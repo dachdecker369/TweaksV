@@ -35,7 +35,7 @@ Then the release: version 2.2.1, a clean rebuild, the suites, my boot with NVE i
 
 **Track 2 (2.2.0, the DirectStorage redesign):** starts now;
 
-**Track 3 (2.2.1, onigiri.asi):** on its branch, from d54259e; five commits verified (f1a0fd4 to 7da0fc1: the second kind of plugin, twelve new checks, 497 on its branch, the documents); two more items under way, the conflict check before the log header and the log line for a part already off in `TweaksV.ini`; rebased and released after 2.2.0.
+**Track 3 (2.2.1, onigiri.asi):** done, on its branch from d54259e, nine commits (f1a0fd4 to 3eb6c82), verified: the second kind of plugin and the conflict check as settled, the check before the log header, the line for a part already off in `TweaksV.ini`, 25 new checks (510 on its branch, 485 and its 25), the documents; the four builds clean there. Rebased onto main and released after 2.2.0; its branch stays until then.
 
 **Decisions waiting on me:** D1, the sharing decided in the `NtCreateFile` hook alone, by the open's own path, access and sharing (recommended: no factory dependency, no thread-local hand-off, every lock covered), or in the `OpenFile` hook, handed down by a thread-local flag, so that only DirectStorage's own opens are widened. D2 is built the start-up summary item with the INI switch that stops it, and stands unless changed.
 
