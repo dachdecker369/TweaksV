@@ -50,9 +50,9 @@ The phases:
 
 ## State
 
-**State:** 2.2.2 is tagged on 2ba8c8c, the commit I booted on 2026-10-27, and pushed with main; it is not published by itself - the next release carries it, and 2.2.1 stays the last one published. The Blips part (2.4.0 on the roadmap) is under way. That switch, `TEST_DUMP_SCRIPT`, is being built, one coding track (phase 2); meanwhile the research pass has recorded the verification's corrections, written its reader for the saved program and settled T-CODEPAGE's open fact: the game's file functions take their paths in UTF-8. Beside the switch, 2.2.3 fixes T-CODEPAGE on that fact, one coding track of its own, released before the switch's commits reach main. The suites stand at 525 checks; the open issues are T-HARDEN, T-LAYOUT, T-CODEPAGE, T-DIAG, T-SUMMARY, T-FREEZE and T-REPLACE - T-LAYOUT goes with the Blips part, T-REPLACE with 2.3.0, not urgent.
+**State:** 2.2.2 is tagged on 2ba8c8c, the commit I booted on 2026-10-27, and pushed with main; it is not published by itself - the next release carries it, and 2.2.1 stays the last one published. The Blips part (2.4.0 on the roadmap) is under way. That switch, `TEST_DUMP_SCRIPT`, is built on its branch, one coding track (phase 2), and waits for the verification; meanwhile the research pass has recorded the verification's corrections, written its reader for the saved program and settled T-CODEPAGE's open fact: the game's file functions take their paths in UTF-8. Beside the switch, 2.2.3 fixes T-CODEPAGE on that fact, one coding track of its own, released before the switch's commits reach main. The suites stand at 525 checks; the open issues are T-HARDEN, T-LAYOUT, T-CODEPAGE, T-DIAG, T-SUMMARY, T-FREEZE and T-REPLACE - T-LAYOUT goes with the Blips part, T-REPLACE with 2.3.0, not urgent.
 
-**The switch's track:** under way since 2026-10-27, on its branch, from f777c78.
+**The switch's track:** done on 2026-10-27 on its branch, from f777c78: four commits, 59b23f2 to 5d52fb6, the suites at 546 checks by its report; not verified yet.
 
 **The 2.2.3 track:** under way since 2026-10-27, on its branch, from 906f333.
 
