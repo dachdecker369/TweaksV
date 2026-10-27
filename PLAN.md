@@ -42,14 +42,14 @@ The phases:
 
 ## State
 
-**State:** 2.2.2 is tagged on 2ba8c8c, the commit I booted on 2026-10-27, and pushed with main; it is not published by itself - the next release carries it, and 2.2.1 stays the last one published. The Blips part (2.4.0 on the roadmap) is under way. Next is that switch, `TEST_DUMP_SCRIPT`, one coding track (phase 2); meanwhile the research pass records the verification's corrections and writes its reader for the saved program. The suites stand at 525 checks; the open issues are T-HARDEN, T-LAYOUT, T-CODEPAGE, T-DIAG, T-SUMMARY, T-FREEZE and T-REPLACE - T-LAYOUT goes with the Blips part, T-REPLACE with 2.3.0, not urgent.
+**State:** 2.2.2 is tagged on 2ba8c8c, the commit I booted on 2026-10-27, and pushed with main; it is not published by itself - the next release carries it, and 2.2.1 stays the last one published. The Blips part (2.4.0 on the roadmap) is under way. That switch, `TEST_DUMP_SCRIPT`, is being built, one coding track (phase 2); meanwhile the research pass records the verification's corrections, writes its reader for the saved program and settles T-CODEPAGE's open fact. The suites stand at 525 checks; the open issues are T-HARDEN, T-LAYOUT, T-CODEPAGE, T-DIAG, T-SUMMARY, T-FREEZE and T-REPLACE - T-LAYOUT goes with the Blips part, T-REPLACE with 2.3.0, not urgent.
 
-**The switch's track:** not started; it branches from main with this plan.
+**The switch's track:** under way since 2026-10-27, on its branch, from f777c78.
 
-**The research pass:** section 2 done; it records the corrections and writes its reader for the saved program, then waits for my boot with the switch.
+**The research pass:** section 2 done; since 2026-10-27 it records the corrections, writes its reader for the saved program and settles T-CODEPAGE's open fact - the encoding of the paths the game's file functions get - which I added to its pass while the dump is there; then it waits for my boot with the switch.
 
 **The verification:** section 2 against the dump, done on 2026-10-27, its record in my research tools' `output-1158.16\blips_verification_of_section2.md`: every fact the switch rests on confirmed; One of them is the part's to settle: the blip count can reach 1,998 to 2,000, not only 1,997, so the top of `ACTIVE_BLIP_LIMIT`'s range is open.
 
-**Decisions waiting on me:** whether the research pass also settles T-CODEPAGE's open fact - the encoding of the paths the game's file functions get - while the dump is there (the overview recommends yes).
+**Decisions waiting on me:** none.
 
 **Boots:** the switch's boot - the test build with `TEST_DUMP_SCRIPT=blip_controller`, a save loaded once more - then the Blips part's boots.
