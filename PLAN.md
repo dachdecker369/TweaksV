@@ -42,14 +42,14 @@ The phases:
 
 ## State
 
-**State:** 2.2.2 is tagged on 2ba8c8c, the commit I booted on 2026-10-27, and pushed with main; it is not published by itself - the next release carries it, and 2.2.1 stays the last one published. The Blips part (2.4.0 on the roadmap) is under way. That switch, `TEST_DUMP_SCRIPT`, is being built, one coding track (phase 2); meanwhile the research pass records the verification's corrections, writes its reader for the saved program and settles T-CODEPAGE's open fact. The suites stand at 525 checks; the open issues are T-HARDEN, T-LAYOUT, T-CODEPAGE, T-DIAG, T-SUMMARY, T-FREEZE and T-REPLACE - T-LAYOUT goes with the Blips part, T-REPLACE with 2.3.0, not urgent.
+**State:** 2.2.2 is tagged on 2ba8c8c, the commit I booted on 2026-10-27, and pushed with main; it is not published by itself - the next release carries it, and 2.2.1 stays the last one published. The Blips part (2.4.0 on the roadmap) is under way. That switch, `TEST_DUMP_SCRIPT`, is being built, one coding track (phase 2); meanwhile the research pass has recorded the verification's corrections, written its reader for the saved program and settled T-CODEPAGE's open fact: the game's file functions take their paths in UTF-8. The suites stand at 525 checks; the open issues are T-HARDEN, T-LAYOUT, T-CODEPAGE, T-DIAG, T-SUMMARY, T-FREEZE and T-REPLACE - T-LAYOUT goes with the Blips part, T-REPLACE with 2.3.0, not urgent.
 
 **The switch's track:** under way since 2026-10-27, on its branch, from f777c78.
 
-**The research pass:** section 2 done; since 2026-10-27 it records the corrections, writes its reader for the saved program and settles T-CODEPAGE's open fact - the encoding of the paths the game's file functions get - which I added to its pass while the dump is there; then it waits for my boot with the switch.
+**The research pass:** section 2 done; on 2026-10-27 it recorded the verification's corrections in the findings, wrote its reader for the saved program, `ScriptRead.java`, tested on files of its own, listed its tools in README.txt, and settled T-CODEPAGE's open fact, which I had added to its pass: all eight file functions RageOpenV hooks turn their paths into UTF-16 with code page 65001, UTF-8, before any Win32 call (the findings' last section; the overview checked the eight call sites in the dump). It waits for my boot with the switch.
 
 **The verification:** section 2 against the dump, done on 2026-10-27, its record in my research tools' `output-1158.16\blips_verification_of_section2.md`: every fact the switch rests on confirmed; One of them is the part's to settle: the blip count can reach 1,998 to 2,000, not only 1,997, so the top of `ACTIVE_BLIP_LIMIT`'s range is open.
 
-**Decisions waiting on me:** none.
+**Decisions waiting on me:** whether T-CODEPAGE is fixed now - RageOpenV's list of the mods folder and the game paths in its log lines in UTF-8, as the game's file functions take them, so that a name outside ASCII is served on every Windows and the double-byte folding problem ends - as one coding track beside the switch's, released as 2.2.3 before the switch's commits reach main (the overview recommends yes).
 
 **Boots:** the switch's boot - the test build with `TEST_DUMP_SCRIPT=blip_controller`, a save loaded once more - then the Blips part's boots.
