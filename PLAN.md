@@ -120,6 +120,6 @@ The topics:
 
 **The verification:** none yet.
 
-**Decisions waiting on me:** none that block. above 470 the list of components breaks first, without a word, and the part logs the value anyway; the ped props pass's - the old plugin's .asi name, on none of its pages: recommended, my look into its archive (gta5-mods.com download 186086, 219 KB) naming the .asi, or my yes to its download into the pass's work folder only to read the names in its directory - nothing extracted, run or read of its code, deleted with the folder; and the texture budget pass's - the game's own `gameconfig.xml`, read with OpenIV: its `ConfigGraphics` block, the names, the four budgets and their count; recommended, since it tells before any build whether the budget binds.
+**Decisions waiting on me:** none that block. and the texture budget pass's - the game's own `gameconfig.xml`, read with OpenIV: its `ConfigGraphics` block, the names, the four budgets and their count; recommended, since it tells before any build whether the budget binds.
 
 **Boots:** 2.4.0's, once the merge reports its build - the Profiles folder (`Documents\Rockstar Games\GTAV Enhanced\Profiles`) backed up first, since the hook sees every rename the game's process makes, its saves' too; the Release build; its log's line 1 `TweaksV 2.4.0 (git <hash>)` without `-dirty`, every part applied, no PROBLEM line, and the line that says `NtSetInformationFile` is hooked. The research needs no boot.
