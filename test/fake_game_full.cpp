@@ -234,8 +234,12 @@
 // objects and of the four budgets and the call after them, the budget's getter, a resource's placement and the update check,
 // leading to the counters as the game's start-up leaves them - textures 2456 MB and buffers 389 MB in 22222 and 1234 objects,
 // the game's high-water mark at 2900 MB, 98304 objects allowed, the budgets 1500, 1500, 3000 and 3000 MB - to the texture
-// quality's index 2, the update check's flag down and its switch on with its factors 0.9, 0.8 and 0.95.
-//   tbgrow         once TweaksV's first texture budget summary is in TweaksV.log, the textures grow by 200 MB and 800 objects,
+// quality's index 2, the update check's flag down and its switch on with its factors 0.9, 0.8 and 0.95. Once TweaksV has
+// started, the game's start-up stores the most and the budgets again and makes the call after its stores, with four arguments
+// the function behind it checks - through TweaksV's stub when TweaksV raises the budgets - and its result checked in turn.
+//   tbconfigbig    the start-up's gameconfig.xml gives budgets 2 and 3 9000 MB
+//   tbnoindex      the texture quality's index is 7, outside 0 to 3
+//   tbgrow        once TweaksV's first texture budget summary is in TweaksV.log, the textures grow by 200 MB and 800 objects,
 //                  past the budget, the game's mark with them, and the update check's flag goes up; then it waits for the
 //                  next summary (TWEAKSV_TEST_SUMMARY_MS), 10 seconds at most
 //   tbhigh         once TweaksV's first texture budget summary is in TweaksV.log, one new high at a time, each once the summary
@@ -1999,10 +2003,72 @@ static TextureBudgetData g_textureBudgetDataAsSet;
 static uint64_t g_textureBudgetDummy[8];	// where the writers of the budgets lead without their options
 static unsigned char g_textureBudgetSitesAsPlaced[sizeof(g_textureBudgetStores) + sizeof(g_textureBudgetGetter) +
 	sizeof(g_textureBudgetPlacement) + sizeof(g_textureBudgetUpdate) + sizeof(g_textureBudgetWriters)];
+// The game's function the call after the budgets' stores leads to: it counts its calls, checks the four arguments the start-up
+// hands it, keeps the budgets as they are when it runs - after TweaksV's raise when the call is redirected - and gives back a
+// result the start-up checks.
+constexpr uint64_t kTextureBudgetArguments[] = { 0x1111111111111111ull, 0x2222222222222222ull, 0x3333333333333333ull, 0x4444444444444444ull };
+constexpr uint64_t kTextureBudgetResult = 0x5A5A5A5A5A5A5A5Aull;
 static volatile int g_textureBudgetNextSteps = 0;
-static void TextureBudgetNextStep()
+static bool g_textureBudgetArgumentsAsHanded = true;
+static uint64_t g_textureBudgetBudgetsThen[4] = {};
+static __declspec(noinline) uint64_t TextureBudgetNextStep(uint64_t first, uint64_t second, uint64_t third, uint64_t fourth)
 {
 	g_textureBudgetNextSteps = g_textureBudgetNextSteps + 1;
+	if (first != kTextureBudgetArguments[0] || second != kTextureBudgetArguments[1] || third != kTextureBudgetArguments[2] ||
+		fourth != kTextureBudgetArguments[3])
+		g_textureBudgetArgumentsAsHanded = false;
+	for (int i = 0; i < 4; i++)
+		g_textureBudgetBudgetsThen[i] = g_textureBudgetData->counters.budgets[i];
+	return kTextureBudgetResult;
+}
+
+// Where the call after the budgets' stores leads: to the next step, to a TweaksV stub - read+execute memory outside the game -
+// or elsewhere, where "another mod" is and nothing is.
+static const unsigned char* Rel32Target(const Site& site);
+static const unsigned char* ImageBase();
+static const unsigned char* ImageEnd();
+static const wchar_t* TextureBudgetCallLeads(const unsigned char* target)
+{
+	if (target == reinterpret_cast<const unsigned char*>(&TextureBudgetNextStep))
+		return L"the next step";
+	MEMORY_BASIC_INFORMATION info{};
+	if ((target < ImageBase() || target >= ImageEnd()) && VirtualQuery(target, &info, sizeof(info)) == sizeof(info) && info.State == MEM_COMMIT &&
+		info.Protect == PAGE_EXECUTE_READ)
+		return L"a TweaksV stub";
+	return L"elsewhere";
+}
+
+// The game's start-up after TweaksV's DllMain: its stores of the most and the four budgets from gameconfig.xml - the game's own
+// file's 98304 objects and 1500, 1500, 3000 and 3000 MB, or with "tbconfigbig" a file that gives budgets 2 and 3 9000 MB - then
+// the call after them, with the four arguments the next step checks: through TweaksV's stub when TweaksV redirected it, to the
+// next step when not, and not made when it leads to another mod.
+static bool g_textureBudgetBigConfig = false;
+static wchar_t g_textureBudgetStartUp[192] = L"start-up: not made";
+static void TextureBudgetStartUp()
+{
+	TextureBudgetData& data = *g_textureBudgetData;
+	data.counters.most = 98304;
+	const uint64_t budgetsMb[] = { 1500, 1500, g_textureBudgetBigConfig ? 9000u : 3000u, g_textureBudgetBigConfig ? 9000u : 3000u };
+	for (int i = 0; i < 4; i++)
+		data.counters.budgets[i] = budgetsMb[i] << 20;
+	g_textureBudgetDataAsSet = data;
+	const unsigned char* const target = Rel32Target(g_textureBudgetCall);
+	const wchar_t* const leads = TextureBudgetCallLeads(target);
+	const size_t size = sizeof(g_textureBudgetStartUp) / sizeof(g_textureBudgetStartUp[0]);
+	if (wcscmp(leads, L"elsewhere") == 0)
+	{
+		swprintf(g_textureBudgetStartUp, size, L"start-up: the call leads elsewhere, not made");
+		return;
+	}
+	using NextStep = uint64_t (*)(uint64_t, uint64_t, uint64_t, uint64_t);
+	const auto next = reinterpret_cast<NextStep>(const_cast<unsigned char*>(target));
+	const uint64_t result = next(kTextureBudgetArguments[0], kTextureBudgetArguments[1], kTextureBudgetArguments[2], kTextureBudgetArguments[3]);
+	const int calls = g_textureBudgetNextSteps;
+	swprintf(g_textureBudgetStartUp, size, L"start-up: through %ls, the next step called %d time%ls, its arguments %ls, its result %ls, the budgets then "
+		L"%llu, %llu, %llu and %llu MB", leads, calls, calls == 1 ? L"" : L"s", g_textureBudgetArgumentsAsHanded ? L"as handed" : L"CHANGED",
+		result == kTextureBudgetResult ? L"back" : L"CHANGED", static_cast<unsigned long long>(g_textureBudgetBudgetsThen[0] >> 20),
+		static_cast<unsigned long long>(g_textureBudgetBudgetsThen[1] >> 20), static_cast<unsigned long long>(g_textureBudgetBudgetsThen[2] >> 20),
+		static_cast<unsigned long long>(g_textureBudgetBudgetsThen[3] >> 20));
 }
 
 // The data as the game's start-up leaves them, at the game's own sizes: textures 2456 MB and buffers 389 MB in 22222 and 1234
@@ -2031,6 +2097,7 @@ static void TextureBudgetSites(unsigned char* to, bool compare, int& asPlaced)
 		g_textureBudgetWriters };
 	const size_t sizes[] = { sizeof(g_textureBudgetStores), sizeof(g_textureBudgetGetter), sizeof(g_textureBudgetPlacement), sizeof(g_textureBudgetUpdate),
 		sizeof(g_textureBudgetWriters) };
+	const volatile unsigned char* const call = g_textureBudgetCall.bytes + g_textureBudgetCall.offset;	// its rel32, which the raise redirects
 	asPlaced = 0;
 	for (int i = 0; i < 5; i++)
 	{
@@ -2038,7 +2105,7 @@ static void TextureBudgetSites(unsigned char* to, bool compare, int& asPlaced)
 		for (size_t j = 0; j < sizes[i]; j++, to++)
 			if (!compare)
 				*to = sites[i][j];
-			else if (*to != sites[i][j])
+			else if (*to != sites[i][j] && (&sites[i][j] < call || &sites[i][j] >= call + 4))
 				same = false;
 		asPlaced += same ? 1 : 0;
 	}
@@ -2093,7 +2160,10 @@ static void TextureBudgetLater(TextureBudgetChange change)
 		data.flag = 1;
 	}
 	else if (change == TextureBudgetChange::Late)
+	{
 		TextureBudgetSetAsTheGame(data);
+		TextureBudgetStartUp();
+	}
 	else
 	{
 		data.counters.textures += 100ull << 20;
@@ -4489,6 +4559,9 @@ int wmain(int argc, wchar_t** argv)
 		TextureBudgetData& data = *g_textureBudgetData;
 		if (!HasOption(argc, argv, L"tblate"))
 			TextureBudgetSetAsTheGame(data);
+		if (HasOption(argc, argv, L"tbnoindex"))	// a texture quality's index outside 0 to 3
+			data.index = 7;
+		g_textureBudgetBigConfig = HasOption(argc, argv, L"tbconfigbig");
 		const auto counters = reinterpret_cast<const unsigned char*>(&data.counters);
 		SetRel32(g_textureBudgetMostRef, counters + 0x20);
 		SetRel32(g_textureBudgetBudgetRefs[0], counters + 0x28);
@@ -4637,6 +4710,10 @@ int wmain(int argc, wchar_t** argv)
 		PedPropsGrow();
 	}
 	// [texture budget]
+	// the game's start-up after TweaksV's DllMain: the budgets' stores and the call after them - with "tblate" once TweaksV's
+	// first summary is in its log
+	if (!HasOption(argc, argv, L"tblate"))
+		TextureBudgetStartUp();
 	if (HasOption(argc, argv, L"tbgrow"))
 		TextureBudgetLater(TextureBudgetChange::Grow);
 	else if (HasOption(argc, argv, L"tbhigh"))
@@ -4705,18 +4782,28 @@ int wmain(int argc, wchar_t** argv)
 	}
 	// [texture budget]
 	{
-		// "texture budget: sites as placed 4 of 4, data as set, its page RW; stores RVA 0x..., ... | " - the sites as they were before
-		// TweaksV loaded, the data as the harness set it, and where each lies, for the suite to compare with the log's lines
+		// "texture budget: sites as placed 5 of 5, the call to the next step, data as set, its page RW, budgets 1500, 1500, 3000 and
+		// 3000 MB; start-up: ...; stores RVA 0x..., ... | " - the sites as they were before TweaksV loaded but the call's rel32 and
+		// where the call leads, the data as the harness set it but the budgets and the budgets as they are, the start-up's call,
+		// and where each site and datum lies, for the suite to compare with the log's lines
 		int asPlaced = 0;
 		TextureBudgetSites(g_textureBudgetSitesAsPlaced, true, asPlaced);
 		const TextureBudgetData& data = *g_textureBudgetData;
+		TextureBudgetData is = data, set = g_textureBudgetDataAsSet;
+		memset(is.counters.budgets, 0, sizeof(is.counters.budgets));
+		memset(set.counters.budgets, 0, sizeof(set.counters.budgets));
+		CheckStub(Rel32Target(g_textureBudgetCall));
 		const auto rva = [](const volatile void* p) {
 			return static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(const_cast<const void*>(p)) - reinterpret_cast<uintptr_t>(ImageBase()));
 		};
-		wprintf(L"texture budget: sites as placed %d of 5, data %ls, its page %ls%ls; stores RVA 0x%llX, getter RVA 0x%llX, placement RVA 0x%llX, "
+		wprintf(L"texture budget: sites as placed %d of 5, the call to %ls, data %ls, its page %ls, budgets %llu, %llu, %llu and %llu MB%ls; %ls; ", asPlaced,
+			TextureBudgetCallLeads(Rel32Target(g_textureBudgetCall)), memcmp(&is, &set, sizeof(is)) == 0 ? L"as set" : L"CHANGED",
+			ProtectionOf(&data) == PAGE_READWRITE ? L"RW" : L"not RW", static_cast<unsigned long long>(data.counters.budgets[0] >> 20),
+			static_cast<unsigned long long>(data.counters.budgets[1] >> 20), static_cast<unsigned long long>(data.counters.budgets[2] >> 20),
+			static_cast<unsigned long long>(data.counters.budgets[3] >> 20), g_textureBudgetLater, g_textureBudgetStartUp);
+		wprintf(L"stores RVA 0x%llX, getter RVA 0x%llX, placement RVA 0x%llX, "
 			L"update RVA 0x%llX, writers RVA 0x%llX, next step RVA 0x%llX, counters RVA 0x%llX, index RVA 0x%llX, flag RVA 0x%llX, switch RVA 0x%llX | ",
-			asPlaced, memcmp(&data, &g_textureBudgetDataAsSet, sizeof(data)) == 0 ? L"as set" : L"CHANGED",
-			ProtectionOf(&data) == PAGE_READWRITE ? L"RW" : L"not RW", g_textureBudgetLater, rva(g_textureBudgetStores), rva(g_textureBudgetGetter),
+			rva(g_textureBudgetStores), rva(g_textureBudgetGetter),
 			rva(g_textureBudgetPlacement), rva(g_textureBudgetUpdate), rva(g_textureBudgetWriters), rva(reinterpret_cast<const void*>(&TextureBudgetNextStep)),
 			rva(&data.counters), rva(&data.index), rva(&data.flag), rva(&data.updateCheck));
 	}

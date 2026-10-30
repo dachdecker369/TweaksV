@@ -148,6 +148,9 @@ breaktest "W-E-I2 (the weapon info loader): the weapon info limit neither raised
 breaktest "A-E-G3 (a ped props narrowing): the ped props' sites as placed, the rest applied" "A-E-G3" \
 	"has 'pedprops: sites as placed, data as placed |' && has '$ALL_ON_HEAP' && has '$MODKIT_ON' && has '$PACK_ON' && has '$ROV_ON' && has '$STORY_ON'"
 # [texture budget]
+fresh_ini; setkey VIDEO_MEMORY_BUDGET 6000 RESOURCES; addkey TEST_BREAK_PATTERN Q-E-T4; out=$(ASI=TweaksV_test.asi game full_game.exe)
+check "Q-E-T4 (the texture budget's placement check), VIDEO_MEMORY_BUDGET=6000: the budgets as the game set them, the rest applied" \
+	"has 'the call to the next step' && has 'budgets 1500, 1500, 3000 and 3000 MB' && has '$ALL_ON_HEAP' && has '$MODKIT_ON' && has '$PACK_ON' && has '$ROV_ON' && has '$STORY_ON' && log_has 'TEST BUILD - not for release' && grep -qi -- 'TEST BUILD: pattern Q-E-T4 is treated as not found' TweaksV.log && grep -qi -- 'Q-E-T4 was not found[ .]' TweaksV.log && summary_once && has 'protect: all restored'"
 # [static bounds]
 # [rt buffer]
 breaktest "a label in small letters works too" "h-e1" \

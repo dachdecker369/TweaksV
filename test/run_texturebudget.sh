@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-only
-# The texture budget, measured first for the Resources part to come (TweaksVTextureBudget): with DIAGNOSTIC_MODE=1 only,
+# The texture budget, the Resources part (TweaksVTextureBudget): VIDEO_MEMORY_BUDGET at 0, said in one line, nothing looked for;
+# at 6000 the four budgets raised as the game's start-up sets them, through the call after its stores redirected to a stub,
+# read+execute, and nothing else written - the call's four arguments and its result as they came, the budgets raised before
+# the game's function runs; none lowered, a gameconfig.xml's larger budgets kept; none below 1500 left as they are; 1000
+# raised to 1500 and reported; an index outside 0 to 3 named; the part off, DRY_RUN, each check failing on its own, a writer
+# besides the start-up's, the plain game and Windows' dynamic code policy - each reported word for word, nothing written; and
+# the measurement with DIAGNOSTIC_MODE=1, also beside a raise:
 # the five patterns found in the full fake game, every site checked and logged with the addresses the fake reports, and the
 # counters summed up 10 seconds in, at the game's own sizes - the budgets 1500, 1500, 3000 and 3000 MB, 98304 objects - and
 # again once they grow past the budget (the test build's TWEAKSV_TEST_SUMMARY_MS), not while nothing changes, and a first
@@ -30,6 +36,9 @@ UPDATE_CHECK='\[Resources\] DIAGNOSTIC: texture budget: the update check.s switc
 UNSET='\[Resources\] DIAGNOSTIC: texture budget: 0 MB of the 0 MB budget for the texture quality.s index 0 (MaxStreamingMemory_0..3_Base: 0, 0, 0 and 0 MB) - textures 0 MB, buffers 0 MB; 0 of the 0 objects allowed (MaxStreamingResources) - 0 textures, 0 buffers; the most so far 0 MB by the game.s own mark, 0 MB and 0 objects at TweaksV.s readings; the update check.s flag is down - the budgets and the most are not set yet (the game sets them when it reads gameconfig.xml).$'
 UPDATE_CHECK_UNSET='\[Resources\] DIAGNOSTIC: texture budget: the update check.s switch holds 0 (off: nothing is evicted ahead of time), its factors 0 of the budget to start evicting, 0 to stop, and 0 of the video memory Windows gives the game to start evicting too.$'
 NOT_MEASURED='\[Resources\] DIAGNOSTIC: the texture budget is not measured: '
+NOT_RAISED='\[Resources\] PROBLEM: The texture budget is not raised this session: '
+RAISE='\[Resources\] The texture budgets of gameconfig.xml (MaxStreamingMemory_0..3_Base: '
+SUMMARY_RAISED='\[Resources\] DIAGNOSTIC: texture budget: 2845 MB of the 6000 MB budget for the texture quality.s index 2 (MaxStreamingMemory_0..3_Base: 1500, 1500, 3000 and 3000 MB, raised to 6000, 6000, 6000 and 6000 MB by VIDEO_MEMORY_BUDGET) - textures 2456 MB, buffers 389 MB; 23456 of the 98304 objects allowed (MaxStreamingResources) - 22222 textures, 1234 buffers; the most so far 2900 MB by the game.s own mark, 2845 MB and 23456 objects at TweaksV.s readings; the update check.s flag is down.$'
 
 # rva NAME [PLUS]: "RVA 0x..." of what the fake's report places at NAME (stores, getter, placement, update, next step,
 # counters, index, flag, switch), plus PLUS
@@ -39,8 +48,22 @@ rva() {
 	[ -n "$at" ] || { echo "RVA-of-$1-not-reported"; return; }
 	printf 'RVA 0x%X' $(( at + ${2:-0} ))
 }
-# untouched: the fake's report - its four sites as placed, its data as set, their pages' protection their own
-untouched() { has 'texture budget: sites as placed 5 of 5, data as set, its page RW' && has 'protect: all restored (RX)'; }
+# report_is CALL BUDGETS: the fake's report - its five sites as placed but the call's rel32, the call to CALL, its data as set but
+# the budgets, its page read/write, the budgets BUDGETS, every page's protection its own
+report_is() { has "texture budget: sites as placed 5 of 5, the call to $1, data as set, its page RW, budgets $2 MB" && has 'protect: all restored (RX)'; }
+# untouched [CALL]: nothing written - the call to CALL (the next step), the budgets the game's own
+untouched() { report_is "${1:-the next step}" '1500, 1500, 3000 and 3000'; }
+# startup CALL BUDGETS: the start-up's call, through CALL, made once with its four arguments, its result back, the budgets
+# BUDGETS while the game's function ran
+startup() { has "start-up: through $1, the next step called 1 time, its arguments as handed, its result back, the budgets then $2 MB"; }
+# stubs: the call stubs the fake's report counts
+stubs() { sed -nE 's/.*stubs: ([0-9]+), all RX.*/\1/p' <<< "$out"; }
+# redirected BUDGET: the part's line for the redirected call; call_written: its DIAGNOSTIC line of the write
+redirected() { log_line "\[Resources\] The call after the budgets. stores at $(rva stores 74) is redirected: the texture budgets below $1 MB are raised to it when the game.s start-up sets them.\$"; }
+call_written() { log_line "\[Resources\] DIAGNOSTIC: call after the budgets. stores at $(rva stores 74): E8 [0-9A-F ]* -> E8 [0-9A-F ]*\$"; }
+dry_run_lines() { log_line "\[Resources\] DRY_RUN: would redirect the call after the budgets. stores at $(rva stores 74).\$" && log_line '\[Resources\] DRY_RUN: the texture budgets below 6000 MB would be raised to it when the game.s start-up sets them.$'; }
+# refused WHY [CALL]: the part's problem WHY, word for word, the only one, in one summary, and nothing written
+refused() { log_line "${NOT_RAISED}$1\$" && [ "$(count 'PROBLEM')" -eq 1 ] && log_has 'Start-up summary not shown (ERROR_POPUP=0): 1 problem' && untouched "${2:-the next step}"; }
 # found LABEL NAME [PLUS]: the scanner's line for LABEL, found once where the fake has it
 found() { log_has "Pattern $1 found: .* -> $(rva "$2" "${3:-0}"), 1 match"; }
 patterns_found() { found Q-E-T1 stores && found Q-E-T2 stores 34 && found Q-E-T3 getter && found Q-E-T4 placement && found Q-E-T5 update; }
@@ -77,8 +100,9 @@ first_after_10s() {
 summaries() { count 'objects allowed (MaxStreamingResources)'; }
 
 echo "== TB1 defaults, VIDEO_MEMORY_BUDGET=0 and DIAGNOSTIC_MODE=0: nothing looked for, nothing written"
-fresh_ini; out=$(game full_game.exe); echo "      $out"
+fresh_ini; out=$(game full_game.exe); echo "      $out"; stubs0=$(stubs)
 check "no texture budget pattern looked for; the part's one line, word for word" "log_lacks 'Q-E-T' && log_line '\[Resources\] VIDEO_MEMORY_BUDGET=0 - the texture budget is not raised.\$' && [ \$(count '\[Resources\]') -eq 1 ]"
+check "the start-up's call made to the game's function itself, its arguments and its result as they came, the budgets the game's own" "startup 'the next step' '1500, 1500, 3000 and 3000' && [ -n '$stubs0' ]"
 check "the fake's sites as placed, its data as set, every page's protection its own" "untouched"
 
 echo "== TB2 DIAGNOSTIC_MODE=1: the five patterns found once each, every site logged, the counters summed up 10 s in"
@@ -126,7 +150,7 @@ check "no problem, no announcement, no summary; nothing written" "log_lacks 'PRO
 echo "== TB9 the call after the budgets' stores already hooked by another mod: logged, nothing measured"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe tbcallhooked)
 check "the call's line and the reason, word for word" "log_line '\[Resources\] DIAGNOSTIC: call after the budgets. stores at $(rva stores 74) -> 0x[0-9A-F]* (outside the game) (Q-E-T2)\$' && log_line '${NOT_MEASURED}the call after the budgets. stores at $(rva stores 74) is not a call into the game (another mod may have hooked it already) (Q-E-T2).\$'"
-check "no problem, no announcement; nothing written" "log_lacks 'PROBLEM' && nothing_measured && untouched"
+check "no problem, no announcement; nothing written, the call not made" "log_lacks 'PROBLEM' && nothing_measured && untouched elsewhere && has 'start-up: the call leads elsewhere, not made'"
 
 echo "== TB10 an address outside the game: the getter's index"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe tbindexout)
@@ -162,6 +186,77 @@ echo "== TB16 six writers of the budgets besides the start-up's stores, each of 
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe tbwritemov tbwritebyte tbwritesse tbwriteavx tbwritelock tbwriteimm)
 check "the line, word for word: mov of 8 bytes, of a byte with an imm8, movups, vmovdqu of 32 bytes, lock add, mov with an imm32" "writers_line 'and 6 besides them: $(rva writers 97), $(rva writers 106), $(rva writers 115), $(rva writers 124), $(rva writers 134), $(rva writers 144)'"
 check "the measurement announced all the same; no problem; nothing written" "announced && log_lacks 'PROBLEM' && untouched"
+
+echo "== TB17 VIDEO_MEMORY_BUDGET=6000: the budgets raised as the game's start-up sets them, through the redirected call and nothing else"
+fresh_ini; setkey VIDEO_MEMORY_BUDGET 6000 RESOURCES; out=$(game full_game.exe)
+check "the redirect's line, word for word" "redirected 6000"
+check "the raise's line, word for word: the four budgets the game had, the four now, the index in use" "log_line '${RAISE}1500, 1500, 3000 and 3000 MB) are raised to 6000 MB where they are below it: 6000, 6000, 6000 and 6000 MB now; the texture quality.s index 2 uses 6000 MB.\$'"
+check "the start-up's call through TweaksV's stub to the game's function, once, its arguments as handed, its result back, the budgets raised before it ran" "startup 'a TweaksV stub' '6000, 6000, 6000 and 6000'"
+check "nothing else written: the sites as placed but the call, the data as set but the budgets, one stub more, read+execute; no DIAGNOSTIC line of the part, Q-E-T5 not looked for, no problem" "report_is 'a TweaksV stub' '6000, 6000, 6000 and 6000' && [ \"\$(stubs)\" = \"\$((stubs0 + 1))\" ] && log_lacks '\[Resources\] DIAGNOSTIC' && log_lacks 'Q-E-T5' && log_lacks 'PROBLEM'"
+
+echo "== TB18 none lowered: a gameconfig.xml that gives budgets 2 and 3 9000 MB, VIDEO_MEMORY_BUDGET=6000"
+fresh_ini; setkey VIDEO_MEMORY_BUDGET 6000 RESOURCES; out=$(game full_game.exe tbconfigbig)
+check "the raise's line, word for word: budgets 0 and 1 raised, 2 and 3 kept at 9000 MB, as the game's function saw them" "log_line '${RAISE}1500, 1500, 9000 and 9000 MB) are raised to 6000 MB where they are below it: 6000, 6000, 9000 and 9000 MB now; the texture quality.s index 2 uses 9000 MB.\$' && startup 'a TweaksV stub' '6000, 6000, 9000 and 9000' && report_is 'a TweaksV stub' '6000, 6000, 9000 and 9000'"
+
+echo "== TB19 VIDEO_MEMORY_BUDGET=1500: no budget below it - left as they are"
+fresh_ini; setkey VIDEO_MEMORY_BUDGET 1500 RESOURCES; out=$(game full_game.exe)
+check "the line, word for word; the call redirected all the same, the budgets as the game set them; no problem" "log_line '${RAISE}1500, 1500, 3000 and 3000 MB) are at least 1500 MB each - left as they are; the texture quality.s index 2 uses 3000 MB.\$' && redirected 1500 && startup 'a TweaksV stub' '1500, 1500, 3000 and 3000' && log_lacks 'PROBLEM'"
+
+echo "== TB20 VIDEO_MEMORY_BUDGET=1000, below the lowest budget the game's own file gives: 1500 used and reported"
+fresh_ini; setkey VIDEO_MEMORY_BUDGET 1000 RESOURCES; out=$(game full_game.exe)
+check "the problem, word for word, the only one, in one summary" "log_line '\[Resources\] PROBLEM: TweaksV.ini: \[RESOURCES\] VIDEO_MEMORY_BUDGET=1000 is outside 0 or 1500..16384 - using 1500.\$' && [ \$(count 'PROBLEM') -eq 1 ] && log_has 'Start-up summary not shown (ERROR_POPUP=0): 1 problem'"
+check "1500 used: the redirect's line with it, the budgets left as they are" "redirected 1500 && log_has 'are at least 1500 MB each - left as they are' && report_is 'a TweaksV stub' '1500, 1500, 3000 and 3000'"
+
+echo "== TB21 the texture quality's index 7, outside 0 to 3, when the start-up sets the budgets"
+fresh_ini; setkey VIDEO_MEMORY_BUDGET 6000 RESOURCES; out=$(game full_game.exe tbnoindex)
+check "the raise's line names the index, which has no budget, word for word" "log_line '${RAISE}1500, 1500, 3000 and 3000 MB) are raised to 6000 MB where they are below it: 6000, 6000, 6000 and 6000 MB now; the texture quality.s index 7 has no budget.\$'"
+
+echo "== TB22 [RESOURCES] ENABLED=0 with VIDEO_MEMORY_BUDGET=6000 and DIAGNOSTIC_MODE=1: the part does nothing"
+fresh_ini; setkey ENABLED 0 RESOURCES; setkey VIDEO_MEMORY_BUDGET 6000 RESOURCES; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe)
+check "no line of the part, none of its patterns looked for, the header says it is off; nothing written, the call made to the game's function" "log_lacks -i 'texture budget' && log_lacks 'Q-E-T' && log_has 'Features: .*, Resources off, ' && untouched && startup 'the next step' '1500, 1500, 3000 and 3000'"
+
+echo "== TB23 DRY_RUN=1 with VIDEO_MEMORY_BUDGET=6000: everything found and checked, the call not redirected"
+fresh_ini; setkey VIDEO_MEMORY_BUDGET 6000 RESOURCES; setkey DRY_RUN 1; out=$(game full_game.exe)
+check "the two dry-run lines, word for word, and not the redirect's; no problem" "dry_run_lines && log_lacks 'stores at RVA 0x[0-9A-F]* is redirected' && log_lacks 'PROBLEM'"
+check "nothing written: the call made to the game's function, the budgets as the game set them" "untouched && startup 'the next step' '1500, 1500, 3000 and 3000'"
+
+echo "== TB24 each check failing on its own, VIDEO_MEMORY_BUDGET=6000: the problem, word for word, the only one, nothing written"
+fresh_ini; setkey VIDEO_MEMORY_BUDGET 6000 RESOURCES; addkey TEST_BREAK_PATTERN Q-E-T2; out=$(ASI=TweaksV_test.asi game full_game.exe)
+check "Q-E-T2 missing (TEST_BREAK_PATTERN, test build)" "refused 'Q-E-T2 was not found.'"
+fresh_ini; setkey VIDEO_MEMORY_BUDGET 6000 RESOURCES; out=$(game full_game.exe tbshift)
+check "the shift between the budgets' stores by 21" "refused 'the code after Q-E-T1 at $(rva stores 21) is not the store of budgets 0 and 1: 66 0F 73 F0 15 F3 0F 7F 05 [0-9A-F ]*.'"
+fresh_ini; setkey VIDEO_MEMORY_BUDGET 6000 RESOURCES; out=$(game full_game.exe tbcallhooked)
+check "the call after the stores hooked by another mod - not made by the start-up either" "refused 'the call after the budgets. stores at $(rva stores 74) is not a call into the game (another mod may have hooked it already) (Q-E-T2).' elsewhere"
+fresh_ini; setkey VIDEO_MEMORY_BUDGET 6000 RESOURCES; out=$(game full_game.exe tbindexout)
+check "the index outside the game" "refused 'the index at 0x[0-9A-F]* (outside the game) (Q-E-T3) is not inside the game.'"
+fresh_ini; setkey VIDEO_MEMORY_BUDGET 6000 RESOURCES; out=$(game full_game.exe tbmost)
+check "the placement's check loading the most 4 bytes past it" "refused 'the placement.s check loads the most objects from $(rva counters 0x24), not from +0x20 of the counters at $(rva counters) (Q-E-T4).'"
+fresh_ini; setkey VIDEO_MEMORY_BUDGET 6000 RESOURCES; out=$(game full_game.exe tbwritemov)
+check "a writer of the budgets besides the start-up's stores" "refused 'the budgets at $(rva counters 0x28) have 1 writer besides the start-up.s stores, the first at $(rva writers 97), which could undo the raise later.'"
+
+echo "== TB30 the update check's raise factor not multiplied, VIDEO_MEMORY_BUDGET=6000 and DIAGNOSTIC_MODE=1: the raise all the same, no measurement"
+fresh_ini; setkey VIDEO_MEMORY_BUDGET 6000 RESOURCES; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe tbfactor)
+check "the raise and its lines; the measurement's reason, word for word, no announcement; no problem" "redirected 6000 && log_has 'are raised to 6000 MB where they are below it' && log_line '${NOT_MEASURED}the update check.s code at $(rva update 0xA0) is not the multiplication by its factor at $(rva switch 4): F3 44 0F 58 0D [0-9A-F ]* (Q-E-T5).\$' && log_lacks 'texture budget.s counters at' && log_lacks 'PROBLEM'"
+
+echo "== TB31 the plain game, VIDEO_MEMORY_BUDGET=6000: every pattern missing - reported"
+fresh_ini; setkey VIDEO_MEMORY_BUDGET 6000 RESOURCES; out=$(game plain_game.exe)
+check "the scanner's four lines - Q-E-T5 not looked for - and the part's problem, word for word" "[ \$(grep -c -E 'Pattern Q-E-T[1-4] not found: ' TweaksV.log) -eq 4 ] && log_lacks 'Q-E-T5' && log_line '${NOT_RAISED}Q-E-T1 was not found.\$'"
+
+echo "== TB32 Windows' dynamic code policy, VIDEO_MEMORY_BUDGET=6000: the call cannot be redirected - reported, nothing written"
+fresh_ini; setkey VIDEO_MEMORY_BUDGET 6000 RESOURCES; out=$(game full_game.exe nodyncode)
+check "the problem, word for word" "log_line '${NOT_RAISED}the call after the budgets. stores at $(rva stores 74) could not be redirected (details in TweaksV.log).\$'"
+check "nothing written: the call made to the game's function, the budgets as the game set them" "untouched && startup 'the next step' '1500, 1500, 3000 and 3000'"
+
+echo "== TB33 DIAGNOSTIC_MODE=1 with VIDEO_MEMORY_BUDGET=6000: the sites, the call's write, the summary 10 s in of the raised budget"
+fresh_ini; setkey VIDEO_MEMORY_BUDGET 6000 RESOURCES; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe wait)
+check "the nine lines of the sites and the call's write, word for word" "sites_logged && call_written && redirected 6000"
+check "the summary 10 s in, word for word, of the raised budget, the game's own four beside it" "log_line '$SUMMARY_RAISED' && first_after_10s"
+check "no problem; the budgets raised, nothing else written" "log_lacks 'PROBLEM' && report_is 'a TweaksV stub' '6000, 6000, 6000 and 6000'"
+
+echo "== TB34 the test build, TWEAKSV_TEST_SUMMARY_MS=500, VIDEO_MEMORY_BUDGET=6000: the first summary before the start-up, then the raise as it sets the budgets"
+fresh_ini; setkey VIDEO_MEMORY_BUDGET 6000 RESOURCES; setkey DIAGNOSTIC_MODE 1; out=$(TWEAKSV_TEST_SUMMARY_MS=500 ASI=TweaksV_test.asi game full_game.exe tblate)
+check "the first summary with the data all 0, then the raise's line and the summary of the raised budget, word for word" "log_line '$UNSET' && log_has 'are raised to 6000 MB where they are below it: 6000, 6000, 6000 and 6000 MB now' && log_line '$SUMMARY_RAISED'"
+check "the start-up's call through the stub after the first summary; no problem" "has 'set after the first summary' && startup 'a TweaksV stub' '6000, 6000, 6000 and 6000' && log_lacks 'PROBLEM'"
 
 echo
 echo "TEXTURE BUDGET SCENARIOS: $pass passed, $fail failed"
