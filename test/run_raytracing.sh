@@ -104,6 +104,10 @@ fresh_ini; setkey DYNAMIC_BVH_VERTICES 1000; out=$(game full_game.exe)
 check "the part's problem and its line, word for word; the one problem" "log_has 'PROBLEM: TweaksV.ini: DYNAMIC_BVH_VERTICES=1000 is outside 4194304..26843545 - using 4194304.' && rt_line 'The ray tracing buffer of moving geometry holds 4194304 vertices already (DYNAMIC_BVH_VERTICES=1000) - nothing to patch.' && log_has 'Start-up summary not shown (ERROR_POPUP=0): 1 problem'"
 check "nothing written" "has '$GAME_BUFFER' && has '$GAME_SITES' && has 'protect: all restored (RX)'"
 
+echo "== R5b DYNAMIC_BVH_VERTICES=4194304, the game's own size: nothing to patch, nothing reported"
+fresh_ini; setkey DYNAMIC_BVH_VERTICES 4194304; out=$(game full_game.exe)
+check "the part's line, word for word; no problem; nothing written" "rt_line 'The ray tracing buffer of moving geometry holds 4194304 vertices already (DYNAMIC_BVH_VERTICES=4194304) - nothing to patch.' && log_lacks 'PROBLEM' && has '$GAME_BUFFER' && has '$GAME_SITES' && has 'protect: all restored (RX)'"
+
 echo "== R6 DRY_RUN=1 with DYNAMIC_BVH_VERTICES=8388608: everything found and checked, the lines say what would be raised, nothing written"
 fresh_ini; setkey DRY_RUN 1; setkey DYNAMIC_BVH_VERTICES 8388608; out=$(game full_game.exe)
 check "the three writes, word for word" "rt_line 'DRY_RUN: would patch the ray tracing buffer.s count: 00 00 40 00 -> 00 00 80 00' && rt_line 'DRY_RUN: would patch the geometry.s capacity check: 00 00 40 00 -> 00 00 80 00' && rt_line 'DRY_RUN: would patch the ropes. capacity check: 00 00 40 00 -> 00 00 80 00'"
@@ -159,7 +163,7 @@ check "the line, word for word, not a problem; the sites as the other mod left t
 
 echo "== R13 a check failing with the key at 0 and DIAGNOSTIC_MODE=1: logged, not reported - no measurement, nothing written"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe rtslot)
-check "the measurement's line, word for word; no problem, no redirect, no announcement" "rt_line \"${NOT_MEASURED}the two checks load different frame slots: $(rva slot) (T-E-C1) and $(rva slot 4) (T-E-C2).\" && log_lacks 'PROBLEM' && log_lacks 'redirected to counting stubs' && log_lacks 'is measured' && has '$GAME_SITES'"
+check "the measurement's line, word for word; no problem, no redirect, no announcement" "rt_line \"${NOT_MEASURED}the two checks load different frame slots: $(rva slot) (T-E-C1) and $(rva slot 4) (T-E-C2).\" && log_lacks 'PROBLEM' && log_lacks 'redirected to counting stubs' && log_lacks '\[RayTracing\] .*is measured' && has '$GAME_SITES'"
 
 echo "== R14 the plain game: the patterns missing - a problem with the key raised, a DIAGNOSTIC line with the key at 0"
 fresh_ini; setkey DYNAMIC_BVH_VERTICES 8388608; out=$(game plain_game.exe)
