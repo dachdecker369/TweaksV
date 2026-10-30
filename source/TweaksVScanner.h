@@ -36,7 +36,7 @@ namespace TweaksV
 		std::vector<uint8_t*> FindRipRelativeReferences(const void* target, size_t limit);
 
 		// Every "call rel32" (E8 and a rel32: 5 bytes) in the game's code that leads to target, in address order, at
-		// most limit of them. For a function whose callers a part must know all of: the ped props' measurement checks
+		// most limit of them. For a function whose callers a part must know all of: the PedProps part checks
 		// that the game calls its per-anchor count and its metadata lookup exactly as often as the research found,
 		// so that no caller a game update adds is left out. Nothing is logged.
 		std::vector<uint8_t*> FindCallsTo(const void* target, size_t limit);

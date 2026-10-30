@@ -46,7 +46,6 @@
     <ClCompile Include="TweaksVIni.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
-    <!-- [legacy packs] -->
     <ClCompile Include="TweaksVLegacyPacks.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
@@ -72,6 +71,9 @@
       <Filter>TweaksV</Filter>
     </ClCompile>
     <ClCompile Include="TweaksVRageOpenV.cpp">
+      <Filter>TweaksV</Filter>
+    </ClCompile>
+    <ClCompile Include="TweaksVRayTracing.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
     <ClCompile Include="TweaksVRelocation.cpp">
@@ -108,10 +110,6 @@
       <Filter>TweaksV</Filter>
     </ClCompile>
     <ClCompile Include="TweaksVWeaponInfos.cpp">
-      <Filter>TweaksV</Filter>
-    </ClCompile>
-    <!-- [rt buffer] -->
-    <ClCompile Include="TweaksVRayTracing.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
     <ClCompile Include="..\vendor\MinHook\src\buffer.c">
@@ -161,14 +159,10 @@
     <ClInclude Include="TweaksVIni.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
-    <ClInclude Include="TweaksVLock.h">
-      <Filter>TweaksV</Filter>
-    </ClInclude>
-    <!-- [legacy packs] -->
     <ClInclude Include="TweaksVLegacyPacks.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
-    <ClInclude Include="TweaksVRpf.h">
+    <ClInclude Include="TweaksVLock.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
     <ClInclude Include="TweaksVLog.h">
@@ -198,7 +192,13 @@
     <ClInclude Include="TweaksVRageOpenV.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
+    <ClInclude Include="TweaksVRayTracing.h">
+      <Filter>TweaksV</Filter>
+    </ClInclude>
     <ClInclude Include="TweaksVRelocation.h">
+      <Filter>TweaksV</Filter>
+    </ClInclude>
+    <ClInclude Include="TweaksVRpf.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
     <ClInclude Include="TweaksVScanner.h">
@@ -232,10 +232,6 @@
       <Filter>TweaksV</Filter>
     </ClInclude>
     <ClInclude Include="TweaksVWeaponInfos.h">
-      <Filter>TweaksV</Filter>
-    </ClInclude>
-    <!-- [rt buffer] -->
-    <ClInclude Include="TweaksVRayTracing.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
     <ClInclude Include="..\vendor\MinHook\include\MinHook.h">

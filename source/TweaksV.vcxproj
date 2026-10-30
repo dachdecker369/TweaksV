@@ -32,7 +32,7 @@
   <PropertyGroup>
     <!-- TweaksV's version: in BuildInfo.h (the log header) and version.rc (the file's version info) -->
     <TweaksVVersionMajor>2</TweaksVVersionMajor>
-    <TweaksVVersionMinor>5</TweaksVVersionMinor>
+    <TweaksVVersionMinor>6</TweaksVVersionMinor>
     <TweaksVVersionPatch>0</TweaksVVersionPatch>
     <TweaksVRoot>$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)..'))</TweaksVRoot>
     <TargetName>TweaksV</TargetName>
@@ -134,7 +134,6 @@
     <ClCompile Include="TweaksVGame.cpp" />
     <ClCompile Include="TweaksVHeapAdjuster.cpp" />
     <ClCompile Include="TweaksVIni.cpp" />
-    <!-- [legacy packs] -->
     <ClCompile Include="TweaksVLegacyPacks.cpp" />
     <ClCompile Include="TweaksVLog.cpp" />
     <ClCompile Include="TweaksVMeasure.cpp" />
@@ -144,6 +143,7 @@
     <ClCompile Include="TweaksVPedProps.cpp" />
     <ClCompile Include="TweaksVPools.cpp" />
     <ClCompile Include="TweaksVRageOpenV.cpp" />
+    <ClCompile Include="TweaksVRayTracing.cpp" />
     <ClCompile Include="TweaksVRelocation.cpp" />
     <ClCompile Include="TweaksVScanner.cpp" />
     <ClCompile Include="TweaksVScripts.cpp" />
@@ -156,8 +156,6 @@
     <ClCompile Include="TweaksVTextureBudget.cpp" />
     <ClCompile Include="TweaksVWeaponComponents.cpp" />
     <ClCompile Include="TweaksVWeaponInfos.cpp" />
-    <!-- [rt buffer] -->
-    <ClCompile Include="TweaksVRayTracing.cpp" />
     <!-- MinHook v1.3.4, compiled unchanged from vendor\MinHook (x64 only: hde64, not hde32), at warning
          level 3, which it builds without a warning: its code is not TweaksV's to change, and /W4 finds
          its own warnings -->
@@ -186,10 +184,8 @@
     <ClInclude Include="TweaksVGame.h" />
     <ClInclude Include="TweaksVHeapAdjuster.h" />
     <ClInclude Include="TweaksVIni.h" />
-    <ClInclude Include="TweaksVLock.h" />
-    <!-- [legacy packs] -->
     <ClInclude Include="TweaksVLegacyPacks.h" />
-    <ClInclude Include="TweaksVRpf.h" />
+    <ClInclude Include="TweaksVLock.h" />
     <ClInclude Include="TweaksVLog.h" />
     <ClInclude Include="TweaksVMeasure.h" />
     <ClInclude Include="TweaksVModkitLimit.h" />
@@ -199,7 +195,9 @@
     <ClInclude Include="TweaksVPedProps.h" />
     <ClInclude Include="TweaksVPools.h" />
     <ClInclude Include="TweaksVRageOpenV.h" />
+    <ClInclude Include="TweaksVRayTracing.h" />
     <ClInclude Include="TweaksVRelocation.h" />
+    <ClInclude Include="TweaksVRpf.h" />
     <ClInclude Include="TweaksVScanner.h" />
     <ClInclude Include="TweaksVScripts.h" />
     <ClInclude Include="TweaksVSettings.h" />
@@ -211,8 +209,6 @@
     <ClInclude Include="TweaksVTextureBudget.h" />
     <ClInclude Include="TweaksVWeaponComponents.h" />
     <ClInclude Include="TweaksVWeaponInfos.h" />
-    <!-- [rt buffer] -->
-    <ClInclude Include="TweaksVRayTracing.h" />
     <ClInclude Include="..\vendor\MinHook\include\MinHook.h" />
   </ItemGroup>
   <ItemGroup>

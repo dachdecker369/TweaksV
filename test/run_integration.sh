@@ -140,23 +140,17 @@ breaktest "R-E-E3 (an encryption call): no OPEN calls, files on" "R-E-E3" \
 	"has 'file hooks 8/8, redirect 8/8, pass 8/8, spellings ok, folder ok, outside ok | open calls 0/5'"
 breaktest "S-E2 (the legal screen): only that screen is left, the others skipped" "S-E2" \
 	"has 'splash: E9 86 01 00 00 90 | legal: 0F 84 07 05 00 00 | landing: 31 C0 C3 24 08' && has '$ROV_ON'"
-# [weapon infos]
 breaktest "W-E-I2 (the weapon info loader): the weapon info limit neither raised nor guarded, the rest applied" "W-E-I2" \
 	"has 'weapon infos: limits 160 160, loader as laid, the rest as laid, array 152 of 160,' && has '$ALL_ON_HEAP' && has '$MODKIT_ON' && has '$PACK_ON' && has '$ROV_ON' && has '$STORY_ON'"
-# [weapon components]
 breaktest "W-E-C2 (the weapon components' sort): list and pool untouched, the rest applied" "W-E-C2" \
 	"has 'wc: loads 0 moved 17 game 0 other, other bytes as placed, data as placed, size call to the lookup' && has '$DECAL_ON' && has '$MODKIT_ON' && has '$PACK_ON' && has '$ROV_ON' && has '$STORY_ON'"
-# [ped props]
 breaktest "A-E-G3 (a ped props narrowing): the ped props' sites as placed, the rest applied" "A-E-G3" \
 	"has 'pedprops: sites as placed, data as placed |' && has '$ALL_ON_HEAP' && has '$MODKIT_ON' && has '$PACK_ON' && has '$ROV_ON' && has '$STORY_ON'"
-# [texture budget]
 fresh_ini; setkey VIDEO_MEMORY_BUDGET 6000 RESOURCES; addkey TEST_BREAK_PATTERN Q-E-T4; out=$(ASI=TweaksV_test.asi game full_game.exe)
 check "Q-E-T4 (the texture budget's placement check), VIDEO_MEMORY_BUDGET=6000: the budgets as the game set them, the rest applied" \
 	"has 'the call to the next step' && has 'budgets 1500, 1500, 3000 and 3000 MB' && has '$ALL_ON_HEAP' && has '$MODKIT_ON' && has '$PACK_ON' && has '$ROV_ON' && has '$STORY_ON' && log_has 'TEST BUILD - not for release' && grep -qi -- 'TEST BUILD: pattern Q-E-T4 is treated as not found' TweaksV.log && grep -qi -- 'Q-E-T4 was not found[ .]' TweaksV.log && summary_once && has 'protect: all restored'"
-# [static bounds]
 breaktest "C-E-H1 (the static bounds pool's name): its size call left to the game's lookup, the rest applied" "C-E-H1" \
 	"has 'static bounds: sites as placed, size call to the lookup, pool sizes 12000 and 12000' && has '$ALL_ON_HEAP' && has '$MODKIT_ON' && has '$PACK_ON' && has '$ROV_ON' && has '$STORY_ON' && log_has 'PROBLEM: The static bounds pool.s size is not raised this session: C-E-H1 was not found.'"
-# [rt buffer]
 fresh_ini; setkey DYNAMIC_BVH_VERTICES 8388608; addkey TEST_BREAK_PATTERN T-E-C1; out=$(ASI=TweaksV_test.asi game full_game.exe)
 check "T-E-C1 (a check of the ray tracing buffer, with DYNAMIC_BVH_VERTICES=8388608): the buffer untouched, the rest applied" "has 'rt sites: as placed, count 4194304, checks 4194304 and 4194304, jumps to the game and the game' && has '$ALL_ON_HEAP' && has '$MODKIT_ON' && has '$PACK_ON' && has '$ROV_ON' && has '$STORY_ON' && log_has 'TEST BUILD - not for release' && grep -qi -- 'TEST BUILD: pattern T-E-C1 is treated as not found' TweaksV.log && grep -qi -- 'T-E-C1 was not found[ .]' TweaksV.log && summary_once && has 'protect: all restored'"
 breaktest "a label in small letters works too" "h-e1" \

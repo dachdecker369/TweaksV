@@ -16,7 +16,9 @@
 //                         cannot be opened is never replaced by the game's own: OpenBulk gives the game
 //                         that failure, as the game's function would for any file it cannot open,
 //                         logged and reported once. Without a mods folder, or an empty one, nothing is
-//                         hooked.
+//                         hooked. Once they are hooked, the folder's packs are checked for GTA V Legacy
+//                         on a thread of their own (TweaksVLegacyPacks.h), with the RPF7 facts and the
+//                         folder's limits this file shares with that check (TweaksVRpf.h).
 //   OPEN_RPF              five calls of the archive code (R-E-E1..E5: FindEncryption, DecryptHeader,
 //                         DecryptHeader2 twice, ParseHeader) are redirected through call stubs, so that
 //                         an archive whose header says OPEN is read without decryption. The encryption
@@ -56,7 +58,6 @@
 #include "TweaksVConflicts.h"
 #include "TweaksVFiles.h"
 #include "TweaksVIni.h"
-// [legacy packs]
 #include "TweaksVLegacyPacks.h"
 #include "TweaksVLog.h"
 #include "TweaksVMeasure.h"
@@ -608,7 +609,6 @@ namespace TweaksV
 					WriteLog(kTag, "DIAGNOSTIC: " + std::string(hook.what) + " hooked at " + DescribeAddress(hook.function) + ".");
 			WriteLog(kTag, "Files in the mods folder are used (8 file functions hooked).");
 			g_filesHooked = true;
-			// [legacy packs]
 			StartLegacyPacksCheck();	// the packs the folder serves, checked for Legacy versions on a thread of their own
 		}
 

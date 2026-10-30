@@ -46,7 +46,7 @@ namespace TweaksV
 
 		// The five original plugins in the order an ASI loader loaded their .asi files (alphabetical),
 		// TweaksV's own box streamer and decal definitions parts among the limit adjusters, then its
-		// DirectStorage part, its Blips part and the four parts of the parts' coding round. ZHeapAdjuster.asi
+		// DirectStorage part, its Blips part and the five parts of the parts' coding round. ZHeapAdjuster.asi
 		// is the rename the HeapAdjuster author recommends; OpenRPF.asi and OpenIV.asi do RageOpenV's job,
 		// alloc8or's DirectStorageFix.asi that of the DirectStorage part, rootBrz's BlipLimitFix.asi that of
 		// the Blips part, Nochala's Static Bounds Limit Adjuster - StaticBoundLimitAdjuster.asi on its page,
@@ -81,7 +81,6 @@ namespace TweaksV
 				[] { InitTextureBudget(); return false; } },
 			{ &kStaticBoundsSection, { L"StaticBoundLimitAdjuster.asi", L"StaticBoundsLimitAdjuster.asi" }, {},
 				[] { InitStaticBounds(); return false; } },
-			// [rt buffer]
 			{ &kRayTracingSection, {}, { &kResourceExtensions },
 				[] { InitRayTracing(); return false; } },
 		};
@@ -97,7 +96,7 @@ namespace TweaksV
 		}
 		static_assert(InSectionOrder(), "TweaksV: kFeatures must be in the order of kSections");
 
-		// A limit of a part to come, measured before its part writes anything (SPECIFICATIONS 11.14): with
+		// A limit of a part to come, measured before its part writes anything (SPECIFICATIONS 11.15): with
 		// DIAGNOSTIC_MODE=1 its module finds and checks the sites of the limit and measures it.
 		struct MeasuredFirst
 		{
@@ -105,16 +104,11 @@ namespace TweaksV
 			void (*start)();		// the module's Measure<Limit>()
 		};
 
-		// The parts measured first, one entry per limit in the order of SPECIFICATIONS 11.14. A limit leaves the
+		// The parts measured first, one entry per limit in the order of SPECIFICATIONS 11.15. A limit leaves the
 		// table when its part is built, or when it is not, so the table may be empty.
 		constexpr std::initializer_list<MeasuredFirst> kMeasuredFirst = {
-			// [weapon infos]
-			// [weapon components]
 			{ "SirenSettings", MeasureSirenIds },
 			{ "SirenSettings", MeasureSirenCount },
-			// [ped props]
-			// [texture budget]
-			// [streaming memory]
 		};
 	}
 

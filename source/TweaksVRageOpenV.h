@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // TweaksV - RageOpenV: the mods folder, unencrypted (OPEN) RPF archives and the RPF cache check, three
-// jobs with a switch each in [RAGEOPENV], plus the console patch with CONSOLE=1. The game's file system
+// jobs with a switch each in [RAGEOPENV], plus the console patch with CONSOLE=1 and, once the mods folder
+// is in use, the check of its packs for GTA V Legacy (TweaksVLegacyPacks.h). The game's file system
 // is not up in DllMain, so the part does its work when the game first asks for the time, and shows the
 // start-up summary then.
 #pragma once

@@ -34,16 +34,12 @@ namespace TweaksV
 	inline constexpr SettingsSection kPedPropsSection{ "PEDPROPS", "PedProps" };
 	inline constexpr SettingsSection kResourcesSection{ "RESOURCES", "Resources" };
 	inline constexpr SettingsSection kStaticBoundsSection{ "STATICBOUNDS", "StaticBounds" };
-	// [rt buffer]
 	inline constexpr SettingsSection kRayTracingSection{ "RAYTRACING", "RayTracing" };
 
 	// The sections in file order; every one but the first is a part of TweaksV with an ENABLED key.
 	inline constexpr const SettingsSection* kSections[] = { &kTweaksVSection, &kHeapSection, &kModkitSection,
 		&kPackfileSection, &kBoxStreamerSection, &kDecalsSection, &kRageOpenVSection, &kStoryModeSection, &kDirectStorageSection,
-		&kBlipsSection, &kWeaponLimitsSection, &kPedPropsSection, &kResourcesSection, &kStaticBoundsSection,
-		// [rt buffer]
-		&kRayTracingSection,
-	};
+		&kBlipsSection, &kWeaponLimitsSection, &kPedPropsSection, &kResourcesSection, &kStaticBoundsSection, &kRayTracingSection };
 
 	// The layout of TweaksV.ini this build writes and reads: VERSION, the last key of [TWEAKSV]. A file
 	// without VERSION has the layout of TweaksV 1.x and is replaced (TweaksVIni.h); a file with a higher
@@ -142,7 +138,6 @@ namespace TweaksV
 
 		Switch(kStaticBoundsSection, "ENABLED", true),
 		Number(kStaticBoundsSection, "STATICBOUNDS_SIZE", 16000, 1, 100000, "Number of static collision bounds - Maximum 100000"),
-		// [rt buffer]
 
 		Switch(kRayTracingSection, "ENABLED", true),
 		Number(kRayTracingSection, "DYNAMIC_BVH_VERTICES", 0, 0, 26843545,
@@ -224,7 +219,6 @@ namespace TweaksV
 	inline constexpr const Setting& kWeaponComponentsSize = FindSetting(kWeaponLimitsSection, "WEAPON_COMPONENTS_SIZE");
 	inline constexpr const Setting& kVideoMemoryBudget = FindSetting(kResourcesSection, "VIDEO_MEMORY_BUDGET");
 	inline constexpr const Setting& kStaticBoundsSize = FindSetting(kStaticBoundsSection, "STATICBOUNDS_SIZE");
-	// [rt buffer]
 	inline constexpr const Setting& kDynamicBvhVertices = FindSetting(kRayTracingSection, "DYNAMIC_BVH_VERTICES");
 
 	// Reads every setting once, after CreateOrUpdateIni() has chosen TweaksV.ini. A value that is not

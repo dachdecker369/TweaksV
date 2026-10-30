@@ -146,9 +146,9 @@ namespace TweaksV
 		{ "L-E-P1", "BA 04 00 00 00 31 C0 48 8D 1D ? ? ? ? 31 F6" },
 		{ "L-E-P2", "48 89 3B 39 35 ? ? ? ? 7F 09 8D 46 01 89 05" },
 
-		// The parts measured first (SPECIFICATIONS 11.14), looked for with DIAGNOSTIC_MODE only: WeaponLimits (W),
-		// SirenSettings (I), PedProps (A), Resources (Q), one group per limit
-		// [weapon infos]
+		// The parts of the parts' coding round, one group per limit, looked for as SPECIFICATIONS 4.2 says: WeaponLimits (W),
+		// SirenSettings (I), whose two limits are measured first (SPECIFICATIONS 11.15), PedProps (A), Resources (Q),
+		// StaticBounds (C) and RayTracing (T)
 		// WeaponLimits, the weapon infos (TweaksVWeaponInfos.cpp), looked for on every boot the part is on: the game's
 		// initializer of the weapon info blob array - the number of blobs allocated, the call that allocates them, the
 		// block's store and the capacity's (I1), the two immediates the part raises - and the loader's head - the count
@@ -156,7 +156,6 @@ namespace TweaksV
 		{ "W-E-I1", "C7 05 ? ? ? ? 00 00 00 00 BA ? ? ? ? E8 ? ? ? ? 48 89 05 ? ? ? ? 66 C7 05 ? ? ? ? ? ? 48 8D 0D" },
 		{ "W-E-I2", "0F B7 05 ? ? ? ? 8D 48 01 66 89 0D ? ? ? ? 4C 69 E8 ? ? ? ? 4C 03 2D ? ? ? ?" },
 
-		// [weapon components]
 		// WeaponLimits' weapon components (TweaksVWeaponComponents.cpp): the rebuild of the list of every weapon component
 		// definition - its count's reset, the files' count and its lea of the list (C1) - its sort, with its lea of the list
 		// and the entry size (C2), its update of the count (C3), the pool's size call, with the pool's name and default (C4,
@@ -199,7 +198,6 @@ namespace TweaksV
 		{ "I-E-B3", "0F BE 94 18 AD 00 00 00 48 8B 8E C0 09 00 00" },
 		{ "I-E-B4", "41 57 41 56 41 55 41 54 56 57 53 48 83 EC 20 66 83 79 5E 00" },
 
-		// [ped props]
 		// PedProps (TweaksVPedProps.cpp): the eleven narrowings to 8 bits the part widens - an anchor's total in the check
 		// the set-prop native asks (T1) and in the helmet code after its four calls of the per-anchor count (T2..T5), a
 		// worn prop's index before the metadata lookup (G1, which matches 2 times, G3..G6) - and the per-anchor count's
@@ -219,7 +217,6 @@ namespace TweaksV
 		{ "A-E-C2", "44 0F B7 54 39 08 41 0F B6 CA 01 C8 49 FF C3 4D 39 C3 74 ? 4B 8B 0C D9 0F B7 71 60 45 31 D2 48 85 F6 74 ? 48 8B 49 58 48 C1 E6 03 48 8D 34 76 31 FF" },
 		{ "A-E-S1", "3B 05 ? ? ? ? 0F 8D ? ? ? ? 48 8B 0D ? ? ? ? 89 C2 C1 EA 05 8B 0C 91 0F A3 C1 0F 83 ? ? ? ? 48 8B 0D ? ? ? ? 48 85 C9 74 ? 44 89 7C 24 34 48 98 48 0F AF 05 ? ? ? ? 4C 8B 3C 01 BB 02 00 00 00 4D 85 FF 74 ? 41 0F B6 87 9D 00 00 00 24 1F 3C 06" },
 
-		// [texture budget]
 		// Resources, the texture budget (TweaksVTextureBudget.cpp): the start-up's store of the most streamed objects and its
 		// load of budgets 0 and 1 (T1), its store of budgets 2 and 3 and the call after the stores (T2), the budget's getter
 		// and the index it reads (T3), a resource's placement and its loads of the counters (T4), the update check and its
@@ -230,14 +227,11 @@ namespace TweaksV
 		{ "Q-E-T4", "8B 05 ? ? ? ? 8B 0D ? ? ? ? 01 C1 3B 0D ? ? ? ? 73 ? 48 8B 05 ? ? ? ? 48 8B 35" },
 		{ "Q-E-T5", "83 3D ? ? ? ? 00 0F 84 ? ? ? ? 48 8D 0D ? ? ? ? 48 8B 3D ? ? ? ? 48 8B 35 ? ? ? ? E8" },
 
-		// [streaming memory]
-
-		// [static bounds]
 		// StaticBounds (TweaksVStaticBounds.cpp), the pattern of Nochala's Static Bounds Limit Adjuster: a load of the static
 		// bounds pool's name, the call of its size within the 64 bytes after it (H1) - the pool size lookup that call leads to
 		// is where the weapon components' pool size call, W-E-C4, leads (TweaksVPools)
 		{ "C-E-H1", "BA 06 E4 DF 2C" },
-		// [rt buffer]
+
 		// RayTracing (TweaksVRayTracing.cpp): the set-up of the ray tracing buffer of moving geometry - its count, its stride, the
 		// call of the buffer maker and the store of the buffer object (B1) - and the two checks of a frame's ranges against its
 		// capacity, every moving object's geometry's (C1) and the ropes' (C2), each with the frame slot, the counters, the
