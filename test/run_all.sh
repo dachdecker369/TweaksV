@@ -23,6 +23,7 @@ SUITES=(
 	decals
 	rageopenv
 	# [legacy packs]
+	legacypacks
 	directstorage
 	blips
 	weaponinfos

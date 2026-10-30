@@ -438,7 +438,7 @@ namespace TweaksV
 				const std::string versions = Versions(pack, false);
 				WriteLog(kTag, "DIAGNOSTIC: the pack " + name + ": " + std::to_string(pack.archives) + (pack.archives == 1 ? " archive" : " archives (" +
 					std::to_string(pack.archives - 1) + " nested)") + (pack.nestedNotOpen ? ", " + std::to_string(pack.nestedNotOpen) +
-					" nested not OPEN" : std::string()) + ", " + std::to_string(pack.entries) + " entries; " +
+					" nested not OPEN" : std::string()) + ", " + std::to_string(pack.entries) + (pack.entries == 1 ? " entry; " : " entries; ") +
 					(versions.empty() ? "no yft, ydr, ydd or ytd" : versions) + ".");
 			}
 			if (pack.legacy > 0)

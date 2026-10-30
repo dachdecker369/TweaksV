@@ -246,6 +246,12 @@
 // [streaming memory]
 // [static bounds]
 // [legacy packs]
+//   lpmake KIND PATH   the Legacy packs check: a crafted RPF7 archive of KIND written at PATH, its folders made, before TweaksV
+//                      starts; repeatable (LpMake has the kinds)
+//   lpmany KIND N DIR  the archive of KIND N times in DIR, p00001.rpf on: the first written, the others hard links to it
+//   lplock PATH        PATH held open without sharing from before TweaksV starts until the report, so the check cannot open it
+//   lpwait             waits up to 40 s for the check's last line in TweaksV.log, then 1.5 s for the box of a problem after the
+//                      start-up summary; reported as "legacy packs: done" or "legacy packs: no last line in 40 s"
 // [rt buffer]
 #include <windows.h>
 #include <winternl.h>
@@ -2009,6 +2015,414 @@ static void TextureBudgetLater(TextureBudgetChange change)
 
 // [static bounds]
 // [legacy packs]
+// The Legacy packs check (SPECIFICATIONS 11.6): crafted RPF7 archives (PATTERNS.md, "RageOpenV"), written into the mods folder
+// before TweaksV starts. An archive is its header of 16 bytes - RPF7, the entry count, the names' length, the encryption - its
+// entries of 16 bytes, the root folder first with every other entry in it, the names, each ending in a zero, and then each
+// binary's data at its block of 512 bytes; a resource's version is split into the top four bits of its system flags (+8) and
+// of its graphics flags (+12).
+static const uint32_t kLpOpen = 0x4E45504F;
+static const uint32_t kLpNg = 0x0FEFFFFF;
+static const uint32_t kLpAes = 0x0FFFFFF9;
+
+struct LpEntry
+{
+	const char* name;
+	int version;					// a resource's, or -1 for a binary
+	const unsigned char* data;		// a binary's bytes: a file, or an archive nested in this one
+	size_t size;
+	uint32_t encryption;			// a binary's own
+};
+
+struct LpArchive
+{
+	unsigned char* bytes;			// from the process heap: LpFree
+	size_t size;
+};
+
+static void* LpAllocate(size_t size)
+{
+	void* const memory = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, size ? size : 1);
+	if (!memory)
+	{
+		wprintf(L"lp: out of memory |\n");
+		ExitProcess(3);
+	}
+	return memory;
+}
+
+static void LpFree(LpArchive& archive)
+{
+	if (archive.bytes)
+		HeapFree(GetProcessHeap(), 0, archive.bytes);
+	archive = {};
+}
+
+static void LpPut(unsigned char* at, uint32_t value, int bytes)
+{
+	for (int i = 0; i < bytes; i++)
+		at[i] = static_cast<unsigned char>(value >> (8 * i));
+}
+
+static size_t LpBlocks(size_t size)
+{
+	return (size + 511) / 512 * 512;
+}
+
+static unsigned char* LpEntryAt(const LpArchive& archive, size_t index)
+{
+	return archive.bytes + 16 + index * 16;
+}
+
+// An archive of the root folder and the entries, the encryption given in its header, every binary's data after the names.
+static LpArchive LpBuild(const LpEntry* entries, size_t count, uint32_t encryption = kLpOpen)
+{
+	size_t names = 1;	// the root's name, empty
+	for (size_t i = 0; i < count; i++)
+		names += strlen(entries[i].name) + 1;
+	names = (names + 15) / 16 * 16;
+	const size_t table = 16 + (count + 1) * 16;
+	size_t size = LpBlocks(table + names);
+	for (size_t i = 0; i < count; i++)
+		if (entries[i].version < 0)
+			size += LpBlocks(entries[i].size);
+	const LpArchive archive = { static_cast<unsigned char*>(LpAllocate(size)), size };
+	unsigned char* const out = archive.bytes;
+	LpPut(out, 0x52504637, 4);
+	LpPut(out + 4, static_cast<uint32_t>(count + 1), 4);
+	LpPut(out + 8, static_cast<uint32_t>(names), 4);
+	LpPut(out + 12, encryption, 4);
+	LpPut(out + 20, 0x7FFFFF00, 4);		// the root folder: its name at 0, its entries from 1, count of them
+	LpPut(out + 24, 1, 4);
+	LpPut(out + 28, static_cast<uint32_t>(count), 4);
+	size_t name = 1, data = LpBlocks(table + names);
+	for (size_t i = 0; i < count; i++)
+	{
+		const LpEntry& e = entries[i];
+		unsigned char* const entry = LpEntryAt(archive, i + 1);
+		LpPut(entry, static_cast<uint32_t>(name), 2);
+		memcpy(out + table + name, e.name, strlen(e.name));
+		name += strlen(e.name) + 1;
+		if (e.version >= 0)		// a resource: no size, at block 1 with the resource bit, the version's two halves
+		{
+			LpPut(entry + 5, 0x800001, 3);
+			LpPut(entry + 8, static_cast<uint32_t>(e.version >> 4) << 28, 4);
+			LpPut(entry + 12, static_cast<uint32_t>(e.version & 15) << 28, 4);
+			continue;
+		}
+		LpPut(entry + 5, static_cast<uint32_t>(data / 512), 3);	// a binary: stored, at its block, its size and its encryption
+		LpPut(entry + 8, static_cast<uint32_t>(e.size), 4);
+		LpPut(entry + 12, e.encryption, 4);
+		if (e.size)
+			memcpy(out + data, e.data, e.size);
+		data += LpBlocks(e.size);
+	}
+	return archive;
+}
+
+// The binaries first to last lead to the data of the binary at source: archives nested at one place.
+static void LpShare(const LpArchive& archive, size_t source, size_t first, size_t last)
+{
+	for (size_t i = first; i <= last; i++)
+		memcpy(LpEntryAt(archive, i) + 2, LpEntryAt(archive, source) + 2, 10);	// no compressed size, the block, the size
+}
+
+// An archive of 1,048,576 entries - the root folder and empty binaries, each named by the root's empty name - and 16 bytes of
+// names: 16 MB of entry table, the most an entry table may have.
+static LpArchive LpBig()
+{
+	const size_t count = 0x100000, size = 16 + count * 16 + 16;
+	const LpArchive big = { static_cast<unsigned char*>(LpAllocate(size)), size };
+	LpPut(big.bytes, 0x52504637, 4);
+	LpPut(big.bytes + 4, static_cast<uint32_t>(count), 4);
+	LpPut(big.bytes + 8, 16, 4);
+	LpPut(big.bytes + 12, kLpOpen, 4);
+	LpPut(big.bytes + 20, 0x7FFFFF00, 4);
+	LpPut(big.bytes + 24, 1, 4);
+	LpPut(big.bytes + 28, static_cast<uint32_t>(count - 1), 4);
+	return big;
+}
+
+// An archive of n binaries named name, all leading to the archive inner.
+static LpArchive LpNestedAtOnePlace(const char* name, const LpArchive& inner, size_t n)
+{
+	LpEntry* const entries = static_cast<LpEntry*>(LpAllocate(n * sizeof(LpEntry)));
+	for (size_t i = 0; i < n; i++)
+		entries[i] = { name, -1, i == 0 ? inner.bytes : nullptr, i == 0 ? inner.size : 0, 0 };
+	const LpArchive archive = LpBuild(entries, n);
+	LpShare(archive, 1, 2, n);
+	HeapFree(GetProcessHeap(), 0, entries);
+	return archive;
+}
+
+static const unsigned char kLpMeta[] = { '<', 'C', 'V', 'e', 'h', 'i', 'c', 'l', 'e', 'M', 'o', 'd', 'e', 'l', 'I', 'n', 'f', 'o', ' ', '/', '>' };
+static const unsigned char kLpZip[] = { 0x50, 0x4B, 0x03, 0x04, 0x14, 0x00, 0x00, 0x00, 0x08, 0x00, 0x21, 0x43, 0x65, 0x87, 0xA9, 0xCB, 0xED, 0x0F };
+static const char kLpOddName[] = { 'l', 0x0A, 'p', static_cast<char>(0xC3), static_cast<char>(0xBC), '.', 'y', 'f', 't', 0 };	// l, a line feed, p, u umlaut
+
+// The archive of a kind of lpmake and lpmany: false for a kind not known.
+static bool LpMake(const wchar_t* kind, LpArchive& out)
+{
+	const LpEntry legacy[] = { { "lp.yft", 162 }, { "lp_hi.yft", 162 }, { "lp.ydr", 165 }, { "lp.ydd", 165 }, { "lp.ytd", 13 },
+		{ "vehicles.meta", -1, kLpMeta, sizeof(kLpMeta), 0 } };
+	const LpEntry enhanced[] = { { "lp.yft", 171 }, { "lp_hi.yft", 171 }, { "lp.ydr", 159 }, { "lp.ydd", 159 }, { "lp.ytd", 5 },
+		{ "vehicles.meta", -1, kLpMeta, sizeof(kLpMeta), 0 } };
+	const LpEntry enhancedModel[] = { { "lp.yft", 171 } };
+	const LpEntry legacyModel[] = { { "lp.yft", 162 } };
+	if (wcscmp(kind, L"legacy") == 0)				// models and textures with Legacy's versions, a vehicles.meta
+		out = LpBuild(legacy, 6);
+	else if (wcscmp(kind, L"enhanced") == 0)		// the same with Enhanced's
+		out = LpBuild(enhanced, 6);
+	else if (wcscmp(kind, L"textures") == 0)		// an Enhanced model, a texture dictionary with Legacy's version
+	{
+		const LpEntry textures[] = { { "lp.yft", 171 }, { "lp.ytd", 13 } };
+		out = LpBuild(textures, 2);
+	}
+	else if (wcscmp(kind, L"others") == 0)			// Legacy's numbers on other kinds and names, another number on a ytd, a yft in capitals
+	{
+		const LpEntry others[] = { { "lp.ybn", 13 }, { "lp.ymap", 162 }, { "lp.yftx", 162 }, { "yft", 162 }, { "LP.YFT", 171 }, { "lp.ytd", 162 } };
+		out = LpBuild(others, 6);
+	}
+	else if (wcscmp(kind, L"nested") == 0)			// a Legacy model in a nested archive; a nested archive not OPEN, one whose bytes are encrypted
+	{
+		LpArchive vehicles = LpBuild(legacyModel, 1), enc = LpBuild(legacyModel, 1, kLpNg), data = LpBuild(legacyModel, 1);
+		const LpEntry outer[] = { { "lp.ytd", 5 }, { "vehicles.rpf", -1, vehicles.bytes, vehicles.size, 0 }, { "enc.rpf", -1, enc.bytes, enc.size, 0 },
+			{ "data.rpf", -1, data.bytes, data.size, 1 } };
+		out = LpBuild(outer, 4);
+		LpFree(vehicles);
+		LpFree(enc);
+		LpFree(data);
+	}
+	else if (wcscmp(kind, L"deep8") == 0 || wcscmp(kind, L"deep9") == 0)	// a Legacy model 8 or 9 archives deep: l1.rpf holds l2.rpf, ...
+	{
+		LpArchive inner = LpBuild(legacyModel, 1);
+		for (int level = kind[4] - L'0'; level >= 1; level--)
+		{
+			char name[8];
+			snprintf(name, sizeof(name), "l%d.rpf", level);
+			const LpEntry holder[] = { { name, -1, inner.bytes, inner.size, 0 } };
+			LpArchive next = LpBuild(holder, 1);
+			LpFree(inner);
+			inner = next;
+		}
+		out = inner;
+	}
+	else if (wcscmp(kind, L"ng") == 0)				// the legacy kind, its header NG-encrypted
+		out = LpBuild(legacy, 6, kLpNg);
+	else if (wcscmp(kind, L"aes") == 0)				// AES-encrypted
+		out = LpBuild(legacy, 6, kLpAes);
+	else if (wcscmp(kind, L"empty") == 0)			// no byte at all
+		out = { static_cast<unsigned char*>(LpAllocate(0)), 0 };
+	else if (wcscmp(kind, L"rootonly") == 0)		// the root folder alone
+		out = LpBuild(nullptr, 0);
+	else if (wcscmp(kind, L"badmagic") == 0)		// a zip's first bytes
+	{
+		out = LpBuild(legacy, 6);
+		memcpy(out.bytes, kLpZip, 4);
+	}
+	else if (wcscmp(kind, L"nocount") == 0)			// no entries
+	{
+		out = LpBuild(legacy, 6);
+		LpPut(out.bytes + 4, 0, 4);
+	}
+	else if (wcscmp(kind, L"toomany") == 0)			// a header alone, its count past the bound
+	{
+		out = LpBuild(nullptr, 0);
+		LpPut(out.bytes + 4, 0x100001, 4);
+		out.size = 16;
+	}
+	else if (wcscmp(kind, L"pastend") == 0)			// cut off inside its entry table
+	{
+		out = LpBuild(legacy, 6);
+		out.size = 64;
+	}
+	else if (wcscmp(kind, L"pastnames") == 0)		// its names' length past its end
+	{
+		out = LpBuild(legacy, 6);
+		LpPut(out.bytes + 8, 0x7FFFFFF0, 4);
+	}
+	else if (wcscmp(kind, L"noroot") == 0)			// a first entry that is no folder
+	{
+		out = LpBuild(legacy, 6);
+		LpPut(LpEntryAt(out, 0) + 4, 0, 4);
+	}
+	else if (wcscmp(kind, L"badname") == 0)			// the first file's name past the names
+	{
+		out = LpBuild(legacy, 6);
+		LpPut(LpEntryAt(out, 1), 0xFFFF, 2);
+	}
+	else if (wcscmp(kind, L"nestedout") == 0)		// a texture dictionary with Legacy's version, an archive nested past this one's end
+	{
+		LpArchive inner = LpBuild(enhancedModel, 1);
+		const LpEntry outer[] = { { "lp.ytd", 13 }, { "out.rpf", -1, inner.bytes, inner.size, 0 } };
+		out = LpBuild(outer, 2);
+		LpPut(LpEntryAt(out, 2) + 5, 0x7FFFFE, 3);	// the last block a binary can have: 0x7FFFFF with no size makes a folder's mark, the top bit a resource
+		LpFree(inner);
+	}
+	else if (wcscmp(kind, L"nestedself") == 0)		// an archive nested at this one's own header
+	{
+		LpArchive inner = LpBuild(enhancedModel, 1);
+		const LpEntry outer[] = { { "self.rpf", -1, inner.bytes, inner.size, 0 } };
+		out = LpBuild(outer, 1);
+		LpPut(LpEntryAt(out, 1) + 5, 0, 3);
+		LpFree(inner);
+	}
+	else if (wcscmp(kind, L"compressed") == 0)		// a nested archive with a compressed size
+	{
+		LpArchive inner = LpBuild(enhancedModel, 1);
+		const LpEntry outer[] = { { "packed.rpf", -1, inner.bytes, inner.size, 0 } };
+		out = LpBuild(outer, 1);
+		LpPut(LpEntryAt(out, 1) + 2, 100, 3);
+		LpFree(inner);
+	}
+	else if (wcscmp(kind, L"notrpf") == 0)			// a nested .rpf that is a zip
+	{
+		const LpEntry outer[] = { { "junk.rpf", -1, kLpZip, sizeof(kLpZip), 0 } };
+		out = LpBuild(outer, 1);
+	}
+	else if (wcscmp(kind, L"oddname") == 0)			// a Legacy model whose name has a line feed and a byte outside ASCII
+	{
+		const LpEntry odd[] = { { kLpOddName, 162 } };
+		out = LpBuild(odd, 1);
+	}
+	else if (wcscmp(kind, L"manynested") == 0 || wcscmp(kind, L"manynestedok") == 0)	// 4096 or 4095 archives nested at one place
+	{
+		const LpEntry textures[] = { { "lp.ytd", 5 } };
+		LpArchive inner = LpBuild(textures, 1);
+		out = LpNestedAtOnePlace("n.rpf", inner, kind[10] ? 4095 : 4096);
+		LpFree(inner);
+	}
+	else if (wcscmp(kind, L"bigtables") == 0 || wcscmp(kind, L"heavy") == 0)	// 5 or 3 archives of 16 MB of entry table, at one place
+	{
+		LpArchive big = LpBig();
+		out = LpNestedAtOnePlace("big.rpf", big, kind[0] == L'b' ? 5 : 3);
+		LpFree(big);
+	}
+	else
+		return false;
+	return true;
+}
+
+// The folders on the way to path ("mods/a/b/x.rpf": mods, mods/a and mods/a/b).
+static void LpMakeFolders(const wchar_t* path)
+{
+	wchar_t folder[MAX_PATH] = {};
+	for (size_t i = 0; path[i] && i < MAX_PATH - 1; i++)
+	{
+		if (path[i] == L'/' || path[i] == L'\\')
+			CreateDirectoryW(folder, nullptr);
+		folder[i] = path[i];
+	}
+}
+
+static bool LpWrite(const wchar_t* path, const LpArchive& archive)
+{
+	LpMakeFolders(path);
+	const HANDLE file = CreateFileW(path, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+	if (file == INVALID_HANDLE_VALUE)
+		return false;
+	DWORD written = 0;
+	const bool ok = archive.size == 0 || (WriteFile(file, archive.bytes, static_cast<DWORD>(archive.size), &written, nullptr) && written == archive.size);
+	CloseHandle(file);
+	return ok;
+}
+
+static int g_lpMade = 0;							// the archives lpmake and lpmany wrote
+static HANDLE g_lpLocked = INVALID_HANDLE_VALUE;	// lplock's file
+static const wchar_t* g_lpWaited = nullptr;			// how lpwait ended
+
+// lpmake, lpmany and lplock, before TweaksV starts.
+static void LpSetup(int argc, wchar_t** argv)
+{
+	for (int i = 2; i < argc; i++)
+	{
+		if (wcscmp(argv[i], L"lpmake") == 0 && i + 2 < argc)
+		{
+			LpArchive archive = {};
+			if (LpMake(argv[i + 1], archive) && LpWrite(argv[i + 2], archive))
+				g_lpMade++;
+			else
+				wprintf(L"lp: %ls NOT made at %ls | ", argv[i + 1], argv[i + 2]);
+			LpFree(archive);
+			i += 2;
+		}
+		else if (wcscmp(argv[i], L"lpmany") == 0 && i + 3 < argc)
+		{
+			const int count = _wtoi(argv[i + 2]);
+			wchar_t first[MAX_PATH], path[MAX_PATH];
+			swprintf(first, MAX_PATH, L"%ls/p%05d.rpf", argv[i + 3], 1);
+			LpArchive archive = {};
+			if (count > 0 && LpMake(argv[i + 1], archive) && LpWrite(first, archive))
+			{
+				g_lpMade++;
+				for (int n = 2; n <= count; n++)
+				{
+					swprintf(path, MAX_PATH, L"%ls/p%05d.rpf", argv[i + 3], n);
+					if (CreateHardLinkW(path, first, nullptr) || LpWrite(path, archive))
+						g_lpMade++;
+				}
+			}
+			else
+				wprintf(L"lp: %ls NOT made in %ls | ", argv[i + 1], argv[i + 3]);
+			LpFree(archive);
+			i += 3;
+		}
+		else if (wcscmp(argv[i], L"lplock") == 0 && i + 1 < argc)	// held without sharing until the report
+		{
+			g_lpLocked = CreateFileW(argv[i + 1], GENERIC_READ, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+			if (g_lpLocked == INVALID_HANDLE_VALUE)
+				wprintf(L"lp: %ls NOT held | ", argv[i + 1]);
+			i += 1;
+		}
+	}
+}
+
+// lpwait: the check's last line in TweaksV.log, read as TweaksV writes it - every 20 ms, on from where the last read ended - for
+// 40 s at most; then 1.5 s for the box of a problem after the start-up summary, which comes a second after the problem.
+static void LpWait(int argc, wchar_t** argv)
+{
+	if (!HasOption(argc, argv, L"lpwait"))
+		return;
+	static const char kLast[] = "] Packs checked for GTA V Legacy versions: ";
+	const size_t lastSize = sizeof(kLast) - 1;
+	static char buffer[65536 + sizeof(kLast)];
+	size_t kept = 0;			// the end of the bytes read before, so that a line split between two reads is found too
+	LARGE_INTEGER offset = {};
+	const ULONGLONG start = GetTickCount64();
+	bool found = false;
+	while (!found && GetTickCount64() - start < 40000)
+	{
+		const HANDLE log = CreateFileW(L"TweaksV.log", GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING,
+			FILE_ATTRIBUTE_NORMAL, nullptr);
+		if (log != INVALID_HANDLE_VALUE)
+		{
+			DWORD read = 0;
+			while (!found && SetFilePointerEx(log, offset, nullptr, FILE_BEGIN) && ReadFile(log, buffer + kept, 65536, &read, nullptr) && read > 0)
+			{
+				offset.QuadPart += read;
+				const size_t size = kept + read;
+				for (size_t i = 0; i + lastSize <= size && !found; i++)
+					found = memcmp(buffer + i, kLast, lastSize) == 0;
+				kept = size < lastSize ? size : lastSize;
+				memmove(buffer, buffer + size - kept, kept);
+			}
+			CloseHandle(log);
+		}
+		if (!found)
+			Sleep(20);
+	}
+	if (found)
+		Sleep(1500);
+	g_lpWaited = found ? L"done" : L"no last line in 40 s";
+}
+
+static void LpReport()
+{
+	if (g_lpMade)
+		wprintf(L"lp: %d made | ", g_lpMade);
+	if (g_lpWaited)
+		wprintf(L"legacy packs: %ls | ", g_lpWaited);
+	if (g_lpLocked != INVALID_HANDLE_VALUE)
+		CloseHandle(g_lpLocked);
+}
 // [rt buffer]
 
 // The game's two tree searches behind the box streamer's four calls: the first and the third call lead
@@ -3929,6 +4343,7 @@ int wmain(int argc, wchar_t** argv)
 
 	// [static bounds]
 	// [legacy packs]
+	LpSetup(argc, argv);	// the Legacy packs check's archives, before TweaksV starts
 	// [rt buffer]
 
 	RovSetup(argc, argv);
@@ -4028,6 +4443,7 @@ int wmain(int argc, wchar_t** argv)
 	// [streaming memory]
 	// [static bounds]
 	// [legacy packs]
+	LpWait(argc, argv);
 	// [rt buffer]
 	if (HasOption(argc, argv, L"wait"))
 		Sleep(11000);	// TweaksV's UNLOCK_FILES summary comes 10 s after the first open it counts, the OpenFile summary 10 s
@@ -4103,6 +4519,7 @@ int wmain(int argc, wchar_t** argv)
 	// [streaming memory]
 	// [static bounds]
 	// [legacy packs]
+	LpReport();
 	// [rt buffer]
 	CheckStub(Rel32Target(g_packCallSite));
 	CheckStub(Rel32Target(g_scriptCallSite));
