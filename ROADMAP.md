@@ -38,7 +38,7 @@ The original: [Static Bounds Limit Adjuster](https://www.gta5-mods.com/scripts/s
 
 ## 2.6.0: RageOpenV - a check for Legacy packs
 
-From my second test (2026-10-30): every vehicle and clothing pack I read before converting it was made for Legacy - models `yft` 162 and `ydr`/`ydd` 165, textures `ytd` 13, where Enhanced's own files have 171, 159 and 5 - and each Legacy vehicle trapped the game as it was created, with no word on screen; converted with CodeWalker, they spawned. With 2.6.0 RageOpenV reads the resource versions in the tables of the mods folder's packs at the start and names every pack that carries Legacy models or textures in the log and in one box (PLAN.md, D17), so that a player knows which pack to convert before a car takes the game down.
+From my second test (2026-10-30): every vehicle and clothing pack I read before converting it was made for Legacy - models `yft` 162 and `ydr`/`ydd` 165, textures `ytd` 13, where Enhanced's own files have 171, 159 and 5 - and each Legacy vehicle trapped the game as it was created, with no word on screen; converted with CodeWalker, they spawned. Built in phase B (PLAN.md, D17), its design in SPECIFICATIONS.md 11.6: once the mods folder is in use, a thread of its own reads every `.rpf` file of the folder and the archives nested in it, OPEN archives only, up to their tables, every count, size and depth bounded, and names each pack that carries Legacy models or textures in the log and in one box - a pack it cannot read as not checked - so that a player knows which pack to convert before a car takes the game down; no key of its own. Phase B's boot proves it in the game: a pack made for Legacy named in the log and the box.
 
 ## Researched in phase B: the ray tracing buffer for moving geometry
 
