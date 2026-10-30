@@ -101,16 +101,27 @@
 // [weapon infos]
 // The weapon infos (WeaponLimits): the game's initializer of the weapon info blob array - its lea of the array, then
 // W-E-I1: "mov edx, 160", the call to the allocation, the block's store, "mov word [capacity], 160" -, the allocation's
-// first bytes, and the loader, a NOP before its start and W-E-I2 0x18 bytes into it, are always there; the array, in the
-// fake's data, is empty while TweaksV starts. Once TweaksV has started, the fake sets the array up as the game's
-// initializer does - a block on its heap of as many blobs of 248 bytes as its site's "mov edx" says, the room its
-// capacity's store says - and its loader's count at 152.
+// first bytes, and the loader, a NOP before its start and W-E-I2 0x18 bytes into it, are always there - the loader real
+// code, which the fake calls through its start with a data file entry, as the game calls its loader: it counts the file,
+// as the game's adds a blob, and returns 1. The array, in the fake's data, is empty while TweaksV starts. Once TweaksV
+// has started, the fake sets the array up as the game's initializer does - a block on its heap of as many blobs of 248
+// bytes as its site's "mov edx" says, the room its capacity's store says - and its loader's count at 152; then it loads
+// the files the options ask for, and when TweaksV's guard refused any, it waits until TweaksV.log holds the guard's
+// report and the line after it - 20 and 5 seconds at most.
 //   wisetup        the array is set up before TweaksV starts (an initializer that ran before it)
+//   wihigh         both immediates hold 2048 before TweaksV starts (another mod's raise, or a later game's own)
 //   wiraised       the array gets room for 512, as if another mod had raised both immediates after TweaksV checked
 //                  them, and 170 files are loaded
 //   wipacks        packs mounted while the game runs: once TweaksV.log holds the first weapon infos summary, the count
 //                  becomes 160 (the array full), once it holds the second, 165 (past its end); then 2.5 s of nothing
 //                  new (for the test build's TWEAKSV_TEST_SUMMARY_MS=1000)
+//   wifill         872 files through the loader: 152 + 872, the part's default room exactly
+//   wifew          14 files through the loader after them, as packs bring them: the 9th with a name of 140
+//                  characters, the 10th with a byte that is no printable ASCII
+//   wiunreadable   with wifew: the 9th file's name runs into memory that cannot be read after its 64th byte
+//   wiflood        20,001 files through the loader after the others
+//   wilater        once the guard's report is in TweaksV.log, 3 files more, then until the guard's next line is there
+//                  and 2.5 s more (for the test build's TWEAKSV_TEST_SUMMARY_MS=1000)
 //   wimismatch     the capacity holds 161, the number allocated 160
 //   wizero         both hold 0
 //   wihooked       the call to the allocation leads outside the game (another mod's hook)
@@ -524,9 +535,11 @@ static Site g_blipMarkRefs[] = { SITE(g_blipMarkSite, 5), SITE(g_blipMarkSite, 1
 // "mov [rip+disp32], rax", the capacity's "mov word [rip+disp32], 160" - whose disp32 counts from the instruction's end,
 // after its imm16 - and the "lea rcx" of the manager's exit destructor; the allocation's first bytes, "push rsi" to
 // "imul rcx, rdi, 0xF8", and "mov edx, 8"; the loader, a NOP before its start (padding, as TweaksV's function-start check
-// takes it - a CC would add a line to the RageOpenV suite's count of computed starts), its prologue and two moves, then
-// W-E-I2: the count read, "lea ecx, [rax+1]", the count written, "imul r13, rax, 0xF8" and "add r13, [block]"; and a third
-// reference to the array, a store of a block once "wiextra" makes its first byte 48. Every site ends in CC.
+// takes it - a CC would add a line to the RageOpenV suite's count of computed starts), its prologue - seven pushes, "sub
+// rsp, 180h" - and two moves, then W-E-I2: the count read, "lea ecx, [rax+1]", the count written, "imul r13, rax, 0xF8"
+// and "add r13, [block]"; then "mov eax, 1" and the epilogue that undoes the prologue, so that the loader runs whole when
+// it is called, through TweaksV's hook once its guard is on; and a third reference to the array, a store of a block once
+// "wiextra" makes its first byte 48. Every site ends in CC.
 volatile unsigned char g_weaponInfosLea[] = { 0x48, 0x8D, 0x0D, 0, 0, 0, 0, 0xCC };
 volatile unsigned char g_weaponInfosInit[] = { 0xC7, 0x05, 0, 0, 0, 0, 0x00, 0x00, 0x00, 0x00, 0xBA, 0xA0, 0x00, 0x00, 0x00, 0xE8, 0, 0,
 	0, 0, 0x48, 0x89, 0x05, 0, 0, 0, 0, 0x66, 0xC7, 0x05, 0, 0, 0, 0, 0xA0, 0x00, 0x48, 0x8D, 0x0D, 0, 0, 0, 0, 0xCC };
@@ -534,7 +547,9 @@ volatile unsigned char g_weaponInfosAllocation[] = { 0x56, 0x57, 0x48, 0x83, 0xE
 	0xCF, 0xF8, 0x00, 0x00, 0x00, 0xBA, 0x08, 0x00, 0x00, 0x00, 0xCC };
 volatile unsigned char g_weaponInfosLoader[] = { 0x90, 0x41, 0x57, 0x41, 0x56, 0x41, 0x55, 0x41, 0x54, 0x56, 0x57, 0x53, 0x48, 0x81,
 	0xEC, 0x80, 0x01, 0x00, 0x00, 0x48, 0x89, 0xCE, 0x48, 0x89, 0xD7, 0x0F, 0xB7, 0x05, 0, 0, 0, 0, 0x8D, 0x48, 0x01, 0x66, 0x89, 0x0D,
-	0, 0, 0, 0, 0x4C, 0x69, 0xE8, 0xF8, 0x00, 0x00, 0x00, 0x4C, 0x03, 0x2D, 0, 0, 0, 0, 0xCC };	// W-E-I2 at +25
+	0, 0, 0, 0, 0x4C, 0x69, 0xE8, 0xF8, 0x00, 0x00, 0x00, 0x4C, 0x03, 0x2D, 0, 0, 0, 0,	// W-E-I2 at +25
+	0xB8, 0x01, 0x00, 0x00, 0x00, 0x48, 0x81, 0xC4, 0x80, 0x01, 0x00, 0x00, 0x5B, 0x5F, 0x5E, 0x41, 0x5C, 0x41, 0x5D, 0x41, 0x5E, 0x41,
+	0x5F, 0xC3, 0xCC };
 volatile unsigned char g_weaponInfosExtra[] = { 0xCC, 0x89, 0x05, 0, 0, 0, 0, 0xCC };
 static Site g_weaponInfosLeaRef = SITE(g_weaponInfosLea, 3);
 static Site g_weaponInfosCall = SITE(g_weaponInfosInit, 16);
@@ -766,7 +781,9 @@ static int32_t* volatile g_blipMark = &g_blipMarkStorage;
 // [weapon infos]
 // The weapon info manager's array of blobs - the block's pointer, the count at +8, the capacity at +0xA - in the fake's
 // data, as the game's is in its own: zero while TweaksV starts. The block the fake's initializer allocates, the sites'
-// bytes as laid before TweaksV starts, and TweaksV.log as the fake reads it for "wipacks".
+// bytes as laid before TweaksV starts, TweaksV.log as the fake reads it to wait for TweaksV's lines, and the files it
+// loads through the loader: a data file entry of the game's list as the loader gets it - 0xA8 bytes, the file's name at
+// +0, its type at +0x90, 0x4E for a weapons.meta file - and how each load went.
 struct WeaponInfosArray { void* block; uint16_t count; uint16_t capacity; uint32_t unused; };
 static_assert(offsetof(WeaponInfosArray, count) == 8 && offsetof(WeaponInfosArray, capacity) == 0xA, "the game's array layout");
 static WeaponInfosArray g_weaponInfosArrayStorage;
@@ -775,6 +792,10 @@ static void* g_weaponInfosBlock = nullptr;
 static unsigned char g_weaponInfosLaid[sizeof(g_weaponInfosLea) + sizeof(g_weaponInfosInit) + sizeof(g_weaponInfosAllocation) +
 	sizeof(g_weaponInfosLoader) + sizeof(g_weaponInfosExtra)];
 static char g_weaponInfosLog[4 << 20];
+struct WeaponInfosEntry { char name[0x90]; uint32_t type; int32_t next; unsigned char rest[0x10]; };
+static_assert(sizeof(WeaponInfosEntry) == 0xA8 && offsetof(WeaponInfosEntry, type) == 0x90, "the game's data file entry");
+static unsigned g_weaponInfosCalls = 0, g_weaponInfosPassed = 0, g_weaponInfosRefused = 0, g_weaponInfosAsExpected = 0;
+static bool HasOption(int argc, wchar_t** argv, const wchar_t* option);
 
 // The capacity's store: its disp32 counts from the instruction's end, the imm16 after it
 static void WeaponInfosPointCapacityAt(const void* target)
@@ -783,7 +804,9 @@ static void WeaponInfosPointCapacityAt(const void* target)
 	memcpy(const_cast<unsigned char*>(g_weaponInfosInit + 30), &rel, sizeof(rel));
 }
 
-// The sites' bytes as laid, kept before TweaksV starts, and whether they are still so: TweaksV writes none of them.
+// The sites' bytes as laid, kept before TweaksV starts. The part may write the two immediates and the loader's first 5
+// bytes, where its hook's jump goes, and nothing else: the report gives the immediates as they are, the loader's start
+// as laid, hooked - a jump in its place - or changed otherwise, and whether every other byte is as laid.
 static void WeaponInfosKeepSites()
 {
 	size_t at = 0;
@@ -791,14 +814,32 @@ static void WeaponInfosKeepSites()
 		for (size_t i = 0; i < site.size; i++)
 			g_weaponInfosLaid[at++] = site.bytes[i];
 }
-static bool WeaponInfosSitesAsLaid()
+static bool WeaponInfosPartsByte(const Site& site, size_t i)
+{
+	return (site.bytes == g_weaponInfosInit && ((i >= 11 && i < 15) || (i >= 34 && i < 36))) || (site.bytes == g_weaponInfosLoader && i >= 1 && i < 6);
+}
+static bool WeaponInfosRestAsLaid()
 {
 	size_t at = 0;
+	bool same = true;
 	for (const Site& site : g_weaponInfosSites)
-		for (size_t i = 0; i < site.size; i++)
-			if (g_weaponInfosLaid[at++] != site.bytes[i])
-				return false;
-	return true;
+		for (size_t i = 0; i < site.size; i++, at++)
+			same = same && (WeaponInfosPartsByte(site, i) || g_weaponInfosLaid[at] == site.bytes[i]);
+	return same;
+}
+static const wchar_t* WeaponInfosLoaderState()
+{
+	const size_t at = sizeof(g_weaponInfosLea) + sizeof(g_weaponInfosInit) + sizeof(g_weaponInfosAllocation);	// the loader's copy
+	bool same = true;
+	for (size_t i = 1; i < 6; i++)
+		same = same && g_weaponInfosLaid[at + i] == g_weaponInfosLoader[i];
+	return same ? L"as laid" : g_weaponInfosLoader[1] == 0xE9 ? L"hooked" : L"CHANGED";
+}
+static unsigned WeaponInfosLimit(size_t at, size_t size)
+{
+	uint32_t value = 0;
+	memcpy(&value, const_cast<const unsigned char*>(g_weaponInfosInit + at), size);
+	return value;
 }
 
 // The game's initializer of the array, as the fake runs it: a block on its heap of as many blobs of 248 bytes as the
@@ -838,10 +879,10 @@ static int WeaponInfosLogHas(const char* text)
 	return found;
 }
 
-// Waits, 100 ms at a time and ms at most, until TweaksV.log holds n weapon infos summaries.
-static bool WeaponInfosAwaitSummaries(int n, DWORD ms)
+// Waits, 100 ms at a time and ms at most, until TweaksV.log holds text n times.
+static bool WeaponInfosAwait(const char* text, int n, DWORD ms)
 {
-	for (DWORD waited = 0; WeaponInfosLogHas(" weapons.meta files loaded (") < n; waited += 100)
+	for (DWORD waited = 0; WeaponInfosLogHas(text) < n; waited += 100)
 	{
 		if (waited >= ms)
 			return false;
@@ -855,13 +896,104 @@ static bool WeaponInfosAwaitSummaries(int n, DWORD ms)
 // (the fake writes nothing there); then 2.5 s of nothing new.
 static void WeaponInfosMountPacks()
 {
-	if (!WeaponInfosAwaitSummaries(1, 20000))
+	if (!WeaponInfosAwait(" weapons.meta files loaded (", 1, 20000))
 		return;
 	g_weaponInfosArray->count = 160;
-	if (!WeaponInfosAwaitSummaries(2, 10000))
+	if (!WeaponInfosAwait(" weapons.meta files loaded (", 2, 10000))
 		return;
 	g_weaponInfosArray->count = 165;
-	if (WeaponInfosAwaitSummaries(3, 10000))
+	if (WeaponInfosAwait(" weapons.meta files loaded (", 3, 10000))
+		Sleep(2500);
+}
+
+// A file through the loader's start, as the game hands its loader one - to TweaksV's guard once it has hooked the start,
+// which passes the file on or refuses it. Passed, the loader counted it and returned 1; refused, it was not counted and 0
+// came back; either way with the last error the fake set before the call.
+static void WeaponInfosLoad(const WeaponInfosEntry* entry)
+{
+	using Loader = uintptr_t (*)(const void* entry, void* second, void* third, void* fourth);
+	const auto loader = reinterpret_cast<Loader>(const_cast<unsigned char*>(g_weaponInfosLoader + 1));
+	const unsigned before = g_weaponInfosArray->count;
+	SetLastError(0x5A5A);
+	const uintptr_t result = loader(entry, nullptr, nullptr, nullptr);
+	const DWORD error = GetLastError();
+	const unsigned after = g_weaponInfosArray->count;
+	const bool passed = after == before + 1;
+	g_weaponInfosCalls++;
+	(passed ? g_weaponInfosPassed : g_weaponInfosRefused)++;
+	if (result == (passed ? 1u : 0u) && error == 0x5A5A)
+		g_weaponInfosAsExpected++;
+}
+static void WeaponInfosLoadNamed(const char* name)
+{
+	static WeaponInfosEntry entry;
+	memset(&entry, 0, sizeof(entry));
+	strncpy_s(entry.name, name, _TRUNCATE);
+	entry.type = 0x4E;
+	entry.next = -1;
+	WeaponInfosLoad(&entry);
+}
+
+// "wifew": 14 files as packs bring them - the 9th's name 140 characters long, the 10th's with a byte that is no printable
+// ASCII; with "wiunreadable" the 9th's name 64 bytes with no end before a page that cannot be read.
+static void WeaponInfosLoadFew(bool unreadable)
+{
+	char name[sizeof(WeaponInfosEntry::name)];
+	for (int i = 1; i <= 14; i++)
+	{
+		if (i == 9 && unreadable)
+		{
+			unsigned char* const pages = static_cast<unsigned char*>(VirtualAlloc(nullptr, 0x2000, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE));
+			DWORD old = 0;
+			if (!pages || !VirtualProtect(pages + 0x1000, 0x1000, PAGE_NOACCESS, &old))
+				continue;
+			memset(pages + 0x1000 - 64, 'u', 64);
+			WeaponInfosLoad(reinterpret_cast<const WeaponInfosEntry*>(pages + 0x1000 - 64));
+			continue;
+		}
+		if (i == 9)
+		{
+			const int length = sprintf_s(name, "dlc_wi09:/common/data/ai/");
+			memset(name + length, 'x', 115);
+			name[length + 115] = '\0';
+		}
+		else if (i == 10)
+			strcpy_s(name, "dlc_wi10:/common/data/ai/weap\xE9ons.meta");
+		else
+			sprintf_s(name, "dlc_wi%02d:/common/data/ai/weapons.meta", i);
+		WeaponInfosLoadNamed(name);
+	}
+}
+
+// The files the options ask for, through the loader - "wifill"'s 872, then "wifew"'s 14, then "wiflood"'s 20,001 - and,
+// when the guard refused any, the wait for its report, 10 seconds after the first refusal, and for the line of the start-up
+// summary's module after it; then with "wilater" 3 files more and the wait for the guard's next line.
+static void WeaponInfosLoadAsAsked(int argc, wchar_t** argv)
+{
+	char name[sizeof(WeaponInfosEntry::name)];
+	if (HasOption(argc, argv, L"wifill"))
+		for (int i = 1; i <= 872; i++)
+		{
+			sprintf_s(name, "dlc_fill%03d:/common/data/ai/weapons.meta", i);
+			WeaponInfosLoadNamed(name);
+		}
+	if (HasOption(argc, argv, L"wifew"))
+		WeaponInfosLoadFew(HasOption(argc, argv, L"wiunreadable"));
+	if (HasOption(argc, argv, L"wiflood"))
+		for (int i = 1; i <= 20001; i++)
+		{
+			sprintf_s(name, "dlc_flood%05d:/common/data/ai/weapons.meta", i);
+			WeaponInfosLoadNamed(name);
+		}
+	if (g_weaponInfosRefused == 0 || !WeaponInfosAwait(" not loaded: the game's room for weapons.meta files, ", 1, 20000) ||
+		!WeaponInfosAwait("after the start-up summary", 1, 5000) || !HasOption(argc, argv, L"wilater"))
+		return;
+	for (int i = 1; i <= 3; i++)
+	{
+		sprintf_s(name, "dlc_late%d:/common/data/ai/weapons.meta", i);
+		WeaponInfosLoadNamed(name);
+	}
+	if (WeaponInfosAwait(" weapons.meta files in all were not loaded this session: ", 1, 5000))
 		Sleep(2500);
 }
 
@@ -3724,6 +3856,11 @@ int wmain(int argc, wchar_t** argv)
 			g_weaponInfosInit[11] = 0;
 			g_weaponInfosInit[34] = 0;
 		}
+		if (HasOption(argc, argv, L"wihigh"))		// both limits 2048: 00 08
+		{
+			g_weaponInfosInit[11] = g_weaponInfosInit[34] = 0x00;
+			g_weaponInfosInit[12] = g_weaponInfosInit[35] = 0x08;
+		}
 		if (HasOption(argc, argv, L"wibytes"))		// a jump at the allocation's start
 			g_weaponInfosAllocation[0] = 0xE9;
 		if (HasOption(argc, argv, L"wisize"))		// the loader's blob size 0x100
@@ -3971,6 +4108,7 @@ int wmain(int argc, wchar_t** argv)
 		WeaponInfosInitialize(HasOption(argc, argv, L"wiraised") ? 512 : 0, HasOption(argc, argv, L"wiraised") ? 170 : 152);
 	if (HasOption(argc, argv, L"wipacks"))
 		WeaponInfosMountPacks();
+	WeaponInfosLoadAsAsked(argc, argv);	// the files the options ask for, through the loader
 	// [weapon components]
 	if (HasOption(argc, argv, L"wcpack"))	// a pack's weaponcomponents.meta loads: the list is rebuilt from 24 files
 	{
@@ -4079,9 +4217,11 @@ int wmain(int argc, wchar_t** argv)
 		g_replaceResult, g_renamesResult, g_renameFloodResult, g_scriptResult, g_blipResult);
 	// The parts measured first: each limit's field of the report, and the stub of a call it redirected
 	// [weapon infos]
-	wprintf(L"weapon infos: sites %ls, array %u of %u%ls | ", WeaponInfosSitesAsLaid() ? L"as laid" : L"CHANGED",
+	wprintf(L"weapon infos: limits %u %u, loader %ls, the rest %ls, array %u of %u%ls, files %u passed %u refused, %u of %u as expected | ",
+		WeaponInfosLimit(11, 4), WeaponInfosLimit(34, 2), WeaponInfosLoaderState(), WeaponInfosRestAsLaid() ? L"as laid" : L"CHANGED",
 		static_cast<unsigned>(g_weaponInfosArray->count), static_cast<unsigned>(g_weaponInfosArray->capacity),
-		g_weaponInfosArray->block == g_weaponInfosBlock ? L"" : L", its block CHANGED");
+		g_weaponInfosArray->block == g_weaponInfosBlock ? L"" : L", its block CHANGED", g_weaponInfosPassed, g_weaponInfosRefused,
+		g_weaponInfosAsExpected, g_weaponInfosCalls);
 	// [weapon components]
 	{
 		unsigned char sites[sizeof(g_weaponComponentsPlacedSites)];

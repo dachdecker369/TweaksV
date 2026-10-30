@@ -271,25 +271,16 @@ namespace TweaksV
 			const RaiseResult refused = { Raise::Refused, sites.gameRoom };
 
 			// 1. every lea and mov store of the array's address in the game's code: exactly the block's store, which gave the
-			// array, and the initializer's lea - a second store of a block, or another reference, would show here
+			// array and so is always among them, and the initializer's lea - a second store of a block, or another
+			// reference, would show here
 			const std::vector<uint8_t*> references = Scanner::FindRipRelativeReferences(sites.array, kExpectedReferences + 1);
-			bool blockStore = false;
 			for (const uint8_t* reference : references)
-			{
 				Diagnostic("reference at " + DescribeAddress(reference + kDispAt) + " -> " + DescribeAddress(sites.array) + " (scan)");
-				blockStore = blockStore || reference == sites.init + kBlockStoreAt;
-			}
 			if (references.size() != kExpectedReferences)
 			{
 				RaiseFailed("the game code holds " + std::to_string(references.size()) + (references.size() > kExpectedReferences ? " or more" : "") +
 					(references.size() == 1 ? " reference" : " references") + " to the weapon info blob array, not the expected " +
 					std::to_string(kExpectedReferences) + " (another mod may have changed one, or the game has changed).");
-				return refused;
-			}
-			if (!blockStore)
-			{
-				RaiseFailed("the block's store at " + DescribeAddress(sites.init + kBlockStoreAt + kDispAt) + " is not among the references to the "
-					"weapon info blob array the game code holds (another mod may have changed one, or the game has changed).");
 				return refused;
 			}
 
@@ -455,14 +446,16 @@ namespace TweaksV
 			if (!g_reported)
 			{
 				g_reported = true;
+				const std::string advice = g_refusedRoom < g_room ? " - the array has less room than the " + std::to_string(g_room) +
+					" TweaksV gave it (another mod may have changed its limit after TweaksV)." : g_advice;
 				ReportFailure(kTag, std::string("The weapons.meta file ") + g_firstRefused +
-					(refused == 1 ? " was" : " and " + std::to_string(refused - 1) + " more were") + " not loaded: " + room + g_advice);
+					(refused == 1 ? " was" : " and " + std::to_string(refused - 1) + " more were") + " not loaded: " + room + advice);
 				return;
 			}
 			WriteLog(kTag, std::to_string(refused) + " weapons.meta files in all were not loaded this session: " + room + ".");
 		}
 
-		constexpr Measurement kGuardReport = { "weapon infos guard", kFirstSummaryMs, &Refusals, &ReportRefusals, &g_refusedEvent };
+		constexpr Measurement kGuardReport = { "weapon infos guard report", kFirstSummaryMs, &Refusals, &ReportRefusals, &g_refusedEvent };
 
 		template <typename F> void** Original(F*& variable) { return reinterpret_cast<void**>(&variable); }
 

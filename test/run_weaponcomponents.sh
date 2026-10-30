@@ -42,7 +42,7 @@ checked() {
 
 echo "== W1 the defaults, DIAGNOSTIC_MODE=0: nothing looked for, nothing written"
 fresh_ini; out=$(game full_game.exe); echo "      $out"
-check "none of the four patterns looked for, no line of the module" "log_lacks 'W-E-C' && log_lacks '\[WeaponLimits\]'"
+check "none of the four patterns looked for, no line of the module" "log_lacks 'W-E-C' && log_lacks '\[WeaponLimits\] DIAGNOSTIC'"
 check "the sites and the data as placed, the size call to the game's lookup, every page back to its own protection, no problem" "has '$PLACED' && has 'protect: all restored (RX)' && quiet"
 
 echo "== W2 DIAGNOSTIC_MODE=1: the four patterns found once each, every site checked and logged, the measurement announced"
@@ -132,7 +132,7 @@ check "no announcement, no problem; the call left where the other mod's hook sen
 echo "== W16 none of the game code present (plain fake game): each pattern logged missing, no problem of the module"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game plain_game.exe)
 check "the harness survived" "grep -q 'harness: .* loaded' harness.out"
-check "all four looked for and missing, the module's line names the first" "[ \$(grep -c 'Pattern W-E-C[1-4] not found: ' TweaksV.log) -eq 4 ] && log_line '${NOT_MEASURED}W-E-C1 was not found.\$' && log_lacks '\[WeaponLimits\] PROBLEM'"
+check "all four looked for and missing, the module's line names the first" "[ \$(grep -c 'Pattern W-E-C[1-4] not found: ' TweaksV.log) -eq 4 ] && log_line '${NOT_MEASURED}W-E-C1 was not found.\$' && log_lacks '\[WeaponLimits\] PROBLEM: .*weapon component'"
 
 echo
 echo "WEAPON COMPONENTS SCENARIOS: $pass passed, $fail failed"

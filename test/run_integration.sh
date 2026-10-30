@@ -141,6 +141,8 @@ breaktest "R-E-E3 (an encryption call): no OPEN calls, files on" "R-E-E3" \
 breaktest "S-E2 (the legal screen): only that screen is left, the others skipped" "S-E2" \
 	"has 'splash: E9 86 01 00 00 90 | legal: 0F 84 07 05 00 00 | landing: 31 C0 C3 24 08' && has '$ROV_ON'"
 # [weapon infos]
+breaktest "W-E-I2 (the weapon info loader): the weapon info limit neither raised nor guarded, the rest applied" "W-E-I2" \
+	"has 'weapon infos: limits 160 160, loader as laid, the rest as laid, array 152 of 160,' && has '$ALL_ON_HEAP' && has '$MODKIT_ON' && has '$PACK_ON' && has '$ROV_ON' && has '$STORY_ON'"
 # [weapon components]
 # [ped props]
 # [texture budget]
