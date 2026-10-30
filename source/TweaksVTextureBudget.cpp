@@ -439,6 +439,8 @@ namespace TweaksV
 			uint64_t buffers = 0, textures = 0, highest = 0;			// bytes
 			uint32_t buffersNumber = 0, texturesNumber = 0, most = 0;
 			uint64_t budgets[kBudgetCount] = {};
+			bool raised = false;										// the raise has run: gameBudgets holds the budgets the game had
+			uint64_t gameBudgets[kBudgetCount] = {};
 			int32_t index = 0;
 			uint8_t flag = 0;
 			bool updateCheckReadable = false;
@@ -463,8 +465,18 @@ namespace TweaksV
 			reading.texturesNumber = Load<uint32_t>(g_counters + kTexturesNumber);
 			reading.highest = Load<uint64_t>(g_counters + kHighest);
 			reading.most = Load<uint32_t>(g_counters + kMost);
-			for (size_t i = 0; i < kBudgetCount; i++)
-				reading.budgets[i] = Load<uint64_t>(g_counters + kBudgets + i * sizeof(uint64_t));
+			// the raise's record before the budgets, so that a reading never pairs the budgets the game had with budgets read
+			// before the raise; a raise that comes while they are read is taken with them, the budgets read again - once at
+			// most, since the record is made once
+			do
+			{
+				reading.raised = g_raised.load(std::memory_order_acquire);
+				for (size_t i = 0; i < kBudgetCount; i++)
+				{
+					reading.gameBudgets[i] = reading.raised ? g_gameBudgets[i].load(std::memory_order_relaxed) : 0;
+					reading.budgets[i] = Load<uint64_t>(g_counters + kBudgets + i * sizeof(uint64_t));
+				}
+			} while (!reading.raised && g_raised.load(std::memory_order_acquire));
 			reading.index = Load<int32_t>(g_index);
 			reading.flag = Load<uint8_t>(g_flag);
 			return reading;
@@ -507,7 +519,7 @@ namespace TweaksV
 
 		// Changes with every reading that has something new to say: the first; a new high - of the bytes in MB, of
 		// the objects, of the game's own mark in MB; the update check's flag raised or lowered, its switch or a factor
-		// changed; another index, budget or most; the counters readable or not.
+		// changed; another index, budget or most; the raise run since; the counters readable or not.
 		uint64_t BudgetNumbers()
 		{
 			const Reading now = ReadCounters();
@@ -518,7 +530,7 @@ namespace TweaksV
 			}
 			const bool news = g_news == 0 || now.readable != g_logged.readable || !SameUpdateCheck(now, g_logged) || (now.readable &&
 				((g_mostBytes >> 20) > g_loggedMostMb || g_mostObjects > g_loggedMostObjects || (now.highest >> 20) > (g_logged.highest >> 20) ||
-				now.flag != g_logged.flag || now.index != g_logged.index || now.most != g_logged.most ||
+				now.flag != g_logged.flag || now.index != g_logged.index || now.most != g_logged.most || now.raised != g_logged.raised ||
 				memcmp(now.budgets, g_logged.budgets, sizeof(now.budgets)) != 0));
 			if (news)
 			{
@@ -568,11 +580,10 @@ namespace TweaksV
 			}
 			const bool known = now.index >= 0 && now.index < static_cast<int32_t>(kBudgetCount);
 			const uint64_t budget = known ? now.budgets[static_cast<size_t>(now.index)] : 0;
-			// the budgets as the game set them, and where the raise has changed them, as they are now
-			const bool raised = g_raised.load(std::memory_order_acquire);
+			// the budgets as the game set them, and where the raise has changed them, as they are now - both from this one reading
 			uint64_t game[kBudgetCount] = {};
 			for (size_t i = 0; i < kBudgetCount; i++)
-				game[i] = raised ? g_gameBudgets[i].load(std::memory_order_relaxed) : now.budgets[i];
+				game[i] = now.raised ? now.gameBudgets[i] : now.budgets[i];
 			std::string line = "DIAGNOSTIC: texture budget: " + Mb(Bytes(now)) + " MB";
 			line += known ? " of the " + Mb(budget) + " MB budget for the texture quality's index " + std::to_string(now.index) :
 				" - the texture quality's index " + std::to_string(now.index) + " has no budget";
