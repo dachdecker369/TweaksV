@@ -11,7 +11,7 @@ namespace TweaksV
 {
 	struct GamePattern
 	{
-		const char* label;	// as in PATTERNS.md: H- Heap, M- Modkit, P- Packfile, B- BoxStreamer, D- Decals, R- RageOpenV, S- StraightToStoryMode, Y- the script programs, L- Blips, W- WeaponLimits, I- SirenSettings, A- PedProps, Q- Resources, T- RayTracing
+		const char* label;	// as in PATTERNS.md: H- Heap, M- Modkit, P- Packfile, B- BoxStreamer, D- Decals, R- RageOpenV, S- StraightToStoryMode, Y- the script programs, L- Blips, W- WeaponLimits, I- SirenSettings, A- PedProps, Q- Resources, C- StaticBounds, T- RayTracing
 		const char* text;	// the bytes in hex, one space apart; ? matches any byte
 	};
 
@@ -232,6 +232,11 @@ namespace TweaksV
 		// [streaming memory]
 
 		// [static bounds]
+		// StaticBounds (TweaksVStaticBounds.cpp), the patterns of Nochala's Static Bounds Limit Adjuster: a load of the static
+		// bounds pool's name, the call of its size within the 64 bytes after it (H1), and the CRoadBlock pool's size call, which
+		// leads to the same pool size lookup (L1)
+		{ "C-E-H1", "BA 06 E4 DF 2C" },
+		{ "C-E-L1", "BA 01 C7 2C F7 41 ? 01 00 00 00 E8 ? ? ? ?" },
 		// [rt buffer]
 		// RayTracing (TweaksVRayTracing.cpp): the set-up of the ray tracing buffer of moving geometry - its count, its stride, the
 		// call of the buffer maker and the store of the buffer object (B1) - and the two checks of a frame's ranges against its

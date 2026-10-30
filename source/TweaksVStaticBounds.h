@@ -5,7 +5,8 @@
 
 namespace TweaksV
 {
-	// The StaticBounds part, started by its entry of the feature table, from DllMain, while [STATICBOUNDS] is on. It
-	// changes nothing yet.
+	// The StaticBounds part, started by its entry of the feature table, from DllMain, while [STATICBOUNDS] is on: the
+	// call that asks the game's configuration for the pool's size is found, checked and redirected, so that the pool
+	// gets the larger of the game's size and STATICBOUNDS_SIZE when the game makes it.
 	void InitStaticBounds();
 }
