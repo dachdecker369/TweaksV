@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // TweaksV - the scanner: finds TweaksV's patterns (TweaksVPatterns.h) in the running game's code, every
-// load of one address and every call of one function. The pattern parser is an altered version of ScriptHookVDotNet's memory
+// load of one address, every call of one function and every store to a range of memory. The pattern parser is an altered version of ScriptHookVDotNet's memory
 // scanner (crosire, kagikn and contributors; the C++ port by Chiheb-Bacha), zlib license - the notice
 // is in TweaksVScanner.cpp and THIRD_PARTY_NOTICES.md. The search itself is TweaksV's own.
 #pragma once
@@ -40,5 +40,14 @@ namespace TweaksV
 		// that the game calls its per-anchor count and its metadata lookup exactly as often as the research found,
 		// so that no caller a game update adds is left out. Nothing is logged.
 		std::vector<uint8_t*> FindCallsTo(const void* target, size_t limit);
+
+		// Every instruction in the game's code that writes to memory at [rip+disp32] (a ModRM of mod 00 and r/m 101) and so
+		// to any of the size bytes from target, in address order, at most limit of them, each given by its first byte, its
+		// prefixes counted: a mov of 1 to 8 bytes from a register or an immediate; a read-modify-write of the integer unit -
+		// add, or, adc, sbb, and, sub, xor, inc, dec, not, neg, the shifts and rotations, xchg, xadd, cmpxchg, setcc, bts,
+		// btr, btc, pop; and an SSE or AVX move or extract of 1 to 32 bytes. For data the game writes once that a part
+		// changes after it: a writer the research did not find would undo the change later (the texture budget's check that
+		// the start-up's two stores are the budgets' only writers). Nothing is logged.
+		std::vector<uint8_t*> FindRipRelativeStores(const void* target, size_t size, size_t limit);
 	}
 }

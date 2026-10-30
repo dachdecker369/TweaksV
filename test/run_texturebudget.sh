@@ -5,7 +5,9 @@
 # counters summed up 10 seconds in, at the game's own sizes - the budgets 1500, 1500, 3000 and 3000 MB, 98304 objects - and
 # again once they grow past the budget (the test build's TWEAKSV_TEST_SUMMARY_MS), not while nothing changes, and a first
 # summary before the game's start-up has set the budgets, which it sets after it, the update check's line again, and one for
-# each new high alone, the update check's flag unchanged; a pattern
+# each new high alone, the update check's flag unchanged; the budgets' writers found by the scanner's search for stores - the
+# start-up's two alone, the stores beside the budgets and the loads and compares of them not counted, and six writers of
+# six kinds besides them, each named; a pattern
 # missing (TEST_BREAK_PATTERN), a site not as expected, a call another mod hooked, an address outside the game, sites that
 # disagree on the counters and a factor's multiplication changed - each logged, no problem, no box, no summary; the plain
 # game; DRY_RUN alike; and in every run nothing written: the fake's sites and data as they were, no call redirected, every
@@ -38,15 +40,18 @@ rva() {
 	printf 'RVA 0x%X' $(( at + ${2:-0} ))
 }
 # untouched: the fake's report - its four sites as placed, its data as set, their pages' protection their own
-untouched() { has 'texture budget: sites as placed 4 of 4, data as set, its page RW' && has 'protect: all restored (RX)'; }
+untouched() { has 'texture budget: sites as placed 5 of 5, data as set, its page RW' && has 'protect: all restored (RX)'; }
 # found LABEL NAME [PLUS]: the scanner's line for LABEL, found once where the fake has it
 found() { log_has "Pattern $1 found: .* -> $(rva "$2" "${3:-0}"), 1 match"; }
 patterns_found() { found Q-E-T1 stores && found Q-E-T2 stores 34 && found Q-E-T3 getter && found Q-E-T4 placement && found Q-E-T5 update; }
-# sites_logged: the module's eight lines, word for word, with the addresses of the fake's sites and data
+# writers_line [BESIDES]: the module's line of the budgets' writers - the start-up's two stores, and BESIDES
+writers_line() { log_line "\[Resources\] DIAGNOSTIC: writers of the budgets at $(rva counters 0x28): the start-up.s stores at $(rva stores 26) and $(rva stores 48), ${1:-none besides them} (Q-E-T1, Q-E-T2)\$"; }
+# sites_logged: the module's nine lines, word for word, with the addresses of the fake's sites and data
 sites_logged() {
 	log_line "\[Resources\] DIAGNOSTIC: store of the most objects at $(rva stores 6) -> $(rva counters 0x20), from the configuration.s +0x54C (Q-E-T1)\$" &&
 	log_line "\[Resources\] DIAGNOSTIC: store of budgets 0 and 1 at $(rva stores 26) -> $(rva counters 0x28), from the configuration.s +0x550 in MB (Q-E-T1)\$" &&
 	log_line "\[Resources\] DIAGNOSTIC: store of budgets 2 and 3 at $(rva stores 48) -> $(rva counters 0x38), from the configuration.s +0x558 in MB (Q-E-T2)\$" &&
+	writers_line &&
 	log_line "\[Resources\] DIAGNOSTIC: call after the budgets. stores at $(rva stores 74) -> $(rva 'next step') (Q-E-T2)\$" &&
 	log_line "\[Resources\] DIAGNOSTIC: budget getter at $(rva getter): the index at $(rva index), the budgets at +0x28 of the counters (Q-E-T3)\$" &&
 	log_line "\[Resources\] DIAGNOSTIC: placement check at $(rva placement): the numbers at $(rva counters 0x10) and $(rva counters 0x14), the most at $(rva counters 0x20), the bytes at $(rva counters) and $(rva counters 8) (Q-E-T4)\$" &&
@@ -79,7 +84,8 @@ check "the fake's sites as placed, its data as set, every page's protection its 
 echo "== TB2 DIAGNOSTIC_MODE=1: the five patterns found once each, every site logged, the counters summed up 10 s in"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe wait)
 check "Q-E-T1 to Q-E-T5 found once each, where the fake has them - Q-E-T2 34 bytes after Q-E-T1" "patterns_found"
-check "the eight lines of the sites, word for word, with the addresses of the fake's sites and data" "sites_logged"
+check "the nine lines of the sites, word for word, with the addresses of the fake's sites and data" "sites_logged"
+check "the budgets' writers: the start-up's two stores alone - the stores beside the budgets, the loads and the compares of them not counted" "writers_line"
 check "the announcement, word for word, with the counters' address" "announced"
 check "the update check's switch and factors, logged once: they do not change" "log_line '$UPDATE_CHECK' && [ \$(count 'the update check.s switch holds') -eq 1 ]"
 check "the summary, word for word, with the fake's numbers at the game's own sizes, 10 s after the announcement" "log_line '$SUMMARY1' && first_after_10s"
@@ -149,8 +155,13 @@ check "no problem of the module's, no announcement" "log_lacks '\[Resources\] PR
 
 echo "== TB15 DRY_RUN=1 with DIAGNOSTIC_MODE=1: the same lines and the same summary; nothing written"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; setkey DRY_RUN 1; out=$(game full_game.exe wait)
-check "the five patterns, the eight lines of the sites, the announcement and the summary 10 s in, word for word" "patterns_found && sites_logged && announced && log_line '$SUMMARY1' && first_after_10s"
+check "the five patterns, the nine lines of the sites, the announcement and the summary 10 s in, word for word" "patterns_found && sites_logged && announced && log_line '$SUMMARY1' && first_after_10s"
 check "no problem; nothing written" "log_lacks 'PROBLEM' && untouched"
+
+echo "== TB16 six writers of the budgets besides the start-up's stores, each of another kind: each named, measured all the same"
+fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe tbwritemov tbwritebyte tbwritesse tbwriteavx tbwritelock tbwriteimm)
+check "the line, word for word: mov of 8 bytes, of a byte with an imm8, movups, vmovdqu of 32 bytes, lock add, mov with an imm32" "writers_line 'and 6 besides them: $(rva writers 97), $(rva writers 106), $(rva writers 115), $(rva writers 124), $(rva writers 134), $(rva writers 144)'"
+check "the measurement announced all the same; no problem; nothing written" "announced && log_lacks 'PROBLEM' && untouched"
 
 echo
 echo "TEXTURE BUDGET SCENARIOS: $pass passed, $fail failed"

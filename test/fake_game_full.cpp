@@ -250,6 +250,11 @@
 //   tbcounters     the update check's lea of the counters leads 8 bytes past them
 //   tbmost         the placement's check loads the most objects from 4 bytes past them
 //   tbfactor      the update check's multiplication by its raise factor is an addition (addss)
+//   tbwritemov, tbwritebyte, tbwritesse, tbwriteavx, tbwritelock, tbwriteimm
+//                  a writer of the budgets besides the start-up's two stores, each of another kind: "mov" of 8 bytes from 4
+//                  bytes before them, "mov" of their last byte with an imm8, "movups" of budgets 2 and 3, "vmovdqu" of 32 bytes
+//                  from 16 bytes before them, "lock add" of budget 1, "mov" of budget 3 with an imm32; without its option each
+//                  leads to a dummy, while the budgets' neighbours and readers, which are no writers, always lead to them
 // [streaming memory]
 // [static bounds]
 // [legacy packs]
@@ -732,6 +737,45 @@ static Site g_textureBudgetSwitchRef = SITE(g_textureBudgetUpdate, 2);
 static Site g_textureBudgetGetterCall = SITE(g_textureBudgetUpdate, 35);
 static Site g_textureBudgetFlagRef = SITE(g_textureBudgetUpdate, 0x4D);
 static Site g_textureBudgetFactorRefs[] = { SITE(g_textureBudgetUpdate, 0x58), SITE(g_textureBudgetUpdate, 0xA5) };	// the lower, the raise
+// The budgets' neighbours and readers, which the scan for the budgets' writers must not count: "mov [rip+disp32], eax" 4 bytes
+// before them, "mov dword [rip+disp32], imm32" right after them, "vmovdqu [rip+disp32], xmm0" 16 bytes before them, "mov rax",
+// "movups xmm0", "cmp [rip+disp32], rax", "cmp byte [rip+disp32], 0" of their last byte, "movq xmm0" and "vmovups ymm0" reading
+// them and "mov [rip+disp32], rax" right after them; then the writers it must count, each leading to the budgets only with its
+// option, else to a dummy: "mov [rip+disp32], rax" 4 bytes before them (tbwritemov, at +97), "mov byte [rip+disp32], imm8" of
+// their last byte (tbwritebyte, +106), "movups [rip+disp32], xmm1" of budgets 2 and 3 (tbwritesse, +115), "vmovdqu
+// [rip+disp32], ymm0" from 16 bytes before them (tbwriteavx, +124), "lock add [rip+disp32], rax" of budget 1 (tbwritelock,
+// +134) and "mov qword [rip+disp32], imm32" of budget 3 (tbwriteimm, +144). Two NOPs before each, so that no byte of the one
+// before it is read as its prefix.
+volatile unsigned char g_textureBudgetWriters[] = {
+	0x90, 0x90, 0x89, 0x05, 0, 0, 0, 0,
+	0x90, 0x90, 0xC7, 0x05, 0, 0, 0, 0, 0x11, 0x11, 0x11, 0x11,
+	0x90, 0x90, 0xC5, 0xFA, 0x7F, 0x05, 0, 0, 0, 0,
+	0x90, 0x90, 0x48, 0x8B, 0x05, 0, 0, 0, 0,
+	0x90, 0x90, 0x0F, 0x10, 0x05, 0, 0, 0, 0,
+	0x90, 0x90, 0x48, 0x39, 0x05, 0, 0, 0, 0,
+	0x90, 0x90, 0x80, 0x3D, 0, 0, 0, 0, 0x00,
+	0x90, 0x90, 0xF3, 0x0F, 0x7E, 0x05, 0, 0, 0, 0,
+	0x90, 0x90, 0xC5, 0xFC, 0x10, 0x05, 0, 0, 0, 0,
+	0x90, 0x90, 0x48, 0x89, 0x05, 0, 0, 0, 0,
+	0x90, 0x90, 0x48, 0x89, 0x05, 0, 0, 0, 0,
+	0x90, 0x90, 0xC6, 0x05, 0, 0, 0, 0, 0x22,
+	0x90, 0x90, 0x0F, 0x11, 0x0D, 0, 0, 0, 0,
+	0x90, 0x90, 0xC5, 0xFE, 0x7F, 0x05, 0, 0, 0, 0,
+	0x90, 0x90, 0xF0, 0x48, 0x01, 0x05, 0, 0, 0, 0,
+	0x90, 0x90, 0x48, 0xC7, 0x05, 0, 0, 0, 0, 0x33, 0x33, 0x33, 0x33,
+	0xCC };
+// each one's disp32, the byte of the budgets its store or load starts at, the size of the immediate after the disp32, and
+// the option that leads a writer to the budgets
+struct TextureBudgetOperand { Site site; int from; int immediate; const wchar_t* option; };
+static TextureBudgetOperand g_textureBudgetOperands[] = { { SITE(g_textureBudgetWriters, 4), -4, 0, nullptr },
+	{ SITE(g_textureBudgetWriters, 12), 32, 4, nullptr }, { SITE(g_textureBudgetWriters, 26), -16, 0, nullptr },
+	{ SITE(g_textureBudgetWriters, 35), 0, 0, nullptr }, { SITE(g_textureBudgetWriters, 44), 0, 0, nullptr },
+	{ SITE(g_textureBudgetWriters, 53), 0, 0, nullptr }, { SITE(g_textureBudgetWriters, 61), 31, 1, nullptr },
+	{ SITE(g_textureBudgetWriters, 72), 0, 0, nullptr }, { SITE(g_textureBudgetWriters, 82), 0, 0, nullptr },
+	{ SITE(g_textureBudgetWriters, 91), 32, 0, nullptr },
+	{ SITE(g_textureBudgetWriters, 100), -4, 0, L"tbwritemov" }, { SITE(g_textureBudgetWriters, 108), 31, 1, L"tbwritebyte" },
+	{ SITE(g_textureBudgetWriters, 118), 16, 0, L"tbwritesse" }, { SITE(g_textureBudgetWriters, 128), -16, 0, L"tbwriteavx" },
+	{ SITE(g_textureBudgetWriters, 138), 8, 0, L"tbwritelock" }, { SITE(g_textureBudgetWriters, 147), 24, 4, L"tbwriteimm" } };
 
 // [streaming memory]
 // [static bounds]
@@ -1952,8 +1996,9 @@ struct TextureBudgetData { TextureBudgetCounters counters; int32_t index; uint8_
 alignas(16) static TextureBudgetData g_textureBudgetDataStorage;
 static TextureBudgetData* volatile g_textureBudgetData = &g_textureBudgetDataStorage;
 static TextureBudgetData g_textureBudgetDataAsSet;
+static uint64_t g_textureBudgetDummy[8];	// where the writers of the budgets lead without their options
 static unsigned char g_textureBudgetSitesAsPlaced[sizeof(g_textureBudgetStores) + sizeof(g_textureBudgetGetter) +
-	sizeof(g_textureBudgetPlacement) + sizeof(g_textureBudgetUpdate)];
+	sizeof(g_textureBudgetPlacement) + sizeof(g_textureBudgetUpdate) + sizeof(g_textureBudgetWriters)];
 static volatile int g_textureBudgetNextSteps = 0;
 static void TextureBudgetNextStep()
 {
@@ -1979,13 +2024,15 @@ static void TextureBudgetSetAsTheGame(TextureBudgetData& data)
 	data.updateCheck = { 1, 0.9f, 0.8f, 0.95f };
 }
 
-// The four sites' bytes in a row, to keep them as placed or to compare them with that
+// The five sites' bytes in a row, to keep them as placed or to compare them with that
 static void TextureBudgetSites(unsigned char* to, bool compare, int& asPlaced)
 {
-	const volatile unsigned char* const sites[] = { g_textureBudgetStores, g_textureBudgetGetter, g_textureBudgetPlacement, g_textureBudgetUpdate };
-	const size_t sizes[] = { sizeof(g_textureBudgetStores), sizeof(g_textureBudgetGetter), sizeof(g_textureBudgetPlacement), sizeof(g_textureBudgetUpdate) };
+	const volatile unsigned char* const sites[] = { g_textureBudgetStores, g_textureBudgetGetter, g_textureBudgetPlacement, g_textureBudgetUpdate,
+		g_textureBudgetWriters };
+	const size_t sizes[] = { sizeof(g_textureBudgetStores), sizeof(g_textureBudgetGetter), sizeof(g_textureBudgetPlacement), sizeof(g_textureBudgetUpdate),
+		sizeof(g_textureBudgetWriters) };
 	asPlaced = 0;
-	for (int i = 0; i < 4; i++)
+	for (int i = 0; i < 5; i++)
 	{
 		bool same = true;
 		for (size_t j = 0; j < sizes[i]; j++, to++)
@@ -3043,7 +3090,7 @@ static void ForEachSite(void (*fn)(const Site&))
 	for (const Site& site : g_pedPropsSites) fn(site);
 	// [texture budget]
 	static Site textureBudgetSites[] = { SITE(g_textureBudgetStores, 0), SITE(g_textureBudgetGetter, 0), SITE(g_textureBudgetPlacement, 0),
-		SITE(g_textureBudgetUpdate, 0) };
+		SITE(g_textureBudgetUpdate, 0), SITE(g_textureBudgetWriters, 0) };
 	for (const Site& site : textureBudgetSites) fn(site);
 	// [streaming memory]
 	// [static bounds]
@@ -4479,6 +4526,10 @@ int wmain(int argc, wchar_t** argv)
 			SetRel32(g_textureBudgetLoads[2].site, counters + 0x24);
 		if (HasOption(argc, argv, L"tbfactor"))	// "addss" in the place of the multiplication by the raise factor
 			g_textureBudgetUpdate[0xA3] = 0x58;
+		// the budgets' neighbours and readers where they lie; a writer at the budgets only with its option, else at the dummy
+		for (const TextureBudgetOperand& operand : g_textureBudgetOperands)
+			SetRel32(operand.site, !operand.option || HasOption(argc, argv, operand.option) ?
+				reinterpret_cast<const void*>(counters + 0x28 + operand.from - operand.immediate) : reinterpret_cast<const void*>(g_textureBudgetDummy));
 		g_textureBudgetDataAsSet = data;
 		int asPlaced = 0;
 		TextureBudgetSites(g_textureBudgetSitesAsPlaced, false, asPlaced);
@@ -4662,11 +4713,12 @@ int wmain(int argc, wchar_t** argv)
 		const auto rva = [](const volatile void* p) {
 			return static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(const_cast<const void*>(p)) - reinterpret_cast<uintptr_t>(ImageBase()));
 		};
-		wprintf(L"texture budget: sites as placed %d of 4, data %ls, its page %ls%ls; stores RVA 0x%llX, getter RVA 0x%llX, placement RVA 0x%llX, "
-			L"update RVA 0x%llX, next step RVA 0x%llX, counters RVA 0x%llX, index RVA 0x%llX, flag RVA 0x%llX, switch RVA 0x%llX | ", asPlaced,
-			memcmp(&data, &g_textureBudgetDataAsSet, sizeof(data)) == 0 ? L"as set" : L"CHANGED", ProtectionOf(&data) == PAGE_READWRITE ? L"RW" : L"not RW",
-			g_textureBudgetLater, rva(g_textureBudgetStores), rva(g_textureBudgetGetter), rva(g_textureBudgetPlacement), rva(g_textureBudgetUpdate),
-			rva(reinterpret_cast<const void*>(&TextureBudgetNextStep)), rva(&data.counters), rva(&data.index), rva(&data.flag), rva(&data.updateCheck));
+		wprintf(L"texture budget: sites as placed %d of 5, data %ls, its page %ls%ls; stores RVA 0x%llX, getter RVA 0x%llX, placement RVA 0x%llX, "
+			L"update RVA 0x%llX, writers RVA 0x%llX, next step RVA 0x%llX, counters RVA 0x%llX, index RVA 0x%llX, flag RVA 0x%llX, switch RVA 0x%llX | ",
+			asPlaced, memcmp(&data, &g_textureBudgetDataAsSet, sizeof(data)) == 0 ? L"as set" : L"CHANGED",
+			ProtectionOf(&data) == PAGE_READWRITE ? L"RW" : L"not RW", g_textureBudgetLater, rva(g_textureBudgetStores), rva(g_textureBudgetGetter),
+			rva(g_textureBudgetPlacement), rva(g_textureBudgetUpdate), rva(g_textureBudgetWriters), rva(reinterpret_cast<const void*>(&TextureBudgetNextStep)),
+			rva(&data.counters), rva(&data.index), rva(&data.flag), rva(&data.updateCheck));
 	}
 	// [streaming memory]
 	// [static bounds]

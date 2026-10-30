@@ -80,6 +80,7 @@ namespace TweaksV
 		constexpr size_t kBudgets = 0x28;			// qwords: the budgets in bytes, one per index
 		constexpr size_t kBudgetCount = 4;			// the indices 0 to 3 (MaxStreamingMemory_0..3_Base)
 		constexpr size_t kCountersSize = kBudgets + kBudgetCount * sizeof(uint64_t);
+		constexpr size_t kWritersLooked = 16;		// the budgets' writers the scan looks for: the start-up's two, and more besides them
 
 		// The update check's switch, a dword, and its three factors, floats, one block of the game's data
 		constexpr size_t kRaiseFactor = 4;			// it evicts once the bytes pass this much of the budget
@@ -229,6 +230,24 @@ namespace TweaksV
 					DescribeAddress(budgets));
 			WriteLog(kTag, "DIAGNOSTIC: store of budgets 2 and 3 at " + DescribeAddress(storeBudgets + kBudgets23StoreAt) + " -> " + DescribeAddress(budgets23) +
 				", from the configuration's +" + Hex(Imm32(storeBudgets + kBudgets23OffsetAt)) + " in MB" + At(kStoreBudgets));
+
+			// Every writer of the budgets, by the scanner's search for stores of any width: the start-up's two, and any besides
+			// them - which would change the budgets again after the start-up, so that a raise would not hold
+			const std::vector<uint8_t*> writers = Scanner::FindRipRelativeStores(budgets, kBudgetCount * sizeof(uint64_t), kWritersLooked);
+			const uint8_t* const startUpStores[] = { storeMost + kBudgets01StoreAt, storeBudgets + kBudgets23StoreAt };
+			if (writers.size() < kWritersLooked)
+				for (const uint8_t* const store : startUpStores)
+					if (std::find(writers.begin(), writers.end(), store) == writers.end())
+						return NotMeasured("the scan for the budgets' writers does not find the start-up's store at " + DescribeAddress(store) +
+							(store == startUpStores[0] ? At(kStoreMost) : At(kStoreBudgets)));
+			std::string besides;
+			size_t others = 0;
+			for (const uint8_t* const writer : writers)
+				if (writer != startUpStores[0] && writer != startUpStores[1])
+					besides += (others++ ? ", " : "") + DescribeAddress(writer);
+			WriteLog(kTag, "DIAGNOSTIC: writers of the budgets at " + DescribeAddress(budgets) + ": the start-up's stores at " + DescribeAddress(startUpStores[0]) +
+				" and " + DescribeAddress(startUpStores[1]) + (others == 0 ? std::string(", none besides them") : ", and " + std::to_string(others) +
+				(writers.size() == kWritersLooked ? " or more" : "") + " besides them: " + besides) + " (" + kStoreMost.label + ", " + kStoreBudgets.label + ")");
 
 			// The call after the stores, the one the part's writing half would redirect: a call into the game
 			const uint8_t* const call = storeBudgets + kCallAt;

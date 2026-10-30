@@ -502,5 +502,249 @@ namespace TweaksV
 			}
 			return found;
 		}
+
+		namespace
+		{
+			// What an instruction writes through its memory operand: the most bytes it can write - 0 for one that writes
+			// nothing there - and the size of the immediate that follows its disp32, which the rip it counts from lies past;
+			// altImmediate, when not 0, the size the immediate has if the 66 prefix in front of it is the instruction's own.
+			struct StoreShape
+			{
+				uint32_t width = 0;
+				uint32_t immediate = 0;
+				uint32_t altImmediate = 0;
+			};
+
+			// The prefixes in front of an opcode: a REX right before it, the legacy prefixes before that, four at most. A
+			// prefix that narrows a store - 66, F2, F3 - is not counted for its width, since the byte may belong to the
+			// instruction before: a store is taken for at most as wide as it can be, never narrower.
+			struct Prefixes
+			{
+				const uint8_t* start;
+				bool rexW = false;
+				bool operand16 = false;	// 66
+				bool repz = false;		// F3
+				bool repnz = false;		// F2
+			};
+
+			Prefixes ReadPrefixes(const uint8_t* opcode, const uint8_t* begin)
+			{
+				Prefixes prefixes{ opcode };
+				if (prefixes.start > begin && (prefixes.start[-1] & 0xF0) == 0x40)
+				{
+					prefixes.rexW = (prefixes.start[-1] & 0x08) != 0;
+					prefixes.start--;
+				}
+				for (int i = 0; i < 4 && prefixes.start > begin; i++, prefixes.start--)
+				{
+					const uint8_t byte = prefixes.start[-1];
+					if (byte == 0x66)
+						prefixes.operand16 = true;
+					else if (byte == 0xF3)
+						prefixes.repz = true;
+					else if (byte == 0xF2)
+						prefixes.repnz = true;
+					else if (byte != 0xF0 && byte != 0x2E && byte != 0x3E && byte != 0x26 && byte != 0x36 && byte != 0x64 && byte != 0x65)
+						break;	// lock and the segments count; anything else belongs to the instruction before
+				}
+				return prefixes;
+			}
+
+			// The one-byte opcodes; reg is the ModRM's reg field, which picks the job in a group.
+			StoreShape OneByteStore(uint8_t opcode, int reg, const Prefixes& prefixes)
+			{
+				const uint32_t full = prefixes.rexW ? 8 : 4;
+				const uint32_t immediate16 = prefixes.operand16 ? 2 : 0;
+				switch (opcode)
+				{
+				case 0x00: case 0x08: case 0x10: case 0x18: case 0x20: case 0x28: case 0x30:	// add, or, adc, sbb, and, sub, xor r/m8, r8
+				case 0x86: case 0x88:															// xchg, mov r/m8, r8
+					return { 1, 0 };
+				case 0x01: case 0x09: case 0x11: case 0x19: case 0x21: case 0x29: case 0x31:	// the same of r/m, r
+				case 0x87: case 0x89:
+					return { full, 0 };
+				case 0x8F: return reg == 0 ? StoreShape{ 8, 0 } : StoreShape{};						// pop r/m64
+				case 0xC6: return reg == 0 ? StoreShape{ 1, 1 } : StoreShape{};						// mov r/m8, imm8
+				case 0xC7: return reg == 0 ? StoreShape{ full, 4, immediate16 } : StoreShape{};		// mov r/m, imm32 (imm16)
+				case 0x80: return reg != 7 ? StoreShape{ 1, 1 } : StoreShape{};						// add .. xor r/m8, imm8; /7 compares
+				case 0x81: return reg != 7 ? StoreShape{ full, 4, immediate16 } : StoreShape{};
+				case 0x83: return reg != 7 ? StoreShape{ full, 1 } : StoreShape{};
+				case 0xC0: return { 1, 1 };																// the rotations and shifts by imm8
+				case 0xC1: return { full, 1 };
+				case 0xD0: case 0xD2: return { 1, 0 };													// by 1, by cl
+				case 0xD1: case 0xD3: return { full, 0 };
+				case 0xF6: return reg == 2 || reg == 3 ? StoreShape{ 1, 0 } : StoreShape{};				// not, neg r/m8
+				case 0xF7: return reg == 2 || reg == 3 ? StoreShape{ full, 0 } : StoreShape{};
+				case 0xFE: return reg <= 1 ? StoreShape{ 1, 0 } : StoreShape{};						// inc, dec r/m8
+				case 0xFF: return reg <= 1 ? StoreShape{ full, 0 } : StoreShape{};
+				default: return {};
+				}
+			}
+
+			// The opcodes after 0F.
+			StoreShape TwoByteStore(uint8_t opcode, int reg, const Prefixes& prefixes)
+			{
+				const uint32_t full = prefixes.rexW ? 8 : 4;
+				if (opcode >= 0x90 && opcode <= 0x9F)	// setcc r/m8
+					return { 1, 0 };
+				switch (opcode)
+				{
+				case 0x11: case 0x29: case 0x2B: return { 16, 0 };	// movups, movupd, movss, movsd; movaps, movapd; movntps, movntpd
+				case 0x13: case 0x17: return { 8, 0 };				// movlps, movlpd, movhps, movhpd to m64
+				case 0x7E: return prefixes.repz ? StoreShape{} : StoreShape{ full, 0 };	// movd, movq to r/m - F3 0F 7E loads
+				case 0x7F: return { prefixes.operand16 || prefixes.repz ? 16u : 8u, 0 };	// movdqa, movdqu; movq m64, mm
+				case 0xD6: return prefixes.operand16 ? StoreShape{ 8, 0 } : StoreShape{};	// movq m64, xmm
+				case 0xE7: return { prefixes.operand16 ? 16u : 8u, 0 };					// movntdq; movntq
+				case 0xC3: return { full, 0 };											// movnti
+				case 0xAB: case 0xB3: case 0xBB: return { full, 0 };					// bts, btr, btc r/m, r
+				case 0xBA: return reg >= 5 ? StoreShape{ full, 1 } : StoreShape{};		// bts, btr, btc r/m, imm8; /4 is bt
+				case 0xA4: case 0xAC: return { full, 1 };								// shld, shrd by imm8
+				case 0xA5: case 0xAD: return { full, 0 };								// by cl
+				case 0xB0: case 0xC0: return { 1, 0 };									// cmpxchg, xadd r/m8
+				case 0xB1: case 0xC1: return { full, 0 };
+				case 0xC7: return reg == 1 ? StoreShape{ prefixes.rexW ? 16u : 8u, 0 } : StoreShape{};	// cmpxchg8b, cmpxchg16b
+				default: return {};
+				}
+			}
+
+			// The opcodes after 0F 38 and 0F 3A.
+			StoreShape ThreeByteStore(uint8_t map, uint8_t opcode, const Prefixes& prefixes)
+			{
+				if (map == 0x38)	// movbe m, r - F2 0F 38 F1 is crc32, a load
+					return opcode == 0xF1 && !prefixes.repnz ? StoreShape{ prefixes.rexW ? 8u : 4u, 0 } : StoreShape{};
+				if (!prefixes.operand16)
+					return {};
+				switch (opcode)		// 66 0F 3A: pextrb, pextrw, pextrd and pextrq, extractps to memory, each with an imm8
+				{
+				case 0x14: return { 1, 1 };
+				case 0x15: return { 2, 1 };
+				case 0x16: return { prefixes.rexW ? 8u : 4u, 1 };
+				case 0x17: return { 4, 1 };
+				default: return {};
+				}
+			}
+
+			// The AVX opcodes: map 1 is 0F, 2 0F 38, 3 0F 3A; pp 1 is 66, 2 F3, 3 F2; wide the 256-bit form.
+			StoreShape VexStore(int map, uint8_t opcode, int pp, bool wide, bool rexW)
+			{
+				const uint32_t vector = wide ? 32 : 16;
+				if (map == 1)
+					switch (opcode)
+					{
+					case 0x11: return { pp == 2 ? 4u : pp == 3 ? 8u : vector, 0 };		// vmovups, vmovupd, vmovss, vmovsd
+					case 0x13: case 0x17: return { 8, 0 };								// vmovlps, vmovlpd, vmovhps, vmovhpd
+					case 0x29: case 0x2B: return { vector, 0 };							// vmovaps, vmovapd, vmovntps, vmovntpd
+					case 0x7E: return pp == 1 ? StoreShape{ rexW ? 8u : 4u, 0 } : StoreShape{};	// vmovd, vmovq to r/m - F3 loads
+					case 0x7F: return pp == 1 || pp == 2 ? StoreShape{ vector, 0 } : StoreShape{};	// vmovdqa, vmovdqu
+					case 0xD6: return pp == 1 ? StoreShape{ 8, 0 } : StoreShape{};		// vmovq m64
+					case 0xE7: return pp == 1 ? StoreShape{ vector, 0 } : StoreShape{};	// vmovntdq
+					default: return {};
+					}
+				if (pp != 1)
+					return {};
+				if (map == 2)	// vmaskmovps, vmaskmovpd, vpmaskmovd and vpmaskmovq to memory
+					return opcode == 0x2E || opcode == 0x2F || opcode == 0x8E ? StoreShape{ vector, 0 } : StoreShape{};
+				switch (opcode)	// the extracts, each with an imm8
+				{
+				case 0x14: return { 1, 1 };
+				case 0x15: return { 2, 1 };
+				case 0x16: return { rexW ? 8u : 4u, 1 };
+				case 0x17: return { 4, 1 };
+				case 0x19: case 0x39: return { 16, 1 };	// vextractf128, vextracti128
+				case 0x1D: return { wide ? 16u : 8u, 1 };	// vcvtps2ph
+				default: return {};
+				}
+			}
+
+			// The instruction whose ModRM lies at modrm, read from the bytes before it - none before begin - as the processor
+			// reads it if it starts there: a VEX prefix first, then the escapes 0F 38, 0F 3A and 0F, then a one-byte opcode.
+			// Its first byte goes to start.
+			StoreShape StoreAt(const uint8_t* modrm, const uint8_t* begin, const uint8_t*& start)
+			{
+				const auto before = [modrm, begin](ptrdiff_t back) { return modrm - back >= begin ? static_cast<int>(modrm[-back]) : -1; };
+				const uint8_t opcode = modrm[-1];
+				const int reg = (modrm[0] >> 3) & 7;
+				if (before(4) == 0xC4 && before(3) >= 0 && (before(3) & 0x1F) >= 1 && (before(3) & 0x1F) <= 3 && before(2) >= 0)
+				{
+					start = modrm - 4;	// C4, R X B and the map, W vvvv L pp
+					return VexStore(before(3) & 0x1F, opcode, before(2) & 3, (before(2) & 4) != 0, (before(2) & 0x80) != 0);
+				}
+				if (before(3) == 0xC5 && before(2) >= 0)
+				{
+					start = modrm - 3;	// C5, R vvvv L pp
+					return VexStore(1, opcode, before(2) & 3, (before(2) & 4) != 0, false);
+				}
+				if (before(3) == 0x0F && (before(2) == 0x38 || before(2) == 0x3A))
+				{
+					const Prefixes prefixes = ReadPrefixes(modrm - 3, begin);
+					start = prefixes.start;
+					return ThreeByteStore(static_cast<uint8_t>(before(2)), opcode, prefixes);
+				}
+				if (before(2) == 0x0F)
+				{
+					const Prefixes prefixes = ReadPrefixes(modrm - 2, begin);
+					start = prefixes.start;
+					return TwoByteStore(opcode, reg, prefixes);
+				}
+				const Prefixes prefixes = ReadPrefixes(modrm - 1, begin);
+				start = prefixes.start;
+				return OneByteStore(opcode, reg, prefixes);
+			}
+		}
+
+		// Every ModRM of mod 00 and r/m 101 is found the way FindRipRelative finds its loads, 16 positions at a time, and its
+		// disp32 checked to lead near the range - within the 4 bytes of an immediate and the 32 of a store before it - before
+		// the bytes in front of it are read as an instruction; one that writes a byte of the range is counted.
+		std::vector<uint8_t*> FindRipRelativeStores(const void* target, size_t size, size_t limit)
+		{
+			constexpr size_t kOperand = 5;			// the ModRM and the disp32
+			constexpr intptr_t kReach = 4 + 32;		// an immediate after the disp32, the widest store
+			std::vector<uint8_t*> found;
+			const auto first = reinterpret_cast<intptr_t>(target);
+			const intptr_t end = first + static_cast<intptr_t>(size);
+			const auto writes = [first, end](intptr_t operand, uint32_t immediate, uint32_t width)	// operand: where it lies without an immediate
+			{
+				const intptr_t at = operand + static_cast<intptr_t>(immediate);
+				return at < end && at + static_cast<intptr_t>(width) > first;
+			};
+			const auto stores = [&found, &writes, first, end](uint8_t* modrm, const uint8_t* begin)
+			{
+				int32_t disp = 0;
+				memcpy(&disp, modrm + 1, sizeof(disp));
+				const intptr_t operand = reinterpret_cast<intptr_t>(modrm + kOperand) + disp;
+				if (operand >= end || operand + kReach <= first)
+					return;
+				const uint8_t* start = nullptr;
+				const StoreShape shape = StoreAt(modrm, begin, start);
+				if (shape.width && (writes(operand, shape.immediate, shape.width) || (shape.altImmediate && writes(operand, shape.altImmediate, shape.width))))
+					found.push_back(const_cast<uint8_t*>(start));
+			};
+			const __m128i modrmBits = _mm_set1_epi8(static_cast<char>(0xC7));
+			const __m128i ripRelative = _mm_set1_epi8(0x05);
+			for (const Range& range : ReadableCode())
+			{
+				const size_t available = static_cast<size_t>(range.end - range.begin);
+				if (available < kOperand + 1)
+					continue;
+				const size_t lastModrm = available - kOperand;	// the disp32 stays inside the range
+				size_t at = 1;									// an opcode before it
+				for (; at + 15 <= lastModrm && found.size() < limit; at += 16)
+				{
+					const __m128i x = _mm_loadu_si128(reinterpret_cast<const __m128i*>(range.begin + at));
+					unsigned mask = static_cast<unsigned>(_mm_movemask_epi8(_mm_cmpeq_epi8(_mm_and_si128(x, modrmBits), ripRelative)));
+					while (mask && found.size() < limit)
+					{
+						unsigned long bit = 0;
+						_BitScanForward(&bit, mask);
+						stores(range.begin + at + bit, range.begin);
+						mask &= mask - 1;
+					}
+				}
+				for (; at <= lastModrm && found.size() < limit; at++)
+					if ((range.begin[at] & 0xC7) == 0x05)
+						stores(range.begin + at, range.begin);
+			}
+			return found;
+		}
 	}
 }
