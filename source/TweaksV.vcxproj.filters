@@ -92,9 +92,6 @@
     <ClCompile Include="TweaksVStraightToStoryMode.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
-    <ClCompile Include="TweaksVStreamingMemory.cpp">
-      <Filter>TweaksV</Filter>
-    </ClCompile>
     <ClCompile Include="TweaksVSummary.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
@@ -205,9 +202,6 @@
       <Filter>TweaksV</Filter>
     </ClInclude>
     <ClInclude Include="TweaksVStraightToStoryMode.h">
-      <Filter>TweaksV</Filter>
-    </ClInclude>
-    <ClInclude Include="TweaksVStreamingMemory.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
     <ClInclude Include="TweaksVSummary.h">

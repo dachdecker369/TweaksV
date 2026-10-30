@@ -34,7 +34,6 @@ SUITES=(
 	sirenids
 	sirencount
 	# [streaming memory]
-	streamingmemory
 	integration
 )
 

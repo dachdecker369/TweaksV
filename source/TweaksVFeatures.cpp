@@ -22,7 +22,6 @@
 #include "TweaksVSirenIds.h"
 #include "TweaksVStaticBounds.h"
 #include "TweaksVStraightToStoryMode.h"
-#include "TweaksVStreamingMemory.h"
 #include "TweaksVSummary.h"
 #include "TweaksVTextureBudget.h"
 #include "TweaksVWeaponComponents.h"
@@ -115,7 +114,6 @@ namespace TweaksV
 			// [texture budget]
 			{ "Resources", MeasureTextureBudget },
 			// [streaming memory]
-			{ "Resources", MeasureStreamingMemory },
 		};
 	}
 

@@ -150,7 +150,6 @@
     <ClCompile Include="TweaksVSirenIds.cpp" />
     <ClCompile Include="TweaksVStaticBounds.cpp" />
     <ClCompile Include="TweaksVStraightToStoryMode.cpp" />
-    <ClCompile Include="TweaksVStreamingMemory.cpp" />
     <ClCompile Include="TweaksVSummary.cpp" />
     <ClCompile Include="TweaksVTextureBudget.cpp" />
     <ClCompile Include="TweaksVWeaponComponents.cpp" />
@@ -202,7 +201,6 @@
     <ClInclude Include="TweaksVSirenIds.h" />
     <ClInclude Include="TweaksVStaticBounds.h" />
     <ClInclude Include="TweaksVStraightToStoryMode.h" />
-    <ClInclude Include="TweaksVStreamingMemory.h" />
     <ClInclude Include="TweaksVSummary.h" />
     <ClInclude Include="TweaksVTextureBudget.h" />
     <ClInclude Include="TweaksVWeaponComponents.h" />
