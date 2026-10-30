@@ -154,6 +154,8 @@ fresh_ini; setkey VIDEO_MEMORY_BUDGET 6000 RESOURCES; addkey TEST_BREAK_PATTERN 
 check "Q-E-T4 (the texture budget's placement check), VIDEO_MEMORY_BUDGET=6000: the budgets as the game set them, the rest applied" \
 	"has 'the call to the next step' && has 'budgets 1500, 1500, 3000 and 3000 MB' && has '$ALL_ON_HEAP' && has '$MODKIT_ON' && has '$PACK_ON' && has '$ROV_ON' && has '$STORY_ON' && log_has 'TEST BUILD - not for release' && grep -qi -- 'TEST BUILD: pattern Q-E-T4 is treated as not found' TweaksV.log && grep -qi -- 'Q-E-T4 was not found[ .]' TweaksV.log && summary_once && has 'protect: all restored'"
 # [static bounds]
+breaktest "C-E-H1 (the static bounds pool's name): its size call left to the game's lookup, the rest applied" "C-E-H1" \
+	"has 'static bounds: sites as placed, size call to the lookup, pool sizes 12000 and 12000' && has '$ALL_ON_HEAP' && has '$MODKIT_ON' && has '$PACK_ON' && has '$ROV_ON' && has '$STORY_ON' && log_has 'PROBLEM: The static bounds pool.s size is not raised this session: C-E-H1 was not found.'"
 # [rt buffer]
 fresh_ini; setkey DYNAMIC_BVH_VERTICES 8388608; addkey TEST_BREAK_PATTERN T-E-C1; out=$(ASI=TweaksV_test.asi game full_game.exe)
 check "T-E-C1 (a check of the ray tracing buffer, with DYNAMIC_BVH_VERTICES=8388608): the buffer untouched, the rest applied" "has 'rt sites: as placed, count 4194304, checks 4194304 and 4194304, jumps to the game and the game' && has '$ALL_ON_HEAP' && has '$MODKIT_ON' && has '$PACK_ON' && has '$ROV_ON' && has '$STORY_ON' && log_has 'TEST BUILD - not for release' && grep -qi -- 'TEST BUILD: pattern T-E-C1 is treated as not found' TweaksV.log && grep -qi -- 'T-E-C1 was not found[ .]' TweaksV.log && summary_once && has 'protect: all restored'"

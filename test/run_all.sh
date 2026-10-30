@@ -31,6 +31,7 @@ SUITES=(
 	pedprops
 	texturebudget
 	# [static bounds]
+	staticbounds
 	# [rt buffer]
 	raytracing
 	sirenids

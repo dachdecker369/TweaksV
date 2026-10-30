@@ -294,6 +294,20 @@
 //                  leads to a dummy, while the budgets' neighbours and readers, which are no writers, always lead to them
 // [streaming memory]
 // [static bounds]
+// StaticBounds: the static bounds pool's size call - the game's configuration, "mov edx, 0x2CDFE406" (C-E-H1), "mov r8d, 1000",
+// whose imm32 begins with an E8 that is no call, and the call of the pool size lookup - and the CRoadBlock pool's size call
+// (C-E-L1) are always there, both calls leading to the fake's stand-in for the game's lookup, which gives the static bounds pool
+// the 12000 slots the fake's configuration names. Once TweaksV has started, the fake makes the pool as the game does, twice,
+// through what the call leads to - TweaksV's stub when it is redirected, the lookup when it is not, nothing when it leads elsewhere.
+//   sbbig          the configuration gives the pool 24500, more than STATICBOUNDS_SIZE's default
+//   sbnegative     the lookup gives the pool -1
+//   sbother        the pool is made with the size of another pool, 0x0BADC0DE, as code between the load and the call would ask
+//   sbhooked       the static bounds pool's size call already leads outside the game (another mod redirected it)
+//   sbroadhooked   the CRoadBlock pool's size call already leads outside the game (another mod's hook)
+//   sbroadtwice    a second copy of the CRoadBlock pool's size call: C-E-L1 matches twice
+//   sbname         a second load of the pool's name, with no call of the lookup after it
+//   sbtwice        a second load of the pool's name with a call of the lookup after it
+//   sbmany         16 more loads of the pool's name, 17 in all
 // [legacy packs]
 //   lpmake KIND PATH   the Legacy packs check: a crafted RPF7 archive of KIND written at PATH, its folders made, before TweaksV
 //                      starts; repeatable (LpMake has the kinds)
@@ -851,6 +865,26 @@ static TextureBudgetOperand g_textureBudgetOperands[] = { { SITE(g_textureBudget
 
 // [streaming memory]
 // [static bounds]
+// StaticBounds: the static bounds pool's size call - "mov rcx, [rip+disp32]" of the game's configuration (+3), "mov edx,
+// 0x2CDFE406" at +7 (C-E-H1), "mov r8d, 1000", whose imm32 begins with an E8 that is no call, the call of the pool size lookup at
+// +18 and "mov ebx, eax" - and the CRoadBlock pool's, "mov edx, 0xF72CC701" at +7 (C-E-L1), "mov r8d, 1" and the call at +18; a
+// second CRoadBlock call, its BA at +7 only with "sbroadtwice"; a second load of the pool's name, its BA only with "sbname" or
+// "sbtwice" and its call of the lookup at +11 an E8 only with "sbtwice"; and 16 more loads of the name, their bytes only with
+// "sbmany". Each load of the name lies at the start of an array that holds the 64 bytes after it too, so that no other site's
+// call lies among them, however the sites are laid out. Every site ends in CC or zeros.
+volatile unsigned char g_staticBoundsCall[96] = { 0x48, 0x8B, 0x0D, 0, 0, 0, 0, 0xBA, 0x06, 0xE4, 0xDF, 0x2C, 0x41, 0xB8, 0xE8, 0x03, 0x00,
+	0x00, 0xE8, 0, 0, 0, 0, 0x89, 0xC3, 0xCC };
+volatile unsigned char g_staticBoundsRoadBlock[] = { 0x48, 0x8B, 0x0D, 0, 0, 0, 0, 0xBA, 0x01, 0xC7, 0x2C, 0xF7, 0x41, 0xB8, 0x01, 0x00,
+	0x00, 0x00, 0xE8, 0, 0, 0, 0, 0xCC };
+volatile unsigned char g_staticBoundsRoadBlockCopy[] = { 0x48, 0x8B, 0x0D, 0, 0, 0, 0, 0xCC, 0x01, 0xC7, 0x2C, 0xF7, 0x41, 0xB8, 0x01, 0x00,
+	0x00, 0x00, 0xE8, 0, 0, 0, 0, 0xCC };
+volatile unsigned char g_staticBoundsNameCopy[80] = { 0xCC, 0x06, 0xE4, 0xDF, 0x2C, 0x41, 0xB8, 0xE8, 0x03, 0x00, 0x00, 0xCC, 0, 0, 0, 0, 0xCC };
+volatile unsigned char g_staticBoundsMoreNames[16][72] = { { 0xCC } };
+static Site g_staticBoundsConfigurationRefs[] = { SITE(g_staticBoundsCall, 3), SITE(g_staticBoundsRoadBlock, 3), SITE(g_staticBoundsRoadBlockCopy, 3) };
+static Site g_staticBoundsSizeCall = SITE(g_staticBoundsCall, 19);		// the rel32 of the E8 at +18
+static Site g_staticBoundsLookupCalls[] = { SITE(g_staticBoundsRoadBlock, 19), SITE(g_staticBoundsRoadBlockCopy, 19), SITE(g_staticBoundsNameCopy, 12) };
+static Site g_staticBoundsSites[] = { SITE(g_staticBoundsCall, 0), SITE(g_staticBoundsRoadBlock, 0), SITE(g_staticBoundsRoadBlockCopy, 0),
+	SITE(g_staticBoundsNameCopy, 0), { &g_staticBoundsMoreNames[0][0], 0, sizeof(g_staticBoundsMoreNames) } };
 // [legacy packs]
 // [rt buffer]
 // The ray tracing buffer: its sites as code the fake runs. The set-up, a function of its own: "sub rsp, 0x38", then T-E-B1 at +4 -
@@ -2580,6 +2614,93 @@ static void TextureBudgetLater(TextureBudgetChange change)
 // [streaming memory]
 
 // [static bounds]
+// StaticBounds: what the size calls' "mov rcx" loads, the game's configuration; the game's pool size lookup behind both calls,
+// which gives the static bounds pool the size the configuration names - 12000, 24500 with "sbbig", -1 with "sbnegative" - and any
+// other pool its default, counts its calls, checks that it was handed the arguments the fake made the pool with and leaves a last
+// error of its own; the sites' bytes as placed, the size call's rel32 left out, which TweaksV may redirect; and the pool made once
+// TweaksV has started, as the game makes it after TweaksV's DllMain - twice, so that a line said once shows.
+static const unsigned char* Rel32Target(const Site& site);
+static bool InImage(const void* p);
+constexpr uint32_t kStaticBoundsHash = 0x2CDFE406, kStaticBoundsOther = 0x0BADC0DE;
+constexpr int32_t kStaticBoundsDefault = 1000;
+constexpr DWORD kStaticBoundsLookupError = 0x5B4;	// the lookup's last error, which the call must hand back
+static uint64_t g_staticBoundsConfigurationStorage[4];
+static void* volatile g_staticBoundsConfiguration = g_staticBoundsConfigurationStorage;
+static int32_t g_staticBoundsConfigured = 12000;
+static uint32_t g_staticBoundsPool = kStaticBoundsHash;	// the pool the fake makes: another with "sbother"
+static int g_staticBoundsLookups = 0, g_staticBoundsArgsBad = 0, g_staticBoundsMade = 0, g_staticBoundsErrorsKept = 0;
+static int32_t g_staticBoundsSizes[2] = {};
+static unsigned char g_staticBoundsPlacedSites[2048];
+static int32_t StaticBoundsLookup(const void* configuration, uint32_t pool, int32_t defaultSize)
+{
+	g_staticBoundsLookups++;
+	if (configuration != g_staticBoundsConfiguration || pool != g_staticBoundsPool || defaultSize != kStaticBoundsDefault)
+		g_staticBoundsArgsBad++;
+	SetLastError(kStaticBoundsLookupError);
+	return pool == kStaticBoundsHash ? g_staticBoundsConfigured : defaultSize;
+}
+
+// Every byte of the sites in a row, at most room, the size call's rel32 as 0: the copy before TweaksV loads, and the
+// comparison after it ran
+static size_t StaticBoundsCopySites(unsigned char* to, size_t room)
+{
+	size_t n = 0;
+	for (const Site& site : g_staticBoundsSites)
+		for (size_t i = 0; i < site.size && n < room; i++)
+			to[n++] = site.bytes == g_staticBoundsCall && i >= 19 && i < 23 ? 0 : site.bytes[i];
+	return n;
+}
+
+// Where the size call leads: the lookup, TweaksV's stub - outside the game, committed memory - or another mod's address
+enum class StaticBoundsTarget { Lookup, Stub, Elsewhere };
+static StaticBoundsTarget StaticBoundsCallTarget(DWORD* protect)
+{
+	const unsigned char* const target = Rel32Target(g_staticBoundsSizeCall);
+	if (target == reinterpret_cast<const unsigned char*>(&StaticBoundsLookup))
+		return StaticBoundsTarget::Lookup;
+	MEMORY_BASIC_INFORMATION info{};
+	if (InImage(target) || VirtualQuery(target, &info, sizeof(info)) != sizeof(info) || info.State != MEM_COMMIT)
+		return StaticBoundsTarget::Elsewhere;
+	*protect = info.Protect;
+	return StaticBoundsTarget::Stub;
+}
+
+// The game makes the static bounds pool: twice through the call at the site, with the configuration, the pool's name and its
+// default, another last error set before each call
+using StaticBoundsSize = int32_t (*)(const void* configuration, uint32_t pool, int32_t defaultSize);
+static void StaticBoundsMakePool()
+{
+	DWORD protect = 0;
+	if (StaticBoundsCallTarget(&protect) == StaticBoundsTarget::Elsewhere)
+		return;	// another mod's address, where nothing is
+	const auto size = reinterpret_cast<StaticBoundsSize>(const_cast<unsigned char*>(Rel32Target(g_staticBoundsSizeCall)));
+	for (int32_t& made : g_staticBoundsSizes)
+	{
+		SetLastError(0x1234);
+		made = size(g_staticBoundsConfiguration, g_staticBoundsPool, kStaticBoundsDefault);
+		g_staticBoundsErrorsKept += GetLastError() == kStaticBoundsLookupError ? 1 : 0;
+		g_staticBoundsMade++;
+	}
+}
+
+// "static bounds: sites as placed, size call to a stub (RX), pool sizes 16000 and 16000, the lookup asked 2 times, arguments as
+// handed, last error kept | " - the arguments the lookup got and the last error the call left, against the fake's own
+static void StaticBoundsReport()
+{
+	unsigned char sites[sizeof(g_staticBoundsPlacedSites)];
+	const size_t size = StaticBoundsCopySites(sites, sizeof(sites));
+	DWORD protect = 0;
+	const StaticBoundsTarget target = StaticBoundsCallTarget(&protect);
+	wprintf(L"static bounds: sites %ls, size call %ls, ", memcmp(sites, g_staticBoundsPlacedSites, size) == 0 ? L"as placed" : L"CHANGED",
+		target == StaticBoundsTarget::Lookup ? L"to the lookup" : target == StaticBoundsTarget::Elsewhere ? L"elsewhere"
+		: protect == PAGE_EXECUTE_READ ? L"to a stub (RX)" : L"to a stub (NOT RX)");
+	if (g_staticBoundsMade == 0)
+		wprintf(L"the pool not made, ");
+	else
+		wprintf(L"pool sizes %d and %d, ", g_staticBoundsSizes[0], g_staticBoundsSizes[1]);
+	wprintf(L"the lookup asked %d times, arguments %ls, last error %ls | ", g_staticBoundsLookups, g_staticBoundsArgsBad == 0 ? L"as handed" : L"CHANGED",
+		g_staticBoundsErrorsKept == g_staticBoundsMade ? L"kept" : L"LOST");
+}
 // [legacy packs]
 // The Legacy packs check (SPECIFICATIONS 11.6): crafted RPF7 archives (PATTERNS.md, "RageOpenV"), written into the mods folder
 // before TweaksV starts. An archive is its header of 16 bytes - RPF7, the entry count, the names' length, the encryption - its
@@ -3824,6 +3945,7 @@ static void ForEachSite(void (*fn)(const Site&))
 	for (const Site& site : textureBudgetSites) fn(site);
 	// [streaming memory]
 	// [static bounds]
+	for (const Site& site : g_staticBoundsSites) fn(site);
 	// [legacy packs]
 	// [rt buffer]
 	for (const Site& site : g_rtSites) fn(site);
@@ -5339,6 +5461,30 @@ int wmain(int argc, wchar_t** argv)
 	// [streaming memory]
 
 	// [static bounds]
+	// StaticBounds: the configuration's loads lead to the configuration, the calls to the stand-in for the game's lookup, but where
+	// an option asks otherwise; the second copies and the 16 more loads take their bytes as asked; then the sites kept as placed
+	{
+		const auto lookup = reinterpret_cast<const void*>(&StaticBoundsLookup);
+		for (const Site& site : g_staticBoundsConfigurationRefs)
+			SetRel32(site, const_cast<void**>(&g_staticBoundsConfiguration));
+		SetRel32(g_staticBoundsSizeCall, HasOption(argc, argv, L"sbhooked") ? static_cast<const void*>(ImageEnd() + 0x74000) : lookup);
+		for (const Site& site : g_staticBoundsLookupCalls)
+			SetRel32(site, lookup);
+		if (HasOption(argc, argv, L"sbroadhooked"))	// another mod hooked the CRoadBlock pool's size call
+			SetRel32(g_staticBoundsLookupCalls[0], ImageEnd() + 0x75000);
+		if (HasOption(argc, argv, L"sbroadtwice"))	// a second CRoadBlock call
+			g_staticBoundsRoadBlockCopy[7] = 0xBA;
+		if (HasOption(argc, argv, L"sbname") || HasOption(argc, argv, L"sbtwice"))	// a second load of the pool's name...
+			g_staticBoundsNameCopy[0] = 0xBA;
+		if (HasOption(argc, argv, L"sbtwice"))		// ...with a call of the lookup after it
+			g_staticBoundsNameCopy[11] = 0xE8;
+		if (HasOption(argc, argv, L"sbmany"))		// 16 more loads of the name
+			for (auto& row : g_staticBoundsMoreNames)
+				memcpy(const_cast<unsigned char*>(row), "\xBA\x06\xE4\xDF\x2C", 5);
+		g_staticBoundsConfigured = HasOption(argc, argv, L"sbbig") ? 24500 : HasOption(argc, argv, L"sbnegative") ? -1 : 12000;
+		g_staticBoundsPool = HasOption(argc, argv, L"sbother") ? kStaticBoundsOther : kStaticBoundsHash;
+		StaticBoundsCopySites(g_staticBoundsPlacedSites, sizeof(g_staticBoundsPlacedSites));
+	}
 	// [legacy packs]
 	LpSetup(argc, argv);	// the Legacy packs check's archives, before TweaksV starts
 	// [rt buffer]
@@ -5474,6 +5620,7 @@ int wmain(int argc, wchar_t** argv)
 		TextureBudgetLater(TextureBudgetChange::Late);
 	// [streaming memory]
 	// [static bounds]
+	StaticBoundsMakePool();	// the game makes the static bounds pool, after TweaksV's DllMain
 	// [legacy packs]
 	LpWait(argc, argv);
 	// [rt buffer]
@@ -5556,6 +5703,7 @@ int wmain(int argc, wchar_t** argv)
 	}
 	// [streaming memory]
 	// [static bounds]
+	StaticBoundsReport();
 	// [legacy packs]
 	LpReport();
 	// [rt buffer]
