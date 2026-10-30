@@ -18,9 +18,11 @@
 // nothing is changed.
 // The redirect raises the pool only if the game asks for its size after TweaksV's DllMain: a thread of the part
 // checks, 60 seconds after the session's start - the first script program the game places, which the script
-// programs' hook sees while the Blips part, whose hook it is, is on; the game makes its pools as the session starts -
-// that the game has asked the redirected call, and reports a problem, with the part's box, when it has not: the game
-// made the pool before TweaksV started, or asks for its size another way. Without the hook no check is made, logged.
+// programs' hook sees: the Blips part's, which the part joins, or while TweaksV.ini switches Blips off the part's own;
+// the game makes its pools as the session starts - that the game has asked the redirected call, and reports a
+// problem, with the part's box, when it has not: the game made the pool before TweaksV started, or asks for its size
+// another way. While a plugin that does the Blips part's job switches it off, and without the hook, no check is made,
+// logged.
 //   DRY_RUN          nothing is redirected, nothing checked; the line says what would be
 //   DIAGNOSTIC_MODE  the lookup and the call at their RVAs, every load of the pool's name without a call after it,
 //                    and when the game asked
@@ -342,13 +344,16 @@ namespace TweaksV
 			" slots (STATICBOUNDS_SIZE) when the game makes it, more where the game's configuration gives it more.");
 
 		// 5. the check, from the session's start - the first script program the game places, seen through the script programs'
-		// hook, which the part joins only while the Blips part, whose hook it is, is on: the part never makes that hook itself
-		// (Resource Extensions, for one, switches Blips off). A check that cannot be made is logged, the redirect staying; a
-		// thread that cannot start is reported
+		// hook: the part joins the hook the Blips part has made while Blips is on, and makes it itself, the first part to use
+		// it, while TweaksV.ini switches Blips off. While the conflict check switches Blips off - BlipLimitFix.asi or Resource
+		// Extensions installed, which do Blips' job on the same script programs, Resource Extensions closed source - the part
+		// leaves the script programs to them. A check that cannot be made is logged, the redirect staying; a thread that
+		// cannot start is reported
 		g_sessionEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
 		std::string why;
-		if (!IsFeatureOn(kBlipsSection))
-			why = "it starts with the session, which TweaksV sees through the script programs' hook, and the Blips part, whose hook that is, is off.";
+		if (IsEnabledInIni(kBlipsSection) && !IsFeatureOn(kBlipsSection))
+			why = "it starts with the session, which TweaksV sees through the script programs' hook, and the Blips part is switched off while "
+				"a plugin that does its job on the script programs is installed (the problem above names it) - TweaksV leaves them to that plugin.";
 		else if (!g_askedEvent || !g_sessionEvent)
 			why = "its events could not be made.";
 		else if (!Scripts::AddUser({ kTag, &SessionStarts, nullptr }, why) && why.empty())
