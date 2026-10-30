@@ -140,20 +140,31 @@
 //   winotstart     the byte before the loader's start is 48, so that it is no function start
 //   wiextra        a third reference to the array, a second store of a block
 // [weapon components]
-// The weapon components' sites are always there (the WeaponLimits part's measurement): the rebuild of the list of every
-// weapon component definition, its sort and its update of the count, the pool's size call to a stand-in for the game's
-// size lookup, and the list's 15 other leas, 17 in all; the list of 470 entries with its count right after it, 412
-// definitions from 23 weaponcomponents.meta files, and the files' count beyond it.
+// The weapon components' sites are always there (the WeaponLimits part): the rebuild of the list of every weapon
+// component definition, its sort and its update of the count, the pool's size call to a stand-in for the game's size
+// lookup, and the list's 15 other leas, 17 in all; the list of 470 entries with its count right after it, 412
+// definitions from 23 weaponcomponents.meta files, and the files' count beyond it. The report calls what the size call
+// leads to twice, as the game makes its pool - TweaksV's stub once it is redirected - unless another mod's hook is there.
 //   wcpack         11 seconds after the other actions begin, a pack's weaponcomponents.meta loads: the list is rebuilt
 //                  with 430 definitions from 24 files (with "wait", the run then stays 11 seconds more)
-//   wcfull         470 definitions from 25 files: the list is full
+//   wcfull         470 definitions from 25 files: the game's own list is full
+//   wcmore         556 definitions from 40 files, past the game's own list, as seven weapon packs bring them
 //   wcover         the list has overflowed: the 471st definition's pointer lies over its count, which reads its low half
+//   wcconfig       the game's configuration names 600 slots for the pool (a gameconfig.xml with the pool's entry)
+//   wcconfigbig    the game's configuration names 20000 slots for the pool, more than the part gives it
+//   wcputback      once TweaksV.log holds the first weapon components summary, one of the list's loads in the role of the
+//                  game's protected code leads to the game's own list again, as if the game had put it back; the run
+//                  then waits up to 10 s for the problem (for the test build's TWEAKSV_TEST_SUMMARY_MS)
 //   wcmoved        every lea of the list points outside the game (another mod moved it)
 //   wcsplit        one lea of the list points elsewhere in the game: only 16 load it
 //   wcextra        an 18th lea loads the list (a changed game)
 //   wcprefix       one lea of the list has a 49 prefix instead of 4C
 //   wccount        the update's store of the count leads 8 bytes past the count: the count's references disagree
 //   wcgap          the count's four references lead 4 bytes past it: not a whole number of entries after the list
+//   wcbefore       the count's four references lead 8 bytes before the list
+//   wcoutside      the count's four references lead outside the game
+//   wcfar          the count's four references lead 20000 entries of 8 bytes past the list, inside the fake's image
+//   wcdefault      the pool's default holds 0
 //   wchooked       the pool size call already leads outside the game (another mod's hook)
 // The siren setting IDs (SirenSettings): their 14 sites are always there - the parser registrations of the siren settings
 // and the vehicle variations with their tables and the two ID members' data (type 0x01), the XML reader, the base and a
@@ -612,7 +623,7 @@ static Site g_weaponInfosSites[] = { SITE(g_weaponInfosLea, 0), SITE(g_weaponInf
 	SITE(g_weaponInfosLoader, 0), SITE(g_weaponInfosExtra, 0), SITE(g_weaponInfosOtherHook, 0) };
 
 // [weapon components]
-// The weapon components (the WeaponLimits part's measurement): the list's rebuild - "mov dword [rip+disp32], 0" of its
+// The weapon components (the WeaponLimits part): the list's rebuild - "mov dword [rip+disp32], 0" of its
 // count, the disp32 at +2 and the instruction 10 bytes long, "movzx r8d, word [rip+disp32]" of the files' count, the
 // disp32 at +14, and "lea r10, [rip+disp32]" of the list, the rel32 at +34 - its sort - "movsxd rdx, dword [rip+disp32]"
 // of the count (+3), "lea rcx, [rip+disp32]" of the list (+14), the comparison's lea (+21) and "mov r8d, 8" - its update
@@ -635,10 +646,11 @@ volatile unsigned char g_weaponComponentsLeas[15][8] = {
 	WEAPON_COMPONENTS_LEA(0x48, 0x15), WEAPON_COMPONENTS_LEA(0x4C, 0x0D), WEAPON_COMPONENTS_LEA(0x4C, 0x0D) };
 // an 18th lea, which the game does not have: its first byte becomes 48 only with the option "wcextra"
 volatile unsigned char g_weaponComponentsLeaExtra[] = { 0xCC, 0x8D, 0x05, 0, 0, 0, 0, 0xCC };
-// every site but the 15 leas, whole, for the protection check and the report; the size lookup's call
+// every site but the 15 leas, whole, for the protection check and the report; the size lookup's call and the pool's default
 static Site g_weaponComponentsSites[] = { SITE(g_weaponComponentsRebuild, 0), SITE(g_weaponComponentsSort, 0), SITE(g_weaponComponentsUpdate, 0),
 	SITE(g_weaponComponentsPool, 0), SITE(g_weaponComponentsLeaExtra, 0) };
 static Site g_weaponComponentsSizeCall = SITE(g_weaponComponentsPool, 19);
+static Site g_weaponComponentsDefault = SITE(g_weaponComponentsPool, 14);
 
 // The siren setting IDs: each array one match of its pattern with the bytes the module checks at their offsets, from
 // I-E-P1 to I-E-M1 (the constructors' C2 and C3 from 15 bytes before their match), and a fifth lea of the ID table that is
@@ -1154,19 +1166,29 @@ static bool WeaponInfosCopyIntoCarrier(size_t at)
 // The game's weapon component list, 470 entries of 8 bytes - a definition's pointer each - with its count, an int32, right
 // after it, then the array of the files' blobs and their count, a uint16, as the game lays them out; what the game's
 // configuration pointer leads to; and the game's pool size lookup behind the pool's size call, which gives a pool the size
-// the configuration names for it or - as the game's own configuration does for this pool - the default. The harness keeps
-// what it placed, the store and the sites' bytes, to tell afterwards that TweaksV wrote nothing.
+// the configuration names for it or - as the game's own configuration does for this pool - the default, and counts its
+// calls and those with the arguments the game's call hands it. The harness keeps what it placed, the store and the sites'
+// bytes - all but the rel32 of the list's 17 loads and of the size call, which the part writes - and the store as TweaksV
+// finds it, whose entries the moved list must hold, to tell afterwards what TweaksV wrote.
 struct WeaponComponentsStore { uint64_t list[470]; int32_t count; uint32_t unused; uint64_t blobs; uint16_t files; uint16_t capacity; };
 static_assert(offsetof(WeaponComponentsStore, count) == 470 * 8, "the list's count lies right after it");
 static WeaponComponentsStore g_weaponComponentsStoreStorage;
 static WeaponComponentsStore* volatile g_weaponComponentsStore = &g_weaponComponentsStoreStorage;
 static WeaponComponentsStore g_weaponComponentsPlacedStore;
+static WeaponComponentsStore g_weaponComponentsAtStart;
 static unsigned char g_weaponComponentsPlacedSites[512];
 static uint64_t g_weaponComponentsConfigurationStorage[4];
 static void* volatile g_weaponComponentsConfiguration = g_weaponComponentsConfigurationStorage;
-static uint32_t WeaponComponentsPoolSize(const void* configuration, uint32_t hash, uint32_t defaultSize)
+static int32_t g_weaponComponentsGameDefault = 470;		// the pool's default at its site (0 with "wcdefault")
+static int32_t g_weaponComponentsConfigured = -1;		// the pool's size the configuration names: none, as the game's own
+static volatile LONG g_weaponComponentsLookups = 0;		// the lookup's calls, and those with the arguments the game's call hands it
+static volatile LONG g_weaponComponentsLookupsAsCalled = 0;
+static int32_t WeaponComponentsPoolSize(const void* configuration, uint32_t hash, int32_t defaultSize)
 {
-	return configuration && hash == 0x0BADC0DE ? 1 : defaultSize;
+	InterlockedIncrement(&g_weaponComponentsLookups);
+	if (configuration == g_weaponComponentsConfiguration && hash == 0xBAE33CCF && defaultSize == g_weaponComponentsGameDefault)
+		InterlockedIncrement(&g_weaponComponentsLookupsAsCalled);
+	return configuration && hash == 0xBAE33CCF && g_weaponComponentsConfigured >= 0 ? g_weaponComponentsConfigured : defaultSize;
 }
 
 // The list as the game leaves it after a rebuild: count definitions from files files - their pointers, as on the heap - the
@@ -1192,19 +1214,154 @@ static void WeaponComponentsPoint(volatile unsigned char* bytes, int field, int 
 	memcpy(at + field, &rel, sizeof(rel));
 }
 
-// Every byte of the sites in a row, at most room: the copy before TweaksV loads, and the comparison after it ran
+// Every byte of the sites in a row, the 15 leas after the others, at most room - the rel32 of each of the list's 17 loads
+// and of the size call, which the part writes, as 0: the copy before TweaksV loads, and the comparison after it ran
 static size_t WeaponComponentsCopySites(unsigned char* to, size_t room)
 {
+	static constexpr size_t kNone = SIZE_MAX;
 	size_t n = 0;
-	const auto copy = [&n, to, room](const volatile unsigned char* bytes, size_t size) {
+	const auto copy = [&n, to, room](const volatile unsigned char* bytes, size_t size, size_t written) {
 		for (size_t i = 0; i < size && n < room; i++)
-			to[n++] = bytes[i];
+			to[n++] = written != kNone && i >= written && i < written + 4 ? 0 : bytes[i];
 	};
-	for (const Site& site : g_weaponComponentsSites)
-		copy(site.bytes, site.size);
+	copy(g_weaponComponentsRebuild, sizeof(g_weaponComponentsRebuild), 34);
+	copy(g_weaponComponentsSort, sizeof(g_weaponComponentsSort), 14);
+	copy(g_weaponComponentsUpdate, sizeof(g_weaponComponentsUpdate), kNone);
+	copy(g_weaponComponentsPool, sizeof(g_weaponComponentsPool), 19);
+	copy(g_weaponComponentsLeaExtra, sizeof(g_weaponComponentsLeaExtra), kNone);
 	for (auto& row : g_weaponComponentsLeas)
-		copy(row, sizeof(row));
+		copy(row, sizeof(row), 3);
 	return n;
+}
+
+static const unsigned char* Rel32Target(const Site& site);
+static bool InImage(const void* p);
+
+// Where the list's 17 loads lead - the rebuild's, the sort's and the 15 others: to the game's own list, to one list outside
+// the game in committed memory - the moved one - or elsewhere
+struct WeaponComponentsLoads
+{
+	int moved = 0, game = 0, other = 0;
+	const unsigned char* list = nullptr;
+};
+static WeaponComponentsLoads WeaponComponentsWhereLoadsLead()
+{
+	WeaponComponentsLoads loads;
+	const auto load = [&loads](const volatile unsigned char* bytes, size_t field) {
+		const unsigned char* const at = const_cast<const unsigned char*>(bytes) + field;
+		int32_t rel = 0;
+		memcpy(&rel, at, sizeof(rel));
+		const unsigned char* const target = at + 4 + rel;
+		MEMORY_BASIC_INFORMATION info{};
+		if (target == reinterpret_cast<const unsigned char*>(g_weaponComponentsStore->list))
+			loads.game++;
+		else if (!InImage(target) && (!loads.list || target == loads.list) && VirtualQuery(target, &info, sizeof(info)) == sizeof(info) &&
+			info.State == MEM_COMMIT)
+		{
+			loads.list = target;
+			loads.moved++;
+		}
+		else
+			loads.other++;
+	};
+	load(g_weaponComponentsRebuild, 34);
+	load(g_weaponComponentsSort, 14);
+	for (auto& row : g_weaponComponentsLeas)
+		load(row, 3);
+	return loads;
+}
+
+// The moved list: read/write data of 16384 entries, the game's 470 as TweaksV found them, then zeros
+static bool WeaponComponentsMovedAsCopied(const unsigned char* list)
+{
+	MEMORY_BASIC_INFORMATION info{};
+	if (VirtualQuery(list, &info, sizeof(info)) != sizeof(info) || info.Protect != PAGE_READWRITE ||
+		static_cast<size_t>(static_cast<const unsigned char*>(info.BaseAddress) + info.RegionSize - list) < 16384 * 8)
+		return false;
+	const auto entries = reinterpret_cast<const uint64_t*>(list);
+	for (size_t i = 0; i < 16384; i++)
+		if (entries[i] != (i < 470 ? g_weaponComponentsAtStart.list[i] : 0))
+			return false;
+	return true;
+}
+
+// How often TweaksV.log, read whole and shared as TweaksV shares it while it writes, holds text; and a wait, 100 ms at a
+// time and ms at most, until it holds text n times
+static int WeaponComponentsLogHas(const char* text)
+{
+	static char log[4 << 20];
+	const HANDLE file = CreateFileW(L"TweaksV.log", GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING,
+		FILE_ATTRIBUTE_NORMAL, nullptr);
+	if (file == INVALID_HANDLE_VALUE)
+		return 0;
+	DWORD read = 0;
+	if (!ReadFile(file, log, sizeof(log) - 1, &read, nullptr))
+		read = 0;
+	CloseHandle(file);
+	log[read] = '\0';
+	int found = 0;
+	for (const char* at = strstr(log, text); at; at = strstr(at + 1, text))
+		found++;
+	return found;
+}
+static bool WeaponComponentsAwait(const char* text, int n, DWORD ms)
+{
+	for (DWORD waited = 0; WeaponComponentsLogHas(text) < n; waited += 100)
+	{
+		if (waited >= ms)
+			return false;
+		Sleep(100);
+	}
+	return true;
+}
+
+// "wcputback": once TweaksV.log holds the first weapon components summary, the 11th of the 15 leas - the second of the six in
+// the role of the game's protected code - leads to the game's own list again, as if the game had put it back; then up to 10 s
+// for TweaksV's problem and 5 s more for its box, or its line that the box is not shown
+static void WeaponComponentsPutBack()
+{
+	if (!WeaponComponentsAwait("weapon component definitions from", 1, 20000))
+		return;
+	const int boxes = WeaponComponentsLogHas("after the start-up summary");
+	const auto row = const_cast<unsigned char*>(g_weaponComponentsLeas[10]);
+	DWORD old = 0;
+	if (!VirtualProtect(row, sizeof(g_weaponComponentsLeas[10]), PAGE_EXECUTE_READWRITE, &old))
+		return;
+	WeaponComponentsPoint(row, 3, 7, g_weaponComponentsStore->list);
+	VirtualProtect(row, sizeof(g_weaponComponentsLeas[10]), old, &old);
+	FlushInstructionCache(GetCurrentProcess(), row, sizeof(g_weaponComponentsLeas[10]));
+	if (WeaponComponentsAwait("is not kept this session", 1, 10000))
+		WeaponComponentsAwait("after the start-up summary", boxes + 1, 5000);
+}
+
+// The report's field: where the 17 loads lead and what the moved list holds; the sites' other bytes and the store as placed;
+// and what the size call leads to, called twice as the game makes its pool - the lookup itself, or TweaksV's stub, which must
+// be read+execute and stays out of the stubs the report counts for the other parts - unless it leads to another mod's hook,
+// where nothing is
+static void WeaponComponentsReport()
+{
+	const WeaponComponentsLoads loads = WeaponComponentsWhereLoadsLead();
+	unsigned char sites[sizeof(g_weaponComponentsPlacedSites)];
+	const size_t size = WeaponComponentsCopySites(sites, sizeof(sites));
+	wprintf(L"wc: loads %d moved %d game %d other", loads.moved, loads.game, loads.other);
+	if (loads.list)
+		wprintf(L", moved list %ls", WeaponComponentsMovedAsCopied(loads.list) ? L"RW, copied then 0" : L"CHANGED");
+	wprintf(L", other bytes %ls, data %ls, size call ", memcmp(sites, g_weaponComponentsPlacedSites, size) == 0 ? L"as placed" : L"CHANGED",
+		memcmp(g_weaponComponentsStore, &g_weaponComponentsPlacedStore, sizeof(WeaponComponentsStore)) == 0 ? L"as placed" : L"CHANGED");
+	const unsigned char* const target = Rel32Target(g_weaponComponentsSizeCall);
+	const auto lookup = reinterpret_cast<const unsigned char*>(&WeaponComponentsPoolSize);
+	MEMORY_BASIC_INFORMATION info{};
+	if (target != lookup && (InImage(target) || VirtualQuery(target, &info, sizeof(info)) != sizeof(info) || info.State != MEM_COMMIT))
+	{
+		wprintf(L"elsewhere | ");
+		return;
+	}
+	using Lookup = int32_t (*)(const void* configuration, uint32_t hash, int32_t defaultSize);
+	const auto call = reinterpret_cast<Lookup>(const_cast<unsigned char*>(target));
+	const int32_t first = call(g_weaponComponentsConfiguration, 0xBAE33CCF, g_weaponComponentsGameDefault);
+	const int32_t second = call(g_weaponComponentsConfiguration, 0xBAE33CCF, g_weaponComponentsGameDefault);
+	wprintf(L"%ls: %d and %d slots, lookups %ld of %ld as called | ", target == lookup ? L"to the lookup" : info.Protect == PAGE_EXECUTE_READ ?
+		L"to a stub, RX" : L"to a stub, NOT RX", first, second, g_weaponComponentsLookupsAsCalled, g_weaponComponentsLookups);
 }
 
 // The siren setting IDs: the game's data their sites lead to, at the game's sizes and offsets (TweaksV's PATTERNS.md,
@@ -4789,8 +4946,8 @@ int wmain(int argc, wchar_t** argv)
 		WeaponInfosKeepSites();
 	}
 	// [weapon components]
-	// The weapon components: 412 definitions from 23 files in the list - 470 from 25 with "wcfull" and "wcover" - and every
-	// site leading to the list, its count, the files' count, the configuration and the size lookup...
+	// The weapon components: 412 definitions from 23 files in the list - 470 from 25 with "wcfull" and "wcover", 556 from 40
+	// with "wcmore" - and every site leading to the list, its count, the files' count, the configuration and the size lookup...
 	WeaponComponentsLoad(HasOption(argc, argv, L"wcfull") || HasOption(argc, argv, L"wcover") ? 470 : 412,
 		HasOption(argc, argv, L"wcfull") || HasOption(argc, argv, L"wcover") ? 25 : 23);
 	if (HasOption(argc, argv, L"wcover"))	// ...the 471st definition stored over the count, which reads its pointer's low half
@@ -4800,10 +4957,32 @@ int wmain(int argc, wchar_t** argv)
 		g_weaponComponentsStore->unused = static_cast<uint32_t>(past >> 32);
 		g_weaponComponentsPlacedStore = *g_weaponComponentsStore;
 	}
+	if (HasOption(argc, argv, L"wcmore"))	// ...past the game's own list, which the fake fills, only its count past it
+	{
+		WeaponComponentsLoad(470, 40);
+		g_weaponComponentsStore->count = 556;
+		g_weaponComponentsPlacedStore = *g_weaponComponentsStore;
+	}
+	if (HasOption(argc, argv, L"wcconfig"))		// ...the configuration naming the pool's size
+		g_weaponComponentsConfigured = 600;
+	if (HasOption(argc, argv, L"wcconfigbig"))
+		g_weaponComponentsConfigured = 20000;
 	{
 		WeaponComponentsStore* const store = g_weaponComponentsStore;
 		const void* const list = HasOption(argc, argv, L"wcmoved") ? static_cast<const void*>(ImageEnd() + 0x70000) : store->list;	// ...unless another mod moved it
-		const unsigned char* const count = reinterpret_cast<unsigned char*>(&store->count) + (HasOption(argc, argv, L"wcgap") ? 4 : 0);
+		// ...and the count where the game has it - or 4 bytes past it, 8 bytes before the list, outside the game, 20000 entries on
+		const unsigned char* count = reinterpret_cast<unsigned char*>(&store->count) + (HasOption(argc, argv, L"wcgap") ? 4 : 0);
+		if (HasOption(argc, argv, L"wcbefore"))
+			count = reinterpret_cast<unsigned char*>(store->list) - 8;
+		if (HasOption(argc, argv, L"wcoutside"))
+			count = ImageEnd() + 0x72000;
+		if (HasOption(argc, argv, L"wcfar"))
+			count = reinterpret_cast<unsigned char*>(store->list) + 20000 * 8;
+		if (HasOption(argc, argv, L"wcdefault"))	// ...or the pool's default 0
+		{
+			SetImm32(g_weaponComponentsDefault, 0);
+			g_weaponComponentsGameDefault = 0;
+		}
 		WeaponComponentsPoint(g_weaponComponentsRebuild, 2, 10, count);
 		WeaponComponentsPoint(g_weaponComponentsRebuild, 14, 18, &store->files);
 		WeaponComponentsPoint(g_weaponComponentsRebuild, 34, 38, list);
@@ -4824,6 +5003,7 @@ int wmain(int argc, wchar_t** argv)
 		if (HasOption(argc, argv, L"wcprefix"))	// ...or one has a prefix the game's never have
 			g_weaponComponentsLeas[0][0] = 0x49;
 		WeaponComponentsCopySites(g_weaponComponentsPlacedSites, sizeof(g_weaponComponentsPlacedSites));
+		g_weaponComponentsAtStart = *store;
 	}
 	SirenIdsSetup(argc, argv);
 	SirenCountSetup(HasOption(argc, argv, L"schooked"), HasOption(argc, argv, L"scgetterhooked"), HasOption(argc, argv, L"scelsewhere"),
@@ -5070,6 +5250,8 @@ int wmain(int argc, wchar_t** argv)
 		Sleep(11000);
 		WeaponComponentsLoad(430, 24);
 	}
+	if (HasOption(argc, argv, L"wcputback"))	// the game puts one of the list's loads back
+		WeaponComponentsPutBack();
 	SirenIdsLater();
 	if (HasOption(argc, argv, L"scdraw"))
 		SirenCountDrawAll(HasOption(argc, argv, L"scodd"), HasOption(argc, argv, L"scmore"), HasOption(argc, argv, L"scfull"),
@@ -5139,14 +5321,7 @@ int wmain(int argc, wchar_t** argv)
 		g_weaponInfosArray->block == g_weaponInfosBlock ? L"" : L", its block CHANGED", g_weaponInfosPassed, g_weaponInfosRefused,
 		g_weaponInfosAsExpected, g_weaponInfosCalls);
 	// [weapon components]
-	{
-		unsigned char sites[sizeof(g_weaponComponentsPlacedSites)];
-		const size_t size = WeaponComponentsCopySites(sites, sizeof(sites));
-		wprintf(L"wc: sites %ls, data %ls, size call %ls | ", memcmp(sites, g_weaponComponentsPlacedSites, size) == 0 ? L"as placed" : L"CHANGED",
-			memcmp(g_weaponComponentsStore, &g_weaponComponentsPlacedStore, sizeof(WeaponComponentsStore)) == 0 ? L"as placed" : L"CHANGED",
-			Rel32Target(g_weaponComponentsSizeCall) == reinterpret_cast<const unsigned char*>(&WeaponComponentsPoolSize) ? L"to the lookup" : L"elsewhere");
-		CheckStub(Rel32Target(g_weaponComponentsSizeCall));
-	}
+	WeaponComponentsReport();
 	SirenIdsReport();
 	SirenCountReport();
 	CheckStub(Rel32Target(g_sirenCountRendererCall));

@@ -301,6 +301,8 @@ namespace TweaksV
 				line += " - the game's own list would have overflowed by " + std::to_string(static_cast<uint32_t>(count) - g_gameSize);
 			if (static_cast<uint32_t>(count) >= g_size)
 				line += " - it is full: one more definition crashes the game while it loads";
+			if (numbers & kPutBack)
+				line += " - a load of the list no longer leads to it, reported above";
 			WriteLog(kTag, line + ".");
 		}
 

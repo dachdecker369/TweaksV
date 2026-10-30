@@ -1,138 +1,194 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-only
-# The weapon components measured first (TweaksVWeaponComponents, the WeaponLimits part's): with DIAGNOSTIC_MODE=1 the
-# fake game's list of every weapon component definition - its rebuild, its sort, its update of the count, the pool's
-# size call and the list's 15 other leas - found, checked and logged, and its count and the files' count summed up 10
-# seconds in and again when they change: the fake's 412 definitions from 23 files at the game's sizes, a pack's 430
-# from 24, the list full, the list overflowed; a pattern broken, the list another mod moved, a lea fewer, one more,
-# one with another prefix, the count's references disagreeing, the count not a whole number of entries after the list
-# and the pool size call another mod hooked - each logged, no problem, no box, no summary; the plain game; DRY_RUN
-# alike; nothing looked for without DIAGNOSTIC_MODE; and nothing written in any of them: the fake's sites and data as
-# placed, the size call to the game's lookup, every page's protection its own. Fake LOCALAPPDATA: the real one is
-# never touched.
+# The weapon components (TweaksVWeaponComponents, the WeaponLimits part's second half), on the fake game's list of every
+# weapon component definition - its rebuild, its sort, its update of the count, the pool's size call and the list's 15
+# other leas: by default the list moved - its 17 loads to a list of 16384 entries that holds the game's own entries, the
+# count left where it is - and the pool's size call redirected to a read+execute stub that gives the pool exactly the list's
+# size, the game's lookup called with the game's arguments, its line once, every other byte as placed and every page its
+# own protection; the part off; DRY_RUN; WEAPON_COMPONENTS_SIZE raised and past its range; the game's configuration naming
+# the pool's size, below the list's and above it; DIAGNOSTIC_MODE with every site, write and status line word for word, the
+# measurement announced and its summary 10 seconds in, again once a pack's file loads, past the game's own 470, the list
+# full, the list overflowed, the game's own list in use with DRY_RUN; a load the game puts back, reported once with its
+# box; each check failing on its own - TEST_BREAK_PATTERN, the list another mod moved, a lea fewer, one more, one with
+# another prefix, the count's references disagreeing, the count not a whole number of entries after the list, before it,
+# outside the game, too far for a plausible size, the pool's default 0 and the size call another mod hooked - each a
+# problem word for word with nothing written; and the plain game. Fake LOCALAPPDATA: the real one is never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 cd "$B" || exit 1
 cp "$R/x64/Release/TweaksV.asi" TweaksV.asi
 cp "$R/object/Test/Release/TweaksV.asi" TweaksV_test.asi
 mkdir -p appdata
 
-# the fake's sites and data as it placed them, its size call to its stand-in for the game's lookup
-PLACED='wc: sites as placed, data as placed, size call to the lookup'
 RVA='RVA 0x[0-9A-F]*'
-TAG='\[WeaponLimits\] DIAGNOSTIC: '
-NOT_MEASURED="${TAG}the weapon components are not measured: "
-ANNOUNCED="${TAG}the weapon component list at $RVA, 470 entries of 8 bytes up to its count at $RVA, and the count of weaponcomponents.meta files at $RVA: the definitions and the files are logged after 10 seconds, then every minute while the numbers change.\$"
-# summary N F [END]: the summary of N definitions from F files, word for word (END: what follows the game's 470)
-summary() { log_line "${TAG}$1 weapon component definitions from $2 weaponcomponents.meta files (the game.s own list holds 470)${3:-.}\$"; }
+TAG='\[WeaponLimits\] '
+DIAG="${TAG}DIAGNOSTIC: "
+NOT_RAISED="${TAG}PROBLEM: The weapon components limit is not raised this session: "
+# The report's field: the part's writes - the 17 loads to the moved list, which holds the game's entries and zeros up to
+# 16384, read/write; every other byte and the game's data as placed; the size call to TweaksV's read+execute stub - or none
+# of them, the game as it was, the size call to the game's lookup; the report calls what the size call leads to twice
+APPLIED='wc: loads 17 moved 0 game 0 other, moved list RW, copied then 0, other bytes as placed, data as placed, size call to a stub, RX: '
+GAME='wc: loads 0 moved 17 game 0 other, other bytes as placed, data as placed, size call to the lookup: 470 and 470 slots, lookups 2 of 2 as called'
+MOVED_LINE="${TAG}The weapon component list moved and its limit raised from 470 to 1024 entries.\$"
+REDIRECTED="${TAG}The pool size call at $RVA is redirected: the weapon components. pool gets 1024 slots, the list.s size.\$"
+ANNOUNCED="${DIAG}the weapon component definitions in the list and the weaponcomponents.meta files are logged after 10 seconds, then every minute while the numbers change, and the list.s 17 loads are checked at each reading to lead to the moved list still.\$"
+# replaced G N: the pool's line, word for word; summary N F REST: the summary of N definitions from F files, word for word
+# (REST: what follows the game's 470, from ", this one" or " and is in use" on); summaries: how many
+replaced() { log_line "${TAG}The pool size the game.s configuration gives for the weapon components, $1, is replaced by $2.\$"; }
+summary() { log_line "${DIAG}$1 weapon component definitions from $2 weaponcomponents.meta files (the game.s own list holds 470$3\$"; }
 summaries() { count 'weapon component definitions from'; }
-# target KIND LABEL: the RVA the module's line of that kind ("reference", "count reference", ...) leads to, for LABEL
-target() { tr -d '\r' < TweaksV.log | sed -n "s/.*${TAG}$1 at RVA 0x[0-9A-F]* -> RVA \(0x[0-9A-F]*\) ($2)\$/\1/p"; }
-# quiet: no problem of any part, no start-up summary and no box; unannounced: no announcement of the measurement;
-# no_site_line: none of the module's site lines, each of which names a W-E-C pattern or the lea scan at its end - the
-# weapon infos module logs its own sites under the same tag; loads: the module's lines of the list's loads
+# target KIND LABEL: the RVA the part's line of that kind ("reference", "count reference", ...) leads to, for LABEL;
+# follower: the RVA of the count, from the core's line of the variable that follows the list
+target() { tr -d '\r' < TweaksV.log | sed -n "s/.*${DIAG}$1 at RVA 0x[0-9A-F]* -> RVA \(0x[0-9A-F]*\) ($2)\$/\1/p"; }
+follower() { tr -d '\r' < TweaksV.log | sed -n "s/.*${DIAG}limit variable at RVA \(0x[0-9A-F]*\) lies 3760 bytes after the weapon component list (W-E-C1) -> game size 470\$/\1/p"; }
+# quiet: no problem of any part, no start-up summary and no box; untouched: nothing of the part written - none of the 17
+# loads moved, every other byte and the data as placed, every page its own protection
 quiet() { log_lacks 'PROBLEM' && log_lacks -i 'start-up summary' && log_lacks 'message box'; }
-unannounced() { log_lacks 'the definitions and the files are logged'; }
-no_site_line() { log_lacks "${TAG}.*(W-E-C[1-4])" && log_lacks "${TAG}.*(lea scan)"; }
-loads() { count "${TAG}reference at .* (lea scan)"; }
-# checked: the four patterns found once each, every site's line, the 17 loads and the announcement
-checked() {
-	[ "$(grep -c -E 'Pattern W-E-C[1-4] found: .* 1 match,' TweaksV.log)" -eq 4 ] && [ "$(count "${TAG}reference at .* (W-E-C[12])\$")" -eq 2 ] &&
-	[ "$(count "${TAG}count reference at ")" -eq 4 ] && [ "$(loads)" -eq 17 ] && log_line "$ANNOUNCED"
-}
+untouched() { has 'wc: loads 0 moved' && has 'other bytes as placed, data as placed' && has 'protect: all restored (RX)' && log_lacks 'moved and its limit raised from 470'; }
+# refused REASON: the part's one problem, word for word - its reason after the job's words - and nothing written
+refused() { [ "$(count "${TAG}PROBLEM")" -eq 1 ] && log_line "${NOT_RAISED}$1\$" && untouched; }
 
-echo "== W1 the defaults, DIAGNOSTIC_MODE=0: nothing looked for, nothing written"
+echo "== W1 the defaults: the list moved, the pool's size call redirected, nothing else written"
 fresh_ini; out=$(game full_game.exe); echo "      $out"
-check "none of the four patterns looked for, no line of the module" "log_lacks 'W-E-C' && log_lacks '\[WeaponLimits\] DIAGNOSTIC'"
-check "the sites and the data as placed, the size call to the game's lookup, every page back to its own protection, no problem" "has '$PLACED' && has 'protect: all restored (RX)' && quiet"
+check "the 17 loads lead to the moved list, read/write, which holds the game's entries and zeros up to 16384 entries; every other byte and the game's data as placed" "has '$APPLIED'"
+check "the size call leads to TweaksV's read+execute stub: 1024 slots at each call, the game's lookup called each time with the game's arguments" "has 'size call to a stub, RX: 1024 and 1024 slots, lookups 2 of 2 as called'"
+check "the status lines word for word, the pool's line once for its two calls" "log_line '$MOVED_LINE' && log_line '$REDIRECTED' && replaced 470 1024 && [ \$(count 'is replaced by 1024.') -eq 1 ]"
+check "every page back to its own protection, no line of DIAGNOSTIC_MODE, no problem" "has 'protect: all restored (RX)' && log_lacks '${TAG}DIAGNOSTIC' && quiet"
 
-echo "== W2 DIAGNOSTIC_MODE=1: the four patterns found once each, every site checked and logged, the measurement announced"
-fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe); echo "      $out"
-list=$(target reference W-E-C1); counted=$(target 'count reference' W-E-C1); files=$(target "files' count reference" W-E-C1)
-check "W-E-C1 to W-E-C4 found exactly once each" "[ \$(grep -c -E 'Pattern W-E-C[1-4] found: .* 1 match,' TweaksV.log) -eq 4 ]"
-check "the rebuild's and the sort's leas lead to one list" "[ -n '$list' ] && [ \"\$(target reference W-E-C2)\" = '$list' ]"
-check "the count's four references - the rebuild's reset, the sort's read, the update's read and write - lead to one count, 470 x 8 bytes after the list" "[ \$(count '${TAG}count reference at ') -eq 4 ] && [ \"\$(target 'count reference' 'W-E-C[123]' | sort -u)\" = '$counted' ] && [ \$(( $counted - $list )) -eq 3760 ]"
-check "the files' count 16 bytes after the count, as the game's lies; the entry size 8" "[ \$(( $files - $counted )) -eq 16 ] && log_line '${TAG}entry size at $RVA holds 8 (W-E-C2)\$'"
-check "the pool's size call, its name and its default, word for word" "log_line '${TAG}pool size call at $RVA -> $RVA for the pool 0xBAE33CCF, its default at $RVA holds 470, the game.s configuration at $RVA (W-E-C4)\$'"
-check "every lea of the list logged: 17, each leading to it" "[ \$(grep -c '${TAG}reference at $RVA -> RVA $list (lea scan)' TweaksV.log) -eq 17 ] && [ \$(loads) -eq 17 ]"
-check "the announcement, word for word" "log_line '$ANNOUNCED'"
-check "no summary within the first seconds" "log_lacks 'weapon component definitions'"
-check "nothing written - the sites and the data as placed, the size call to the game's lookup, every page its own protection; no problem" "has '$PLACED' && has 'protect: all restored (RX)' && quiet"
+echo "== W2 [WEAPON_LIMITS] ENABLED=0, with DIAGNOSTIC_MODE=1: nothing looked for, nothing written"
+fresh_ini; setkey ENABLED 0 WEAPON_LIMITS; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe)
+check "the part off in the header, none of its patterns looked for, no line of the weapon components" "log_has 'WeaponLimits off' && log_lacks 'W-E-C' && log_lacks -i 'weapon component'"
+check "the game as it was - the loads, the bytes, the data, the size call to the game's lookup - every page its own protection, no problem" "has '$GAME' && has 'protect: all restored (RX)' && quiet"
 
-echo "== W3 DIAGNOSTIC_MODE=1 for 12 seconds: the summary 10 s in, the fake's numbers at the game's sizes"
+echo "== W3 DRY_RUN=1: everything found and checked, the line of what it would do, nothing written"
+fresh_ini; setkey DRY_RUN 1; out=$(game full_game.exe)
+check "the dry run's line, word for word" "log_line '${TAG}DRY_RUN: would move the weapon component list (17 references) and raise its limit from 470 to 1024 and redirect the pool size call at $RVA\.\$'"
+check "the game as it was, no status line, no problem" "has '$GAME' && untouched && log_lacks 'is redirected: the weapon components' && quiet"
+
+echo "== W4 DIAGNOSTIC_MODE=1 for 12 seconds: every site and write logged, the measurement announced, its summary 10 s in"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe wait)
-check "the summary, word for word: 412 definitions from 23 files against the game's own 470, once" "summary 412 23 && [ \$(summaries) -eq 1 ]"
-check "nothing written, no problem" "has '$PLACED' && quiet"
+list=$(target reference W-E-C1); counted=$(follower); files=$(target "files' count reference" W-E-C1)
+check "W-E-C1 to W-E-C4 found exactly once each" "[ \$(grep -c -E 'Pattern W-E-C[1-4] found: .* 1 match,' TweaksV.log) -eq 4 ]"
+check "the rebuild's and the sort's leas lead to one list, 470 entries of 8 bytes" "[ -n '$list' ] && [ \"\$(target reference W-E-C2)\" = '$list' ] && log_line '${DIAG}the weapon component list is at RVA $list - 470 entries of 8 bytes\$'"
+check "the count the rebuild resets follows the list by 3760 bytes, 470 entries (the core's follower); the sort's read and the update's read and write lead to it" "[ -n '$counted' ] && [ \$(( $counted - $list )) -eq 3760 ] && [ \$(count '${DIAG}count reference at ') -eq 3 ] && [ \"\$(target 'count reference' 'W-E-C[23]' | sort -u)\" = '$counted' ]"
+check "the files' count 16 bytes after the count, as the game's lies; the entry size 8" "[ \$(( $files - $counted )) -eq 16 ] && log_line '${DIAG}entry size at $RVA holds 8 (W-E-C2)\$'"
+check "the pool's size call, its name and its default, word for word" "log_line '${DIAG}pool size call at $RVA -> $RVA for the pool 0xBAE33CCF, its default at $RVA holds 470, the game.s configuration at $RVA (W-E-C4)\$'"
+check "every lea of the list logged: 17, each leading to it" "[ \$(grep -c '${DIAG}reference at $RVA -> RVA $list (lea scan)' TweaksV.log) -eq 17 ]"
+check "the 18 writes logged: the 17 loads' rel32 and the size call" "[ \$(count '${DIAG}weapon component list reference at $RVA: ') -eq 17 ] && [ \$(count '${DIAG}pool size call at $RVA: E8 ') -eq 1 ]"
+check "the status lines and the announcement, word for word, in that order" "log_line '$MOVED_LINE' && log_line '$REDIRECTED' && log_line '$ANNOUNCED' && [ \$(grep -n 'is redirected: the weapon components' TweaksV.log | cut -d: -f1) -lt \$(grep -n 'loads are checked at each reading' TweaksV.log | cut -d: -f1) ]"
+check "the summary 10 s in, word for word: 412 definitions from 23 files against the game's own 470 and the part's 1024, once" "summary 412 23 ', this one 1024).' && [ \$(summaries) -eq 1 ]"
+check "the part applied, every page its own protection, no problem" "has '$APPLIED' && has 'protect: all restored (RX)' && quiet"
 
-echo "== W4 the summary again when the numbers change: a pack's file loads after the first (test build, TWEAKSV_TEST_SUMMARY_MS=1000)"
+echo "== W5 the summary again when the numbers change: a pack's file loads after the first (test build, TWEAKSV_TEST_SUMMARY_MS=1000)"
 export TWEAKSV_TEST_SUMMARY_MS=1000
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(ASI=TweaksV_test.asi game full_game.exe wcpack wait)
 unset TWEAKSV_TEST_SUMMARY_MS
 check "the test build's line, once" "[ \$(count 'TEST BUILD: the weapon components summary comes every 1000 ms after its first (TWEAKSV_TEST_SUMMARY_MS=1000).') -eq 1 ]"
-check "412 from 23 first, then 430 from 24, and nothing more while the numbers stay" "summary 412 23 && summary 430 24 && [ \$(summaries) -eq 2 ] && [ \$(grep -n 'from 23 weaponcomponents' TweaksV.log | cut -d: -f1) -lt \$(grep -n 'from 24 weaponcomponents' TweaksV.log | cut -d: -f1) ]"
-check "nothing written by TweaksV, no problem" "has '$PLACED' && quiet"
+check "412 from 23 first, then 430 from 24, and nothing more while the numbers stay" "summary 412 23 ', this one 1024).' && summary 430 24 ', this one 1024).' && [ \$(summaries) -eq 2 ] && [ \$(grep -n 'from 23 weaponcomponents' TweaksV.log | cut -d: -f1) -lt \$(grep -n 'from 24 weaponcomponents' TweaksV.log | cut -d: -f1) ]"
+check "the part applied, no problem" "has '$APPLIED' && quiet"
 
-echo "== W5 DRY_RUN=1 alike, the list full: 470 definitions from 25 files"
+echo "== W6 556 definitions from 40 files, past the game's own 470, as seven weapon packs bring them"
+fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe wcmore wait)
+check "the summary, word for word: the game's own list would have overflowed" "summary 556 40 ', this one 1024) - the game.s own list would have overflowed by 86.'"
+check "the part applied, no problem" "has '$APPLIED' && quiet"
+
+echo "== W7 WEAPON_COMPONENTS_SIZE=556 with those 556 definitions: the list and the pool full"
+fresh_ini; setkey DIAGNOSTIC_MODE 1; setkey WEAPON_COMPONENTS_SIZE 556; out=$(game full_game.exe wcmore wait)
+check "raised to 556, the pool given 556 slots, word for word" "log_line '${TAG}The weapon component list moved and its limit raised from 470 to 556 entries.\$' && log_line '${TAG}The pool size call at $RVA is redirected: the weapon components. pool gets 556 slots, the list.s size.\$' && replaced 470 556 && has 'size call to a stub, RX: 556 and 556 slots'"
+check "the summary, word for word: past the game's own, and full" "summary 556 40 ', this one 556) - the game.s own list would have overflowed by 86 - it is full: one more definition crashes the game while it loads.'"
+check "nothing else, no problem" "has '$APPLIED' && quiet"
+
+echo "== W8 DRY_RUN=1 with DIAGNOSTIC_MODE=1, the game's own list full (470 from 25): measured in place"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; setkey DRY_RUN 1; out=$(game full_game.exe wcfull wait)
-check "every pattern, site and load as without DRY_RUN, the announcement" "checked"
-check "the summary, word for word: the list full" "summary 470 25 ' - it is full: one more definition crashes the game while it loads.' && [ \$(summaries) -eq 1 ]"
-check "nothing written, no problem" "has '$PLACED' && quiet"
+check "every site, load and line as without DRY_RUN, the dry run's line in the place of the writes" "[ \$(grep -c -E 'Pattern W-E-C[1-4] found: .* 1 match,' TweaksV.log) -eq 4 ] && [ \$(count '${DIAG}count reference at ') -eq 3 ] && log_has 'DRY_RUN: would move the weapon component list (17 references)' && [ \$(count '${DIAG}weapon component list reference at $RVA: ') -eq 0 ]"
+check "the announcement and the summary, word for word: the game's own list in use, full" "log_line '${DIAG}the weapon component definitions in the list and the weaponcomponents.meta files are logged after 10 seconds, then every minute while the numbers change (DRY_RUN: the game.s own list is in use).\$' && summary 470 25 ' and is in use) - it is full: one more definition crashes the game while it loads.'"
+check "the game as it was, no problem" "has '$GAME' && quiet"
 
-echo "== W6 the list overflowed: the 471st definition's pointer over the count, which reads its low half"
+echo "== W9 the list overflowed - the 471st definition's pointer over the count: with DRY_RUN in the game's own list, without it past the moved one"
+fresh_ini; setkey DIAGNOSTIC_MODE 1; setkey DRY_RUN 1; out=$(game full_game.exe wcover wait)
+check "DRY_RUN: the summary, word for word - no count within the game's own 470; nothing written" "log_line '${DIAG}the weapon component list.s count reads -1547607936, from 25 weaponcomponents.meta files - outside the game.s own list of 470: the list has overflowed, a definition past its end written over the count and the memory after it, and the game is likely to crash.\$' && has '$GAME' && quiet"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe wcover wait)
-check "every pattern, site and load as before, the announcement" "checked"
-check "the summary, word for word: no count within the game's 470" "log_line '${TAG}the weapon component list.s count reads -1547607936, from 25 weaponcomponents.meta files - outside the game.s own list of 470: the list has overflowed, a definition past its end written over the count and the memory after it, and the game is likely to crash.\$'"
-check "nothing written, no problem" "has '$PLACED' && quiet"
+check "the part on: the summary, word for word - no count within the moved list's 16384; the part applied" "log_line '${DIAG}the weapon component list.s count reads -1547607936, from 25 weaponcomponents.meta files - outside the moved list of 16384: the game.s data is damaged, and the game is likely to crash.\$' && has '$APPLIED' && quiet"
 
-echo "== W7 TEST_BREAK_PATTERN=W-E-C1 (test build, ERROR_POPUP=1) for 12 seconds: logged, no problem, no box, no summary"
-fresh_ini; setkey DIAGNOSTIC_MODE 1; setkey ERROR_POPUP 1; addkey TEST_BREAK_PATTERN W-E-C1; out=$(ASI=TweaksV_test.asi game full_game.exe wait)
-check "the scanner's line and the module's, word for word; the other three still looked for and found" "log_has 'TEST BUILD: pattern W-E-C1 is treated as not found (TEST_BREAK_PATTERN).' && log_line '${NOT_MEASURED}W-E-C1 was not found.\$' && [ \$(grep -c -E 'Pattern W-E-C[234] found: .* 1 match,' TweaksV.log) -eq 3 ]"
-check "no site line, no announcement, no summary" "no_site_line && unannounced && log_lacks 'weapon component definitions'"
-check "no problem, no start-up summary, no box; nothing written" "quiet && has '$PLACED'"
+echo "== W10 the game's configuration names the pool's size: 600, then 20000 - replaced by the list's size either way"
+fresh_ini; out=$(game full_game.exe wcconfig)
+check "600 replaced by 1024, word for word; the stub's 1024 slots, the lookup called each time" "replaced 600 1024 && has 'size call to a stub, RX: 1024 and 1024 slots, lookups 2 of 2 as called' && quiet"
+fresh_ini; out=$(game full_game.exe wcconfigbig)
+check "20000, more than the list's size, replaced by 1024 exactly, word for word" "replaced 20000 1024 && has 'size call to a stub, RX: 1024 and 1024 slots, lookups 2 of 2 as called' && quiet"
 
-echo "== W8 TEST_BREAK_PATTERN=W-E-C4 (test build): the last of the four, logged by its label"
-fresh_ini; setkey DIAGNOSTIC_MODE 1; addkey TEST_BREAK_PATTERN W-E-C4; out=$(ASI=TweaksV_test.asi game full_game.exe)
-check "the module's line, word for word; the other three found, no site line" "log_line '${NOT_MEASURED}W-E-C4 was not found.\$' && [ \$(grep -c -E 'Pattern W-E-C[123] found: .* 1 match,' TweaksV.log) -eq 3 ] && no_site_line"
-check "no problem, nothing written" "quiet && has '$PLACED'"
+echo "== W11 WEAPON_COMPONENTS_SIZE=20000, past its range: 16384, reported"
+fresh_ini; setkey WEAPON_COMPONENTS_SIZE 20000; out=$(game full_game.exe)
+check "the setting's problem, word for word, the one problem" "log_line '\[TweaksV\] PROBLEM: TweaksV.ini: \[WEAPON_LIMITS\] WEAPON_COMPONENTS_SIZE=20000 is outside 470..16384 - using 16384.\$' && [ \$(count 'PROBLEM') -eq 1 ]"
+check "raised to 16384, the pool given 16384 slots" "log_line '${TAG}The weapon component list moved and its limit raised from 470 to 16384 entries.\$' && replaced 470 16384 && has 'size call to a stub, RX: 16384 and 16384 slots' && has '$APPLIED'"
 
-echo "== W9 the list another mod moved: its leas outside the game (test build, ERROR_POPUP=1)"
-fresh_ini; setkey DIAGNOSTIC_MODE 1; setkey ERROR_POPUP 1; out=$(ASI=TweaksV_test.asi game full_game.exe wcmoved)
-check "the reason, word for word, after the rebuild's lea" "log_line '${TAG}reference at $RVA -> 0x[0-9A-F]* (outside the game) (W-E-C1)\$' && log_line '${NOT_MEASURED}the weapon component list is not inside the game: 0x[0-9A-F]* (outside the game) (another mod may have moved it already).\$'"
-check "no announcement; no problem, no box; nothing written" "unannounced && quiet && has '$PLACED'"
+echo "== W12 a load the game puts back, after the first summary (test build, ERROR_POPUP=1, TWEAKSV_TEST_SUMMARY_MS=1000): reported once, in a box"
+export TWEAKSV_TEST_SUMMARY_MS=1000
+fresh_ini; setkey DIAGNOSTIC_MODE 1; setkey ERROR_POPUP 1; out=$(ASI=TweaksV_test.asi game full_game.exe wcputback)
+unset TWEAKSV_TEST_SUMMARY_MS
+check "the load leads to the game's own list again: 16 loads to the moved list, 1 to the game's" "has 'wc: loads 16 moved 1 game 0 other, moved list RW, copied then 0, other bytes as placed'"
+check "the problem, word for word, once" "[ \$(count 'is not kept this session') -eq 1 ] && log_line '${TAG}PROBLEM: The weapon components limit is not kept this session: the load of the weapon component list at $RVA leads to RVA 0x[0-9A-F]* again, not to the moved list at 0x[0-9A-F]* (outside the game) - the game has put it back, and a search through it reads the game.s own list, empty since the move: the game is likely to crash.\$'"
+check "the summary again, with the load put back, word for word" "summary 412 23 ', this one 1024).' && summary 412 23 ', this one 1024) - a load of the list no longer leads to it, reported above.' && [ \$(summaries) -eq 2 ]"
+check "the box of a part that stopped working after the start-up" "log_has 'Showing a problem after the start-up summary (1 problem(s)).' && log_has 'TEST BUILD: message box not shown (TWEAKSV_TEST_NO_BOXES=1): TweaksV: a part stopped working after the start-up:'"
 
-echo "== W10 one lea of the list leads elsewhere in the game: only 16 load it"
-fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe wcsplit)
-check "16 loads logged, the reason word for word" "[ \$(loads) -eq 16 ] && log_line '${NOT_MEASURED}the game code loads the weapon component list in 16 places, not the expected 17 (another mod may have moved some of them, or the game has changed).\$'"
-check "no announcement, no problem, nothing written" "unannounced && quiet && has '$PLACED'"
+echo "== W13 TEST_BREAK_PATTERN=W-E-C1 (test build, ERROR_POPUP=1): the problem in the start-up summary, nothing written"
+fresh_ini; setkey ERROR_POPUP 1; addkey TEST_BREAK_PATTERN W-E-C1; out=$(ASI=TweaksV_test.asi game full_game.exe)
+check "the scanner's line and the problem, word for word" "log_has 'TEST BUILD: pattern W-E-C1 is treated as not found (TEST_BREAK_PATTERN).' && refused 'W-E-C1 was not found.'"
+check "the start-up summary's box" "log_has 'Showing the start-up summary (1 problem(s)).' && log_has 'TEST BUILD: message box not shown (TWEAKSV_TEST_NO_BOXES=1): TweaksV could not apply everything:'"
+check "the size call to the game's lookup" "has '$GAME'"
 
-echo "== W11 an 18th lea loads the list (a changed game)"
-fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe wcextra)
-check "18 loads logged, the reason word for word" "[ \$(loads) -eq 18 ] && log_line '${NOT_MEASURED}the game code loads the weapon component list in 18 or more places, not the expected 17 (another mod may have moved some of them, or the game has changed).\$'"
-check "no announcement, no problem, nothing written" "unannounced && quiet && has '$PLACED'"
+echo "== W14 TEST_BREAK_PATTERN=W-E-C4 (test build): the last of the four, refused by its label"
+fresh_ini; addkey TEST_BREAK_PATTERN W-E-C4; out=$(ASI=TweaksV_test.asi game full_game.exe)
+check "the problem, word for word; the other three found; nothing written" "refused 'W-E-C4 was not found.' && has '$GAME'"
 
-echo "== W12 one lea of the list with a 49 prefix, which the game's never have"
-fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe wcprefix)
-check "the reason, word for word, with the lea's bytes" "log_line '${NOT_MEASURED}the load of the weapon component list at $RVA is not a \"lea r64, \[rip+disp32\]\" with a 48 or 4C prefix: 49 8D 05 [0-9A-F ]*\.\$'"
-check "no announcement, no problem, nothing written" "unannounced && quiet && has '$PLACED'"
+echo "== W15 the list another mod moved: its leas outside the game"
+fresh_ini; out=$(game full_game.exe wcmoved)
+check "the problem, word for word" "refused 'the weapon component list is not inside the game: 0x[0-9A-F]* (outside the game) (another mod may have moved it already).'"
+check "the loads where the other mod put them, the size call to the game's lookup" "has 'wc: loads 0 moved 0 game 17 other' && has 'size call to the lookup: 470 and 470 slots'"
 
-echo "== W13 the update's store of the count leads elsewhere: the count's references disagree"
-fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe wccount)
-check "the reason, word for word, naming the update" "log_line '${NOT_MEASURED}the references to the weapon component list.s count do not all point to one count: $RVA and $RVA (W-E-C3).\$'"
-check "no announcement, no problem, nothing written" "unannounced && quiet && has '$PLACED'"
+echo "== W16 one lea of the list leads elsewhere in the game: only 16 load it"
+fresh_ini; out=$(game full_game.exe wcsplit)
+check "the problem, word for word; nothing written" "refused 'the game code loads the weapon component list in 16 places, not the expected 17 (another mod may have moved some of them, or the game has changed).' && has 'wc: loads 0 moved 16 game 1 other' && has 'size call to the lookup'"
 
-echo "== W14 the count 4 bytes further: not a whole number of 8-byte entries after the list"
-fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe wcgap)
-check "the reason, word for word" "log_line '${NOT_MEASURED}the weapon component list.s count at $RVA does not lie a whole number of 8-byte entries after the list at $RVA.\$'"
-check "no announcement, no problem, nothing written" "unannounced && quiet && has '$PLACED'"
+echo "== W17 an 18th lea loads the list (a changed game)"
+fresh_ini; out=$(game full_game.exe wcextra)
+check "the problem, word for word; nothing written" "refused 'the game code loads the weapon component list in 18 or more places, not the expected 17 (another mod may have moved some of them, or the game has changed).' && has '$GAME'"
 
-echo "== W15 the pool size call another mod hooked: it leads outside the game"
-fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe wchooked); echo "      $out"
-check "the reason, word for word" "log_line '${NOT_MEASURED}the pool size call at $RVA is not a call into the game (another mod may have hooked it already) (W-E-C4).\$'"
-check "no announcement, no problem; the call left where the other mod's hook sent it, nothing written" "unannounced && quiet && has 'wc: sites as placed, data as placed, size call elsewhere'"
+echo "== W18 one lea of the list with a 49 prefix, which the game's never have"
+fresh_ini; out=$(game full_game.exe wcprefix)
+check "the problem, word for word, with the lea's bytes; nothing written" "refused 'the load of the weapon component list at $RVA is not a \"lea r64, \[rip+disp32\]\" with a 48 or 4C prefix: 49 8D 05 [0-9A-F ]*\.' && has '$GAME'"
 
-echo "== W16 none of the game code present (plain fake game): each pattern logged missing, no problem of the module"
-fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game plain_game.exe)
+echo "== W19 the update's store of the count leads elsewhere: the count's references disagree"
+fresh_ini; out=$(game full_game.exe wccount)
+check "the problem, word for word, naming the update; nothing written" "refused 'the references to the weapon component list.s count do not all point to one count: $RVA and $RVA (W-E-C3).' && has '$GAME'"
+
+echo "== W20 the core's follower: the count 4 bytes further - not a whole number of 8-byte entries after the list"
+fresh_ini; out=$(game full_game.exe wcgap)
+check "the problem, word for word; nothing written" "refused 'the variable at $RVA does not lie a whole number of 8-byte entries after the weapon component list at $RVA (W-E-C1).' && has '$GAME'"
+
+echo "== W21 the core's follower: the count 8 bytes before the list"
+fresh_ini; out=$(game full_game.exe wcbefore)
+check "the problem, word for word; nothing written" "refused 'the variable at $RVA does not lie a whole number of 8-byte entries after the weapon component list at $RVA (W-E-C1).' && has '$GAME'"
+
+echo "== W22 the core's follower: the count outside the game"
+fresh_ini; out=$(game full_game.exe wcoutside)
+check "the problem, word for word; nothing written" "refused 'the variable that follows the weapon component list is not inside the game: 0x[0-9A-F]* (outside the game) (W-E-C1).' && has '$GAME'"
+
+echo "== W23 the core's follower: the count 20000 entries after the list, no plausible size"
+fresh_ini; out=$(game full_game.exe wcfar)
+check "the problem, word for word; nothing written" "refused 'the game.s own weapon component list size, 20000, is not plausible.' && has '$GAME'"
+
+echo "== W24 the pool's default holds 0"
+fresh_ini; out=$(game full_game.exe wcdefault)
+check "the problem, word for word; nothing written, the size call to the game's lookup" "refused 'the pool.s default size at $RVA holds 0, which is no plausible size (W-E-C4).' && has 'size call to the lookup: 0 and 0 slots'"
+
+echo "== W25 the pool size call another mod hooked: it leads outside the game"
+fresh_ini; out=$(game full_game.exe wchooked); echo "      $out"
+check "the problem, word for word" "refused 'the pool size call at $RVA is not a call into the game (another mod may have hooked it already) (W-E-C4).'"
+check "the call left where the other mod's hook sent it, not called" "has 'size call elsewhere'"
+
+echo "== W26 none of the game code present (plain fake game): reported, the first pattern named"
+fresh_ini; out=$(game plain_game.exe)
 check "the harness survived" "grep -q 'harness: .* loaded' harness.out"
-check "all four looked for and missing, the module's line names the first" "[ \$(grep -c 'Pattern W-E-C[1-4] not found: ' TweaksV.log) -eq 4 ] && log_line '${NOT_MEASURED}W-E-C1 was not found.\$' && log_lacks '\[WeaponLimits\] PROBLEM: .*weapon component'"
+check "W-E-C1 looked for and missing, the problem word for word" "log_has 'Pattern W-E-C1 not found: ' && log_line '${NOT_RAISED}W-E-C1 was not found.\$'"
 
 echo
 echo "WEAPON COMPONENTS SCENARIOS: $pass passed, $fail failed"

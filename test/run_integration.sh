@@ -144,6 +144,8 @@ breaktest "S-E2 (the legal screen): only that screen is left, the others skipped
 breaktest "W-E-I2 (the weapon info loader): the weapon info limit neither raised nor guarded, the rest applied" "W-E-I2" \
 	"has 'weapon infos: limits 160 160, loader as laid, the rest as laid, array 152 of 160,' && has '$ALL_ON_HEAP' && has '$MODKIT_ON' && has '$PACK_ON' && has '$ROV_ON' && has '$STORY_ON'"
 # [weapon components]
+breaktest "W-E-C2 (the weapon components' sort): list and pool untouched, the rest applied" "W-E-C2" \
+	"has 'wc: loads 0 moved 17 game 0 other, other bytes as placed, data as placed, size call to the lookup' && has '$DECAL_ON' && has '$MODKIT_ON' && has '$PACK_ON' && has '$ROV_ON' && has '$STORY_ON'"
 # [ped props]
 breaktest "A-E-G3 (a ped props narrowing): the ped props' sites as placed, the rest applied" "A-E-G3" \
 	"has 'pedprops: sites as placed, data as placed |' && has '$ALL_ON_HEAP' && has '$MODKIT_ON' && has '$PACK_ON' && has '$ROV_ON' && has '$STORY_ON'"
