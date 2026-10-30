@@ -212,12 +212,12 @@ namespace TweaksV
 				{
 					const std::string sizes = std::to_string(game);
 					if (ours && g_diagnostic)
-						WriteLog(kTag, "DIAGNOSTIC: the game asked for the static bounds pool's size " + std::to_string(GetTickCount64() - g_start) +
-							" ms after TweaksV's start.");
+						WriteLog(kTag, "DIAGNOSTIC: the game's first ask for the static bounds pool's size came " +
+							std::to_string(GetTickCount64() - g_start) + " ms after TweaksV's start.");
 					if (ours && checked == kReported)
-						WriteLog(kTag, "The game asked for the static bounds pool's size after all, after the check had reported it missing.");
+						WriteLog(kTag, "The game's ask for the static bounds pool's size came after all, after the check had reported it missing.");
 					if (!ours)
-						Fail("the redirected call at " + DescribeAddress(g_call) + " asked for the size of the pool " + Hex32(pool) +
+						Fail("the redirected call at " + DescribeAddress(g_call) + " asks for the size of the pool " + Hex32(pool) +
 							", not of the static bounds pool, " + Hex32(kStaticBoundsHash) + " - its size, " + sizes + ", is passed on as the game gave it.");
 					else if (game < 0)
 						Fail("the game's configuration gives the static bounds pool the size " + sizes + ", which is none - passed on as the game gave it.");

@@ -121,7 +121,7 @@ check "the call redirected, the pool raised, no problem" "redirected 16000 && ha
 
 echo "== SB17 the pool made with the size of another pool: passed on as the game gave it, reported once"
 fresh_ini; out=$(game full_game.exe sbother)
-check "the problem, word for word, once though the call comes twice" "log_line '${NOT_RAISED}the redirected call at $RVA asked for the size of the pool 0x0BADC0DE, not of the static bounds pool, 0x2CDFE406 - its size, 1000, is passed on as the game gave it.\$' && [ \$(count 'asked for the size of the pool') -eq 1 ]"
+check "the problem, word for word, once though the call comes twice" "log_line '${NOT_RAISED}the redirected call at $RVA asks for the size of the pool 0x0BADC0DE, not of the static bounds pool, 0x2CDFE406 - its size, 1000, is passed on as the game gave it.\$' && [ \$(count 'asks for the size of the pool') -eq 1 ]"
 check "the other pool's default both times through the stub, no sizes line" "has 'size call to a stub (RX), pool sizes 1000 and 1000, the lookup asked 2 times, arguments as handed, last error kept' && [ \$(said) -eq 0 ]"
 
 echo "== SB18 the lookup gives the pool -1: passed on as the game gave it, reported once"
@@ -138,14 +138,14 @@ check "the harness survived" "grep -q 'harness: .* loaded' harness.out"
 check "both looked for and missing, the problem names the first" "[ \$(grep -c 'Pattern C-E-[HL]1 not found: ' TweaksV.log) -eq 2 ] && log_line '${NOT_RAISED}C-E-H1 was not found.\$'"
 
 NOT_ASKED="${NOT_RAISED}the game did not ask the redirected call at $RVA for the pool.s size in the first 2 seconds after TweaksV started - it made the pool before TweaksV started, or asks for its size another way, and the pool keeps the game.s size.\$"
-AFTER_ALL='The game asked for the static bounds pool.s size after all, after the check had reported it missing.'
+AFTER_ALL='The game.s ask for the static bounds pool.s size came after all, after the check had reported it missing.'
 
 echo "== SB21 the check (test build, TWEAKSV_TEST_STATICBOUNDS_CHECK=10, DIAGNOSTIC_MODE=1, past the check's time): the game asks in time - timed, nothing reported"
 export TWEAKSV_TEST_STATICBOUNDS_CHECK=10
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(ASI=TweaksV_test.asi game full_game.exe wait)
-asked=$(rva_of "s/.*${TAG}DIAGNOSTIC: the game asked for the static bounds pool.s size \([0-9]*\) ms after TweaksV.s start.\$/\1/p")
+asked=$(rva_of "s/.*${TAG}DIAGNOSTIC: the game.s first ask for the static bounds pool.s size came \([0-9]*\) ms after TweaksV.s start.\$/\1/p")
 check "the test build's line, once; the redirect's line with the check's 10 seconds" "[ \$(count 'TEST BUILD: the static bounds check comes 10 seconds after TweaksV.s start instead of 120 seconds (TWEAKSV_TEST_STATICBOUNDS_CHECK=10).') -eq 1 ] && redirected 16000 '10 seconds'"
-check "the first ask timed, once, within the check's 10 seconds; the sizes said once" "[ \$(count 'the game asked for the static bounds pool.s size') -eq 1 ] && [ '${asked:-none}' != none ] && [ ${asked:-99999} -lt 10000 ] && [ \$(said) -eq 1 ]"
+check "the first ask timed, once, within the check's 10 seconds; the sizes said once" "[ \$(count 'first ask for the static bounds pool.s size came') -eq 1 ] && [ '${asked:-none}' != none ] && [ ${asked:-99999} -lt 10000 ] && [ \$(said) -eq 1 ]"
 check "past the check's time: nothing reported, the pool raised" "log_lacks 'did not ask the redirected call' && quiet && has '$RAISED'"
 
 echo "== SB22 the pool made before TweaksV loaded, never asked (test build, TWEAKSV_TEST_STATICBOUNDS_CHECK=2, ERROR_POPUP=1): reported, with the part's box"
