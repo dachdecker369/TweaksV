@@ -258,6 +258,14 @@
 //   tbcounters     the update check's lea of the counters leads 8 bytes past them
 //   tbmost         the placement's check loads the most objects from 4 bytes past them
 //   tbfactor      the update check's multiplication by its raise factor is an addition (addss)
+//   tbmostout      the start-up's store of the most objects leads outside the game
+//   tbbudgetsout   the start-up's store of budgets 0 and 1 leads outside the game
+//   tbt2moved      the store of budgets 2 and 3 lies elsewhere: Q-E-T2's 41 bytes copied into the update check's NOPs at +0x60,
+//                  the first byte of the one right after the store of budgets 0 and 1 changed
+//   tbbudgets23    the store of budgets 2 and 3 leads 24 bytes after budgets 0 and 1, not 16
+//   tbcountersout  the placement's load of the buffers' bytes, the start of the counters, leads outside the game
+//   tbmoststore    the start-up stores the most objects 4 bytes past where the placement's check reads them
+//   tbbudgetsoff   both stores of the budgets lead 16 bytes past them, the counters' +0x38
 //   tbwritemov, tbwritebyte, tbwritesse, tbwriteavx, tbwritelock, tbwriteimm
 //                  a writer of the budgets besides the start-up's two stores, each of another kind: "mov" of 8 bytes from 4
 //                  bytes before them, "mov" of their last byte with an imm8, "movups" of budgets 2 and 3, "vmovdqu" of 32 bytes
@@ -4603,6 +4611,27 @@ int wmain(int argc, wchar_t** argv)
 			SetRel32(g_textureBudgetLoads[2].site, counters + 0x24);
 		if (HasOption(argc, argv, L"tbfactor"))	// "addss" in the place of the multiplication by the raise factor
 			g_textureBudgetUpdate[0xA3] = 0x58;
+		if (HasOption(argc, argv, L"tbmostout"))	// the start-up's store of the most objects outside the game
+			SetRel32(g_textureBudgetMostRef, ImageEnd() + 0x7A000);
+		if (HasOption(argc, argv, L"tbbudgetsout"))	// its store of budgets 0 and 1 outside the game
+			SetRel32(g_textureBudgetBudgetRefs[0], ImageEnd() + 0x7C000);
+		if (HasOption(argc, argv, L"tbt2moved"))	// the store of budgets 2 and 3 elsewhere: Q-E-T2's 41 bytes in the update check's
+		{											// NOPs, and the bytes right after the store of budgets 0 and 1 no longer Q-E-T2
+			const auto stores = const_cast<unsigned char*>(g_textureBudgetStores);
+			memcpy(update + 0x60, stores + 34, 41);
+			stores[34] = 0x90;
+		}
+		if (HasOption(argc, argv, L"tbbudgets23"))	// budgets 2 and 3 24 bytes after budgets 0 and 1
+			SetRel32(g_textureBudgetBudgetRefs[1], counters + 0x40);
+		if (HasOption(argc, argv, L"tbcountersout"))	// the placement's load of the buffers' bytes, the counters' start, outside the game
+			SetRel32(g_textureBudgetLoads[3].site, ImageEnd() + 0x7E000);
+		if (HasOption(argc, argv, L"tbmoststore"))	// the start-up's store of the most 4 bytes past where the placement reads it
+			SetRel32(g_textureBudgetMostRef, counters + 0x24);
+		if (HasOption(argc, argv, L"tbbudgetsoff"))	// both stores of the budgets 16 bytes past them
+		{
+			SetRel32(g_textureBudgetBudgetRefs[0], counters + 0x38);
+			SetRel32(g_textureBudgetBudgetRefs[1], counters + 0x48);
+		}
 		// the budgets' neighbours and readers where they lie; a writer at the budgets only with its option, else at the dummy
 		for (const TextureBudgetOperand& operand : g_textureBudgetOperands)
 			SetRel32(operand.site, !operand.option || HasOption(argc, argv, operand.option) ?

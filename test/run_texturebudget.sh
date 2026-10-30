@@ -4,9 +4,10 @@
 # at 6000 the four budgets raised as the game's start-up sets them, through the call after its stores redirected to a stub,
 # read+execute, and nothing else written - the call's four arguments and its result as they came, the budgets raised before
 # the game's function runs; none lowered, a gameconfig.xml's larger budgets kept; none below 1500 left as they are; 1000
-# raised to 1500 and reported; an index outside 0 to 3 named; the part off, DRY_RUN, each check failing on its own, a writer
-# besides the start-up's, the game's start-up before TweaksV started, its data unreadable while TweaksV starts, the plain game
-# and Windows' dynamic code policy - each reported word for word, nothing written; and
+# raised to 1500 and reported; an index outside 0 to 3 named; the part off, DRY_RUN, each check failing on its own - those of
+# the sites also with DIAGNOSTIC_MODE=1, the measurement's line beside the problem - a writer besides the start-up's, also with
+# DIAGNOSTIC_MODE=1, named and measured all the same, the game's start-up before TweaksV started, its data unreadable while
+# TweaksV starts, the plain game and Windows' dynamic code policy - each reported word for word, nothing written; and
 # the measurement with DIAGNOSTIC_MODE=1, also beside a raise:
 # the five patterns found in the full fake game, every site checked and logged with the addresses the fake reports, and the
 # counters summed up 10 seconds in, at the game's own sizes - the budgets 1500, 1500, 3000 and 3000 MB, 98304 objects - and
@@ -65,6 +66,10 @@ call_written() { log_line "\[Resources\] DIAGNOSTIC: call after the budgets. sto
 dry_run_lines() { log_line "\[Resources\] DRY_RUN: would redirect the call after the budgets. stores at $(rva stores 74).\$" && log_line '\[Resources\] DRY_RUN: the texture budgets below 6000 MB would be raised to it when the game.s start-up sets them.$'; }
 # refused WHY [CALL]: the part's problem WHY, word for word, the only one, in one summary, and nothing written
 refused() { log_line "${NOT_RAISED}$1\$" && [ "$(count 'PROBLEM')" -eq 1 ] && log_has 'Start-up summary not shown (ERROR_POPUP=0): 1 problem' && untouched "${2:-the next step}"; }
+# both_keys: TweaksV.ini with VIDEO_MEMORY_BUDGET=6000 and DIAGNOSTIC_MODE=1; refused_both WHY: refused, and the measurement's
+# line with the same reason, nothing measured
+both_keys() { fresh_ini; setkey VIDEO_MEMORY_BUDGET 6000 RESOURCES; setkey DIAGNOSTIC_MODE 1; }
+refused_both() { refused "$1" && log_line "${NOT_MEASURED}$1\$" && nothing_measured; }
 # found LABEL NAME [PLUS]: the scanner's line for LABEL, found once where the fake has it
 found() { log_has "Pattern $1 found: .* -> $(rva "$2" "${3:-0}"), 1 match"; }
 patterns_found() { found Q-E-T1 stores && found Q-E-T2 stores 34 && found Q-E-T3 getter && found Q-E-T4 placement && found Q-E-T5 update; }
@@ -269,6 +274,28 @@ check "the start-up's call made before TweaksV, once, to the game's function its
 echo "== TB36 the data's page unreadable while TweaksV starts, VIDEO_MEMORY_BUDGET=6000: the raise refused, reported"
 fresh_ini; setkey VIDEO_MEMORY_BUDGET 6000 RESOURCES; out=$(game full_game.exe tbunreadable)
 check "the problem, word for word, the only one, in one summary; nothing written, the start-up's call made to the game's function" "refused 'the most objects at $(rva counters 0x20) and the budgets at $(rva counters 0x28) cannot be read.' && startup 'the next step' '1500, 1500, 3000 and 3000'"
+
+echo "== TB37 the checks of the sites TB24 leaves, each failing on its own, VIDEO_MEMORY_BUDGET=6000 and DIAGNOSTIC_MODE=1: the problem and the measurement's line, word for word, nothing written"
+both_keys; out=$(game full_game.exe tbmostout)
+check "the start-up's store of the most objects leading outside the game" "refused_both 'the most objects at 0x[0-9A-F]* (outside the game) (Q-E-T1) are not inside the game.'"
+both_keys; out=$(game full_game.exe tbbudgetsout)
+check "its store of budgets 0 and 1 leading outside the game" "refused_both 'the budgets at 0x[0-9A-F]* (outside the game) (Q-E-T1) are not inside the game.'"
+both_keys; out=$(game full_game.exe tbt2moved)
+check "the store of budgets 2 and 3 elsewhere, not right after the store of budgets 0 and 1" "refused_both 'the store of budgets 2 and 3 at $(rva update 0x60) (Q-E-T2) does not follow the store of budgets 0 and 1, which ends at $(rva stores 34).'"
+both_keys; out=$(game full_game.exe tbbudgets23)
+check "budgets 2 and 3 24 bytes after budgets 0 and 1" "refused_both 'budgets 2 and 3 at $(rva counters 0x40) (Q-E-T2) do not lie 16 bytes after budgets 0 and 1 at $(rva counters 0x28).'"
+both_keys; out=$(game full_game.exe tbcountersout)
+check "the counters the placement's check loads outside the game" "refused_both 'the counters at 0x[0-9A-F]* (outside the game) (Q-E-T4) are not inside the game.'"
+both_keys; out=$(game full_game.exe tbmoststore)
+check "the most objects stored 4 bytes past where the placement's check reads them" "refused_both 'the most objects the placement.s check reads at $(rva counters 0x20) are not those Q-E-T1 stores at $(rva counters 0x24).'"
+both_keys; out=$(game full_game.exe tbbudgetsoff)
+check "the budgets stored 16 bytes past the counters' +0x28" "refused_both 'the budgets at $(rva counters 0x38) (Q-E-T1) are not at +0x28 of the counters at $(rva counters) (Q-E-T4).'"
+
+echo "== TB38 a writer besides the start-up's stores, VIDEO_MEMORY_BUDGET=6000 and DIAGNOSTIC_MODE=1: the raise refused, the writer named, the budget measured"
+both_keys; out=$(game full_game.exe tbwritemov wait)
+check "the problem, word for word, the only one, in one summary; nothing written" "refused 'the budgets at $(rva counters 0x28) have 1 writer besides the start-up.s stores, the first at $(rva writers 97), which could undo the raise later.'"
+check "the writers' line names it; neither the start-up's check nor the redirect made" "writers_line 'and 1 besides them: $(rva writers 97)' && log_lacks 'are still 0 at TweaksV' && log_lacks 'budgets. stores at RVA 0x[0-9A-F]* is redirected'"
+check "the measurement all the same: the announcement and the summary 10 s in, word for word, of the game's own budgets" "announced && log_line '$SUMMARY1' && first_after_10s"
 
 echo
 echo "TEXTURE BUDGET SCENARIOS: $pass passed, $fail failed"
