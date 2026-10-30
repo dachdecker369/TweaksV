@@ -8,8 +8,9 @@
 # anchor at the game's offsets, only the first entry of an anchor in a file counted, anchors and files past 255 named -
 # raised, not raised in a dry run, past even 65535 - the lines capped, a bound broken and memory that cannot be read ending
 # a pass with a line. Each check failing on its own refuses the whole job, a problem word for word, nothing written: each
-# pattern missing, A-E-G1 once and three times, a narrowing another mod widened, an 8th and an 18th call, a call into the
-# count's loop, a lookup call to another function, a call another mod hooked; a site of the measurement's own not as
+# pattern missing, A-E-G1 once and three times, a narrowing another mod widened, an 8th and an 18th call and one of each
+# redirected away, a call into the count's loop, a lookup call to another function, a call another mod hooked, the write
+# refused by Windows' dynamic code policy; a site of the measurement's own not as
 # expected only stops the measurement, logged, the part applied; the plain game. Every page's protection its own, always.
 # Fake LOCALAPPDATA: the real one is never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
@@ -226,6 +227,18 @@ echo "== PP29 DRY_RUN=1 with DIAGNOSTIC_MODE=1: every site checked and logged, n
 fresh_ini; setkey DIAGNOSTIC_MODE 1; setkey DRY_RUN 1; out=$(game full_game.exe wait)
 check "every site logged and checked, the complete sets, then the dry run's line instead of the writes" "sites_logged && one_target_each && log_line '$DRYLINE' && log_lacks '\[PedProps\] DIAGNOSTIC: narrowing of '"
 check "the measurement announced and its summary 10 s in, word for word; nothing written, no problem" "log_line '$ANNOUNCED' && log_line \"$SUMMARY\" && has '$ASIS' && has 'protect: all restored (RX)' && log_lacks '\[PedProps\] PROBLEM'"
+
+echo "== PP30 Windows' dynamic code policy: the eleven writes cannot be made, the job refused, nothing written"
+fresh_ini; out=$(game full_game.exe nodyncode)
+check "the patch module's line under the part's tag, then its problem, word for word; the sites as placed, every page's protection its own" "log_has '\[PedProps\] The game code at RVA 0x[0-9A-F]* could not be made writable (' && refused 'the game code could not be made writable (details in TweaksV.log).'"
+
+echo "== PP31 one of the per-anchor count's 7 calls redirected by another mod: 6 found, refused"
+fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe ppcountshort)
+check "6 calls logged; refused, word for word" "[ \$(count 'per-anchor count call at RVA .* (call scan)') -eq 6 ] && refused 'the game code calls the per-anchor count at RVA 0x[0-9A-F]* in 6 places, not the expected 7 (another mod may have redirected some of them, or the game has changed).'"
+
+echo "== PP32 one of the metadata lookup's 17 calls redirected by another mod: 16 found, refused"
+fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe pplookupshort)
+check "the count's 7 calls, then 16 of the lookup logged; refused, word for word" "[ \$(count 'per-anchor count call at RVA .* (call scan)') -eq 7 ] && [ \$(count 'metadata lookup call at RVA .* (call scan)') -eq 16 ] && refused 'the game code calls the metadata lookup at RVA 0x[0-9A-F]* in 16 places, not the expected 17 (another mod may have redirected some of them, or the game has changed).'"
 
 echo
 echo "PED PROPS SCENARIOS: $pass passed, $fail failed"

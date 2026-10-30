@@ -220,6 +220,8 @@
 //   ppwidened      A-E-T3's narrowing holds 0F B7 C0 already (another mod widened it)
 //   ppg1widened    A-E-G1's second copy holds 44 0F B7 C6 already: the pattern matches once, its widened twin once
 //   pphuge         one more ped with 258 files of 255 props on anchor 0, 65790 in all: past even the part's 65535
+//   ppcountshort   one of the per-anchor count's calls no pattern names leads outside the game (another mod redirected it)
+//   pplookupshort  one of the metadata lookup's calls no pattern names leads outside the game (another mod redirected it)
 // [texture budget]
 // The texture budget's sites (the Resources part's measurement) are always there: the start-up's stores of the most streamed
 // objects and of the four budgets and the call after them, the budget's getter, a resource's placement and the update check,
@@ -3954,6 +3956,10 @@ int wmain(int argc, wchar_t** argv)
 			g_pedPropsExtra[0][0] = 0xE8;
 		if (HasOption(argc, argv, L"pplookupcall"))	// an 18th call of the metadata lookup
 			g_pedPropsExtra[1][0] = 0xE8;
+		if (HasOption(argc, argv, L"ppcountshort"))	// one of the per-anchor count's 7 calls redirected by another mod
+			SetRel32(g_pedPropsCountCalls[5], ImageEnd() + 0x70000);
+		if (HasOption(argc, argv, L"pplookupshort"))	// one of the metadata lookup's 17 calls redirected by another mod
+			SetRel32(g_pedPropsLookupCalls[6], ImageEnd() + 0x70000);
 		if (HasOption(argc, argv, L"ppg1once"))		// A-E-G1's second copy gone
 			g_pedPropsG1b[0] = 0xCC;
 		if (HasOption(argc, argv, L"ppg1thrice"))		// a third copy of A-E-G1
