@@ -1247,6 +1247,7 @@ static_assert(sizeof(WeaponComponentsEntry) == 0xA8 && offsetof(WeaponComponents
 struct WeaponComponentsCallback { const void* const* vtable; unsigned char rest[0x30]; void* callable; };
 static_assert(offsetof(WeaponComponentsCallback, callable) == 0x38, "the callable's pointer at +0x38");
 static int g_weaponComponentsMounted = 0, g_weaponComponentsLoaded = 0, g_weaponComponentsDestroyed = 0, g_weaponComponentsHeapDestroys = 0;
+static int g_weaponComponentsErrorKept = 0;	// the refused files after which the game's last error was as it left it
 static void WeaponComponentsDestroy(void*, bool heap)
 {
 	g_weaponComponentsDestroyed++;
@@ -1302,7 +1303,11 @@ static void WeaponComponentsMount(const char* name, int definitions)
 	WeaponComponentsCallback callback{};
 	callback.vtable = g_weaponComponentsCallbackVtable;
 	callback.callable = &callback;
+	const int loaded = g_weaponComponentsLoaded;
+	SetLastError(0x5EED);	// the game's last error, which a refused file must find as it left it
 	reinterpret_cast<uint64_t (*)(void*, void*)>(const_cast<unsigned char*>(g_weaponComponentsLoader + 1))(&entry, &callback);
+	if (g_weaponComponentsLoaded == loaded)
+		g_weaponComponentsErrorKept += GetLastError() == 0x5EED ? 1 : 0;
 }
 
 // wcmount, wcbase, wcmany and wcbadblob: the packs' files mounted once TweaksV has started
@@ -1516,9 +1521,9 @@ static void WeaponComponentsReport()
 	const int32_t second = call(g_weaponComponentsConfiguration, 0xBAE33CCF, g_weaponComponentsGameDefault);
 	wprintf(L"%ls: %d and %d slots, lookups %ld of %ld as called | ", target == lookup ? L"to the lookup" : info.Protect == PAGE_EXECUTE_READ ?
 		L"to a stub, RX" : L"to a stub, NOT RX", first, second, g_weaponComponentsLookupsAsCalled, g_weaponComponentsLookups);
-	wprintf(L"wc loader %ls, files mounted %d, loaded %d, destroyed %d (%d on the heap), list %d | ", g_weaponComponentsLoader[1] == 0xE9 ? L"hooked" :
-		L"as placed", g_weaponComponentsMounted, g_weaponComponentsLoaded, g_weaponComponentsDestroyed, g_weaponComponentsHeapDestroys,
-		g_weaponComponentsStore->count);
+	wprintf(L"wc loader %ls, files mounted %d, loaded %d, destroyed %d (%d on the heap), list %d, last error kept %d | ", g_weaponComponentsLoader[1] == 0xE9 ?
+		L"hooked" : L"as placed", g_weaponComponentsMounted, g_weaponComponentsLoaded, g_weaponComponentsDestroyed, g_weaponComponentsHeapDestroys,
+		g_weaponComponentsStore->count, g_weaponComponentsErrorKept);
 }
 
 // The siren setting IDs: the game's data their sites lead to, at the game's sizes and offsets (TweaksV's PATTERNS.md,

@@ -210,7 +210,7 @@ check "the test build's line once, the guard's room the game's own 470, word for
 check "the loader's head, word for word" "log_line '${DIAG}the weapon components. loader at $RVA (W-E-C5 - 0x13): no unwind data, byte before it 90\$'"
 check "files 01 to 07 let in while fewer than 470 are loaded, 08 to 11 refused, a line each" "[ \$(file 0[1-7] 'let in') -eq 7 ] && [ \$(file '\(08\|09\|10\|11\)' refused) -eq 4 ] && [ \$(count 'definitions loaded, the room') -eq 11 ]"
 check "the first refused file's problem, word for word, once" "[ \$(count 'Weapon component files are refused this session') -eq 1 ] && log_line '${GUARD_PROBLEM}08/common/data/weaponcomponents.meta, the first, came once 472 definitions were loaded, the room being 470 - the weapon components of the files refused are missing in the game. Raise WEAPON_COMPONENTS_SIZE in TweaksV.ini (at most 16384); the log names every file refused.\$'"
-check "7 files loaded, every callback destroyed once - the refused ones by the guard - the list's count 472" "has 'files mounted 11, loaded 7, destroyed 11 (0 on the heap), list 472'"
+check "7 files loaded, every callback destroyed once - the refused ones by the guard - the list's count 472; the game's last error kept by each refusal" "has 'files mounted 11, loaded 7, destroyed 11 (0 on the heap), list 472, last error kept 4'"
 
 echo "== W28 WEAPON_COMPONENTS_SIZE=480: the room the key gives, the 9th file the first refused"
 fresh_ini; setkey WEAPON_COMPONENTS_SIZE 480; out=$(game full_game.exe wcmount)

@@ -420,9 +420,11 @@ namespace TweaksV
 		}
 
 		// The game calls this for each weaponcomponents.meta it loads, the base game's and the packs', on the thread that
-		// applies the data file changes: nothing may throw out of here, and a file let in goes to the game's loader as it came.
+		// applies the data file changes: nothing may throw out of here, a file let in goes to the game's loader as it came, and
+		// the game's last error is kept - the guard's reads and lines may change it, and a refused file never reaches the loader.
 		uint64_t GuardedLoader(void* entry, void* callback)
 		{
+			const DWORD lastError = GetLastError();
 			bool refuse = false;
 			if (g_guardOn.load())
 			{
@@ -434,9 +436,11 @@ namespace TweaksV
 				{
 				}
 			}
+			SetLastError(lastError);
 			if (!refuse)
 				return g_loader(entry, callback);
 			DestroyCallback(callback);
+			SetLastError(lastError);
 			return 0;
 		}
 
