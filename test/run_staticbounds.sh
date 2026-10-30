@@ -10,9 +10,10 @@
 # a second load without a call passed over; a call for another pool and a size below 0 passed on and reported; the plain
 # game; the check that the game asks, its clock from the session's start, the first script program placed (the test build's
 # TWEAKSV_TEST_STATICBOUNDS_CHECK): asked in time, never asked - the pool made before TweaksV loaded - asked after the check,
-# the hook made by the part with the Blips part off in TweaksV.ini and the check reporting, no check with BlipLimitFix.asi
-# installed, no report without a session. In every run the sites as placed but for the call's rel32, the stub read+execute
-# and every page its own protection. Fake LOCALAPPDATA: the real one is never touched.
+# the hook made by the part with the Blips part off in TweaksV.ini and the check reporting, no hook and no check with
+# BlipLimitFix.asi installed or with Resource Extensions installed and the Blips part off, no report without a session. In
+# every run the sites as placed but for the call's rel32, the stub read+execute and every page its own protection. Fake
+# LOCALAPPDATA: the real one is never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 cd "$B" || exit 1
 cp "$R/x64/Release/TweaksV.asi" TweaksV.asi
@@ -191,12 +192,21 @@ fresh_ini; out=$(ASI=TweaksV_test.asi game full_game.exe sbother script wait)
 unset TWEAKSV_TEST_STATICBOUNDS_CHECK
 check "the call for another pool reported once, the check made and silent past its time" "[ \$(count 'asks for the size of the pool 0x0BADC0DE') -eq 1 ] && made '2 seconds' && log_lacks 'did not ask the redirected call'"
 
+# the line of a check left to a plugin that does the Blips part's job, word for word
+LEFT="${TAG}The static bounds check is not made this session: it starts with the session, which TweaksV sees through the script programs. hook, and a plugin that does the Blips part.s job on the script programs is installed (named above) - TweaksV leaves the script programs to it.\$"
+
 echo "== SB28 BlipLimitFix.asi in the game folder, the Blips part on in TweaksV.ini (test build, TWEAKSV_TEST_STATICBOUNDS_CHECK=2, the pool made before TweaksV, a script program placed): no check, the line says why"
 export TWEAKSV_TEST_STATICBOUNDS_CHECK=2
 fresh_ini; touch BlipLimitFix.asi; out=$(ASI=TweaksV_test.asi game full_game.exe sbearly script wait); rm -f BlipLimitFix.asi
 unset TWEAKSV_TEST_STATICBOUNDS_CHECK
-check "the line, word for word; no check, nothing reported past its time; the program placed through the game's own function" "log_line '${TAG}The static bounds check is not made this session: it starts with the session, which TweaksV sees through the script programs. hook, and the Blips part is switched off while a plugin that does its job on the script programs is installed (the problem above names it) - TweaksV leaves them to that plugin.\$' && log_lacks 'static bounds check comes' && log_lacks 'did not ask the redirected call' && has 'through the game function'"
+check "the line, word for word; no check, nothing reported past its time; the program placed through the game's own function" "log_line '$LEFT' && log_lacks 'static bounds check comes' && log_lacks 'did not ask the redirected call' && has 'through the game function'"
 check "the call redirected all the same, no problem of the part" "redirected 16000 && quiet"
+
+echo "== SB29 [BLIPS] ENABLED=0 with ResourceExtensions.asi in the game folder (test build, TWEAKSV_TEST_STATICBOUNDS_CHECK=2, the pool made before TweaksV, a script program placed): the plugin does the Blips part's job whatever TweaksV.ini says - no hook, no check, the line"
+export TWEAKSV_TEST_STATICBOUNDS_CHECK=2
+fresh_ini; setkey ENABLED 0 BLIPS; touch ResourceExtensions.asi; out=$(ASI=TweaksV_test.asi game full_game.exe sbearly script wait); rm -f ResourceExtensions.asi
+unset TWEAKSV_TEST_STATICBOUNDS_CHECK
+check "the conflict check's line and the part's, word for word; no hook made, no check, nothing reported past its time; the program placed through the game's own function; the call redirected all the same, no problem of the part" "log_line '\[TweaksV\] Conflict check: .*ResourceExtensions.asi is installed; TweaksV.s Blips part is off in TweaksV.ini already.\$' && log_line '$LEFT' && log_lacks 'natives. resolution call' && log_lacks 'static bounds check comes' && log_lacks 'did not ask the redirected call' && has 'through the game function' && redirected 16000 && quiet"
 
 echo
 echo "STATIC BOUNDS SCENARIOS: $pass passed, $fail failed"

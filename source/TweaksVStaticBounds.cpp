@@ -21,8 +21,8 @@
 // programs' hook sees: the Blips part's, which the part joins, or while TweaksV.ini switches Blips off the part's own;
 // the game makes its pools as the session starts - that the game has asked the redirected call, and reports a
 // problem, with the part's box, when it has not: the game made the pool before TweaksV started, or asks for its size
-// another way. While a plugin that does the Blips part's job switches it off, and without the hook, no check is made,
-// logged.
+// another way. While a plugin that does the Blips part's job is installed, whatever TweaksV.ini says, and without the
+// hook, no check is made, logged.
 //   DRY_RUN          nothing is redirected, nothing checked; the line says what would be
 //   DIAGNOSTIC_MODE  the lookup and the call at their RVAs, every load of the pool's name without a call after it,
 //                    and when the game asked
@@ -48,6 +48,7 @@
 #include <string>
 #include <vector>
 
+#include "TweaksVConflicts.h"
 #include "TweaksVLog.h"
 #include "TweaksVPatch.h"
 #include "TweaksVPatterns.h"
@@ -345,15 +346,15 @@ namespace TweaksV
 
 		// 5. the check, from the session's start - the first script program the game places, seen through the script programs'
 		// hook: the part joins the hook the Blips part has made while Blips is on, and makes it itself, the first part to use
-		// it, while TweaksV.ini switches Blips off. While the conflict check switches Blips off - BlipLimitFix.asi or Resource
-		// Extensions installed, which do Blips' job on the same script programs, Resource Extensions closed source - the part
-		// leaves the script programs to them. A check that cannot be made is logged, the redirect staying; a thread that
-		// cannot start is reported
+		// it, while TweaksV.ini switches Blips off. While a plugin that does Blips' job on the same script programs is installed
+		// - BlipLimitFix.asi or Resource Extensions, closed source, as the conflict check found them, whatever TweaksV.ini
+		// says of Blips - the part makes no hook and leaves the script programs to it. A check that cannot be made is logged,
+		// the redirect staying; a thread that cannot start is reported
 		g_sessionEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
 		std::string why;
-		if (IsEnabledInIni(kBlipsSection) && !IsFeatureOn(kBlipsSection))
-			why = "it starts with the session, which TweaksV sees through the script programs' hook, and the Blips part is switched off while "
-				"a plugin that does its job on the script programs is installed (the problem above names it) - TweaksV leaves them to that plugin.";
+		if (IsPluginInstalledFor(kBlipsSection))
+			why = "it starts with the session, which TweaksV sees through the script programs' hook, and a plugin that does the Blips part's job "
+				"on the script programs is installed (named above) - TweaksV leaves the script programs to it.";
 		else if (!g_askedEvent || !g_sessionEvent)
 			why = "its events could not be made.";
 		else if (!Scripts::AddUser({ kTag, &SessionStarts, nullptr }, why) && why.empty())

@@ -12,8 +12,8 @@
 // after the game resolves its natives. Its users: the test builds' TEST_DUMP_SCRIPT (TweaksVDump.h), which
 // saves a program, the Blips part (TweaksVBlips.h), which raises blip_controller's threshold, and the
 // StaticBounds part (TweaksVStaticBounds.h), whose check starts with the first program the game places and
-// which, while TweaksV.ini switches Blips off, makes the hook as the first part to use it. The facts are in
-// PATTERNS.md, "Script programs".
+// which makes the hook as the first part to use it while TweaksV.ini switches Blips off and no plugin that
+// does Blips' job is installed. The facts are in PATTERNS.md, "Script programs".
 #pragma once
 
 #include <cstddef>
