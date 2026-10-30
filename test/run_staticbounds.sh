@@ -173,5 +173,15 @@ fresh_ini; out=$(ASI=TweaksV_test.asi game full_game.exe sbearly wait)
 unset TWEAKSV_TEST_STATICBOUNDS_CHECK
 check "the check made and waiting, nothing reported past its time" "made '2 seconds' && log_lacks 'did not ask the redirected call' && quiet"
 
+echo "== SB26 nothing redirected, no check (test build, TWEAKSV_TEST_STATICBOUNDS_CHECK=2, the pool made before TweaksV, a script program placed): DRY_RUN, a refused job, a failed redirect"
+export TWEAKSV_TEST_STATICBOUNDS_CHECK=2
+for case in dryrun sbhooked nodyncode; do
+	fresh_ini; options="sbearly script wait"
+	if [ "$case" = dryrun ]; then setkey DRY_RUN 1; else options="$options $case"; fi
+	out=$(ASI=TweaksV_test.asi game full_game.exe $options)
+	check "$case: no check - neither its line nor its test build's line nor its problem past its time" "log_lacks 'static bounds check' && log_lacks 'did not ask the redirected call'"
+done
+unset TWEAKSV_TEST_STATICBOUNDS_CHECK
+
 echo
 echo "STATIC BOUNDS SCENARIOS: $pass passed, $fail failed"
