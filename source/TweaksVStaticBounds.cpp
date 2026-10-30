@@ -169,8 +169,9 @@ namespace TweaksV
 		}
 
 		// The check's thread: once the game has asked, or after the check's time - then, if the game has still not asked, the
-		// problem, after the start-up summary in a box of its own. Nothing leaves the thread.
-		DWORD WINAPI CheckAsked(LPVOID)
+		// problem, after the start-up summary in a box of its own. Nothing leaves the thread, which drops the reference to the
+		// module StartModuleThread handed it as it ends.
+		DWORD WINAPI CheckAsked(LPVOID module)
 		{
 			if (g_askedEvent)
 				WaitForSingleObject(g_askedEvent, g_checkSeconds * 1000);
@@ -189,7 +190,7 @@ namespace TweaksV
 				{
 				}
 			}
-			return 0;
+			FreeLibraryAndExitThread(static_cast<HMODULE>(module), 0);
 		}
 
 		// The game calls this through the call stub, on its thread, when it makes the pool, with the arguments it hands its
