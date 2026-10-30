@@ -20,9 +20,10 @@
 //                  offset in blocks of 512 bytes, and read the same way
 //   the verdict    a model (yft 162, ydr or ydd 165) or a texture dictionary (ytd 13) with Legacy's version makes the
 //                  pack one made for Legacy - Enhanced's are 171, 159 and 5; such a pack gets a line, and so does a
-//                  pack that cannot be read, or not in full, named as not checked with the reason; one problem names
-//                  them all - but the packs that are not OPEN, which their lines alone name - and is shown in a box as
-//                  ERROR_POPUP allows; the last line counts them
+//                  pack that cannot be read, or not in full, named as not checked with the reason - also one that holds
+//                  archives that are not OPEN, with their number; one problem names them all - but the packs not read only
+//                  for archives that are not OPEN, their own or nested ones, which their lines alone name - and is shown
+//                  in a box as ERROR_POPUP allows; the last line counts them
 //   the bounds     1,048,576 entries per entry table; the table and the names inside their archive, and a nested
 //                  archive inside the one that holds it, past that one's names - so each is smaller than the one
 //                  that holds it; 8 levels of nesting, 4,096 archives and 64 MB of tables per pack, 1 GB of tables
@@ -268,6 +269,9 @@ namespace TweaksV
 			return "the check had read " + std::to_string(kMaxTableBytes >> 20) + " MB of entry tables and names before it";
 		}
 
+		// why an archive that is not OPEN is not read, for the lines that name one
+		constexpr const char* kOnlyOpen = " - only OPEN archives are read, and the game's own archives are encrypted";
+
 		// A resource of the four kinds counted by its version - the top four bits of its system flags (+8) and of its
 		// graphics flags (+12) - and the first with Legacy's version kept.
 		void CountResource(Pack& pack, const Archive& archive, std::string_view name, const uint8_t* entry)
@@ -315,8 +319,7 @@ namespace TweaksV
 					return Outcome::NotRead;
 				}
 				pack.notOpen = true;
-				return notRead("it is not OPEN (" + EncryptionText(encryption) + ") - only OPEN archives are read, and the game's own archives are "
-					"encrypted");
+				return notRead("it is not OPEN (" + EncryptionText(encryption) + ")" + kOnlyOpen);
 			}
 			if (count == 0)
 				return notRead(it + " has no entries");
@@ -451,16 +454,22 @@ namespace TweaksV
 				if (Counted(check.legacyLines))
 					WriteLog(kTag, "The pack " + name + " was made for GTA V Legacy: " + Versions(pack, true) + " - the first " + pack.firstLegacy + ".");
 			}
-			if (pack.notChecked.empty())
+			// a pack not read for any reason but archives that are not OPEN - its own, or ones nested in it - is named in the problem
+			// too; one with nothing but those in its line alone, since the game's own archives are encrypted
+			const bool damaged = !pack.notChecked.empty() && !pack.notOpen;
+			std::string why = pack.notChecked;
+			if (pack.nestedNotOpen > 0)
+				why += (why.empty() ? std::string() : "; ") + std::to_string(pack.nestedNotOpen) + (pack.nestedNotOpen == 1 ? " archive nested in it is" :
+					" archives nested in it are") + " not OPEN" + (why.empty() ? kOnlyOpen : "");
+			if (why.empty())
 				return;
 			check.notCheckedPacks++;
-			if (pack.notOpen)
+			if (!damaged)
 				check.notOpenPacks++;
 			else if (check.notCheckedNamed.size() < kMaxNamed)
 				check.notCheckedNamed.push_back(name);
 			if (Counted(check.notCheckedLines))
-				WriteLog(kTag, "The pack " + name + " was not checked for GTA V Legacy versions" + (pack.archives > 0 ? " in full" : "") + ": " +
-					pack.notChecked + ".");
+				WriteLog(kTag, "The pack " + name + " was not checked for GTA V Legacy versions" + (pack.archives > 0 ? " in full" : "") + ": " + why + ".");
 		}
 
 		void CheckPack(Check& check, const std::wstring& path, const std::string& name)

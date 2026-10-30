@@ -2274,6 +2274,14 @@ static bool LpMake(const wchar_t* kind, LpArchive& out)
 		LpPut(LpEntryAt(out, 1) + 2, 100, 3);
 		LpFree(inner);
 	}
+	else if (wcscmp(kind, L"mixed") == 0)			// a nested archive whose bytes are encrypted, and a compressed one
+	{
+		LpArchive inner = LpBuild(enhancedModel, 1);
+		const LpEntry outer[] = { { "enc.rpf", -1, inner.bytes, inner.size, 1 }, { "packed.rpf", -1, inner.bytes, inner.size, 0 } };
+		out = LpBuild(outer, 2);
+		LpPut(LpEntryAt(out, 2) + 2, 100, 3);
+		LpFree(inner);
+	}
 	else if (wcscmp(kind, L"notrpf") == 0)			// a nested .rpf that is a zip
 	{
 		const LpEntry outer[] = { { "junk.rpf", -1, kLpZip, sizeof(kLpZip), 0 } };
