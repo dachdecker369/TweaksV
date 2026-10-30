@@ -44,6 +44,7 @@ Where a project's license allows no reuse, TweaksV took the idea alone: nothing 
 <!-- [texture budget] -->
 - **zombieguy** - Resource Adjuster 1.0 for GTA V Legacy (2022-12-21), the idea behind TweaksV's Resources part: a larger budget of video memory for textures and assets. It carries no license and published no code, so the idea alone was taken: nothing of it was read, and the budget was found anew in Enhanced's code - https://www.gta5-mods.com/tools/resource-adjuster
 <!-- [rt buffer] -->
+- **Koukol** - Resource Extensions [Enhanced] 2.4, the idea behind TweaksV's RayTracing part: its key `BvhVertexArena`, extra capacity for dynamic ray-tracing geometry, which its page says stops the shadows' flicker. It is closed source and its redistribution is not allowed, so the idea is all that came from it: its plugin was not read, and every game fact behind the part was found anew in the Enhanced dump - https://www.gta5-mods.com/scripts/resource-extensions
 
 ## Libraries and tools
 
