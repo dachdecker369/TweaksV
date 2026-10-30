@@ -101,7 +101,7 @@ check "the three immediates and the buffer at 26843545, the rest as placed" "has
 
 echo "== R5 DYNAMIC_BVH_VERTICES=1000: below the game's own, raised to it and reported - nothing to patch"
 fresh_ini; setkey DYNAMIC_BVH_VERTICES 1000; out=$(game full_game.exe)
-check "the part's problem and its line, word for word; the one problem" "log_has 'PROBLEM: TweaksV.ini: DYNAMIC_BVH_VERTICES=1000 is outside 4194304..26843545 - using 4194304.' && rt_line 'The ray tracing buffer of moving geometry holds 4194304 vertices already (DYNAMIC_BVH_VERTICES=1000) - nothing to patch.' && log_has 'Start-up summary not shown (ERROR_POPUP=0): 1 problem'"
+check "the part's problem and its line, word for word; the one problem" "log_has 'PROBLEM: TweaksV.ini: \[RAYTRACING\] DYNAMIC_BVH_VERTICES=1000 is outside 0 or 4194304..26843545 - using 4194304.' && rt_line 'The ray tracing buffer of moving geometry holds 4194304 vertices already (DYNAMIC_BVH_VERTICES=1000) - nothing to patch.' && log_has 'Start-up summary not shown (ERROR_POPUP=0): 1 problem'"
 check "nothing written" "has '$GAME_BUFFER' && has '$GAME_SITES' && has 'protect: all restored (RX)'"
 
 echo "== R5b DYNAMIC_BVH_VERTICES=4194304, the game's own size: nothing to patch, nothing reported"

@@ -326,7 +326,7 @@ namespace TweaksV
 		// Raises the buffer and its two checks to the key's value in one write, all or nothing; returns their size afterwards.
 		uint32_t Raise(const Sites& sites, int requested)
 		{
-			const std::string key = "DYNAMIC_BVH_VERTICES=" + std::to_string(requested);
+			const std::string key = std::string(kDynamicBvhVertices.key) + "=" + std::to_string(requested);
 			if (sites.vertices != kGameVertices)
 			{
 				WriteLog(kTag, std::string(kJob) + "another mod already set it to " + std::to_string(sites.vertices) + " vertices - left as it is.");
@@ -336,8 +336,8 @@ namespace TweaksV
 			if (size < kGameVertices)
 			{
 				size = kGameVertices;
-				ReportFailure(kTag, "TweaksV.ini: " + key + " is outside " + std::to_string(kGameVertices) + ".." + std::to_string(kMaxVertices) + " - using " +
-					std::to_string(size) + ".");
+				ReportFailure(kTag, "TweaksV.ini: [" + std::string(kRayTracingSection.name) + "] " + key + " is outside 0 or " + std::to_string(kGameVertices) +
+					".." + std::to_string(kMaxVertices) + " - using " + std::to_string(size) + ".");
 			}
 			if (size == kGameVertices)
 			{
