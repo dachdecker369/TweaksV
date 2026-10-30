@@ -464,14 +464,27 @@ namespace TweaksV
 			ReportFailure(kTag, "The weapon info blob limit is not guarded this session: " + why);
 		}
 
-		// The guard's own check: the loader's start, where it is hooked - a function start, inside the game. The reason
-		// it is not, or "".
+		// The guard's own check: the loader's start, where it is hooked - inside the game and a function start. Where the
+		// game's unwind data covers the match, the function it names must begin at the start; the byte before the start
+		// counts only for code without unwind data (TweaksV's fake game), so that a shorter prologue after a game update
+		// cannot put the hook into the padding between functions. The reason it is not, or "".
 		std::string CheckLoaderStart(const Sites& sites)
 		{
 			const uint8_t* const start = sites.loader - kLoaderStart;
 			const std::string where = DescribeAddress(start) + " (" + kLoaderPattern.label + " - " + Hex(kLoaderStart) + ")";
 			if (!IsInsideGameImage(start) || !IsReadable(start, 2))	// the two bytes StartsWithJump reads
 				return "the loader at " + where + " is not readable game code.";
+			DWORD64 imageBase = 0;
+			if (const PRUNTIME_FUNCTION entry = RtlLookupFunctionEntry(reinterpret_cast<DWORD64>(sites.loader), &imageBase, nullptr))
+			{
+				const auto begin = reinterpret_cast<const uint8_t*>(imageBase + entry->BeginAddress);
+				Diagnostic("the loader at " + where + ": " + (begin == start ? std::string("a function start (unwind data)") :
+					"inside the function at " + DescribeAddress(begin) + " (unwind data)"));
+				if (begin != start)
+					return "the loader at " + where + " is not a function start: " + kLoaderPattern.label + " lies in the function at " +
+						DescribeAddress(begin) + " (unwind data).";
+				return std::string();
+			}
 			std::string detail;
 			const bool functionStart = IsFunctionStart(start, detail);
 			Diagnostic("the loader at " + where + ": " + detail);

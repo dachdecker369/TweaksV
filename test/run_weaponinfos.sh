@@ -47,8 +47,8 @@ rva() { tr -d '\r' < TweaksV.log | sed -nE "s/.*Pattern $1 found: .* -> RVA (0x[
 hex() { printf '0x%X' "$1"; }
 # summaries: the summary lines, without their time and tag
 summaries() { tr -d '\r' < TweaksV.log | grep -- "$SUMMARY" | sed 's/.*\] DIAGNOSTIC: //'; }
-# guarded ROOM: the guard's line, word for word - the loader at W-E-I2 - 0x18 hooked, the room it keeps
-guarded() { log_line "$W The weapon info blob limit is guarded: the weapon info loader at RVA $loader is hooked, and a weapons.meta file past the room, $1, is refused instead of being written past the array.s end.\$"; }
+# guarded ROOM [RVA]: the guard's line, word for word - the loader at W-E-I2 - 0x18 (or RVA) hooked, the room it keeps
+guarded() { log_line "$W The weapon info blob limit is guarded: the weapon info loader at RVA ${2:-$loader} is hooked, and a weapons.meta file past the room, $1, is refused instead of being written past the array.s end.\$"; }
 # field LIMITS LOADER ARRAY [FILES]: the fake's report - the two immediates as they are, the loader's start (as laid,
 # hooked or CHANGED), every other byte of the sites as laid, the array's count and room, and the files through the
 # loader, those it counted and those refused, with how many came back as the loader returns and with the last error
@@ -212,6 +212,16 @@ check "the three references logged, the raise's problem word for word; the guard
 echo "== WI27 the plain game, no game code, DIAGNOSTIC_MODE=1: both patterns missing, one problem"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game plain_game.exe)
 check "both looked for and missing, the problem names the first, word for word" "log_has 'Pattern W-E-I1 not found' && log_has 'Pattern W-E-I2 not found' && problem 'The weapon info blob limit is neither raised nor guarded this session: W-E-I1 was not found.'"
+
+echo "== WI28 the loader copied into a function the fake's unwind data names, at its start (wiunwind; test build): its start by unwind data"
+failing; run_test wiunwind
+c2=$(rva W-E-I2)
+check "the loader's start a function start by unwind data, word for word; the guard on at that start, the raise done, no problem of the half" "[ -n '$c2' ] && site 'the loader at RVA $(hex $((c2 - 0x18))) (W-E-I2 - 0x18): a function start (unwind data)' && guarded 1024 $(hex $((c2 - 0x18))) && log_line '$RAISED' && quiet"
+
+echo "== WI29 the loader copied 8 bytes into that function (wiunwindin): its start inside the function by unwind data - refused, though a CC stands before it"
+failing; run_test wiunwindin
+c2=$(rva W-E-I2)
+check "the guard's problem, word for word: W-E-I2 lies in the function that begins 8 bytes before the loader's start; the raise done" "[ -n '$c2' ] && problem 'The weapon info blob limit is not guarded this session: the loader at RVA $(hex $((c2 - 0x18))) (W-E-I2 - 0x18) is not a function start: W-E-I2 lies in the function at RVA $(hex $((c2 - 0x20))) (unwind data).' && boxed && log_line '$RAISED'"
 
 echo
 echo "WEAPON INFOS SCENARIOS: $pass passed, $fail failed"

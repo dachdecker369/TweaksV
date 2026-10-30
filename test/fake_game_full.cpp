@@ -122,6 +122,9 @@
 //   wiflood        20,001 files through the loader after the others
 //   wilater        once the guard's report is in TweaksV.log, 3 files more, then until the guard's next line is there
 //                  and 2.5 s more (for the test build's TWEAKSV_TEST_SUMMARY_MS=1000)
+//   wiunwind       the loader copied into a function of the fake's own that its unwind data names, at the function's start,
+//                  and W-E-I2 in .fakesit broken, so that it matches in the copy alone
+//   wiunwindin     the same, the loader copied 8 bytes into that function: its start lies inside it, a CC before it
 //   wimismatch     the capacity holds 161, the number allocated 160
 //   wizero         both hold 0
 //   wihooked       the call to the allocation leads outside the game (another mod's hook)
@@ -976,6 +979,44 @@ static void WeaponInfosLoadAsAsked(int argc, wchar_t** argv)
 	}
 	if (WeaponInfosAwait(" weapons.meta files in all were not loaded this session: ", 1, 5000))
 		Sleep(2500);
+}
+
+// "wiunwind" and "wiunwindin": a function of the fake's own with a frame, so that its unwind data names it, and the loader
+// copied into it from its start - at the function's start, or 8 bytes into it - its three rel32 leading to the array again;
+// false, with nothing copied, where the function has not the room.
+static void SetRel32(const Site& site, const void* target);
+static volatile int g_weaponInfosSink = 0;
+static __declspec(noinline) void WeaponInfosLoaderCarrier()
+{
+	volatile int frame[32];
+	for (int i = 0; i < 32; i++)
+		frame[i] = g_weaponInfosSink + 5 * i;
+	for (int i = 1; i < 32; i++)
+		frame[i] = frame[i] + (frame[i - 1] ^ 0x4E4E);
+	for (int i = 2; i < 32; i++)
+		frame[i] = frame[i] - (frame[i - 2] & 0xF8);
+	g_weaponInfosSink = frame[7] + frame[17] + frame[27];
+}
+static bool WeaponInfosCopyIntoCarrier(size_t at)
+{
+	unsigned char* const carrier = reinterpret_cast<unsigned char*>(&WeaponInfosLoaderCarrier);
+	const size_t size = sizeof(g_weaponInfosLoader) - 1;	// from the loader's start, without the NOP before it
+	DWORD64 base = 0;
+	const PRUNTIME_FUNCTION entry = RtlLookupFunctionEntry(reinterpret_cast<DWORD64>(carrier), &base, nullptr);
+	DWORD old = 0, unused = 0;
+	if (!entry || base + entry->BeginAddress != reinterpret_cast<DWORD64>(carrier) || entry->EndAddress - entry->BeginAddress < at + size ||
+		!VirtualProtect(carrier, at + size, PAGE_EXECUTE_READWRITE, &old))
+		return false;
+	memset(carrier, 0xCC, at);
+	for (size_t i = 0; i < size; i++)
+		carrier[at + i] = g_weaponInfosLoader[1 + i];
+	const unsigned char* const array = reinterpret_cast<const unsigned char*>(g_weaponInfosArray);
+	SetRel32({ carrier, static_cast<int>(at + 27), size }, array + 8);	// the count's read and write, the block's read
+	SetRel32({ carrier, static_cast<int>(at + 37), size }, array + 8);
+	SetRel32({ carrier, static_cast<int>(at + 51), size }, array);
+	VirtualProtect(carrier, at + size, old, &unused);
+	FlushInstructionCache(GetCurrentProcess(), carrier, at + size);
+	return true;
 }
 
 // [weapon components]
@@ -4272,6 +4313,9 @@ int wmain(int argc, wchar_t** argv)
 			g_weaponInfosExtra[0] = 0x48;
 		if (HasOption(argc, argv, L"wisetup"))		// the initializer ran before TweaksV
 			WeaponInfosInitialize(0, 152);
+		if ((HasOption(argc, argv, L"wiunwind") || HasOption(argc, argv, L"wiunwindin")) &&	// the loader in a function the unwind
+			WeaponInfosCopyIntoCarrier(HasOption(argc, argv, L"wiunwindin") ? 8 : 0))			// data names, W-E-I2 in .fakesit broken
+			g_weaponInfosLoader[25] = 0xCC;
 		WeaponInfosKeepSites();
 	}
 	// [weapon components]
