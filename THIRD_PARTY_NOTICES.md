@@ -12,6 +12,7 @@ This file reproduces the copyright notices and license texts that this code requ
 | [ScriptHookVDotNet](https://github.com/scripthookvdotnet/scripthookvdotnet) memory scanner | crosire, kagikn; the C++ port by Chiheb-Bacha | zlib | the pattern parser in `TweaksVScanner.cpp`, an altered version (see the notes) |
 | [RageOpenV](https://github.com/Chiheb-Bacha/RageOpenV) | Chiheb-Bacha | GPL-3.0 | the console opener in `TweaksVLog.cpp`, carried over as it was |
 <!-- [static bounds] -->
+| [Static Bounds Limit Adjuster](https://github.com/Nochala/StaticboundsLimitAdjuster) v1.0.2, commit 61507bc | Nochala (3_Washing_Machines) | GPL-3.0-or-later | the StaticBounds part in `TweaksVStaticBounds.cpp` and its two patterns, `C-E-H1` and `C-E-L1` in `TweaksVPatterns.h`, adapted (see the notes) |
 
 Everything else in `dllmain.cpp`, `version.rc` and the `TweaksV*` files is TweaksV's own code, Copyright (C) dachdecker369, licensed under the GPL-3.0-only.
 
@@ -20,6 +21,7 @@ Everything else in `dllmain.cpp`, `version.rc` and the `TweaksV*` files is Tweak
 - **ScriptHookVDotNet:** the pattern parser is an altered version, as the zlib license requires to be stated. It is Chiheb-Bacha's C++ port of ScriptHookVDotNet's `MemScanner.cs`, which came to TweaksV through his plugins, altered again for TweaksV: a malformed token is refused instead of throwing - `??` among them, so that one `?` is the only wildcard - and a miss returns nothing instead of ending the game. The search itself is TweaksV's own.
 - **RageOpenV:** its license is the GPL-3.0, the same as TweaksV's; the text is [LICENSE](LICENSE), which accompanies every copy.
 <!-- [static bounds] -->
+- **Static Bounds Limit Adjuster:** Copyright (C) 2026 Nochala, licensed under the GNU General Public License as published by the Free Software Foundation, version 3 or, at the licensee's option, any later version; TweaksV takes it under version 3, its own, whose text is [LICENSE](LICENSE), which accompanies every copy. Adapted for TweaksV on 2026-10-30, as the GPL requires to be stated: its two patterns of the game's code, its search for the static bounds pool's size call, its rule - the larger of the game's size and the key's - and its key were rewritten on TweaksV's own code in `TweaksVStaticBounds.cpp`, whose header carries the notice too; its hooks on the pool's set-up, on its allocator and on the pool size lookup were left out. The source TweaksV's part was adapted from: https://github.com/Nochala/StaticboundsLimitAdjuster, commit 61507bc.
 
 ## License texts
 

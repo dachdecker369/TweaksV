@@ -141,6 +141,11 @@ What each part does and the checks it makes, the measurements, the open issues a
   - The idea is zombieguy's Resource Adjuster's, for the Legacy game; it published no code, and none was read.
 
 <!-- [static bounds] -->
+- **StaticBounds:** `TweaksVStaticBounds`, `C-E-H1` and `C-E-L1`, rewritten in 2.6.0 from Nochala's Static Bounds Limit Adjuster v1.0.2 (CREDITS.md). The game makes its pool of static collision bounds, `StaticBounds`, once at its start with the size its pool size lookup gives - `gameconfig.xml`'s value for the pool, else the code's default - and a full pool ends the game in an access violation, the crash heavy map mods meet:
+  - The lookup is where the CRoadBlock pool's size call leads (`C-E-L1`), a call into the game, and the static bounds pool's size call is found as the original finds it: the first call of that lookup in the 64 bytes after a load of the pool's name, `mov edx, 0x2CDFE406` (`C-E-H1`), after exactly one of at most 16 such loads. A call another mod has redirected leads elsewhere, so none is found: the job is reported and nothing is changed;
+  - The call is redirected through a call stub to a function that calls the game's lookup with the game's arguments and returns the larger of its size and `STATICBOUNDS_SIZE` (1 to 100000, 16000 by default, the original's key): a `gameconfig.xml` that gives the pool more keeps it. The sizes are said once, the game's last error is kept, and a call for another pool or a size below 0 is passed on as the game gave it and reported once;
+  - The original's other ways - hooks on the pool's set-up and on its allocator, which it tries first on Enhanced, and a hook on the lookup itself - are left out: a call that cannot be redirected is reported, nothing changed, as with every part;
+  - `StaticBoundLimitAdjuster.asi` and `StaticBoundsLimitAdjuster.asi`, the original's two names, count as old plugins: with either installed, this part is switched off.
 
 <!-- [rt buffer] -->
 
@@ -182,6 +187,7 @@ Newest first; the tags carry the same numbers. One line per version with what it
 <!-- [texture budget] -->
 <!-- 2.6.0, texture budget: VIDEO_MEMORY_BUDGET under [RESOURCES] raises the four video memory budgets of gameconfig.xml below it to it as the game's start-up sets them, through the call after its stores redirected, a writer of the budgets besides the start-up's, or a start-up before TweaksV's, refusing it; 0 the game's own; the texture budget's measurement the Resources part's own under DIAGNOSTIC_MODE, out of the table of the parts measured first; with it the scanner's FindRipRelativeStores -->
 <!-- [static bounds] -->
+<!-- 2.6.0, static bounds: the StaticBounds part, rewritten from Nochala's Static Bounds Limit Adjuster v1.0.2 - the static bounds pool's size call redirected, so that the pool gets the larger of the game's size and STATICBOUNDS_SIZE; C-E-H1 and C-E-L1; its suite, 40 checks -->
 <!-- [legacy packs] -->
 <!-- 2.6.0, Legacy packs: RageOpenV checks the mods folder's packs for GTA V Legacy - every .rpf file and the archives nested in it, those whose table is not encrypted only, read once at the start on a thread of its own, every count, size and depth bounded; a pack whose models or textures have Legacy's versions (yft 162, ydr and ydd 165, ytd 13) is named in the log and in one box, a pack that cannot be read as not checked; no key; the suite legacypacks, 52 checks -->
 <!-- [streaming memory] -->

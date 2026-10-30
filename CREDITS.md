@@ -26,6 +26,9 @@ The five plugins TweaksV 1.x merged and 2.0.0 rewrote as its own parts, and the 
 - **crosire, kagikn and contributors** - the ScriptHookVDotNet memory scanner - https://github.com/scripthookvdotnet/scripthookvdotnet
 
 <!-- [static bounds] -->
+## Nochala (3_Washing_Machines) - https://github.com/Nochala
+
+- [Static Bounds Limit Adjuster](https://www.gta5-mods.com/scripts/static-bound-limit-adjuster) v1.0.2, "[Legacy & Enhanced]", GPL-3.0-or-later, its source at https://github.com/Nochala/StaticboundsLimitAdjuster (commit 61507bc of 2026-10-09) - the StaticBounds part, rewritten from that source as TweaksV's own in 2.6.0: its two patterns of the game's code (`C-E-H1`, a load of the static bounds pool's name, and `C-E-L1`, the CRoadBlock pool's size call), its search for the static bounds pool's size call - the first call of the pool size lookup within 64 bytes of the name's load - its rule, the larger of the game's size and the key's, and its key, `STATICBOUNDS_SIZE`, with its default and its maximum. Its hooks on the pool's set-up, on its allocator and on the lookup itself are left out. Its copyright notice is in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
 
 ## Ideas behind TweaksV's own parts
 
