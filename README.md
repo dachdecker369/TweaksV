@@ -93,6 +93,8 @@ TweaksV's own part; the idea comes from Zombieguy's [PedProp Limit Adjuster](htt
 
 <!-- [texture budget] -->
 
+The game streams the world's textures and buffers into a budget of video memory that its `gameconfig.xml` sets by texture quality - on 1.0.1158.16 1,500 MB at Normal and 3,000 MB at High and Very High, as far as my research tells, whatever your card has - and refuses to place more: what it cannot fit, it drops, and textures go missing even when the card has memory to spare. `VIDEO_MEMORY_BUDGET` under `[RESOURCES]` raises that budget, in MB: each of the four budgets below it is raised to it as the game's start-up sets them, and none is lowered, so a `gameconfig.xml` that gives more keeps its own. 0, the default, keeps the game's own; the lowest raise is 1,500 - a value below it counts as 1,500 and is reported - and the highest 16,384. Choose it for your card: the budget is the video memory the game may fill with streamed textures, beside what it needs for everything else - at 3840x2160 with ray tracing that is several GB - so a budget past what the card has left only moves the textures' memory out to system memory, which costs speed, and the game's own check, which evicts against what Windows gives it, steps in anyway. With 0 the log says `VIDEO_MEMORY_BUDGET=0 - the texture budget is not raised.`; with a raise `The call after the budgets' stores at RVA ... is redirected: the texture budgets below 6000 MB are raised to it when the game's start-up sets them.`, and once the game's start-up has set them `[Resources] The texture budgets of gameconfig.xml (MaxStreamingMemory_0..3_Base: 1500, 1500, 3000 and 3000 MB) are raised to 6000 MB where they are below it: 6000, 6000, 6000 and 6000 MB now; the texture quality's index 2 uses 6000 MB.` - the four the game had, the four now, and the one your texture quality uses. A budget changed by more than the game's start-up - a game update, another mod - is not raised, and the start-up summary says so. With `DIAGNOSTIC_MODE=1` the log also says, 10 seconds in and again every minute while the numbers change, how much of the budget the streamed textures and buffers take (`2845 MB of the 6000 MB budget`), the four budgets of `gameconfig.xml` and the raised ones, how many of the 98,304 objects the game allows are in use, the most so far, and whether the game's own check is dropping textures ahead of time (`the update check's flag is up`); ` - at the budget` at its end means the game is dropping what it cannot place right now. The same budgets can be raised by data instead: `MaxStreamingMemory_2_Base` and `_3_Base` in `ConfigGraphics` of a `gameconfig.xml` in your mods folder.
+
 ### StaticBounds
 
 <!-- [static bounds] -->
@@ -116,8 +118,6 @@ Four parts to come ([ROADMAP.md](ROADMAP.md)) lift seven more limits of the game
 <!-- [ped props] -->
 
 <!-- [texture budget] -->
-
-**Texture budget** (Resources): the game streams the world's textures and buffers into a budget of video memory that its `gameconfig.xml` sets by texture quality - on 1.0.1158.16 1,500 MB at Normal and 3,000 MB at High and Very High, as far as my research tells, whatever your card has - and refuses to place more: what it cannot fit, it drops, and textures go missing even when the card has memory to spare. The line says how much of that budget the streamed textures and buffers take (`2845 MB of the 3000 MB budget`), the budget for your texture quality's index and the four in `gameconfig.xml`, how many of the 98,304 objects the game allows are in use, the most so far, and whether the game's own check is dropping textures ahead of time (`the update check's flag is up`); ` - at the budget` at its end means the game is dropping what it cannot place right now. It comes 10 seconds in and again whenever a new high is reached; a line before the first, and again should they change, gives the switch and the factors of the game's own check, and a line from before the game has read its `gameconfig.xml` says that the budgets are not set yet.
 
 <!-- [streaming memory] -->
 
@@ -152,7 +152,7 @@ TweaksV writes `TweaksV.ini` in the game folder, next to `GTA5_Enhanced.exe`, on
 | `[WEAPON_LIMITS]` | `WEAPON_INFO_FILES` | 1024 | the `weapons.meta` files the game can load, 160 to 16384 (the game's own: 160) |
 | | `WEAPON_COMPONENTS_SIZE` | 1024 | the weapon component definitions of all `weaponcomponents.meta` files together, 470 to 16384 (the game's own: 470) |
 | `[PEDPROPS]` | `ENABLED` | 1 | the props per anchor of a ped model: 255 in the game's own checks, 65535 with the part on |
-| `[RESOURCES]` | `VIDEO_MEMORY_BUDGET` | 0 | the video memory in MB the game may stream textures and buffers into; 0 keeps the game's own budgets, 1500 to 16384 raises each budget below it to it |
+| `[RESOURCES]` | `VIDEO_MEMORY_BUDGET` | 0 | the video memory in MB the game may stream textures and buffers into; 0 keeps the game's own budgets, 1500 to 16384 raises each budget below it to it (a value below 1500 counts as 1500) |
 | `[STATICBOUNDS]` | `STATICBOUNDS_SIZE` | 16000 | the game's static collision bounds, 1 to 100000; a larger number in `gameconfig.xml` is kept |
 <!-- [rt buffer] -->
 

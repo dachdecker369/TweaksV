@@ -42,6 +42,7 @@ Where a project's license allows no reuse, TweaksV took the idea alone: nothing 
 - **Zombieguy** - PedProp Limit Adjuster 1.0.3889.0, uploaded and kept by William Halverd, the idea behind TweaksV's PedProps part: the 8-bit limit on a ped model's props per anchor lifted. Its page says all rights reserved, so only its page was read and none of its code; it is made for GTA V Legacy, and every game fact behind the part was found anew in Enhanced - https://www.gta5-mods.com/scripts/pedprop-limit-adjuster
 - **Disquse** - FiveM's pull request 2421, "Workaround for ped props limit in FiveM", which PedProp Limit Adjuster ports: the idea that the game narrows 32-bit prop indices to 8 bits in a set of its functions. Its code is under FiveM's terms, which free none of the game components, so only its title and description were read, none of its code - https://github.com/citizenfx/fivem/pull/2421
 <!-- [texture budget] -->
+- **zombieguy** - Resource Adjuster 1.0 for GTA V Legacy (2022-12-21), the idea behind TweaksV's Resources part: a larger budget of video memory for textures and assets. It carries no license and published no code, so the idea alone was taken: nothing of it was read, and the budget was found anew in Enhanced's code - https://www.gta5-mods.com/tools/resource-adjuster
 <!-- [rt buffer] -->
 
 ## Libraries and tools
