@@ -7,8 +7,9 @@
 # DRY_RUN; DIAGNOSTIC_MODE with every site; each check failing on its own - a pattern missing, the CRoadBlock call twice or
 # hooked, 17 loads of the name, a call after two of them, the call another mod redirected, no call stub - each reported
 # with nothing written; a second load without a call passed over; a call for another pool and a size below 0 passed on and
-# reported; the plain game. In every run the sites as placed but for the call's rel32, the stub read+execute and every page
-# its own protection. Fake LOCALAPPDATA: the real one is never touched.
+# reported; the plain game; the check that the game asks (the test build's TWEAKSV_TEST_STATICBOUNDS_CHECK): asked in time,
+# never asked - the pool made before TweaksV loaded - and asked after the check. In every run the sites as placed but for the
+# call's rel32, the stub read+execute and every page its own protection. Fake LOCALAPPDATA: the real one is never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 cd "$B" || exit 1
 cp "$R/x64/Release/TweaksV.asi" TweaksV.asi
@@ -21,8 +22,9 @@ NOT_RAISED="${TAG}PROBLEM: The static bounds pool.s size is not raised this sess
 # the report's field: the pool made twice through TweaksV's stub - or through the game's lookup, nothing written
 RAISED='static bounds: sites as placed, size call to a stub (RX), pool sizes 16000 and 16000, the lookup asked 2 times, arguments as handed, last error kept'
 UNTOUCHED='static bounds: sites as placed, size call to the lookup, pool sizes 12000 and 12000, the lookup asked 2 times, arguments as handed, last error kept'
-# redirected N: the redirect's line, word for word, for STATICBOUNDS_SIZE=N; sizes G WORDS: the sizes' line, word for word
-redirected() { log_line "${TAG}The static bounds pool.s size call at $RVA is redirected: the pool gets at least $1 slots (STATICBOUNDS_SIZE) when the game makes it, more where the game.s configuration gives it more.\$"; }
+# redirected N [CHECK]: the redirect's line, word for word, for STATICBOUNDS_SIZE=N and the check's time CHECK (120 seconds);
+# sizes G WORDS: the sizes' line, word for word
+redirected() { log_line "${TAG}The static bounds pool.s size call at $RVA is redirected: the pool gets at least $1 slots (STATICBOUNDS_SIZE) when the game makes it, more where the game.s configuration gives it more; a check ${2:-120 seconds} after TweaksV.s start reports it if the game has not asked by then.\$"; }
 sizes() { log_line "${TAG}The pool size the game.s configuration gives for the static bounds, $1, $2\$"; }
 said() { count 'The pool size the game.s configuration gives for the static bounds'; }
 # quiet: no problem of the part; kept: the game left as it was - the pool made through its own lookup, every page its own protection
@@ -134,6 +136,30 @@ echo "== SB20 none of the game code present (plain fake game): both patterns loo
 fresh_ini; out=$(game plain_game.exe)
 check "the harness survived" "grep -q 'harness: .* loaded' harness.out"
 check "both looked for and missing, the problem names the first" "[ \$(grep -c 'Pattern C-E-[HL]1 not found: ' TweaksV.log) -eq 2 ] && log_line '${NOT_RAISED}C-E-H1 was not found.\$'"
+
+NOT_ASKED="${NOT_RAISED}the game did not ask the redirected call at $RVA for the pool.s size in the first 2 seconds after TweaksV started - it made the pool before TweaksV started, or asks for its size another way, and the pool keeps the game.s size.\$"
+AFTER_ALL='The game asked for the static bounds pool.s size after all, after the check had reported it missing.'
+
+echo "== SB21 the check (test build, TWEAKSV_TEST_STATICBOUNDS_CHECK=10, DIAGNOSTIC_MODE=1, past the check's time): the game asks in time - timed, nothing reported"
+export TWEAKSV_TEST_STATICBOUNDS_CHECK=10
+fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(ASI=TweaksV_test.asi game full_game.exe wait)
+asked=$(rva_of "s/.*${TAG}DIAGNOSTIC: the game asked for the static bounds pool.s size \([0-9]*\) ms after TweaksV.s start.\$/\1/p")
+check "the test build's line, once; the redirect's line with the check's 10 seconds" "[ \$(count 'TEST BUILD: the static bounds check comes 10 seconds after TweaksV.s start instead of 120 seconds (TWEAKSV_TEST_STATICBOUNDS_CHECK=10).') -eq 1 ] && redirected 16000 '10 seconds'"
+check "the first ask timed, once, within the check's 10 seconds; the sizes said once" "[ \$(count 'the game asked for the static bounds pool.s size') -eq 1 ] && [ '${asked:-none}' != none ] && [ ${asked:-99999} -lt 10000 ] && [ \$(said) -eq 1 ]"
+check "past the check's time: nothing reported, the pool raised" "log_lacks 'did not ask the redirected call' && quiet && has '$RAISED'"
+
+echo "== SB22 the pool made before TweaksV loaded, never asked (test build, TWEAKSV_TEST_STATICBOUNDS_CHECK=2, ERROR_POPUP=1): reported, with the part's box"
+export TWEAKSV_TEST_STATICBOUNDS_CHECK=2
+fresh_ini; setkey ERROR_POPUP 1; out=$(ASI=TweaksV_test.asi game full_game.exe sbearly wait)
+check "the problem, word for word, once" "log_line '$NOT_ASKED' && [ \$(count 'did not ask the redirected call') -eq 1 ]"
+check "shown after the start-up summary, in a box of its own" "log_has 'Showing a problem after the start-up summary (1 problem(s)).' && log_has 'TEST BUILD: message box not shown (TWEAKSV_TEST_NO_BOXES=1): TweaksV: a part stopped working after the start-up:'"
+check "the pool made through the game's lookup before TweaksV, the call redirected all the same, no sizes line" "has 'size call to a stub (RX), pool sizes 12000 and 12000' && [ \$(said) -eq 0 ] && log_lacks 'after all, after the check'"
+
+echo "== SB23 the pool made 4 seconds late, after the check of 2 seconds (test build): reported, then asked after all"
+fresh_ini; out=$(ASI=TweaksV_test.asi game full_game.exe sblate wait)
+unset TWEAKSV_TEST_STATICBOUNDS_CHECK
+check "the problem first, then the line that the game asked after all, then the sizes, each once" "[ \$(count 'did not ask the redirected call') -eq 1 ] && [ \$(count '$AFTER_ALL') -eq 1 ] && [ \$(grep -n 'did not ask the redirected call' TweaksV.log | cut -d: -f1) -lt \$(grep -n 'after all, after the check' TweaksV.log | cut -d: -f1) ] && sizes 12000 'is raised to 16000 (STATICBOUNDS_SIZE).' && [ \$(said) -eq 1 ]"
+check "the pool raised all the same" "has '$RAISED'"
 
 echo
 echo "STATIC BOUNDS SCENARIOS: $pass passed, $fail failed"

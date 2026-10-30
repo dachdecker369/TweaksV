@@ -308,6 +308,8 @@
 //   sbname         a second load of the pool's name, with no call of the lookup after it
 //   sbtwice        a second load of the pool's name with a call of the lookup after it
 //   sbmany         16 more loads of the pool's name, 17 in all
+//   sbearly        the pool made before TweaksV loads, and not again: the game never asks the redirected call
+//   sblate         the pool made 4 seconds later than the other actions leave it, after the test build's check of 2 seconds
 // [legacy packs]
 //   lpmake KIND PATH   the Legacy packs check: a crafted RPF7 archive of KIND written at PATH, its folders made, before TweaksV
 //                      starts; repeatable (LpMake has the kinds)
@@ -5484,6 +5486,8 @@ int wmain(int argc, wchar_t** argv)
 		g_staticBoundsConfigured = HasOption(argc, argv, L"sbbig") ? 24500 : HasOption(argc, argv, L"sbnegative") ? -1 : 12000;
 		g_staticBoundsPool = HasOption(argc, argv, L"sbother") ? kStaticBoundsOther : kStaticBoundsHash;
 		StaticBoundsCopySites(g_staticBoundsPlacedSites, sizeof(g_staticBoundsPlacedSites));
+		if (HasOption(argc, argv, L"sbearly"))		// the game made the pool before TweaksV started
+			StaticBoundsMakePool();
 	}
 	// [legacy packs]
 	LpSetup(argc, argv);	// the Legacy packs check's archives, before TweaksV starts
@@ -5620,7 +5624,12 @@ int wmain(int argc, wchar_t** argv)
 		TextureBudgetLater(TextureBudgetChange::Late);
 	// [streaming memory]
 	// [static bounds]
-	StaticBoundsMakePool();	// the game makes the static bounds pool, after TweaksV's DllMain
+	if (!HasOption(argc, argv, L"sbearly"))	// the game makes the static bounds pool after TweaksV's DllMain - with "sblate" 4 s later
+	{
+		if (HasOption(argc, argv, L"sblate"))
+			Sleep(4000);
+		StaticBoundsMakePool();
+	}
 	// [legacy packs]
 	LpWait(argc, argv);
 	// [rt buffer]

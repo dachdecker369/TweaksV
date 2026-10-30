@@ -14,8 +14,13 @@
 // inside the game; the call is the first call of the lookup in the 64 bytes after a load of the pool's name, "mov edx,
 // 0x2CDFE406" (C-E-H1), and exactly one load may be followed by one. A call another mod has redirected leads
 // elsewhere, so it is no call of the lookup: the job is then reported and not done, and nothing is changed.
-//   DRY_RUN          nothing is redirected; the line says what would be
-//   DIAGNOSTIC_MODE  the lookup and the call at their RVAs, and every load of the pool's name without a call after it
+// The redirect raises the pool only if the game asks for its size after TweaksV's DllMain: a thread of the part
+// checks, 120 seconds after TweaksV's start - long after the game makes its pools, about 22 seconds into its start
+// on my boots - that the game has asked the redirected call, and reports a problem, with the part's box, when it
+// has not: the game made the pool before TweaksV started, or asks for its size another way.
+//   DRY_RUN          nothing is redirected, nothing checked; the line says what would be
+//   DIAGNOSTIC_MODE  the lookup and the call at their RVAs, every load of the pool's name without a call after it,
+//                    and when the game asked
 // Written for TweaksV from the Static Bounds Limit Adjuster v1.0.2 by Nochala (3_Washing_Machines), commit 61507bc:
 //   Copyright (C) 2026 Nochala
 //   License: GPL-3.0-or-later - https://github.com/Nochala/StaticboundsLimitAdjuster (THIRD_PARTY_NOTICES.md)
@@ -32,6 +37,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <cwchar>
 #include <string>
 #include <vector>
 
@@ -120,25 +126,96 @@ namespace TweaksV
 		PoolSizeLookupFn g_lookup = nullptr;		// the game's lookup behind the call
 		const uint8_t* g_call = nullptr;			// the call, for the lines
 		int32_t g_size = 0;							// STATICBOUNDS_SIZE
+		bool g_diagnostic = false;					// DIAGNOSTIC_MODE, read once at the start: the call never reads a switch
+		ULONGLONG g_start = 0;						// TweaksV's start, for the time of the game's first ask
 		std::atomic<bool> g_sizeSaid{ false };		// the pool's sizes are said once
 		std::atomic<bool> g_otherSaid{ false };		// a call for another pool is reported once
 
+		// ---- the check that the game asks: whichever comes first, the game's first ask for the static bounds pool's size or
+		// the check's end, takes the state - an ask after the check has reported is said once, with the sizes
+
+		constexpr DWORD kCheckSeconds = 120;		// the check's time after TweaksV's start; the game makes its pools far sooner
+		enum : int { kWaiting, kAsked, kReported };
+		std::atomic<int> g_check{ kWaiting };
+		HANDLE g_askedEvent = nullptr;				// set at the first ask, so that the check's thread ends early; none, it waits
+		DWORD g_checkSeconds = kCheckSeconds;
+
+		// "1 second", "120 seconds"
+		std::string Seconds(DWORD n)
+		{
+			return std::to_string(n) + (n == 1 ? " second" : " seconds");
+		}
+
+		// The check's time: 120 seconds - in test builds TWEAKSV_TEST_STATICBOUNDS_CHECK=<seconds> in the environment (1..120)
+		// instead, so that a suite sees the check within the minute a fake game runs, said once.
+		DWORD CheckSeconds()
+		{
+#ifdef TWEAKSV_TEST_BUILD
+			wchar_t text[8]{};
+			const DWORD length = GetEnvironmentVariableW(L"TWEAKSV_TEST_STATICBOUNDS_CHECK", text, 8);
+			if (length > 0 && length < 8)
+			{
+				wchar_t* end = nullptr;
+				const long seconds = wcstol(text, &end, 10);
+				if (end && *end == L'\0' && seconds >= 1 && seconds <= static_cast<long>(kCheckSeconds))
+				{
+					WriteLog(kTag, "TEST BUILD: the static bounds check comes " + Seconds(static_cast<DWORD>(seconds)) + " after TweaksV's start instead of " +
+						Seconds(kCheckSeconds) + " (TWEAKSV_TEST_STATICBOUNDS_CHECK=" + std::to_string(seconds) + ").");
+					return static_cast<DWORD>(seconds);
+				}
+			}
+#endif
+			return kCheckSeconds;
+		}
+
+		// The check's thread: once the game has asked, or after the check's time - then, if the game has still not asked, the
+		// problem, after the start-up summary in a box of its own. Nothing leaves the thread.
+		DWORD WINAPI CheckAsked(LPVOID)
+		{
+			if (g_askedEvent)
+				WaitForSingleObject(g_askedEvent, g_checkSeconds * 1000);
+			else
+				Sleep(g_checkSeconds * 1000);
+			int waiting = kWaiting;
+			if (g_check.compare_exchange_strong(waiting, kReported))
+			{
+				try
+				{
+					Fail("the game did not ask the redirected call at " + DescribeAddress(g_call) + " for the pool's size in the first " +
+						Seconds(g_checkSeconds) + " after TweaksV started - it made the pool before TweaksV started, or asks for its size another "
+						"way, and the pool keeps the game's size.");
+				}
+				catch (...)
+				{
+				}
+			}
+			return 0;
+		}
+
 		// The game calls this through the call stub, on its thread, when it makes the pool, with the arguments it hands its
 		// lookup: the static bounds pool gets the larger of the game's size and STATICBOUNDS_SIZE; a size below 0, which is
-		// none, and the size of another pool are passed on as the game gives them. Nothing may throw out of here, and the
-		// game's last error after its lookup is the one the call leaves.
+		// none, and the size of another pool are passed on as the game gives them. The first ask for the static bounds pool
+		// ends the check. Nothing may throw out of here, and the game's last error after its lookup is the one the call leaves.
 		int32_t StaticBoundsPoolSize(void* configuration, uint32_t pool, int32_t defaultSize)
 		{
 			const int32_t game = g_lookup(configuration, pool, defaultSize);
 			const DWORD lastError = GetLastError();
 			const bool ours = pool == kStaticBoundsHash;
 			const int32_t size = ours && game >= 0 && game < g_size ? g_size : game;
+			int checked = kWaiting;
+			if (ours && g_check.compare_exchange_strong(checked, kAsked) && g_askedEvent)
+				SetEvent(g_askedEvent);
 			std::atomic<bool>& said = ours ? g_sizeSaid : g_otherSaid;
 			if (!said.exchange(true))
 			{
 				try
 				{
 					const std::string sizes = std::to_string(game);
+					if (ours && g_diagnostic)
+						WriteLog(kTag, "DIAGNOSTIC: the game asked for the static bounds pool's size " + std::to_string(GetTickCount64() - g_start) +
+							" ms after TweaksV's start.");
+					if (ours && checked == kReported)
+						WriteLog(kTag, "The game asked for the static bounds pool's size after all, after the check had reported it missing.");
 					if (!ours)
 						Fail("the redirected call at " + DescribeAddress(g_call) + " asked for the size of the pool " + Hex32(pool) +
 							", not of the static bounds pool, " + Hex32(kStaticBoundsHash) + " - its size, " + sizes + ", is passed on as the game gave it.");
@@ -162,6 +239,9 @@ namespace TweaksV
 
 	void InitStaticBounds()
 	{
+		g_start = GetTickCount64();
+		g_diagnostic = IsDiagnosticMode();
+
 		// 1. both patterns looked for, so that the log names each one missing: the loads of the pool's name, every one up
 		// to the bound, and the CRoadBlock pool's size call, which must be unique
 		const std::vector<uint8_t*> loads = Scanner::FindAll(kNamePattern, kMaxNameLoads + 1);
@@ -222,18 +302,35 @@ namespace TweaksV
 			return;
 		}
 
-		// 4. the call redirected: the pool gets at least STATICBOUNDS_SIZE when the game makes it
+		// 4. the call redirected: the pool gets at least STATICBOUNDS_SIZE when the game makes it - the check's event made first,
+		// so that the game's first ask finds it
 		g_size = GetNumber(kStaticBoundsSize);
 		g_call = call;
+		const bool dryRun = IsDryRun();
+		if (!dryRun)
+		{
+			g_checkSeconds = CheckSeconds();
+			g_askedEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+		}
 		const std::vector<CallRedirect> redirects = { { call, reinterpret_cast<const void*>(&StaticBoundsPoolSize), "static bounds pool's size call",
 			reinterpret_cast<void**>(&g_lookup) } };
 		if (!RedirectCalls(redirects, {}, kTag))
 		{
+			if (g_askedEvent)
+				CloseHandle(g_askedEvent);
+			g_askedEvent = nullptr;
 			Fail("the game code could not be changed (details in TweaksV.log).");
 			return;
 		}
-		if (!IsDryRun())
-			WriteLog(kTag, "The static bounds pool's size call at " + DescribeAddress(call) + " is redirected: the pool gets at least " +
-				std::to_string(g_size) + " slots (STATICBOUNDS_SIZE) when the game makes it, more where the game's configuration gives it more.");
+		if (dryRun)
+			return;
+		WriteLog(kTag, "The static bounds pool's size call at " + DescribeAddress(call) + " is redirected: the pool gets at least " + std::to_string(g_size) +
+			" slots (STATICBOUNDS_SIZE) when the game makes it, more where the game's configuration gives it more; a check " + Seconds(g_checkSeconds) +
+			" after TweaksV's start reports it if the game has not asked by then.");
+
+		// 5. the check, on a thread of its own: a thread that cannot start leaves the redirect in place, unchecked - reported
+		if (!StartModuleThread(&CheckAsked, "static bounds check"))
+			ReportFailure(kTag, "The check that the game asks for the static bounds pool's size is not done this session: its thread could not be started "
+				"(details in TweaksV.log).");
 	}
 }
