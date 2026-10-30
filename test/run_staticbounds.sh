@@ -1,16 +1,17 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-only
 # The StaticBounds part (TweaksVStaticBounds): the fake game's static bounds pool's size call found after the load of the
-# pool's name, checked against the pool size lookup the CRoadBlock pool's size call leads to, and redirected, so that the
-# pool the fake makes twice once TweaksV has started gets the larger of its configured size and STATICBOUNDS_SIZE, said
-# once: the configuration below and above the key, the key at its limits and beyond; ENABLED=0 and both old plugins;
-# DRY_RUN; DIAGNOSTIC_MODE with every site; each check failing on its own - a pattern missing, the CRoadBlock call twice or
-# hooked, 17 loads of the name, a call after two of them, the call another mod redirected, no call stub - each reported
-# with nothing written; a second load without a call passed over; a call for another pool and a size below 0 passed on and
-# reported; the plain game; the check that the game asks, its clock from the session's start, the first script program placed
-# (the test build's TWEAKSV_TEST_STATICBOUNDS_CHECK): asked in time, never asked - the pool made before TweaksV loaded - asked
-# after the check, no check with the Blips part off, no report without a session. In every run the sites as placed but for the
-# call's rel32, the stub read+execute and every page its own protection. Fake LOCALAPPDATA: the real one is never touched.
+# pool's name, checked against the pool size lookup the weapon components' pool size call (W-E-C4) leads to - looked for
+# once for both parts (TweaksVPools) - and redirected, so that the pool the fake makes twice once TweaksV has started gets the
+# larger of its configured size and STATICBOUNDS_SIZE, said once: the configuration below and above the key, the key at its
+# limits and beyond; ENABLED=0 and both old plugins; DRY_RUN; DIAGNOSTIC_MODE with every site; each check failing on its own
+# - a pattern missing, the weapon components' call hooked, 17 loads of the name, a call after two of them, the call another
+# mod redirected, no call stub - each reported with nothing written; the WeaponLimits part off, the pool raised all the same;
+# a second load without a call passed over; a call for another pool and a size below 0 passed on and reported; the plain
+# game; the check that the game asks, its clock from the session's start, the first script program placed (the test build's
+# TWEAKSV_TEST_STATICBOUNDS_CHECK): asked in time, never asked - the pool made before TweaksV loaded - asked after the check,
+# no check with the Blips part off, no report without a session. In every run the sites as placed but for the call's rel32,
+# the stub read+execute and every page its own protection. Fake LOCALAPPDATA: the real one is never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 cd "$B" || exit 1
 cp "$R/x64/Release/TweaksV.asi" TweaksV.asi
@@ -32,7 +33,7 @@ said() { count 'The pool size the game.s configuration gives for the static boun
 # quiet: no problem of the part; kept: the game left as it was - the pool made through its own lookup, every page its own protection
 quiet() { log_lacks '\[StaticBounds\] PROBLEM'; }
 kept() { has "$UNTOUCHED" && has 'protect: all restored (RX)' && log_lacks 'is redirected: the pool gets'; }
-# lookup_rva KIND: the RVA the module's DIAGNOSTIC line leads to (lookup) or stands at (call), for C-E-L1 or C-E-H1
+# rva_of SED: what SED's s///p takes from TweaksV.log - the RVA a DIAGNOSTIC line leads to or stands at
 rva_of() { tr -d '\r' < TweaksV.log | sed -n "$1"; }
 
 echo "== SB1 the defaults: the call redirected, the pool made twice with 16000 slots in the place of the configuration's 12000, said once"
@@ -61,7 +62,7 @@ check "the setting's problem, word for word, and 100000 both times" "log_has 'PR
 
 echo "== SB6 [STATICBOUNDS] ENABLED=0, with DIAGNOSTIC_MODE=1: nothing looked for, nothing written"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; setkey ENABLED 0 STATICBOUNDS; out=$(game full_game.exe)
-check "the header says off, no line of the part, neither pattern looked for" "log_has 'StaticBounds off' && log_lacks '\[StaticBounds\]' && log_lacks 'C-E-[HL]1'"
+check "the header says off, no line of the part, its own pattern not looked for (W-E-C4 is the weapon components' too)" "log_has 'StaticBounds off' && log_lacks '\[StaticBounds\]' && log_lacks 'C-E-H1'"
 check "the pool made through the game's lookup: 12000, nothing written" "kept"
 
 echo "== SB7 the old plugins, StaticBoundLimitAdjuster.asi in the game folder and StaticBoundsLimitAdjuster.asi in scripts\\: each switches the part off"
@@ -77,31 +78,33 @@ fresh_ini; setkey DRY_RUN 1; out=$(game full_game.exe)
 check "the would line, word for word, and not the redirect's" "log_line '${TAG}DRY_RUN: would redirect the static bounds pool.s size call at $RVA.\$' && log_lacks 'is redirected: the pool gets'"
 check "the pool made through the game's lookup: 12000, no sizes line, nothing written, no problem" "kept && [ \$(said) -eq 0 ] && quiet"
 
-echo "== SB9 DIAGNOSTIC_MODE=1: both patterns found once, the lookup and the call at their RVAs, the write"
+echo "== SB9 DIAGNOSTIC_MODE=1: both patterns found once - W-E-C4 once, though the weapon components ask for it too - the lookup and the call at their RVAs, the write"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe)
 name=$(rva_of "s/.*Pattern C-E-H1 found: BA 06 E4 DF 2C -> RVA \(0x[0-9A-F]*\), 1 match,.*/\1/p")
-lookup=$(rva_of "s/.*${TAG}DIAGNOSTIC: pool size call at $RVA -> RVA \(0x[0-9A-F]*\) for the pool 0xF72CC701 (C-E-L1): the pool size lookup\$/\1/p")
+lookup=$(rva_of "s/.*${TAG}DIAGNOSTIC: pool size call at $RVA -> RVA \(0x[0-9A-F]*\) for the pool 0xBAE33CCF (W-E-C4): the pool size lookup\$/\1/p")
+wclookup=$(rva_of "s/.*\[WeaponLimits\] DIAGNOSTIC: pool size call at $RVA -> RVA \(0x[0-9A-F]*\) for the pool 0xBAE33CCF, its default .*/\1/p")
 call=$(rva_of "s/.*${TAG}DIAGNOSTIC: pool size call at RVA \(0x[0-9A-F]*\) -> RVA ${lookup:-none} for the pool 0x2CDFE406, its name loaded at RVA ${name:-none} (C-E-H1)\$/\1/p")
-check "C-E-H1 and C-E-L1 found exactly once each" "[ \$(grep -c -E 'Pattern C-E-(H1|L1) found: .* 1 match,' TweaksV.log) -eq 2 ]"
-check "the CRoadBlock pool's size call and the lookup it leads to, word for word" "[ -n '$lookup' ]"
+check "C-E-H1 and W-E-C4 found exactly once each, W-E-C4's line the only one of it" "[ \$(grep -c -E 'Pattern (C-E-H1|W-E-C4) found: .* 1 match,' TweaksV.log) -eq 2 ] && [ \$(count 'Pattern W-E-C4 ') -eq 1 ]"
+check "the weapon components' pool size call and the lookup it leads to, word for word - the one their own line names" "[ -n '$lookup' ] && [ '$lookup' = '${wclookup:-none}' ]"
 check "the static bounds pool's size call, word for word: to the same lookup, 11 bytes into C-E-H1's match" "[ -n '$call' ] && [ \$(( $call - ${name:-0} )) -eq 11 ]"
 check "the write's line: the call's E8 kept, its rel32 to the stub" "log_line '${TAG}DIAGNOSTIC: static bounds pool.s size call at RVA ${call:-none}: E8 [0-9A-F ]* -> E8 [0-9A-F ]*\$'"
 check "no load of the name without a call; the redirect and the sizes as without DIAGNOSTIC_MODE; no problem" "log_lacks 'is followed by no call' && redirected 16000 && has '$RAISED' && [ \$(said) -eq 1 ] && quiet"
 
-echo "== SB10 TEST_BREAK_PATTERN for each pattern (test build): reported by its label, nothing written"
-for label in C-E-H1 C-E-L1; do
+echo "== SB10 TEST_BREAK_PATTERN for each pattern (test build): reported by its label, nothing written - W-E-C4 looked for once, for both parts"
+for label in C-E-H1 W-E-C4; do
 	fresh_ini; addkey TEST_BREAK_PATTERN $label; out=$(ASI=TweaksV_test.asi game full_game.exe)
-	check "$label: the scanner's test line and the problem, word for word" "log_has 'TEST BUILD: pattern $label is treated as not found (TEST_BREAK_PATTERN).' && log_line '${NOT_RAISED}$label was not found.\$'"
+	check "$label: the scanner's test line once and the problem, word for word" "[ \$(count 'TEST BUILD: pattern $label is treated as not found (TEST_BREAK_PATTERN).') -eq 1 ] && log_line '${NOT_RAISED}$label was not found.\$'"
 	check "$label: nothing written - the pool made through the game's lookup" "kept"
 done
 
-echo "== SB11 a second CRoadBlock pool's size call: C-E-L1 matches twice, not used"
-fresh_ini; out=$(game full_game.exe sbroadtwice)
-check "the scanner's line and the problem, word for word; nothing written" "log_has 'Pattern C-E-L1 matches 2 or more times - not used (the site must be unique).' && log_line '${NOT_RAISED}C-E-L1 was not found.\$' && kept"
+echo "== SB11 the weapon components' pool size call another mod hooked: it leads outside the game, so the lookup is not known"
+fresh_ini; out=$(game full_game.exe wchooked)
+check "the problem, word for word - the reason the weapon components give too; nothing written" "log_line '${NOT_RAISED}the weapon components. pool size call at $RVA is not a call into the game (another mod may have hooked it already) (W-E-C4).\$' && [ \$(count 'is not a call into the game (another mod may have hooked it already) (W-E-C4).') -eq 2 ] && kept"
 
-echo "== SB12 the CRoadBlock pool's size call another mod hooked: it leads outside the game"
-fresh_ini; out=$(game full_game.exe sbroadhooked)
-check "the problem, word for word; nothing written" "log_line '${NOT_RAISED}the CRoadBlock pool.s size call at $RVA is not a call into the game (another mod may have hooked it already) (C-E-L1).\$' && kept"
+echo "== SB12 [WEAPON_LIMITS] ENABLED=0, with DIAGNOSTIC_MODE=1: the part finds the lookup through W-E-C4 on its own and raises the pool"
+fresh_ini; setkey ENABLED 0 WEAPON_LIMITS; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe)
+check "WeaponLimits off, no line of it; W-E-C4 found once, the lookup's line word for word" "log_has 'WeaponLimits off' && log_lacks '\[WeaponLimits\]' && [ \$(grep -c 'Pattern W-E-C4 found: .* 1 match,' TweaksV.log) -eq 1 ] && log_line '${TAG}DIAGNOSTIC: pool size call at $RVA -> $RVA for the pool 0xBAE33CCF (W-E-C4): the pool size lookup\$'"
+check "the call redirected, the pool raised, said once, no problem; the weapon components' size call left to the game's lookup" "redirected 16000 && has '$RAISED' && [ \$(said) -eq 1 ] && quiet && has 'size call to the lookup: 470 and 470 slots, lookups 2 of 2 as called'"
 
 echo "== SB13 17 loads of the pool's name, more than the 16 the part looks through"
 fresh_ini; out=$(game full_game.exe sbmany)
@@ -137,7 +140,7 @@ check "the stubs' line and the problem, word for word; the pool made through the
 echo "== SB20 none of the game code present (plain fake game): both patterns looked for, the first one missing reported"
 fresh_ini; out=$(game plain_game.exe)
 check "the harness survived" "grep -q 'harness: .* loaded' harness.out"
-check "both looked for and missing, the problem names the first" "[ \$(grep -c 'Pattern C-E-[HL]1 not found: ' TweaksV.log) -eq 2 ] && log_line '${NOT_RAISED}C-E-H1 was not found.\$'"
+check "both looked for and missing, the problem names the first" "[ \$(grep -c -E 'Pattern (C-E-H1|W-E-C4) not found: ' TweaksV.log) -eq 2 ] && log_line '${NOT_RAISED}C-E-H1 was not found.\$'"
 
 NOT_ASKED="${NOT_RAISED}the game did not ask the redirected call at $RVA for the pool.s size within 2 seconds of the session.s start - it made the pool before TweaksV started, or asks for its size another way, and the pool keeps the game.s size.\$"
 AFTER_ALL='The game.s ask for the static bounds pool.s size came after all, after the check had reported it missing.'

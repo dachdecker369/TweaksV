@@ -10,10 +10,12 @@
 // pool is redirected through a call stub to a function that calls the game's lookup with the game's arguments and
 // returns the larger of the game's size and STATICBOUNDS_SIZE - so a gameconfig.xml that gives the pool more keeps
 // it - and logs the sizes once.
-// The call is found as the original finds it: the lookup is where the CRoadBlock pool's size call leads (C-E-L1),
-// inside the game; the call is the first call of the lookup in the 64 bytes after a load of the pool's name, "mov edx,
-// 0x2CDFE406" (C-E-H1), and exactly one load may be followed by one. A call another mod has redirected leads
-// elsewhere, so it is no call of the lookup: the job is then reported and not done, and nothing is changed.
+// The call is found as the original finds it, the lookup as TweaksV knows it from its own findings: the lookup is where the
+// weapon components' pool size call leads (W-E-C4, which TweaksVPools finds once a session for this part and the weapon
+// components, whatever WeaponLimits' switch), inside the game; the call is the first call of the lookup in the 64 bytes
+// after a load of the pool's name, "mov edx, 0x2CDFE406" (C-E-H1), and exactly one load may be followed by one. A call
+// another mod has redirected leads elsewhere, so it is no call of the lookup: the job is then reported and not done, and
+// nothing is changed.
 // The redirect raises the pool only if the game asks for its size after TweaksV's DllMain: a thread of the part
 // checks, 60 seconds after the session's start - the first script program the game places, which the script
 // programs' hook sees while the Blips part, whose hook it is, is on; the game makes its pools as the session starts -
@@ -25,10 +27,12 @@
 // Written for TweaksV from the Static Bounds Limit Adjuster v1.0.2 by Nochala (3_Washing_Machines), commit 61507bc:
 //   Copyright (C) 2026 Nochala
 //   License: GPL-3.0-or-later - https://github.com/Nochala/StaticboundsLimitAdjuster (THIRD_PARTY_NOTICES.md)
-// Adapted for TweaksV on 2026-10-30: its two patterns of the game's code, its search for the call, its rule - the
-// larger of the two sizes, a size the game gives below 0 left as it is - and its key, STATICBOUNDS_SIZE, with its
-// default and its maximum. Its hooks on the pool's set-up and its allocator, which it tries first on Enhanced, and its
-// hook on the lookup itself are left out: a call that cannot be redirected is reported, as every part does.
+// Adapted for TweaksV on 2026-10-30: its pattern of the game's code that finds the load of the pool's name, its search for
+// the call, its rule - the larger of the two sizes, a size the game gives below 0 left as it is - and its key,
+// STATICBOUNDS_SIZE, with its default and its maximum; its second pattern, the CRoadBlock pool's size call that leads it to
+// the lookup, gave way the same day to TweaksV's own W-E-C4. Its hooks on the pool's set-up and its allocator, which it
+// tries first on Enhanced, and its hook on the lookup itself are left out: a call that cannot be redirected is reported,
+// as every part does.
 
 #include "TweaksVStaticBounds.h"
 
@@ -42,10 +46,10 @@
 #include <string>
 #include <vector>
 
-#include "TweaksVConflicts.h"
 #include "TweaksVLog.h"
 #include "TweaksVPatch.h"
 #include "TweaksVPatterns.h"
+#include "TweaksVPools.h"
 #include "TweaksVScanner.h"
 #include "TweaksVScripts.h"
 #include "TweaksVSettings.h"
@@ -60,18 +64,15 @@ namespace TweaksV
 		// ---- the pool's size call (PATTERNS.md, "StaticBounds")
 
 		constexpr uint32_t kStaticBoundsHash = 0x2CDFE406;	// the game's hash of the pool's name, "StaticBounds"
-		constexpr uint32_t kRoadBlockHash = 0xF72CC701;		// the CRoadBlock pool's, whose size call leads to the same lookup
 		constexpr size_t kNameLoadSize = 5;					// "mov edx, imm32": a load of a pool's name
 		constexpr size_t kCallSize = 5;						// "call rel32"
 		constexpr size_t kCallWindow = 64;					// the bytes after a load of the name that the call lies in, whole
 		constexpr size_t kMaxNameLoads = 16;				// the loads of the name the part looks through: more is a changed game
 
 		constexpr const GamePattern& kNamePattern = Pattern("C-E-H1");		// a load of the pool's name: its size call follows
-		constexpr const GamePattern& kLookupPattern = Pattern("C-E-L1");	// the CRoadBlock pool's size call: the lookup
-		constexpr size_t kLookupCallAt = 11;								// C-E-L1: "call rel32" - the pool size lookup
 
-		// True if a pattern holds "mov edx, imm32" with this imm32 at index at - checked when TweaksV is compiled, so
-		// that the hashes above and the offsets read are the bytes the patterns pin.
+		// True if a pattern holds "mov edx, imm32" with this imm32 at index at - checked when TweaksV is compiled, so that
+		// the hash above and the offsets read are the bytes the pattern pins.
 		consteval bool HoldsNameLoad(const GamePattern& pattern, size_t at, uint32_t hash)
 		{
 			if (PatternByte(pattern, at) != 0xBA)
@@ -83,23 +84,12 @@ namespace TweaksV
 		}
 		static_assert(HoldsNameLoad(kNamePattern, 0, kStaticBoundsHash) && PatternByte(kNamePattern, kNameLoadSize) == -1,
 			"TweaksV: C-E-H1 is the load of the pool's name, mov edx, 0x2CDFE406, and no more");
-		static_assert(HoldsNameLoad(kLookupPattern, 0, kRoadBlockHash) && PatternByte(kLookupPattern, kLookupCallAt) == 0xE8,
-			"TweaksV: C-E-L1 holds the CRoadBlock pool's name, mov edx, 0xF72CC701, at +0 and the lookup's call at +11");
 
 		std::string Hex32(uint32_t value)
 		{
 			char text[16];
 			snprintf(text, sizeof(text), "0x%08X", value);
 			return text;
-		}
-
-		// The pool size lookup a call leads to, checked as TweaksV checks a call it redirects or reads a target from: a
-		// "call rel32" that can be read and leads into the game - another mod's hook would lead outside it. nullptr if not.
-		// The weapon components' pool size call (W-E-C4) leads to the same lookup, so one helper can check both.
-		const uint8_t* PoolSizeLookup(const uint8_t* call)
-		{
-			const uint8_t* const lookup = IsReadable(call, kCallSize) ? CallTarget(call) : nullptr;
-			return lookup && IsInsideGameImage(lookup) ? lookup : nullptr;
 		}
 
 		// The call of lookup after a load of the pool's name: the first "call rel32" wholly inside the 64 bytes after the
@@ -269,12 +259,15 @@ namespace TweaksV
 		g_diagnostic = IsDiagnosticMode();
 
 		// 1. both patterns looked for, so that the log names each one missing: the loads of the pool's name, every one up
-		// to the bound, and the CRoadBlock pool's size call, which must be unique
+		// to the bound, and the weapon components' pool size call (W-E-C4), which must be unique - TweaksVPools finds it once
+		// a session for this part and the weapon components, as the game had it before they redirect it
 		const std::vector<uint8_t*> loads = Scanner::FindAll(kNamePattern, kMaxNameLoads + 1);
-		uint8_t* const roadBlock = Scanner::Find(kLookupPattern);
-		if (loads.empty() || !roadBlock)
+		PoolSizeCall pool;
+		std::string lookupWhy;
+		const bool lookupFound = FindPoolSizeCall(pool, lookupWhy);
+		if (loads.empty() || !pool.call)
 		{
-			Fail(std::string(loads.empty() ? kNamePattern.label : kLookupPattern.label) + " was not found.");
+			Fail(loads.empty() ? std::string(kNamePattern.label) + " was not found." : lookupWhy);
 			return;
 		}
 		if (loads.size() > kMaxNameLoads)
@@ -284,18 +277,16 @@ namespace TweaksV
 			return;
 		}
 
-		// 2. the pool size lookup: where the CRoadBlock pool's size call leads - a call into the game
-		const uint8_t* const roadBlockCall = roadBlock + kLookupCallAt;
-		const uint8_t* const lookup = PoolSizeLookup(roadBlockCall);
+		// 2. the pool size lookup: where the weapon components' pool size call leads - a call into the game
 		if (IsDiagnosticMode())
-			WriteLog(kTag, "DIAGNOSTIC: pool size call at " + DescribeAddress(roadBlockCall) + " -> " + DescribeAddress(CallTarget(roadBlockCall)) +
-				" for the pool " + Hex32(kRoadBlockHash) + " (" + kLookupPattern.label + "): the pool size lookup");
-		if (!lookup)
+			WriteLog(kTag, "DIAGNOSTIC: pool size call at " + DescribeAddress(pool.call) + " -> " + DescribeAddress(pool.target) +
+				" for the pool " + Hex32(pool.pool) + " (" + kPoolSizeCallPattern.label + "): the pool size lookup");
+		if (!lookupFound)
 		{
-			Fail("the CRoadBlock pool's size call at " + DescribeAddress(roadBlockCall) + " is not a call into the game (another mod may have hooked it "
-				"already) (" + kLookupPattern.label + ").");
+			Fail(lookupWhy);
 			return;
 		}
+		const uint8_t* const lookup = pool.lookup;
 
 		// 3. the static bounds pool's size call: the first call of the lookup in the 64 bytes after a load of the pool's name,
 		// after exactly one of the loads

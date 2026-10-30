@@ -65,8 +65,8 @@ check "the status lines word for word, the pool's line once for its two calls" "
 check "the guard: the loader hooked at its head, its line word for word" "has 'wc loader hooked, files mounted 0' && log_line '$HOOKED 1024 definitions are loaded is refused.\$'"
 check "every page back to its own protection, no line of DIAGNOSTIC_MODE, no problem" "has 'protect: all restored (RX)' && log_lacks '${TAG}DIAGNOSTIC' && quiet"
 
-echo "== W2 [WEAPON_LIMITS] ENABLED=0, with DIAGNOSTIC_MODE=1: nothing looked for, nothing written"
-fresh_ini; setkey ENABLED 0 WEAPON_LIMITS; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe)
+echo "== W2 [WEAPON_LIMITS] ENABLED=0, with DIAGNOSTIC_MODE=1 and [STATICBOUNDS] ENABLED=0, which looks for W-E-C4 too: nothing looked for, nothing written"
+fresh_ini; setkey ENABLED 0 WEAPON_LIMITS; setkey ENABLED 0 STATICBOUNDS; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe)
 check "the part off in the header, none of its patterns looked for, no line of the weapon components" "log_has 'WeaponLimits off' && log_lacks 'W-E-C' && log_lacks -i 'weapon component'"
 check "the game as it was - the loads, the bytes, the data, the size call to the game's lookup - every page its own protection, no problem" "has '$GAME' && has 'protect: all restored (RX)' && quiet"
 
@@ -194,7 +194,7 @@ check "the problem, word for word; nothing written, the size call to the game's 
 
 echo "== W25 the pool size call another mod hooked: it leads outside the game"
 fresh_ini; out=$(game full_game.exe wchooked); echo "      $out"
-check "the problem, word for word" "refused 'the pool size call at $RVA is not a call into the game (another mod may have hooked it already) (W-E-C4).'"
+check "the problem, word for word" "refused 'the weapon components. pool size call at $RVA is not a call into the game (another mod may have hooked it already) (W-E-C4).'"
 check "the call left where the other mod's hook sent it, not called" "has 'size call elsewhere'"
 
 echo "== W26 none of the game code present (plain fake game): reported, the first pattern named"

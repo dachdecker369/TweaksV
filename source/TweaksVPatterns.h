@@ -159,7 +159,8 @@ namespace TweaksV
 		// [weapon components]
 		// WeaponLimits' weapon components (TweaksVWeaponComponents.cpp): the rebuild of the list of every weapon component
 		// definition - its count's reset, the files' count and its lea of the list (C1) - its sort, with its lea of the list
-		// and the entry size (C2), its update of the count (C3), the pool's size call, with the pool's name and default (C4),
+		// and the entry size (C2), its update of the count (C3), the pool's size call, with the pool's name and default (C4,
+		// TweaksVPools', which finds the game's pool size lookup through it for this part and StaticBounds),
 		// and the loader of one weaponcomponents.meta, 0x13 bytes into it, where the guard hooks its head - the blob's size,
 		// allocated and zeroed, and the blob array's count, capacity and pointer (C5)
 		{ "W-E-C1", "C7 05 ? ? ? ? 00 00 00 00 44 0F B7 05 ? ? ? ? 66 45 85 C0 0F 84 ? ? ? ? 45 31 C9 4C 8D 15 ? ? ? ?" },
@@ -232,11 +233,10 @@ namespace TweaksV
 		// [streaming memory]
 
 		// [static bounds]
-		// StaticBounds (TweaksVStaticBounds.cpp), the patterns of Nochala's Static Bounds Limit Adjuster: a load of the static
-		// bounds pool's name, the call of its size within the 64 bytes after it (H1), and the CRoadBlock pool's size call, which
-		// leads to the same pool size lookup (L1)
+		// StaticBounds (TweaksVStaticBounds.cpp), the pattern of Nochala's Static Bounds Limit Adjuster: a load of the static
+		// bounds pool's name, the call of its size within the 64 bytes after it (H1) - the pool size lookup that call leads to
+		// is where the weapon components' pool size call, W-E-C4, leads (TweaksVPools)
 		{ "C-E-H1", "BA 06 E4 DF 2C" },
-		{ "C-E-L1", "BA 01 C7 2C F7 41 ? 01 00 00 00 E8 ? ? ? ?" },
 		// [rt buffer]
 		// RayTracing (TweaksVRayTracing.cpp): the set-up of the ray tracing buffer of moving geometry - its count, its stride, the
 		// call of the buffer maker and the store of the buffer object (B1) - and the two checks of a frame's ranges against its
