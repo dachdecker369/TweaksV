@@ -64,8 +64,16 @@ stubs() { sed -nE 's/.*stubs: ([0-9]+), all RX.*/\1/p' <<< "$out"; }
 redirected() { log_line "\[Resources\] The call after the budgets. stores at $(rva stores 74) is redirected: the texture budgets below $1 MB are raised to it when the game.s start-up sets them.\$"; }
 call_written() { log_line "\[Resources\] DIAGNOSTIC: call after the budgets. stores at $(rva stores 74): E8 [0-9A-F ]* -> E8 [0-9A-F ]*\$"; }
 dry_run_lines() { log_line "\[Resources\] DRY_RUN: would redirect the call after the budgets. stores at $(rva stores 74).\$" && log_line '\[Resources\] DRY_RUN: the texture budgets below 6000 MB would be raised to it when the game.s start-up sets them.$'; }
-# refused WHY [CALL]: the part's problem WHY, word for word, the only one, in one summary, and nothing written
-refused() { log_line "${NOT_RAISED}$1\$" && [ "$(count 'PROBLEM')" -eq 1 ] && log_has 'Start-up summary not shown (ERROR_POPUP=0): 1 problem' && untouched "${2:-the next step}"; }
+# one_problem: the part's one problem, an item of the start-up summary - logged before the summary's line. The other parts run
+# beside it in the merged runs, so neither every problem of a run nor the summary's count of them is counted here
+one_problem() {
+	local problem summary
+	problem=$(grep -n -m1 '\[Resources\] PROBLEM' TweaksV.log | cut -d: -f1)
+	summary=$(grep -n -m1 'Start-up summary not shown (ERROR_POPUP=0): [1-9][0-9]* problem' TweaksV.log | cut -d: -f1)
+	[ "$(count '\[Resources\] PROBLEM')" -eq 1 ] && [ -n "$problem" ] && [ -n "$summary" ] && [ "$problem" -lt "$summary" ]
+}
+# refused WHY [CALL]: the part's problem WHY, word for word, its only one, in the start-up summary, and nothing written
+refused() { log_line "${NOT_RAISED}$1\$" && one_problem && untouched "${2:-the next step}"; }
 # both_keys: TweaksV.ini with VIDEO_MEMORY_BUDGET=6000 and DIAGNOSTIC_MODE=1; refused_both WHY: refused, and the measurement's
 # line with the same reason, nothing measured
 both_keys() { fresh_ini; setkey VIDEO_MEMORY_BUDGET 6000 RESOURCES; setkey DIAGNOSTIC_MODE 1; }
@@ -212,7 +220,7 @@ check "the line, word for word; the call redirected all the same, the budgets as
 
 echo "== TB20 VIDEO_MEMORY_BUDGET=1000, below the lowest budget the game's own file gives: 1500 used and reported"
 fresh_ini; setkey VIDEO_MEMORY_BUDGET 1000 RESOURCES; out=$(game full_game.exe)
-check "the problem, word for word, the only one, in one summary" "log_line '\[Resources\] PROBLEM: TweaksV.ini: \[RESOURCES\] VIDEO_MEMORY_BUDGET=1000 is outside 0 or 1500..16384 - using 1500.\$' && [ \$(count 'PROBLEM') -eq 1 ] && log_has 'Start-up summary not shown (ERROR_POPUP=0): 1 problem'"
+check "the problem, word for word, the part's only one, in the start-up summary" "log_line '\[Resources\] PROBLEM: TweaksV.ini: \[RESOURCES\] VIDEO_MEMORY_BUDGET=1000 is outside 0 or 1500..16384 - using 1500.\$' && one_problem"
 check "1500 used: the redirect's line with it, the budgets left as they are" "redirected 1500 && log_has 'are at least 1500 MB each - left as they are' && report_is 'a TweaksV stub' '1500, 1500, 3000 and 3000'"
 
 echo "== TB21 the texture quality's index 7, outside 0 to 3, when the start-up sets the budgets"
@@ -228,7 +236,7 @@ fresh_ini; setkey VIDEO_MEMORY_BUDGET 6000 RESOURCES; setkey DRY_RUN 1; out=$(ga
 check "the two dry-run lines, word for word, and not the redirect's; no problem" "dry_run_lines && log_lacks 'stores at RVA 0x[0-9A-F]* is redirected' && log_lacks 'PROBLEM'"
 check "nothing written: the call made to the game's function, the budgets as the game set them" "untouched && startup 'the next step' '1500, 1500, 3000 and 3000'"
 
-echo "== TB24 each check failing on its own, VIDEO_MEMORY_BUDGET=6000: the problem, word for word, the only one, nothing written"
+echo "== TB24 each check failing on its own, VIDEO_MEMORY_BUDGET=6000: the problem, word for word, the part's only one, nothing written"
 fresh_ini; setkey VIDEO_MEMORY_BUDGET 6000 RESOURCES; addkey TEST_BREAK_PATTERN Q-E-T2; out=$(ASI=TweaksV_test.asi game full_game.exe)
 check "Q-E-T2 missing (TEST_BREAK_PATTERN, test build)" "refused 'Q-E-T2 was not found.'"
 fresh_ini; setkey VIDEO_MEMORY_BUDGET 6000 RESOURCES; out=$(game full_game.exe tbshift)
@@ -268,12 +276,12 @@ check "the start-up's call through the stub after the first summary; no problem"
 
 echo "== TB35 the game's start-up before TweaksV started (a loader that starts TweaksV late), VIDEO_MEMORY_BUDGET=6000: the raise refused, reported"
 fresh_ini; setkey VIDEO_MEMORY_BUDGET 6000 RESOURCES; out=$(game full_game.exe tbearly)
-check "the problem, word for word, with the most and the budgets as the start-up set them, the only one, in one summary; nothing written" "refused 'the most objects at $(rva counters 0x20) and the budgets at $(rva counters 0x28) were set before TweaksV started (MaxStreamingResources: 98304, MaxStreamingMemory_0..3_Base: 1500, 1500, 3000 and 3000 MB): the game.s start-up ran before TweaksV.s DllMain, and the call after its stores with it.'"
+check "the problem, word for word, with the most and the budgets as the start-up set them, the part's only one, in the start-up summary; nothing written" "refused 'the most objects at $(rva counters 0x20) and the budgets at $(rva counters 0x28) were set before TweaksV started (MaxStreamingResources: 98304, MaxStreamingMemory_0..3_Base: 1500, 1500, 3000 and 3000 MB): the game.s start-up ran before TweaksV.s DllMain, and the call after its stores with it.'"
 check "the start-up's call made before TweaksV, once, to the game's function itself; no line of a redirect" "startup 'the next step' '1500, 1500, 3000 and 3000' && log_lacks 'budgets. stores at RVA 0x[0-9A-F]* is redirected'"
 
 echo "== TB36 the data's page unreadable while TweaksV starts, VIDEO_MEMORY_BUDGET=6000: the raise refused, reported"
 fresh_ini; setkey VIDEO_MEMORY_BUDGET 6000 RESOURCES; out=$(game full_game.exe tbunreadable)
-check "the problem, word for word, the only one, in one summary; nothing written, the start-up's call made to the game's function" "refused 'the most objects at $(rva counters 0x20) and the budgets at $(rva counters 0x28) cannot be read.' && startup 'the next step' '1500, 1500, 3000 and 3000'"
+check "the problem, word for word, the part's only one, in the start-up summary; nothing written, the start-up's call made to the game's function" "refused 'the most objects at $(rva counters 0x20) and the budgets at $(rva counters 0x28) cannot be read.' && startup 'the next step' '1500, 1500, 3000 and 3000'"
 
 echo "== TB37 the checks of the sites TB24 leaves, each failing on its own, VIDEO_MEMORY_BUDGET=6000 and DIAGNOSTIC_MODE=1: the problem and the measurement's line, word for word, nothing written"
 both_keys; out=$(game full_game.exe tbmostout)
@@ -293,7 +301,7 @@ check "the budgets stored 16 bytes past the counters' +0x28" "refused_both 'the 
 
 echo "== TB38 a writer besides the start-up's stores, VIDEO_MEMORY_BUDGET=6000 and DIAGNOSTIC_MODE=1: the raise refused, the writer named, the budget measured"
 both_keys; out=$(game full_game.exe tbwritemov wait)
-check "the problem, word for word, the only one, in one summary; nothing written" "refused 'the budgets at $(rva counters 0x28) have 1 writer besides the start-up.s stores, the first at $(rva writers 97), which could undo the raise later.'"
+check "the problem, word for word, the part's only one, in the start-up summary; nothing written" "refused 'the budgets at $(rva counters 0x28) have 1 writer besides the start-up.s stores, the first at $(rva writers 97), which could undo the raise later.'"
 check "the writers' line names it; neither the start-up's check nor the redirect made" "writers_line 'and 1 besides them: $(rva writers 97)' && log_lacks 'are still 0 at TweaksV' && log_lacks 'budgets. stores at RVA 0x[0-9A-F]* is redirected'"
 check "the measurement all the same: the announcement and the summary 10 s in, word for word, of the game's own budgets" "announced && log_line '$SUMMARY1' && first_after_10s"
 
