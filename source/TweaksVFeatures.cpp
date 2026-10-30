@@ -112,7 +112,6 @@ namespace TweaksV
 			{ "SirenSettings", MeasureSirenCount },
 			// [ped props]
 			// [texture budget]
-			{ "Resources", MeasureTextureBudget },
 			// [streaming memory]
 		};
 	}

@@ -76,9 +76,9 @@ first_after_10s() {
 }
 summaries() { count 'objects allowed (MaxStreamingResources)'; }
 
-echo "== TB1 defaults, DIAGNOSTIC_MODE=0: nothing looked for, nothing written"
+echo "== TB1 defaults, VIDEO_MEMORY_BUDGET=0 and DIAGNOSTIC_MODE=0: nothing looked for, nothing written"
 fresh_ini; out=$(game full_game.exe); echo "      $out"
-check "no texture budget pattern looked for, no line of the module" "log_lacks 'Q-E-T' && log_lacks '\[Resources\]' && log_lacks -i 'texture budget'"
+check "no texture budget pattern looked for; the part's one line, word for word" "log_lacks 'Q-E-T' && log_line '\[Resources\] VIDEO_MEMORY_BUDGET=0 - the texture budget is not raised.\$' && [ \$(count '\[Resources\]') -eq 1 ]"
 check "the fake's sites as placed, its data as set, every page's protection its own" "untouched"
 
 echo "== TB2 DIAGNOSTIC_MODE=1: the five patterns found once each, every site logged, the counters summed up 10 s in"

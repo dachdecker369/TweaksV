@@ -1,36 +1,44 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// TweaksV - the video memory budget for streamed resources, measured first (see TweaksVTextureBudget.h).
+// TweaksV - the texture budget, the Resources part (see TweaksVTextureBudget.h).
 //
-// The game counts the video memory of the textures and buffers its streaming engine places in one object of its
-// data, the counters: the buffers' and the textures' bytes and numbers, the most bytes of both so far (its own
-// high-water mark), the most objects allowed and four budgets in bytes, the last two written once at the start-up
-// from gameconfig.xml's ConfigGraphics - MaxStreamingResources, 98304 in the game's own file, and
-// MaxStreamingMemory_0..3_Base, 1500, 1500, 3000 and 3000 MB. An index the texture quality gives picks the budget
-// in use. A resource is placed only while the objects stay below the most and the bytes below the budget;
-// otherwise the engine evicts what it cannot place and textures go missing, and an update check evicts ahead of
-// time once the bytes pass a factor of the budget. The Resources part to come would raise the budget, so this
-// module measures first whether a load reaches it, with DIAGNOSTIC_MODE=1 only (SPECIFICATIONS 11.14):
-//   DIAGNOSTIC_MODE  Q-E-T1 to Q-E-T5 found once each - the start-up's stores of the most and the four budgets
-//                    and the call after them, which the part's writing half would redirect (T1, T2), the budget's
-//                    getter with the index (T3), the placement's check of the counters (T4) and the update check
-//                    with its switch, flag and factors (T5) - every address checked inside the game and against
-//                    the others, every site logged; then the counters read 10 seconds in and again every minute
-//                    that brings a new high, a change of the update check or of the budget in use; the update
-//                    check's switch and factors logged at the first summary and again if they change, a summary
-//                    before the game has read gameconfig.xml saying that its budgets are not set yet
-//   DRY_RUN          changes nothing here: the module writes nothing to the game
-// Every read of the game's data - the counters, the index, the flag, the switch and its factors - is an aligned
-// read after IsReadable; nothing is written or called. Windows' own budget for the game's video memory is not read:
-// whether TweaksV asks DXGI for it or reads the game's cached copy is decided with the part.
-// Written for TweaksV from the findings of its own research in the game's code (PATTERNS.md, "Resources"); the
-// idea of a larger budget is that of zombieguy's Resource Adjuster for the Legacy game, which published no code -
-// none was read.
+// The game counts the video memory of the textures and buffers its streaming engine places in one object of its data, the
+// counters: the buffers' and the textures' bytes and numbers, the most bytes of both so far (its own high-water mark), the
+// most objects allowed and four budgets in bytes, the last two written once at the start-up from gameconfig.xml's
+// ConfigGraphics - MaxStreamingResources, 98304 in the game's own file, and MaxStreamingMemory_0..3_Base, 1500, 1500, 3000
+// and 3000 MB. An index the texture quality gives picks the budget in use. A resource is placed only while the objects stay
+// below the most and the bytes below the budget; otherwise the engine evicts what it cannot place and textures go missing,
+// however much memory the card has, and an update check evicts ahead of time once the bytes pass a factor of the budget.
+// VIDEO_MEMORY_BUDGET in [RESOURCES] raises each of the four budgets that is below it to it and lowers none
+// (SPECIFICATIONS 11.12):
+//   0                the default: the game's own budgets - nothing is looked for, but with DIAGNOSTIC_MODE=1
+//   1 to 1499        raised to 1500, the lowest budget the game's own file gives, and reported
+//   1500 to 16384    once Q-E-T1 to Q-E-T4 are found and every site checked - the start-up's stores of the most and the four
+//                    budgets and the call after them (T1, T2), the budget's getter with the index (T3), the placement's check
+//                    of the counters (T4), every address inside the game and the sites agreeing on the counters - and the
+//                    scanner's search for stores has found the start-up's two the budgets' only writers, the call after the
+//                    stores is redirected through a call stub to a function that raises the budgets the game has just
+//                    written, logs the four it found and the index in use, and calls the game's function; nothing else is
+//                    written
+//   DRY_RUN          everything found and checked, the call not redirected
+//   DIAGNOSTIC_MODE  every site logged, the budgets' writers among them; and the measurement, with Q-E-T5, the update check
+//                    with its switch, flag and factors: the counters read 10 seconds in and again every minute that brings a
+//                    new high, a change of the update check or of the budgets; the update check's switch and factors logged
+//                    at the first summary and again if they change, a summary before the game has read gameconfig.xml saying
+//                    that its budgets are not set yet
+// Every read of the game's data - the counters, the index, the flag, the switch and its factors - is an aligned read after
+// IsReadable, or of the budgets and the index the checks found, by the raise; the raise writes the four budgets alone, right
+// after the game's own stores made them, on the game's start-up thread. Windows' own budget for the game's video memory is
+// not read: VIDEO_MEMORY_BUDGET has a documented maximum in its place, since the update check evicts against Windows' budget
+// anyway.
+// Written for TweaksV from the findings of its own research in the game's code (PATTERNS.md, "Resources"); the idea of a
+// larger budget is that of zombieguy's Resource Adjuster for the Legacy game, which published no code - none was read.
 
 #include "TweaksVTextureBudget.h"
 
 #include <windows.h>
 
 #include <algorithm>
+#include <atomic>
 #include <bit>
 #include <cstdint>
 #include <cstdio>
@@ -38,6 +46,7 @@
 #include <initializer_list>
 #include <iterator>
 #include <string>
+#include <vector>
 
 #include "TweaksVConflicts.h"
 #include "TweaksVLog.h"
@@ -45,6 +54,8 @@
 #include "TweaksVPatch.h"
 #include "TweaksVPatterns.h"
 #include "TweaksVScanner.h"
+#include "TweaksVSettings.h"
+#include "TweaksVSummary.h"
 
 namespace TweaksV
 {
@@ -81,6 +92,12 @@ namespace TweaksV
 		constexpr size_t kBudgetCount = 4;			// the indices 0 to 3 (MaxStreamingMemory_0..3_Base)
 		constexpr size_t kCountersSize = kBudgets + kBudgetCount * sizeof(uint64_t);
 		constexpr size_t kWritersLooked = 16;		// the budgets' writers the scan looks for: the start-up's two, and more besides them
+
+		// VIDEO_MEMORY_BUDGET: 0, the game's own, or a budget from the lowest the game's own file gives, 1500 MB
+		// (MaxStreamingMemory_0_Base and _1_Base), to the setting's maximum
+		constexpr int kLowestBudgetMb = 1500;
+		static_assert(kVideoMemoryBudget.minValue == 0 && kVideoMemoryBudget.defaultValue == 0 && kVideoMemoryBudget.maxValue > kLowestBudgetMb,
+			"TweaksV: VIDEO_MEMORY_BUDGET is 0, the game's own, or from 1500 MB to its maximum");
 
 		// The update check's switch, a dword, and its three factors, floats, one block of the game's data
 		constexpr size_t kRaiseFactor = 4;			// it evicts once the bytes pass this much of the budget
@@ -141,11 +158,25 @@ namespace TweaksV
 			PatternHolds(kUpdate, 20, { 0x48, 0x8B, 0x3D }) && PatternHolds(kUpdate, 27, { 0x48, 0x8B, 0x35 }) && PatternByte(kUpdate, kGetterCallAt) == 0xE8,
 			"TweaksV: Q-E-T5 holds the switch's compare, the loads of the counters and the getter's call");
 
-		// What the checks found, set once everything is checked, before the measurement's thread starts
+		// What the checks found, set once everything is checked, before the call is redirected and the measurement's thread
+		// starts
 		const uint8_t* g_counters = nullptr;
 		const uint8_t* g_index = nullptr;
+		const uint8_t* g_getter = nullptr;
 		const uint8_t* g_flag = nullptr;
 		const uint8_t* g_switch = nullptr;
+		uint8_t* g_budgets = nullptr;					// the four budgets, which the raise writes
+		uint8_t* g_call = nullptr;						// the call after the start-up's stores, which the raise redirects
+		size_t g_otherWriters = 0;						// the budgets' writers besides the start-up's two stores
+		const uint8_t* g_firstOtherWriter = nullptr;
+
+		// The raise: the budget in bytes and the game's function behind the call, both set before the call is redirected,
+		// and the budgets the game had set, kept by the raise for the measurement's summary and published by g_raised.
+		using NextStep = uint64_t (*)(uint64_t, uint64_t, uint64_t, uint64_t);
+		uint64_t g_raiseTo = 0;
+		NextStep g_nextStep = nullptr;
+		std::atomic<uint64_t> g_gameBudgets[kBudgetCount] = {};
+		std::atomic<bool> g_raised{ false };
 
 		std::string Hex(uint64_t value)
 		{
@@ -183,52 +214,93 @@ namespace TweaksV
 			return Rel32Target(p + 4 + rex);
 		}
 
-		// A check that failed: the measurement is not started - logged, not reported, an aid (NOTES.md, T-DIAG).
-		bool NotMeasured(const std::string& why)
+		// ---- the checks: the raise's and the measurement's
+
+		// The patterns' matches: Q-E-T1 to Q-E-T4 for the raise and the measurement, Q-E-T5 for the measurement alone.
+		struct Matches
 		{
-			WriteLog(kTag, "DIAGNOSTIC: the texture budget is not measured: " + why + ".");
-			return false;
+			uint8_t* storeMost = nullptr;
+			uint8_t* storeBudgets = nullptr;
+			uint8_t* getter = nullptr;
+			uint8_t* placement = nullptr;
+			uint8_t* update = nullptr;
+		};
+
+		// Every pattern the jobs need, looked for before anything is checked, so that the scanner names each one missing.
+		Matches FindPatterns(bool measure)
+		{
+			Matches found;
+			found.storeMost = Scanner::Find(kStoreMost);
+			found.storeBudgets = Scanner::Find(kStoreBudgets);
+			found.getter = Scanner::Find(kGetter);
+			found.placement = Scanner::Find(kPlacement);
+			if (measure)
+				found.update = Scanner::Find(kUpdate);
+			return found;
 		}
 
-		// Q-E-T1 to Q-E-T5 found and every site checked as the part's writing half would check it - each address
-		// inside the game, the sites agreeing on the counters - and logged; false at the first that is not as the
-		// research found it, logged.
-		bool FindAndCheck()
+		// A site's line, with DIAGNOSTIC_MODE only.
+		void LogSite(const std::string& line)
 		{
-			const uint8_t* const storeMost = Scanner::Find(kStoreMost);	// all five looked for, so that the log names each one missing
-			const uint8_t* const storeBudgets = Scanner::Find(kStoreBudgets);
-			const uint8_t* const getter = Scanner::Find(kGetter);
-			const uint8_t* const placement = Scanner::Find(kPlacement);
-			const uint8_t* const update = Scanner::Find(kUpdate);
-			if (!storeMost || !storeBudgets || !getter || !placement || !update)
-				return NotMeasured(std::string((!storeMost ? kStoreMost : !storeBudgets ? kStoreBudgets : !getter ? kGetter : !placement ? kPlacement :
-					kUpdate).label) + " was not found");
+			if (IsDiagnosticMode())
+				WriteLog(kTag, "DIAGNOSTIC: " + line);
+		}
+
+		// The raise not done: a problem of the start-up summary.
+		void NotRaised(const std::string& why)
+		{
+			ReportFailure(kTag, "The texture budget is not raised this session: " + why + ".");
+		}
+
+		// The measurement not started - logged, not reported, an aid (NOTES.md, T-DIAG).
+		void NotMeasured(const std::string& why)
+		{
+			WriteLog(kTag, "DIAGNOSTIC: the texture budget is not measured: " + why + ".");
+		}
+
+		// Q-E-T1 to Q-E-T4, the sites the raise and the measurement share: each checked as the research found it - every
+		// address inside the game, the sites agreeing on the counters - and logged with DIAGNOSTIC_MODE, the budgets' writers
+		// among them. False at the first that is not as expected, with the reason in why; a writer besides the start-up's
+		// stores is not one of them: it refuses the raise alone, which it could undo.
+		bool CheckSites(const Matches& found, std::string& why)
+		{
+			const auto fail = [&why](const std::string& reason)
+			{
+				why = reason;
+				return false;
+			};
+			const uint8_t* const storeMost = found.storeMost;
+			const uint8_t* const storeBudgets = found.storeBudgets;
+			const uint8_t* const getter = found.getter;
+			const uint8_t* const placement = found.placement;
+			if (!storeMost || !storeBudgets || !getter || !placement)
+				return fail(std::string((!storeMost ? kStoreMost : !storeBudgets ? kStoreBudgets : !getter ? kGetter : kPlacement).label) + " was not found");
 
 			// The start-up's stores: the most, then budgets 0 and 1 past Q-E-T1, then budgets 2 and 3 right after them
 			const uint8_t* const most = Rel32Target(storeMost + kMostStoreAt + 2);
 			if (!Inside(most, sizeof(uint32_t)))
-				return NotMeasured("the most objects at " + DescribeAddress(most) + At(kStoreMost) + " are not inside the game");
-			WriteLog(kTag, "DIAGNOSTIC: store of the most objects at " + DescribeAddress(storeMost + kMostStoreAt) + " -> " + DescribeAddress(most) +
+				return fail("the most objects at " + DescribeAddress(most) + At(kStoreMost) + " are not inside the game");
+			LogSite("store of the most objects at " + DescribeAddress(storeMost + kMostStoreAt) + " -> " + DescribeAddress(most) +
 				", from the configuration's +" + Hex(Imm32(storeMost + kMostOffsetAt)) + At(kStoreMost));
 			const uint8_t* const shift = storeMost + kShiftAt;
 			if (!IsReadable(shift, kStoreBudgetsAt - kShiftAt))
-				return NotMeasured("the code after " + std::string(kStoreMost.label) + " at " + DescribeAddress(shift) + " cannot be read");
+				return fail("the code after " + std::string(kStoreMost.label) + " at " + DescribeAddress(shift) + " cannot be read");
 			if (memcmp(shift, kShiftAndStore, sizeof(kShiftAndStore)) != 0)
-				return NotMeasured("the code after " + std::string(kStoreMost.label) + " at " + DescribeAddress(shift) + " is not the store of budgets 0 and 1: " +
+				return fail("the code after " + std::string(kStoreMost.label) + " at " + DescribeAddress(shift) + " is not the store of budgets 0 and 1: " +
 					HexBytes(shift, kStoreBudgetsAt - kShiftAt));
 			const uint8_t* const budgets = Rel32Target(storeMost + kBudgets01StoreAt + 4);
 			if (!Inside(budgets, kBudgetCount * sizeof(uint64_t)))
-				return NotMeasured("the budgets at " + DescribeAddress(budgets) + At(kStoreMost) + " are not inside the game");
-			WriteLog(kTag, "DIAGNOSTIC: store of budgets 0 and 1 at " + DescribeAddress(storeMost + kBudgets01StoreAt) + " -> " + DescribeAddress(budgets) +
+				return fail("the budgets at " + DescribeAddress(budgets) + At(kStoreMost) + " are not inside the game");
+			LogSite("store of budgets 0 and 1 at " + DescribeAddress(storeMost + kBudgets01StoreAt) + " -> " + DescribeAddress(budgets) +
 				", from the configuration's +" + Hex(Imm32(storeMost + kBudgets01OffsetAt)) + " in MB" + At(kStoreMost));
 			if (storeBudgets != storeMost + kStoreBudgetsAt)
-				return NotMeasured("the store of budgets 2 and 3 at " + DescribeAddress(storeBudgets) + At(kStoreBudgets) +
+				return fail("the store of budgets 2 and 3 at " + DescribeAddress(storeBudgets) + At(kStoreBudgets) +
 					" does not follow the store of budgets 0 and 1, which ends at " + DescribeAddress(storeMost + kStoreBudgetsAt));
 			const uint8_t* const budgets23 = Rel32Target(storeBudgets + kBudgets23StoreAt + 4);
 			if (budgets23 != budgets + 2 * sizeof(uint64_t))
-				return NotMeasured("budgets 2 and 3 at " + DescribeAddress(budgets23) + At(kStoreBudgets) + " do not lie 16 bytes after budgets 0 and 1 at " +
+				return fail("budgets 2 and 3 at " + DescribeAddress(budgets23) + At(kStoreBudgets) + " do not lie 16 bytes after budgets 0 and 1 at " +
 					DescribeAddress(budgets));
-			WriteLog(kTag, "DIAGNOSTIC: store of budgets 2 and 3 at " + DescribeAddress(storeBudgets + kBudgets23StoreAt) + " -> " + DescribeAddress(budgets23) +
+			LogSite("store of budgets 2 and 3 at " + DescribeAddress(storeBudgets + kBudgets23StoreAt) + " -> " + DescribeAddress(budgets23) +
 				", from the configuration's +" + Hex(Imm32(storeBudgets + kBudgets23OffsetAt)) + " in MB" + At(kStoreBudgets));
 
 			// Every writer of the budgets, by the scanner's search for stores of any width: the start-up's two, and any besides
@@ -238,91 +310,117 @@ namespace TweaksV
 			if (writers.size() < kWritersLooked)
 				for (const uint8_t* const store : startUpStores)
 					if (std::find(writers.begin(), writers.end(), store) == writers.end())
-						return NotMeasured("the scan for the budgets' writers does not find the start-up's store at " + DescribeAddress(store) +
+						return fail("the scan for the budgets' writers does not find the start-up's store at " + DescribeAddress(store) +
 							(store == startUpStores[0] ? At(kStoreMost) : At(kStoreBudgets)));
 			std::string besides;
 			size_t others = 0;
+			const uint8_t* firstOther = nullptr;
 			for (const uint8_t* const writer : writers)
 				if (writer != startUpStores[0] && writer != startUpStores[1])
+				{
 					besides += (others++ ? ", " : "") + DescribeAddress(writer);
-			WriteLog(kTag, "DIAGNOSTIC: writers of the budgets at " + DescribeAddress(budgets) + ": the start-up's stores at " + DescribeAddress(startUpStores[0]) +
-				" and " + DescribeAddress(startUpStores[1]) + (others == 0 ? std::string(", none besides them") : ", and " + std::to_string(others) +
+					if (!firstOther)
+						firstOther = writer;
+				}
+			LogSite("writers of the budgets at " + DescribeAddress(budgets) + ": the start-up's stores at " + DescribeAddress(startUpStores[0]) + " and " +
+				DescribeAddress(startUpStores[1]) + (others == 0 ? std::string(", none besides them") : ", and " + std::to_string(others) +
 				(writers.size() == kWritersLooked ? " or more" : "") + " besides them: " + besides) + " (" + kStoreMost.label + ", " + kStoreBudgets.label + ")");
 
-			// The call after the stores, the one the part's writing half would redirect: a call into the game
-			const uint8_t* const call = storeBudgets + kCallAt;
+			// The call after the stores, the one the raise redirects: a call into the game
+			uint8_t* const call = found.storeBudgets + kCallAt;
 			const uint8_t* const callee = IsReadable(call, kCallSize) ? CallTarget(call) : nullptr;
-			WriteLog(kTag, "DIAGNOSTIC: call after the budgets' stores at " + DescribeAddress(call) + " -> " +
-				(callee ? DescribeAddress(callee) : std::string("not a call")) + At(kStoreBudgets));
+			LogSite("call after the budgets' stores at " + DescribeAddress(call) + " -> " + (callee ? DescribeAddress(callee) : std::string("not a call")) +
+				At(kStoreBudgets));
 			if (!callee || !IsInsideGameImage(callee))
-				return NotMeasured("the call after the budgets' stores at " + DescribeAddress(call) + " is not a call into the game (another mod may have hooked it "
+				return fail("the call after the budgets' stores at " + DescribeAddress(call) + " is not a call into the game (another mod may have hooked it "
 					"already)" + At(kStoreBudgets));
 
 			// The getter: the index
 			const uint8_t* const index = Rel32Target(getter + kIndexAt);
 			if (!Inside(index, sizeof(int32_t)))
-				return NotMeasured("the index at " + DescribeAddress(index) + At(kGetter) + " is not inside the game");
-			WriteLog(kTag, "DIAGNOSTIC: budget getter at " + DescribeAddress(getter) + ": the index at " + DescribeAddress(index) + ", the budgets at +" +
-				Hex(kBudgets) + " of the counters" + At(kGetter));
+				return fail("the index at " + DescribeAddress(index) + At(kGetter) + " is not inside the game");
+			LogSite("budget getter at " + DescribeAddress(getter) + ": the index at " + DescribeAddress(index) + ", the budgets at +" + Hex(kBudgets) +
+				" of the counters" + At(kGetter));
 
 			// The placement's check: every load a field of the counters, the most and the budgets those the start-up writes
 			const uint8_t* const counters = Rel32Target(placement + kPlacementCountersAt);
 			if (!Inside(counters, kCountersSize))
-				return NotMeasured("the counters at " + DescribeAddress(counters) + At(kPlacement) + " are not inside the game");
+				return fail("the counters at " + DescribeAddress(counters) + At(kPlacement) + " are not inside the game");
 			if (!IsReadable(placement + kPlacementPastAt, sizeof(int32_t)))
-				return NotMeasured("the load of the textures' bytes after " + std::string(kPlacement.label) + " at " + DescribeAddress(placement + kPlacementPastAt) +
+				return fail("the load of the textures' bytes after " + std::string(kPlacement.label) + " at " + DescribeAddress(placement + kPlacementPastAt) +
 					" cannot be read");
 			for (const PlacementLoad& load : kPlacementLoads)
 				if (Rel32Target(placement + load.at) != counters + load.field)
-					return NotMeasured(std::string("the placement's check loads the ") + load.what + " from " + DescribeAddress(Rel32Target(placement + load.at)) +
+					return fail(std::string("the placement's check loads the ") + load.what + " from " + DescribeAddress(Rel32Target(placement + load.at)) +
 						", not from +" + Hex(load.field) + " of the counters at " + DescribeAddress(counters) + At(kPlacement));
 			if (counters + kMost != most)
-				return NotMeasured("the most objects the placement's check reads at " + DescribeAddress(counters + kMost) + " are not those " +
-					kStoreMost.label + " stores at " + DescribeAddress(most));
+				return fail("the most objects the placement's check reads at " + DescribeAddress(counters + kMost) + " are not those " + kStoreMost.label +
+					" stores at " + DescribeAddress(most));
 			if (counters + kBudgets != budgets)
-				return NotMeasured("the budgets at " + DescribeAddress(budgets) + At(kStoreMost) + " are not at +" + Hex(kBudgets) + " of the counters at " +
+				return fail("the budgets at " + DescribeAddress(budgets) + At(kStoreMost) + " are not at +" + Hex(kBudgets) + " of the counters at " +
 					DescribeAddress(counters) + At(kPlacement));
-			WriteLog(kTag, "DIAGNOSTIC: placement check at " + DescribeAddress(placement) + ": the numbers at " + DescribeAddress(counters + kBuffersNumber) + " and " +
+			LogSite("placement check at " + DescribeAddress(placement) + ": the numbers at " + DescribeAddress(counters + kBuffersNumber) + " and " +
 				DescribeAddress(counters + kTexturesNumber) + ", the most at " + DescribeAddress(counters + kMost) + ", the bytes at " +
 				DescribeAddress(counters + kBuffersBytes) + " and " + DescribeAddress(counters + kTexturesBytes) + At(kPlacement));
 
-			// The update check: its switch, the counters, the getter's call; past the match its flag and its factors
+			g_counters = counters;
+			g_index = index;
+			g_getter = getter;
+			g_budgets = const_cast<uint8_t*>(budgets);
+			g_call = call;
+			g_otherWriters = others;
+			g_firstOtherWriter = firstOther;
+			return true;
+		}
+
+		// Q-E-T5, the measurement's own: the update check's switch, the counters, the getter's call; past the match its flag
+		// and its factors - each checked and logged as above, after CheckSites. False at the first that is not as expected,
+		// with the reason in why.
+		bool CheckUpdateCheck(const uint8_t* update, std::string& why)
+		{
+			const auto fail = [&why](const std::string& reason)
+			{
+				why = reason;
+				return false;
+			};
+			if (!update)
+				return fail(std::string(kUpdate.label) + " was not found");
+			const uint8_t* const counters = g_counters;
+			const uint8_t* const getter = g_getter;
 			const uint8_t* const switchAt = Rel32Target(update + kSwitchAt) + 1;	// the disp32 ends a byte before the instruction
 			if (!Inside(switchAt, kSwitchSize))
-				return NotMeasured("the update check's switch and factors at " + DescribeAddress(switchAt) + At(kUpdate) + " are not inside the game");
+				return fail("the update check's switch and factors at " + DescribeAddress(switchAt) + At(kUpdate) + " are not inside the game");
 			if (Rel32Target(update + kUpdateCountersAt) != counters || Rel32Target(update + kUpdateBuffersAt) != counters + kBuffersBytes ||
 				Rel32Target(update + kUpdateTexturesAt) != counters + kTexturesBytes)
-				return NotMeasured("the update check at " + DescribeAddress(update) + " does not read the counters at " + DescribeAddress(counters) + At(kUpdate));
+				return fail("the update check at " + DescribeAddress(update) + " does not read the counters at " + DescribeAddress(counters) + At(kUpdate));
 			const uint8_t* const getterCall = update + kGetterCallAt;
 			const uint8_t* const called = IsReadable(getterCall, kCallSize) ? CallTarget(getterCall) : nullptr;
 			if (called != getter)
-				return NotMeasured("the update check's call at " + DescribeAddress(getterCall) + " does not lead to the budget getter at " + DescribeAddress(getter) +
+				return fail("the update check's call at " + DescribeAddress(getterCall) + " does not lead to the budget getter at " + DescribeAddress(getter) +
 					At(kUpdate));
-			WriteLog(kTag, "DIAGNOSTIC: update check at " + DescribeAddress(update) + ": its switch at " + DescribeAddress(switchAt) + ", the counters at " +
+			LogSite("update check at " + DescribeAddress(update) + ": its switch at " + DescribeAddress(switchAt) + ", the counters at " +
 				DescribeAddress(counters) + ", the getter's call at " + DescribeAddress(getterCall) + " -> " + DescribeAddress(called) + At(kUpdate));
 			const uint8_t* const compare = update + kFlagAt;
 			if (!IsReadable(compare, kRaiseAt + kMulssMaxSize - kFlagAt))
-				return NotMeasured("the update check's code after " + std::string(kUpdate.label) + " at " + DescribeAddress(compare) + " cannot be read");
+				return fail("the update check's code after " + std::string(kUpdate.label) + " at " + DescribeAddress(compare) + " cannot be read");
 			if (compare[0] != 0x80 || compare[1] != 0x3D || compare[6] != 0x00)
-				return NotMeasured("the update check's code at " + DescribeAddress(compare) + " is not the compare of its flag: " + HexBytes(compare, kFlagSize) +
+				return fail("the update check's code at " + DescribeAddress(compare) + " is not the compare of its flag: " + HexBytes(compare, kFlagSize) +
 					At(kUpdate));
 			const uint8_t* const flag = Rel32Target(compare + 2) + 1;	// an imm8 follows the disp32 here too
 			if (!Inside(flag, 1))
-				return NotMeasured("the update check's flag at " + DescribeAddress(flag) + At(kUpdate) + " is not inside the game");
+				return fail("the update check's flag at " + DescribeAddress(flag) + At(kUpdate) + " is not inside the game");
 			const uint8_t* const lower = update + kLowerAt;
 			const uint8_t* const raise = update + kRaiseAt;
 			if (MulssTarget(lower) != switchAt + kLowerFactor)
-				return NotMeasured("the update check's code at " + DescribeAddress(lower) + " is not the multiplication by its factor at " +
+				return fail("the update check's code at " + DescribeAddress(lower) + " is not the multiplication by its factor at " +
 					DescribeAddress(switchAt + kLowerFactor) + ": " + HexBytes(lower, kMulssMaxSize) + At(kUpdate));
 			if (MulssTarget(raise) != switchAt + kRaiseFactor)
-				return NotMeasured("the update check's code at " + DescribeAddress(raise) + " is not the multiplication by its factor at " +
+				return fail("the update check's code at " + DescribeAddress(raise) + " is not the multiplication by its factor at " +
 					DescribeAddress(switchAt + kRaiseFactor) + ": " + HexBytes(raise, kMulssMaxSize) + At(kUpdate));
-			WriteLog(kTag, "DIAGNOSTIC: update check's flag at " + DescribeAddress(compare) + " -> " + DescribeAddress(flag) + ", its factors at " +
-				DescribeAddress(lower) + " -> " + DescribeAddress(switchAt + kLowerFactor) + " and " + DescribeAddress(raise) + " -> " +
-				DescribeAddress(switchAt + kRaiseFactor) + At(kUpdate));
+			LogSite("update check's flag at " + DescribeAddress(compare) + " -> " + DescribeAddress(flag) + ", its factors at " + DescribeAddress(lower) +
+				" -> " + DescribeAddress(switchAt + kLowerFactor) + " and " + DescribeAddress(raise) + " -> " + DescribeAddress(switchAt + kRaiseFactor) +
+				At(kUpdate));
 
-			g_counters = counters;
-			g_index = index;
 			g_flag = flag;
 			g_switch = switchAt;
 			return true;
@@ -385,6 +483,12 @@ namespace TweaksV
 		std::string Mb(uint64_t bytes)
 		{
 			return std::to_string(bytes >> 20);
+		}
+
+		// "1500, 1500, 3000 and 3000": the four budgets in MB.
+		std::string FourMb(const uint64_t (&budgets)[kBudgetCount])
+		{
+			return Mb(budgets[0]) + ", " + Mb(budgets[1]) + ", " + Mb(budgets[2]) + " and " + Mb(budgets[3]);
 		}
 
 		// The measurement's state, kept by its thread alone: the reading of the last summary, TweaksV's own highs of
@@ -464,15 +568,20 @@ namespace TweaksV
 			}
 			const bool known = now.index >= 0 && now.index < static_cast<int32_t>(kBudgetCount);
 			const uint64_t budget = known ? now.budgets[static_cast<size_t>(now.index)] : 0;
+			// the budgets as the game set them, and where the raise has changed them, as they are now
+			const bool raised = g_raised.load(std::memory_order_acquire);
+			uint64_t game[kBudgetCount] = {};
+			for (size_t i = 0; i < kBudgetCount; i++)
+				game[i] = raised ? g_gameBudgets[i].load(std::memory_order_relaxed) : now.budgets[i];
 			std::string line = "DIAGNOSTIC: texture budget: " + Mb(Bytes(now)) + " MB";
 			line += known ? " of the " + Mb(budget) + " MB budget for the texture quality's index " + std::to_string(now.index) :
 				" - the texture quality's index " + std::to_string(now.index) + " has no budget";
-			line += " (MaxStreamingMemory_0..3_Base: " + Mb(now.budgets[0]) + ", " + Mb(now.budgets[1]) + ", " + Mb(now.budgets[2]) + " and " +
-				Mb(now.budgets[3]) + " MB) - textures " + Mb(now.textures) + " MB, buffers " + Mb(now.buffers) + " MB; " + std::to_string(Objects(now)) +
-				" of the " + std::to_string(now.most) + " objects allowed (MaxStreamingResources) - " + std::to_string(now.texturesNumber) + " textures, " +
-				std::to_string(now.buffersNumber) + " buffers; the most so far " + Mb(now.highest) + " MB by the game's own mark, " + Mb(g_mostBytes) +
-				" MB and " + std::to_string(g_mostObjects) + " objects at TweaksV's readings; the update check's flag is " +
-				(now.flag ? "up: it evicts ahead of time" : "down");
+			line += " (MaxStreamingMemory_0..3_Base: " + FourMb(game) + " MB" + (memcmp(game, now.budgets, sizeof(game)) != 0 ? ", raised to " +
+				FourMb(now.budgets) + " MB by VIDEO_MEMORY_BUDGET" : std::string()) + ") - textures " + Mb(now.textures) + " MB, buffers " + Mb(now.buffers) +
+				" MB; " + std::to_string(Objects(now)) + " of the " + std::to_string(now.most) + " objects allowed (MaxStreamingResources) - " +
+				std::to_string(now.texturesNumber) + " textures, " + std::to_string(now.buffersNumber) + " buffers; the most so far " + Mb(now.highest) +
+				" MB by the game's own mark, " + Mb(g_mostBytes) + " MB and " + std::to_string(g_mostObjects) + " objects at TweaksV's readings; the update "
+				"check's flag is " + (now.flag ? "up: it evicts ahead of time" : "down");
 			// all 0 before the game's start-up has read gameconfig.xml, which can come after the first summary: no limit then
 			if (now.most == 0 && std::all_of(std::begin(now.budgets), std::end(now.budgets), [](uint64_t bytes) { return bytes == 0; }))
 				line += " - the budgets and the most are not set yet (the game sets them when it reads gameconfig.xml)";
@@ -485,18 +594,125 @@ namespace TweaksV
 
 		// The first summary 10 seconds in, then one every minute that has something new to say.
 		constexpr Measurement kMeasurement = { "texture budget summary", kFirstSummaryMs, &BudgetNumbers, &LogBudget };
-	}
 
-	void MeasureTextureBudget()
-	{
-		if (!FindAndCheck())
-			return;
-		WriteLog(kTag, "DIAGNOSTIC: the texture budget's counters at " + DescribeAddress(g_counters) + At(kPlacement) + ": the streamed textures and buffers "
-			"are logged after 10 seconds, then every minute while their highs, the update check or the budget in use change.");
-		StartMeasurement<kMeasurement>();	// one that cannot start is logged
+		// The measurement (DIAGNOSTIC_MODE), after CheckSites: its own site, the update check, checked, then its thread
+		// started. An aid: what stops it is logged, not reported, and an exception ends it alone.
+		void StartBudgetMeasurement(const uint8_t* update)
+		{
+			try
+			{
+				std::string why;
+				if (!CheckUpdateCheck(update, why))
+				{
+					NotMeasured(why);
+					return;
+				}
+				WriteLog(kTag, "DIAGNOSTIC: the texture budget's counters at " + DescribeAddress(g_counters) + At(kPlacement) + ": the streamed textures and "
+					"buffers are logged after 10 seconds, then every minute while their highs, the update check or the budget in use change.");
+				StartMeasurement<kMeasurement>();	// one that cannot start is logged
+			}
+			catch (...)
+			{
+				WriteLog(kTag, "DIAGNOSTIC: unexpected exception - the texture budget's measurement is skipped for this session.");
+			}
+		}
+
+		// ---- the raise
+
+		// The game's call after its start-up has stored the budgets, redirected: each budget below VIDEO_MEMORY_BUDGET raised
+		// to it, none lowered, then the game's function, with its result handed back - on the start-up thread, before any
+		// streaming. The research did not read that function's arguments: the start-up sets none up between its stores and
+		// the call, and gives it no room on the stack but the 32 bytes every call gets, so it takes four registers at most,
+		// which are handed on as they came. Nothing may throw out of here, and the game's function is always called.
+		uint64_t RaiseBudgets(uint64_t first, uint64_t second, uint64_t third, uint64_t fourth)
+		{
+			uint64_t had[kBudgetCount] = {};
+			uint64_t now[kBudgetCount] = {};
+			bool raised = false;
+			for (size_t i = 0; i < kBudgetCount; i++)
+			{
+				volatile uint64_t& budget = *reinterpret_cast<volatile uint64_t*>(g_budgets + i * sizeof(uint64_t));
+				had[i] = budget;
+				now[i] = had[i];
+				if (had[i] < g_raiseTo)
+				{
+					budget = g_raiseTo;
+					now[i] = g_raiseTo;
+					raised = true;
+				}
+				g_gameBudgets[i].store(had[i], std::memory_order_relaxed);
+			}
+			g_raised.store(true, std::memory_order_release);
+			const int32_t index = Load<int32_t>(g_index);
+			try
+			{
+				std::string line = "The texture budgets of gameconfig.xml (MaxStreamingMemory_0..3_Base: " + FourMb(had) + " MB) are ";
+				line += raised ? "raised to " + Mb(g_raiseTo) + " MB where they are below it: " + FourMb(now) + " MB now" :
+					"at least " + Mb(g_raiseTo) + " MB each - left as they are";
+				line += index >= 0 && index < static_cast<int32_t>(kBudgetCount) ? "; the texture quality's index " + std::to_string(index) + " uses " +
+					Mb(now[static_cast<size_t>(index)]) + " MB." : "; the texture quality's index " + std::to_string(index) + " has no budget.";
+				WriteLog(kTag, line);
+			}
+			catch (...)
+			{
+			}
+			return g_nextStep(first, second, third, fourth);
+		}
 	}
 
 	void InitTextureBudget()
 	{
+		// the budget asked for: 0, the game's own, or one from the lowest the game's own file gives on
+		const int asked = GetNumber(kVideoMemoryBudget);
+		const int budgetMb = asked != 0 && asked < kLowestBudgetMb ? kLowestBudgetMb : asked;
+		if (budgetMb != asked)
+			ReportFailure(kTag, std::string("TweaksV.ini: [") + kResourcesSection.name + "] " + kVideoMemoryBudget.key + "=" + std::to_string(asked) +
+				" is outside 0 or " + std::to_string(kLowestBudgetMb) + ".." + std::to_string(kVideoMemoryBudget.maxValue) + " - using " +
+				std::to_string(budgetMb) + ".");
+		const bool measure = IsDiagnosticMode();
+		bool raise = budgetMb != 0;
+		if (!raise)
+		{
+			WriteLog(kTag, std::string(kVideoMemoryBudget.key) + "=0 - the texture budget is not raised.");
+			if (!measure)
+				return;
+		}
+
+		// the sites the raise and the measurement share, all checked before anything is written
+		const Matches found = FindPatterns(measure);
+		std::string why;
+		if (!CheckSites(found, why))
+		{
+			if (raise)
+				NotRaised(why);
+			if (measure)
+				NotMeasured(why);
+			return;
+		}
+
+		// the raise, refused while the budgets have a writer besides the start-up's stores: it could undo the raise later
+		if (raise && g_otherWriters != 0)
+		{
+			NotRaised("the budgets at " + DescribeAddress(g_budgets) + " have " + std::to_string(g_otherWriters) + (g_otherWriters == 1 ? " writer" : " writers") +
+				" besides the start-up's stores, the first at " + DescribeAddress(g_firstOtherWriter) + ", which could undo the raise later");
+			raise = false;
+		}
+		if (raise)
+		{
+			g_raiseTo = static_cast<uint64_t>(budgetMb) << 20;
+			const std::vector<CallRedirect> redirect = { { g_call, reinterpret_cast<const void*>(&RaiseBudgets), "call after the budgets' stores",
+				reinterpret_cast<void**>(&g_nextStep) } };
+			if (!RedirectCalls(redirect, {}, kTag))
+				NotRaised("the call after the budgets' stores at " + DescribeAddress(g_call) + " could not be redirected (details in TweaksV.log)");
+			else if (IsDryRun())
+				WriteLog(kTag, "DRY_RUN: the texture budgets below " + std::to_string(budgetMb) + " MB would be raised to it when the game's start-up sets them.");
+			else
+				WriteLog(kTag, "The call after the budgets' stores at " + DescribeAddress(g_call) + " is redirected: the texture budgets below " +
+					std::to_string(budgetMb) + " MB are raised to it when the game's start-up sets them.");
+		}
+
+		// the measurement, with DIAGNOSTIC_MODE, the budget at 0 too
+		if (measure)
+			StartBudgetMeasurement(found.update);
 	}
 }
