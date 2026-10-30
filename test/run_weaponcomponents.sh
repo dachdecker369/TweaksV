@@ -12,7 +12,9 @@
 # box; each check failing on its own - TEST_BREAK_PATTERN, the list another mod moved, a lea fewer, one more, one with
 # another prefix, the count's references disagreeing, the count not a whole number of entries after the list, before it,
 # outside the game, too far for a plausible size, the pool's default 0 and the size call another mod hooked - each a
-# problem word for word with nothing written; and the plain game. Fake LOCALAPPDATA: the real one is never touched.
+# problem word for word with nothing written; and the plain game. The weapon infos half logs and reports under the same tag,
+# so every check matches the weapon components' lines and problems by their wording. Fake LOCALAPPDATA: the real one is
+# never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 cd "$B" || exit 1
 cp "$R/x64/Release/TweaksV.asi" TweaksV.asi
@@ -40,18 +42,18 @@ summaries() { count 'weapon component definitions from'; }
 # follower: the RVA of the count, from the core's line of the variable that follows the list
 target() { tr -d '\r' < TweaksV.log | sed -n "s/.*${DIAG}$1 at RVA 0x[0-9A-F]* -> RVA \(0x[0-9A-F]*\) ($2)\$/\1/p"; }
 follower() { tr -d '\r' < TweaksV.log | sed -n "s/.*${DIAG}limit variable at RVA \(0x[0-9A-F]*\) lies 3760 bytes after the weapon component list (W-E-C1) -> game size 470\$/\1/p"; }
-# quiet: no problem of any part, no start-up summary and no box; untouched: nothing of the part written - none of the 17
-# loads moved, every other byte and the data as placed, every page its own protection
-quiet() { log_lacks 'PROBLEM' && log_lacks -i 'start-up summary' && log_lacks 'message box'; }
+# quiet: no problem of the weapon components - neither the part's nor its setting's; untouched: nothing of the part written -
+# none of the 17 loads moved, every other byte and the data as placed, every page its own protection
+quiet() { log_lacks 'PROBLEM: The weapon components limit' && log_lacks 'PROBLEM: TweaksV.ini: \[WEAPON_LIMITS\] WEAPON_COMPONENTS_SIZE'; }
 untouched() { has 'wc: loads 0 moved' && has 'other bytes as placed, data as placed' && has 'protect: all restored (RX)' && log_lacks 'moved and its limit raised from 470'; }
-# refused REASON: the part's one problem, word for word - its reason after the job's words - and nothing written
-refused() { [ "$(count "${TAG}PROBLEM")" -eq 1 ] && log_line "${NOT_RAISED}$1\$" && untouched; }
+# refused REASON: the weapon components' one problem, word for word - its reason after the job's words - and nothing written
+refused() { [ "$(count "${TAG}PROBLEM: The weapon components limit")" -eq 1 ] && log_line "${NOT_RAISED}$1\$" && untouched; }
 
 echo "== W1 the defaults: the list moved, the pool's size call redirected, nothing else written"
 fresh_ini; out=$(game full_game.exe); echo "      $out"
 check "the 17 loads lead to the moved list, read/write, which holds the game's entries and zeros up to 16384 entries; every other byte and the game's data as placed" "has '$APPLIED'"
 check "the size call leads to TweaksV's read+execute stub: 1024 slots at each call, the game's lookup called each time with the game's arguments" "has 'size call to a stub, RX: 1024 and 1024 slots, lookups 2 of 2 as called'"
-check "the status lines word for word, the pool's line once for its two calls" "log_line '$MOVED_LINE' && log_line '$REDIRECTED' && replaced 470 1024 && [ \$(count 'is replaced by 1024.') -eq 1 ]"
+check "the status lines word for word, the pool's line once for its two calls" "log_line '$MOVED_LINE' && log_line '$REDIRECTED' && replaced 470 1024 && [ \$(count 'for the weapon components, 470, is replaced by 1024.') -eq 1 ]"
 check "every page back to its own protection, no line of DIAGNOSTIC_MODE, no problem" "has 'protect: all restored (RX)' && log_lacks '${TAG}DIAGNOSTIC' && quiet"
 
 echo "== W2 [WEAPON_LIMITS] ENABLED=0, with DIAGNOSTIC_MODE=1: nothing looked for, nothing written"
@@ -117,7 +119,7 @@ check "20000, more than the list's size, replaced by 1024 exactly, word for word
 
 echo "== W11 WEAPON_COMPONENTS_SIZE=20000, past its range: 16384, reported"
 fresh_ini; setkey WEAPON_COMPONENTS_SIZE 20000; out=$(game full_game.exe)
-check "the setting's problem, word for word, the one problem" "log_line '\[TweaksV\] PROBLEM: TweaksV.ini: \[WEAPON_LIMITS\] WEAPON_COMPONENTS_SIZE=20000 is outside 470..16384 - using 16384.\$' && [ \$(count 'PROBLEM') -eq 1 ]"
+check "the setting's problem, word for word, once; none of the part's" "log_line '\[TweaksV\] PROBLEM: TweaksV.ini: \[WEAPON_LIMITS\] WEAPON_COMPONENTS_SIZE=20000 is outside 470..16384 - using 16384.\$' && [ \$(count 'PROBLEM: TweaksV.ini') -eq 1 ] && log_lacks 'PROBLEM: The weapon components limit'"
 check "raised to 16384, the pool given 16384 slots" "log_line '${TAG}The weapon component list moved and its limit raised from 470 to 16384 entries.\$' && replaced 470 16384 && has 'size call to a stub, RX: 16384 and 16384 slots' && has '$APPLIED'"
 
 echo "== W12 a load the game puts back, after the first summary (test build, ERROR_POPUP=1, TWEAKSV_TEST_SUMMARY_MS=1000): reported once, in a box"
@@ -126,13 +128,13 @@ fresh_ini; setkey DIAGNOSTIC_MODE 1; setkey ERROR_POPUP 1; out=$(ASI=TweaksV_tes
 unset TWEAKSV_TEST_SUMMARY_MS
 check "the load leads to the game's own list again: 16 loads to the moved list, 1 to the game's" "has 'wc: loads 16 moved 1 game 0 other, moved list RW, copied then 0, other bytes as placed'"
 check "the problem, word for word, once" "[ \$(count 'is not kept this session') -eq 1 ] && log_line '${TAG}PROBLEM: The weapon components limit is not kept this session: the load of the weapon component list at $RVA leads to RVA 0x[0-9A-F]* again, not to the moved list at 0x[0-9A-F]* (outside the game) - the game has put it back, and a search through it reads the game.s own list, empty since the move: the game is likely to crash.\$'"
-check "the summary again, with the load put back, word for word" "summary 412 23 ', this one 1024).' && summary 412 23 ', this one 1024) - a load of the list no longer leads to it, reported above.' && [ \$(summaries) -eq 2 ]"
-check "the box of a part that stopped working after the start-up" "log_has 'Showing a problem after the start-up summary (1 problem(s)).' && log_has 'TEST BUILD: message box not shown (TWEAKSV_TEST_NO_BOXES=1): TweaksV: a part stopped working after the start-up:'"
+check "the summary again, with the load put back, word for word" "summary 412 23 ', this one 1024).' && summary 412 23 ', this one 1024) - a load of the list has changed, reported above.' && [ \$(summaries) -eq 2 ]"
+check "the box of a part that stopped working after the start-up" "log_has 'Showing a problem after the start-up summary (' && log_has 'TEST BUILD: message box not shown (TWEAKSV_TEST_NO_BOXES=1): TweaksV: a part stopped working after the start-up:'"
 
 echo "== W13 TEST_BREAK_PATTERN=W-E-C1 (test build, ERROR_POPUP=1): the problem in the start-up summary, nothing written"
 fresh_ini; setkey ERROR_POPUP 1; addkey TEST_BREAK_PATTERN W-E-C1; out=$(ASI=TweaksV_test.asi game full_game.exe)
 check "the scanner's line and the problem, word for word" "log_has 'TEST BUILD: pattern W-E-C1 is treated as not found (TEST_BREAK_PATTERN).' && refused 'W-E-C1 was not found.'"
-check "the start-up summary's box" "log_has 'Showing the start-up summary (1 problem(s)).' && log_has 'TEST BUILD: message box not shown (TWEAKSV_TEST_NO_BOXES=1): TweaksV could not apply everything:'"
+check "the start-up summary's box" "log_has 'Showing the start-up summary (' && log_has 'TEST BUILD: message box not shown (TWEAKSV_TEST_NO_BOXES=1): TweaksV could not apply everything:'"
 check "the size call to the game's lookup" "has '$GAME'"
 
 echo "== W14 TEST_BREAK_PATTERN=W-E-C4 (test build): the last of the four, refused by its label"

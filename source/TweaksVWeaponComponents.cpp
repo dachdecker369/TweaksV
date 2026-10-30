@@ -254,17 +254,22 @@ namespace TweaksV
 		}
 
 		// A load put back, reported once: a search through it reads the game's own list, empty since the move, against
-		// the count of the moved one - it reads the null pointers there, and the game is likely to crash.
+		// the count of the moved one - it reads the null pointers there, and the game is likely to crash. A load that cannot
+		// be read any more is reported once too, as what it is.
 		void ReportPutBack()
 		{
 			const uint8_t* const field = LoadPutBack();
 			if (g_putBackSaid || !field)
 				return;
 			g_putBackSaid = true;
-			const std::string now = IsReadable(field, sizeof(int32_t)) ? "leads to " + DescribeAddress(Rel32Target(field)) : std::string("cannot be read");
-			ReportFailure(kTag, "The weapon components limit is not kept this session: the load of the weapon component list at " +
-				DescribeAddress(field - 3) + " " + now + " again, not to the moved list at " + DescribeAddress(g_moved) + " - the game has put it "
-				"back, and a search through it reads the game's own list, empty since the move: the game is likely to crash.");
+			const std::string load = "the load of the weapon component list at " + DescribeAddress(field - 3);
+			if (!IsReadable(field, sizeof(int32_t)))
+				ReportFailure(kTag, "The weapon components limit may not be kept this session: " + load + " cannot be read any more, so whether "
+					"it still leads to the moved list at " + DescribeAddress(g_moved) + " cannot be told.");
+			else
+				ReportFailure(kTag, "The weapon components limit is not kept this session: " + load + " leads to " + DescribeAddress(Rel32Target(field)) +
+					" again, not to the moved list at " + DescribeAddress(g_moved) + " - the game has put it back, and a search through it reads "
+					"the game's own list, empty since the move: the game is likely to crash.");
 		}
 
 		void LogDefinitions(uint64_t numbers)
@@ -302,7 +307,7 @@ namespace TweaksV
 			if (static_cast<uint32_t>(count) >= g_size)
 				line += " - it is full: one more definition crashes the game while it loads";
 			if (numbers & kPutBack)
-				line += " - a load of the list no longer leads to it, reported above";
+				line += " - a load of the list has changed, reported above";
 			WriteLog(kTag, line + ".");
 		}
 
