@@ -6,8 +6,9 @@
 # part's problem and nothing written, another mod's raise left as it is, each pattern missing, the plain game; with
 # DIAGNOSTIC_MODE every site logged and the measurement - the refusal jumps through counting stubs while two threads of the fake
 # run the checks at once, every register the refusals find as the checks left it and the counts exact, the frames sampled and
-# summed up 10 seconds in, again when the most taken grows and after a frame's flip; DRY_RUN alike, and Windows' dynamic code
-# policy. Fake LOCALAPPDATA: the real one is never touched.
+# summed up 10 seconds in, again when the most taken grows and after a frame's flip; DRY_RUN alike, Windows' dynamic code
+# policy, and a buffer the game has made already, whose refusal jumps are left as they are. Fake LOCALAPPDATA: the real one is
+# never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 cd "$B" || exit 1
 cp "$R/x64/Release/TweaksV.asi" TweaksV.asi
@@ -176,6 +177,11 @@ echo "== R16 Windows' dynamic code policy, DYNAMIC_BVH_VERTICES=8388608 and DIAG
 fresh_ini; setkey DIAGNOSTIC_MODE 1; setkey DYNAMIC_BVH_VERTICES 8388608; out=$(game full_game.exe nodyncode)
 check "the part's problem and the stubs' line, word for word" "rt_line 'PROBLEM: ${JOB}the game code could not be changed (details in TweaksV.log).' && log_has '\[RayTracing\] DIAGNOSTIC: the ray tracing buffer.s refusals are not counted: its stubs could not be made read+execute ('"
 check "nothing written: the sites as placed, the jumps to the game" "has '$GAME_SITES' && has 'protect: all restored (RX)'"
+
+echo "== R17 the buffer made already, DIAGNOSTIC_MODE=1: the sites logged, the frames sampled, the refusal jumps left as they are - the game's threads may run the checks"
+fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe rtmade)
+check "the buffer object's line, the stubs' line and the announcement, word for word" "rt_line \"DIAGNOSTIC: buffer object.s store at $(rva set-up 33) -> $(rva object), which holds 0xBAD0B1EC7000: the buffer is made already (T-E-B1)\" && rt_line 'DIAGNOSTIC: the ray tracing buffer.s refusals are not counted: the game has made the buffer already - its threads may run the checks while their jumps are rewritten.' && rt_line '$MEASURED'"
+check "no jump rewritten or redirected, no problem; the sites as placed" "log_lacks 'refusal jump at RVA 0x[0-9A-F]*: 0F 87' && log_lacks 'redirected to counting stubs' && log_lacks 'PROBLEM' && has '$GAME_SITES' && has 'protect: all restored (RX)'"
 
 echo
 echo "RAY TRACING SCENARIOS: $pass passed, $fail failed"

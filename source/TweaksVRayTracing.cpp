@@ -17,7 +17,8 @@
 //                         object's first vertex in and the game's 32-bit sizes
 //   DIAGNOSTIC_MODE       every site logged, and the measurement, also with the key at 0: a thread reads the frame slot and
 //                         the last finished frame's counter every 50 ms, and the checks' two refusal jumps lead through
-//                         counting stubs; 10 seconds in, and then every minute while the most taken or the refusals change,
+//                         counting stubs, unless the game has made the buffer already and its threads may run the checks;
+//                         10 seconds in, and then every minute while the most taken or the refusals change,
 //                         the log says how much of the buffer the frames take and how many geometries it refused
 //   DRY_RUN               everything found and checked, nothing written: the lines say what would be raised and
 //                         redirected, and the refusals are not counted
@@ -651,7 +652,9 @@ namespace TweaksV
 		}
 
 		// With DIAGNOSTIC_MODE: the stubs made, the summary's thread and the sampling thread started, then the jumps redirected -
-		// a measurement that cannot sum up redirects nothing. Nothing of it is reported: an aid (SPECIFICATIONS 12).
+		// a measurement that cannot sum up redirects nothing. A buffer the game has made already gets no stubs: its threads may run
+		// the checks then, and a jump's rel32 can cross a cache line, so a check could read it half written. Nothing of it is
+		// reported: an aid (SPECIFICATIONS 12).
 		void Measure(const Sites& sites, uint32_t capacity)
 		{
 			g_slot = sites.slot;
@@ -662,7 +665,9 @@ namespace TweaksV
 
 			uint8_t* block = nullptr;
 			Refusals* counters = nullptr;
-			if (IsDryRun())
+			if (sites.made)
+				NotCounted("the game has made the buffer already - its threads may run the checks while their jumps are rewritten.");
+			else if (IsDryRun())
 			{
 				g_counting = Counting::DryRun;
 				WriteLog(kTag, "DRY_RUN: would redirect the refusal jumps at " + jumps + " to counting stubs - the refusals are not counted.");
