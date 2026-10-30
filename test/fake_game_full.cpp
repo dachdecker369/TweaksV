@@ -248,7 +248,8 @@
 // [legacy packs]
 //   lpmake KIND PATH   the Legacy packs check: a crafted RPF7 archive of KIND written at PATH, its folders made, before TweaksV
 //                      starts; repeatable (LpMake has the kinds)
-//   lpmany KIND N DIR  the archive of KIND N times in DIR, p00001.rpf on: the first written, the others hard links to it
+//   lpmany KIND N DIR  the archive of KIND N times in DIR, p00001.rpf on: the first written, the others hard links to it - 1,023,
+//                      the most NTFS gives a file - and copies of it past them
 //   lplock PATH        PATH held open without sharing from before TweaksV starts until the report, so the check cannot open it
 //   lpbadname          makes mods\lpbad<U+D800>.rpf, a legacy archive whose name is not valid UTF-16 (an unpaired surrogate), before
 //                      TweaksV starts, and keeps it open with delete on close, so it goes when the fake ends - however it ends
@@ -2212,6 +2213,8 @@ static bool LpMake(const wchar_t* kind, LpArchive& out)
 		out = LpBuild(legacy, 6, kLpNg);
 	else if (wcscmp(kind, L"aes") == 0)				// AES-encrypted
 		out = LpBuild(legacy, 6, kLpAes);
+	else if (wcscmp(kind, L"plain") == 0)			// its encryption field 0, which names no encryption
+		out = LpBuild(legacy, 6, 0);
 	else if (wcscmp(kind, L"empty") == 0)			// no byte at all
 		out = { static_cast<unsigned char*>(LpAllocate(0)), 0 };
 	else if (wcscmp(kind, L"rootonly") == 0)		// the root folder alone

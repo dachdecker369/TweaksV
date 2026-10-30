@@ -13,9 +13,11 @@
 //                  check is not done
 //   the tables     a pack's header of 16 bytes - the magic RPF7, the entry count, the names' length, the encryption
 //                  - then its entry table and the names behind it, read through a handle that shares reading, writing
-//                  and deleting, so that the game opens the pack as if the check were not there; an archive that is
-//                  not OPEN is not read: the game's own archives are encrypted, and a pack made with OpenIV or
-//                  CodeWalker is OPEN. A resource's version is the top four bits of its system flags and of its
+//                  and deleting, so that the game opens the pack as if the check were not there; an archive whose
+//                  table is not encrypted - OPEN, or 0, which names no encryption - is read, one that is not OPEN is
+//                  not: the game's own archives are encrypted, and a pack made with OpenIV or CodeWalker is OPEN. Were
+//                  a table of 0 encrypted after all, its first entry would not be the root folder, and the pack would
+//                  be named as not checked. A resource's version is the top four bits of its system flags and of its
 //                  graphics flags; a binary entry named .rpf is an archive nested in it, stored uncompressed at its
 //                  offset in blocks of 512 bytes, and read the same way
 //   the verdict    a model (yft 162, ydr or ydd 165) or a texture dictionary (ytd 13) with Legacy's version makes the
@@ -270,7 +272,7 @@ namespace TweaksV
 		}
 
 		// why an archive that is not OPEN is not read, for the lines that name one
-		constexpr const char* kOnlyOpen = " - only OPEN archives are read, and the game's own archives are encrypted";
+		constexpr const char* kOnlyOpen = " - only archives that are not encrypted are read, and the game's own archives are encrypted";
 
 		// A resource of the four kinds counted by its version - the top four bits of its system flags (+8) and of its
 		// graphics flags (+12) - and the first with Legacy's version kept.
@@ -311,7 +313,7 @@ namespace TweaksV
 			const uint32_t encryption = Get<uint32_t>(header + 12);
 			if (Get<uint32_t>(header) != kMagic)
 				return notRead(it + " is not an RPF7 archive (its first bytes are " + HexBytes(header, 4) + ")");
-			if (encryption != kOpenTag)
+			if (encryption != kOpenTag && encryption != 0)	// 0 names no encryption: its table is read as it is
 			{
 				if (!archive.name.empty())
 				{
@@ -482,8 +484,9 @@ namespace TweaksV
 			Conclude(check, name, pack);
 		}
 
-		// The mods folder, walked as RageOpenV's list reads it, every .rpf file checked: a folder's files first, in the
-		// order Windows lists them, then its folders, in that order too.
+		// The mods folder, walked as RageOpenV's list reads it (ReadModsFolder), every .rpf file checked: the folders in
+		// its order - each folder listed is pushed, the last pushed is read next - so that at the list's 200,000 files and
+		// folders the check stops at the same name; a folder's packs in the order Windows lists them.
 		void Walk(Check& check, const std::wstring& root)
 		{
 			struct Folder
@@ -544,8 +547,8 @@ namespace TweaksV
 				}
 				for (const auto& [path, name] : packs)
 					CheckPack(check, path, name);
-				for (auto next = folders.rbegin(); next != folders.rend(); ++next)
-					todo.push_back(std::move(*next));
+				for (Folder& next : folders)
+					todo.push_back(std::move(next));
 			}
 		}
 
