@@ -225,6 +225,7 @@ namespace TweaksV
 			const int32_t given = g_lookup(configuration, hash, defaultSize);
 			if (InterlockedExchange(&g_poolSaid, 1) == 0)
 			{
+				const DWORD error = GetLastError();	// the game's, kept around the line
 				try
 				{
 					WriteLog(kTag, "The pool size the game's configuration gives for the weapon components, " + std::to_string(given) +
@@ -233,6 +234,7 @@ namespace TweaksV
 				catch (...)
 				{
 				}
+				SetLastError(error);
 			}
 			return g_poolSize;
 		}
