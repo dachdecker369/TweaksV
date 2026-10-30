@@ -135,6 +135,7 @@
     <ClCompile Include="TweaksVHeapAdjuster.cpp" />
     <ClCompile Include="TweaksVIni.cpp" />
     <!-- [legacy packs] -->
+    <ClCompile Include="TweaksVLegacyPacks.cpp" />
     <ClCompile Include="TweaksVLog.cpp" />
     <ClCompile Include="TweaksVMeasure.cpp" />
     <ClCompile Include="TweaksVModkitLimit.cpp" />
@@ -185,6 +186,7 @@
     <ClInclude Include="TweaksVIni.h" />
     <ClInclude Include="TweaksVLock.h" />
     <!-- [legacy packs] -->
+    <ClInclude Include="TweaksVLegacyPacks.h" />
     <ClInclude Include="TweaksVLog.h" />
     <ClInclude Include="TweaksVMeasure.h" />
     <ClInclude Include="TweaksVModkitLimit.h" />

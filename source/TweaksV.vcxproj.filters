@@ -47,6 +47,9 @@
       <Filter>TweaksV</Filter>
     </ClCompile>
     <!-- [legacy packs] -->
+    <ClCompile Include="TweaksVLegacyPacks.cpp">
+      <Filter>TweaksV</Filter>
+    </ClCompile>
     <ClCompile Include="TweaksVLog.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
@@ -156,6 +159,9 @@
       <Filter>TweaksV</Filter>
     </ClInclude>
     <!-- [legacy packs] -->
+    <ClInclude Include="TweaksVLegacyPacks.h">
+      <Filter>TweaksV</Filter>
+    </ClInclude>
     <ClInclude Include="TweaksVLog.h">
       <Filter>TweaksV</Filter>
     </ClInclude>

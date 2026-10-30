@@ -57,6 +57,7 @@
 #include "TweaksVFiles.h"
 #include "TweaksVIni.h"
 // [legacy packs]
+#include "TweaksVLegacyPacks.h"
 #include "TweaksVLog.h"
 #include "TweaksVMeasure.h"
 #include "TweaksVPatch.h"
@@ -614,6 +615,7 @@ namespace TweaksV
 			WriteLog(kTag, "Files in the mods folder are used (8 file functions hooked).");
 			g_filesHooked = true;
 			// [legacy packs]
+			StartLegacyPacksCheck();	// the packs the folder serves, checked for Legacy versions on a thread of their own
 		}
 
 		// ---- OPEN archives: the five redirected calls
