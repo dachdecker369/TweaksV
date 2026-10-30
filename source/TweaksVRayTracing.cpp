@@ -406,17 +406,15 @@ namespace TweaksV
 			uint64_t ropes = 0;
 		};
 
+		// Each counter read once, so that the ropes never come out more than the geometries they are counted in.
 		Refused ReadRefused()
 		{
 			Refused refused;
 			if (const Refusals* const counters = g_refusals.load(std::memory_order_acquire))
 			{
-				for (size_t i = 0; i < 2; i++)
-				{
-					refused.geometries += Load<uint64_t>(&counters[i].geometries);
-					refused.vertices += Load<uint64_t>(&counters[i].vertices);
-				}
-				refused.ropes = Load<uint64_t>(&counters[1].geometries);
+				refused.ropes = Load<uint64_t>(&counters[1].geometries);	// kChecks' second, the ropes'
+				refused.geometries = Load<uint64_t>(&counters[0].geometries) + refused.ropes;
+				refused.vertices = Load<uint64_t>(&counters[0].vertices) + Load<uint64_t>(&counters[1].vertices);
 			}
 			return refused;
 		}
