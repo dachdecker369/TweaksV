@@ -32,6 +32,7 @@ S_FEW="166 weapons.meta files loaded (the game's own array holds 160, this one 1
 S_SWITCH="160 weapons.meta files loaded (the game's own array holds 160, this one 1024) - the guard's room, 160, is full: 6 files were refused.
 160 weapons.meta files loaded (the game's own array holds 160, this one 1024) - the guard's room, 160, is full: 9 files were refused."
 S_FLOOD="1024 weapons.meta files loaded (the game's own array holds 160, this one 1024) - the game's own array would have overflowed by 864 of them - the guard's room, 1024, is full: 20001 files were refused."
+S_FULL="1024 weapons.meta files loaded (the game's own array holds 160, this one 1024) - the game's own array would have overflowed by 864 of them - the guard's room, 1024, is full: the next file is refused."
 S_DRY="166 weapons.meta files loaded (the game's own array holds 160, this one 160) - past its end: the game's memory is already damaged."
 S_PACKS="152 weapons.meta files loaded (the game's own array holds 160, this one 160).
 160 weapons.meta files loaded (the game's own array holds 160, this one 160) - it is full: the next file would be written past its end.
@@ -227,6 +228,14 @@ echo "== WI30 another mod's port rewrites the number of blobs alone to 512 after
 fresh_ini; out=$(game full_game.exe wiedx wifill)
 check "360 files to the 512 blobs, 512 refused - none past the blobs, though the capacity says 1024" "field '512 1024' hooked '512 of 1024' '360 passed 512 refused, 872 of 872 as expected'"
 check "the report, word for word: the array's room, less than the part gave it" "problem 'The weapons.meta file dlc_fill361:/common/data/ai/weapons.meta and 511 more were not loaded: the game.s room for weapons.meta files, 512, is full - the array has less room than the 1024 TweaksV gave it (another mod may have changed its limit after TweaksV).'"
+
+echo "== WI31 the loader's start a jump already - another mod's hook (wijump) - and 14 files: the guard on top of it, every file through both"
+fresh_ini; out=$(game full_game.exe wijump wifew)
+check "the line, word for word, not a problem; the guard on, every file through it and the other mod's hook to the loader" "log_line '$W The weapon info loader at RVA $loader already starts with a jump - another mod may have hooked it; the guard goes on top and chains through.\$' && guarded 1024 && quiet && field '1024 1024' hooked '166 of 1024' '14 passed 0 refused, 14 of 14 as expected'"
+
+echo "== WI32 DIAGNOSTIC_MODE=1, 872 files, 11 seconds: the room reached, no file refused yet"
+fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe wifill wait)
+check "the summary 10 s in, word for word: the guard's room full, the next file refused" '[ "$(summaries)" = "$S_FULL" ]'
 
 echo
 echo "WEAPON INFOS SCENARIOS: $pass passed, $fail failed"

@@ -122,6 +122,8 @@
 //   wiflood        20,001 files through the loader after the others
 //   wilater        once the guard's report is in TweaksV.log, 3 files more, then until the guard's next line is there
 //                  and 2.5 s more (for the test build's TWEAKSV_TEST_SUMMARY_MS=1000)
+//   wijump         the loader's start a jump already, another mod's hook: to a stub that runs the three pushes it took the
+//                  place of and jumps back into the loader
 //   wiedx          once TweaksV has started, before the fake's initializer runs, the number of blobs alone rewritten to 512, as
 //                  another mod's port could after TweaksV's raise: fewer blobs than the capacity says
 //   wiunwind       the loader copied into a function of the fake's own that its unwind data names, at the function's start,
@@ -554,13 +556,16 @@ volatile unsigned char g_weaponInfosLoader[] = { 0x90, 0x41, 0x57, 0x41, 0x56, 0
 	0xB8, 0x01, 0x00, 0x00, 0x00, 0x48, 0x81, 0xC4, 0x80, 0x01, 0x00, 0x00, 0x5B, 0x5F, 0x5E, 0x41, 0x5C, 0x41, 0x5D, 0x41, 0x5E, 0x41,
 	0x5F, 0xC3, 0xCC };
 volatile unsigned char g_weaponInfosExtra[] = { 0xCC, 0x89, 0x05, 0, 0, 0, 0, 0xCC };
+// "wijump": another mod's hook on the loader - the loader's start a jump to this stub, which runs the three pushes the jump
+// took the place of and jumps back into the loader, 6 bytes after its start
+volatile unsigned char g_weaponInfosOtherHook[] = { 0x41, 0x57, 0x41, 0x56, 0x41, 0x55, 0xE9, 0, 0, 0, 0, 0xCC };
 static Site g_weaponInfosLeaRef = SITE(g_weaponInfosLea, 3);
 static Site g_weaponInfosCall = SITE(g_weaponInfosInit, 16);
 static Site g_weaponInfosBlockRef = SITE(g_weaponInfosInit, 23);
 static Site g_weaponInfosLoaderRefs[] = { SITE(g_weaponInfosLoader, 28), SITE(g_weaponInfosLoader, 38), SITE(g_weaponInfosLoader, 52) };
 static Site g_weaponInfosExtraRef = SITE(g_weaponInfosExtra, 3);
 static Site g_weaponInfosSites[] = { SITE(g_weaponInfosLea, 0), SITE(g_weaponInfosInit, 0), SITE(g_weaponInfosAllocation, 0),
-	SITE(g_weaponInfosLoader, 0), SITE(g_weaponInfosExtra, 0) };
+	SITE(g_weaponInfosLoader, 0), SITE(g_weaponInfosExtra, 0), SITE(g_weaponInfosOtherHook, 0) };
 
 // [weapon components]
 // The weapon components (the WeaponLimits part's measurement): the list's rebuild - "mov dword [rip+disp32], 0" of its
@@ -776,7 +781,7 @@ static WeaponInfosArray g_weaponInfosArrayStorage;
 static WeaponInfosArray* volatile g_weaponInfosArray = &g_weaponInfosArrayStorage;
 static void* g_weaponInfosBlock = nullptr;
 static unsigned char g_weaponInfosLaid[sizeof(g_weaponInfosLea) + sizeof(g_weaponInfosInit) + sizeof(g_weaponInfosAllocation) +
-	sizeof(g_weaponInfosLoader) + sizeof(g_weaponInfosExtra)];
+	sizeof(g_weaponInfosLoader) + sizeof(g_weaponInfosExtra) + sizeof(g_weaponInfosOtherHook)];
 static char g_weaponInfosLog[4 << 20];
 struct WeaponInfosEntry { char name[0x90]; uint32_t type; int32_t next; unsigned char rest[0x10]; };
 static_assert(sizeof(WeaponInfosEntry) == 0xA8 && offsetof(WeaponInfosEntry, type) == 0x90, "the game's data file entry");
@@ -4315,6 +4320,12 @@ int wmain(int argc, wchar_t** argv)
 			g_weaponInfosExtra[0] = 0x48;
 		if (HasOption(argc, argv, L"wisetup"))		// the initializer ran before TweaksV
 			WeaponInfosInitialize(0, 152);
+		if (HasOption(argc, argv, L"wijump"))		// another mod's hook: the loader's start a jump to its stub, which jumps back
+		{
+			g_weaponInfosLoader[1] = 0xE9;
+			SetRel32({ g_weaponInfosLoader, 2, sizeof(g_weaponInfosLoader) }, const_cast<const unsigned char*>(g_weaponInfosOtherHook));
+			SetRel32({ g_weaponInfosOtherHook, 7, sizeof(g_weaponInfosOtherHook) }, const_cast<const unsigned char*>(g_weaponInfosLoader + 7));
+		}
 		if ((HasOption(argc, argv, L"wiunwind") || HasOption(argc, argv, L"wiunwindin")) &&	// the loader in a function the unwind
 			WeaponInfosCopyIntoCarrier(HasOption(argc, argv, L"wiunwindin") ? 8 : 0))			// data names, W-E-I2 in .fakesit broken
 			g_weaponInfosLoader[25] = 0xCC;
