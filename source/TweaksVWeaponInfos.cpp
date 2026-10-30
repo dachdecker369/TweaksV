@@ -340,6 +340,7 @@ namespace TweaksV
 		// Set by InitWeaponInfos before the hook can run
 		const volatile uint16_t* g_count = nullptr;
 		const volatile uint16_t* g_capacity = nullptr;
+		const uint8_t* g_allocated = nullptr;		// the imm32 of "mov edx": the blobs the initializer allocates
 		uint32_t g_room = 0;						// the room the guard keeps the count below
 		uint32_t g_gameRoom = 0;					// the game's own, for the lines per file
 		bool g_refusing = false;					// the guard refuses: its report's thread runs
@@ -402,13 +403,24 @@ namespace TweaksV
 			}
 		}
 
+		// The room the guard keeps the count below: its own, or what the array has where that is less - its capacity and
+		// the blobs the initializer allocated, as the imm32 of "mov edx" stands - so that an array another mod gave less
+		// room, or fewer blobs than its capacity, after TweaksV still holds.
+		uint32_t Room()
+		{
+			uint32_t allocated = 0;
+			memcpy(&allocated, g_allocated, sizeof(allocated));
+			const uint32_t capacity = *g_capacity;
+			const uint32_t room = capacity < g_room ? capacity : g_room;
+			return allocated < room ? allocated : room;
+		}
+
 		// The hook: one 16-bit comparison per file, the game's loader called last, so that its own last error stands. A
 		// file refused keeps the game's last error as it came.
 		uintptr_t LoaderHook(void* entry, void* second, void* third, void* fourth)
 		{
 			const uint32_t count = *g_count;
-			const uint32_t capacity = *g_capacity;
-			const uint32_t room = capacity < g_room ? capacity : g_room;
+			const uint32_t room = Room();
 			const bool refuse = g_refusing && count >= room;
 			if (refuse || g_diagnostic)
 			{
@@ -512,6 +524,7 @@ namespace TweaksV
 			// what the hook and the report use from their first call on
 			g_count = reinterpret_cast<const volatile uint16_t*>(sites.array + kCountOffset);
 			g_capacity = reinterpret_cast<const volatile uint16_t*>(sites.array + kCapacityOffset);
+			g_allocated = sites.allocatedAt;
 			g_room = room;
 			const uint32_t most = static_cast<uint32_t>(kWeaponInfoFiles.maxValue);
 			if (raised.outcome == Raise::Refused)
@@ -577,7 +590,7 @@ namespace TweaksV
 				std::to_string(g_gameRoom) + (capacity == 0 ? std::string(", and the array is not set up yet") : ", this one " + std::to_string(capacity)) + ")";
 			if (count > g_gameRoom && count <= capacity)
 				line += " - the game's own array would have overflowed by " + std::to_string(count - g_gameRoom) + " of them";
-			const uint32_t room = capacity < g_room ? capacity : g_room;
+			const uint32_t room = g_refusing ? Room() : 0;	// the guard's, as the hook takes it
 			if (count > capacity)
 				line += " - past its end: the game's memory is already damaged";
 			else if (g_refusing && refused > 0)

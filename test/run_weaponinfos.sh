@@ -223,5 +223,10 @@ failing; run_test wiunwindin
 c2=$(rva W-E-I2)
 check "the guard's problem, word for word: W-E-I2 lies in the function that begins 8 bytes before the loader's start; the raise done" "[ -n '$c2' ] && problem 'The weapon info blob limit is not guarded this session: the loader at RVA $(hex $((c2 - 0x18))) (W-E-I2 - 0x18) is not a function start: W-E-I2 lies in the function at RVA $(hex $((c2 - 0x20))) (unwind data).' && boxed && log_line '$RAISED'"
 
+echo "== WI30 another mod's port rewrites the number of blobs alone to 512 after TweaksV's raise (wiedx), 872 files: the guard keeps to the blobs"
+fresh_ini; out=$(game full_game.exe wiedx wifill)
+check "360 files to the 512 blobs, 512 refused - none past the blobs, though the capacity says 1024" "field '512 1024' hooked '512 of 1024' '360 passed 512 refused, 872 of 872 as expected'"
+check "the report, word for word: the array's room, less than the part gave it" "problem 'The weapons.meta file dlc_fill361:/common/data/ai/weapons.meta and 511 more were not loaded: the game.s room for weapons.meta files, 512, is full - the array has less room than the 1024 TweaksV gave it (another mod may have changed its limit after TweaksV).'"
+
 echo
 echo "WEAPON INFOS SCENARIOS: $pass passed, $fail failed"

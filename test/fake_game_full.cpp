@@ -122,6 +122,8 @@
 //   wiflood        20,001 files through the loader after the others
 //   wilater        once the guard's report is in TweaksV.log, 3 files more, then until the guard's next line is there
 //                  and 2.5 s more (for the test build's TWEAKSV_TEST_SUMMARY_MS=1000)
+//   wiedx          once TweaksV has started, before the fake's initializer runs, the number of blobs alone rewritten to 512, as
+//                  another mod's port could after TweaksV's raise: fewer blobs than the capacity says
 //   wiunwind       the loader copied into a function of the fake's own that its unwind data names, at the function's start,
 //                  and W-E-I2 in .fakesit broken, so that it matches in the copy alone
 //   wiunwindin     the same, the loader copied 8 bytes into that function: its start lies inside it, a CC before it
@@ -4543,6 +4545,14 @@ int wmain(int argc, wchar_t** argv)
 		FloodRenames();
 	// The parts measured first: what the game does with each limit once TweaksV has started, as its options ask
 	// [weapon infos]
+	if (HasOption(argc, argv, L"wiedx"))	// another mod's port rewrites the number of blobs alone to 512, after TweaksV's raise
+	{
+		DWORD old = 0, unused = 0;
+		const uint32_t blobs = 512;
+		VirtualProtect(const_cast<unsigned char*>(g_weaponInfosInit + 11), sizeof(blobs), PAGE_EXECUTE_READWRITE, &old);
+		memcpy(const_cast<unsigned char*>(g_weaponInfosInit + 11), &blobs, sizeof(blobs));
+		VirtualProtect(const_cast<unsigned char*>(g_weaponInfosInit + 11), sizeof(blobs), old, &unused);
+	}
 	if (!HasOption(argc, argv, L"wisetup"))	// the game's initializer of the weapon info blob array, then its loader
 		WeaponInfosInitialize(HasOption(argc, argv, L"wiraised") ? 512 : 0, HasOption(argc, argv, L"wiraised") ? 170 : 152);
 	if (HasOption(argc, argv, L"wipacks"))
