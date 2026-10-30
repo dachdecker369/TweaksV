@@ -53,7 +53,7 @@ follower() { tr -d '\r' < TweaksV.log | sed -n "s/.*${DIAG}limit variable at RVA
 # quiet: no problem of the weapon components - neither the part's nor its setting's; untouched: nothing of the part written -
 # none of the 17 loads moved, every other byte and the data as placed, every page its own protection
 quiet() { log_lacks 'PROBLEM: The weapon components limit' && log_lacks 'PROBLEM: TweaksV.ini: \[WEAPON_LIMITS\] WEAPON_COMPONENTS_SIZE' && log_lacks 'PROBLEM: The weapon components. guard' && log_lacks 'PROBLEM: Weapon component files are refused'; }
-untouched() { has 'wc: loads 0 moved' && has 'other bytes as placed, data as placed' && has 'protect: all restored (RX)' && log_lacks 'moved and its limit raised from 470'; }
+untouched() { has 'wc: loads 0 moved' && has 'other bytes as placed, data as placed' && has 'protect: all restored (RX)' && log_lacks 'weapon component list moved'; }
 # refused REASON: the weapon components' one problem, word for word - its reason after the job's words - and nothing written
 refused() { [ "$(count "${TAG}PROBLEM: The weapon components limit")" -eq 1 ] && log_line "${NOT_RAISED}$1\$" && untouched; }
 
@@ -137,7 +137,7 @@ export TWEAKSV_TEST_SUMMARY_MS=1000
 fresh_ini; setkey DIAGNOSTIC_MODE 1; setkey ERROR_POPUP 1; out=$(ASI=TweaksV_test.asi game full_game.exe wcputback)
 unset TWEAKSV_TEST_SUMMARY_MS
 check "the load leads to the game's own list again: 16 loads to the moved list, 1 to the game's" "has 'wc: loads 16 moved 1 game 0 other, moved list RW, copied then 0, other bytes as placed'"
-check "the problem, word for word, once" "[ \$(count 'is not kept this session') -eq 1 ] && log_line '${TAG}PROBLEM: The weapon components limit is not kept this session: the load of the weapon component list at $RVA leads to RVA 0x[0-9A-F]* again, not to the moved list at 0x[0-9A-F]* (outside the game) - the game has put it back, and a search through it reads the game.s own list, empty since the move: the game is likely to crash.\$'"
+check "the problem, word for word, once" "[ \$(count 'is not kept this session') -eq 1 ] && log_line '${TAG}PROBLEM: The weapon components limit is not kept this session: the load of the weapon component list at $RVA leads to the game.s own list at RVA 0x[0-9A-F]* again, not to the moved list at 0x[0-9A-F]* (outside the game) - the game has put it back, and a search through it reads the game.s own list, empty since the move: the game is likely to crash.\$'"
 check "the summary again, with the load put back, word for word" "summary 412 23 ', this one 1024).' && summary 412 23 ', this one 1024) - a load of the list has changed, reported above.' && [ \$(summaries) -eq 2 ]"
 check "the box of a part that stopped working after the start-up" "log_has 'Showing a problem after the start-up summary (' && log_has 'TEST BUILD: message box not shown (TWEAKSV_TEST_NO_BOXES=1): TweaksV: a part stopped working after the start-up:'"
 
@@ -243,6 +243,17 @@ check "the problem, word for word; the rest applied" "log_line '${TAG}PROBLEM: T
 echo "== W33 the loader another mod hooked: the guard not made, the rest applied"
 fresh_ini; out=$(game full_game.exe wcloaderhooked)
 check "the problem, word for word; the rest applied" "log_line '${TAG}PROBLEM: The weapon components. guard is not made this session: the loader at $RVA starts with a jump (another mod may have hooked it already).\$' && has '$APPLIED' && log_lacks 'loader at $RVA is hooked'"
+
+echo "== W34 the store's page - the list and its count - unreadable while TweaksV starts: the count cannot be read"
+fresh_ini; out=$(game full_game.exe wccountnoaccess)
+check "the problem, word for word; nothing written" "refused 'the weapon component list.s count at $RVA cannot be read.' && has '$GAME'"
+
+echo "== W35 the leas' page unreadable a while after the first summary (test build, ERROR_POPUP=1, TWEAKSV_TEST_SUMMARY_MS=1000)"
+export TWEAKSV_TEST_SUMMARY_MS=1000
+fresh_ini; setkey DIAGNOSTIC_MODE 1; setkey ERROR_POPUP 1; out=$(ASI=TweaksV_test.asi game full_game.exe wcloadnoaccess)
+unset TWEAKSV_TEST_SUMMARY_MS
+check "the problem, word for word, once, and its box" "[ \$(count 'may not be kept this session') -eq 1 ] && log_line '${TAG}PROBLEM: The weapon components limit may not be kept this session: the load of the weapon component list at $RVA cannot be read any more, so whether it still leads to the moved list at 0x[0-9A-F]* (outside the game) cannot be told.\$' && log_has 'Showing a problem after the start-up summary ('"
+check "the page readable again, the 17 loads to the moved list" "has '$APPLIED' && has 'protect: all restored (RX)'"
 
 echo
 echo "WEAPON COMPONENTS SCENARIOS: $pass passed, $fail failed"

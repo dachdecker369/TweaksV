@@ -171,6 +171,9 @@
 //                  base loader would; wcmany mounts 60 definitions in one file, then 1,100 files of one definition each
 //   wcbadblob      the first blob's count holds 500, past the 470 a blob holds, when the files are mounted
 //   wcloaderhooked the loader's head starts with a jump (another mod's hook); the files are not mounted then
+//   wccountnoaccess the store's page - the list and its count - cannot be read while TweaksV starts, readable again after
+//   wcloadnoaccess once TweaksV.log holds the first weapon components summary, the page of the list's 15 leas cannot be read
+//                  until TweaksV's problem is in the log, up to 10 s (for the test build's TWEAKSV_TEST_SUMMARY_MS)
 // The siren setting IDs (SirenSettings): their 14 sites are always there - the parser registrations of the siren settings
 // and the vehicle variations with their tables and the two ID members' data (type 0x01), the XML reader, the base and a
 // pack's loops and builders with the four lea of the ID table, the dedupe and its loop, the three constructors, the init's
@@ -1188,8 +1191,10 @@ static bool WeaponInfosCopyIntoCarrier(size_t at)
 // finds it, whose entries the moved list must hold, to tell afterwards what TweaksV wrote.
 struct WeaponComponentsStore { uint64_t list[470]; int32_t count; uint32_t unused; uint64_t blobs; uint16_t files; uint16_t capacity; };
 static_assert(offsetof(WeaponComponentsStore, count) == 470 * 8, "the list's count lies right after it");
-static WeaponComponentsStore g_weaponComponentsStoreStorage;
-static WeaponComponentsStore* volatile g_weaponComponentsStore = &g_weaponComponentsStoreStorage;
+alignas(4096) static unsigned char g_weaponComponentsStorePage[4096];	// the store alone on its page, for "wccountnoaccess" - reached through
+// g_weaponComponentsStore alone: a lea of the page in the fake's code would be an 18th load of the list
+static_assert(sizeof(WeaponComponentsStore) <= 4096, "the store fits its page");
+static WeaponComponentsStore* volatile g_weaponComponentsStore = reinterpret_cast<WeaponComponentsStore*>(g_weaponComponentsStorePage);
 static WeaponComponentsStore g_weaponComponentsPlacedStore;
 static WeaponComponentsStore g_weaponComponentsAtStart;
 static unsigned char g_weaponComponentsPlacedSites[512];
@@ -1463,6 +1468,23 @@ static void WeaponComponentsPutBack()
 	VirtualProtect(row, sizeof(g_weaponComponentsLeas[10]), old, &old);
 	FlushInstructionCache(GetCurrentProcess(), row, sizeof(g_weaponComponentsLeas[10]));
 	if (WeaponComponentsAwait("is not kept this session", 1, 10000))
+		WeaponComponentsAwait("after the start-up summary", boxes + 1, 5000);
+}
+
+// "wcloadnoaccess": once TweaksV.log holds the first weapon components summary, the page of the 15 leas cannot be read until
+// TweaksV's problem is in the log, up to 10 s, then its protection back; then up to 5 s for the box, or its line
+static void WeaponComponentsLoadsNoAccess()
+{
+	if (!WeaponComponentsAwait("weapon component definitions from", 1, 20000))
+		return;
+	const int boxes = WeaponComponentsLogHas("after the start-up summary");
+	const auto row = const_cast<unsigned char*>(g_weaponComponentsLeas[0]);
+	DWORD old = 0;
+	if (!VirtualProtect(row, sizeof(g_weaponComponentsLeas), PAGE_NOACCESS, &old))
+		return;
+	const bool said = WeaponComponentsAwait("may not be kept this session", 1, 10000);
+	VirtualProtect(row, sizeof(g_weaponComponentsLeas), old, &old);
+	if (said)
 		WeaponComponentsAwait("after the start-up summary", boxes + 1, 5000);
 }
 
@@ -5149,6 +5171,9 @@ int wmain(int argc, wchar_t** argv)
 		WeaponComponentsCopySites(g_weaponComponentsPlacedSites, sizeof(g_weaponComponentsPlacedSites));
 		g_weaponComponentsAtStart = *store;
 	}
+	DWORD weaponComponentsOld = 0;	// ...and the store's page unreadable while TweaksV starts
+	if (HasOption(argc, argv, L"wccountnoaccess"))
+		VirtualProtect(const_cast<WeaponComponentsStore*>(g_weaponComponentsStore), sizeof(g_weaponComponentsStorePage), PAGE_NOACCESS, &weaponComponentsOld);
 	SirenIdsSetup(argc, argv);
 	SirenCountSetup(HasOption(argc, argv, L"schooked"), HasOption(argc, argv, L"scgetterhooked"), HasOption(argc, argv, L"scelsewhere"),
 		HasOption(argc, argv, L"scnotstart"), HasOption(argc, argv, L"scnounwind"));
@@ -5389,6 +5414,13 @@ int wmain(int argc, wchar_t** argv)
 		WeaponInfosMountPacks();
 	WeaponInfosLoadAsAsked(argc, argv);	// the files the options ask for, through the loader
 	// [weapon components]
+	if (HasOption(argc, argv, L"wccountnoaccess"))	// the store's page readable again
+	{
+		DWORD old = 0;
+		VirtualProtect(const_cast<WeaponComponentsStore*>(g_weaponComponentsStore), sizeof(g_weaponComponentsStorePage), PAGE_READWRITE, &old);
+	}
+	if (HasOption(argc, argv, L"wcloadnoaccess"))	// the leas' page unreadable a while
+		WeaponComponentsLoadsNoAccess();
 	if (HasOption(argc, argv, L"wcpack"))	// a pack's weaponcomponents.meta loads: the list is rebuilt from 24 files
 	{
 		Sleep(11000);

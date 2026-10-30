@@ -517,6 +517,7 @@ namespace TweaksV
 		uint32_t g_gameSize = 0;						// the game's own list: 470 entries on 1.0.1158.16
 		uint32_t g_size = 0;							// the room the list in use gives: WEAPON_COMPONENTS_SIZE as used, the game's own with DRY_RUN
 		const uint8_t* g_moved = nullptr;				// the moved list, which every load must lead to - none with DRY_RUN
+		const uint8_t* g_gameList = nullptr;			// the game's own list, which a load put back leads to again
 		std::array<const uint8_t*, kListLoads> g_loads{};	// the rel32 of each load of the list
 		bool g_putBackSaid = false;						// the measurement's thread alone reads and writes it
 		constexpr uint64_t kUnreadable = uint64_t{ 1 } << 48;	// the two counts cannot be read
@@ -558,10 +559,14 @@ namespace TweaksV
 			if (!IsReadable(field, sizeof(int32_t)))
 				ReportFailure(kTag, "The weapon components limit may not be kept this session: " + load + " cannot be read any more, so whether "
 					"it still leads to the moved list at " + DescribeAddress(g_moved) + " cannot be told.");
+			else if (Rel32Target(field) == g_gameList)
+				ReportFailure(kTag, "The weapon components limit is not kept this session: " + load + " leads to the game's own list at " +
+					DescribeAddress(g_gameList) + " again, not to the moved list at " + DescribeAddress(g_moved) + " - the game has put it back, and a "
+					"search through it reads the game's own list, empty since the move: the game is likely to crash.");
 			else
 				ReportFailure(kTag, "The weapon components limit is not kept this session: " + load + " leads to " + DescribeAddress(Rel32Target(field)) +
-					" again, not to the moved list at " + DescribeAddress(g_moved) + " - the game has put it back, and a search through it reads "
-					"the game's own list, empty since the move: the game is likely to crash.");
+					", not to the moved list at " + DescribeAddress(g_moved) + " - the game or another mod has changed it, and a search through it no "
+					"longer reads the moved list: the game is likely to crash.");
 		}
 
 		void LogDefinitions(uint64_t numbers)
@@ -718,6 +723,7 @@ namespace TweaksV
 		g_gameSize = plan.gameSize;
 		g_size = IsDryRun() ? plan.gameSize : plan.size;
 		g_moved = IsDryRun() ? nullptr : Rel32Target(plan.references[0]);
+		g_gameList = plan.array;
 		for (size_t i = 0; i < kListLoads && i < plan.references.size(); i++)
 			g_loads[i] = plan.references[i];
 		WriteLog(kTag, std::string("DIAGNOSTIC: the weapon component definitions in the list and the weaponcomponents.meta files are logged after "
