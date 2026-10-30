@@ -2,9 +2,9 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # The weapon components (TweaksVWeaponComponents, the WeaponLimits part's second half), on the fake game's list of every
 # weapon component definition - its rebuild, its sort, its update of the count, the pool's size call and the list's 15
-# other leas: by default the list moved - its 17 loads to a list of 16384 entries that holds the game's own entries, the
-# count left where it is - and the pool's size call redirected to a read+execute stub that gives the pool exactly the list's
-# size, the game's lookup called with the game's arguments, its line once, every other byte as placed and every page its
+# other leas: by default the list moved - its 17 loads to a list of 16854 entries that holds the game's own entries, the
+# count left where it is - and the pool's size call redirected to a read+execute stub that gives the pool the room and
+# 470, the game's lookup called with the game's arguments, its line once, every other byte as placed and every page its
 # own protection; the part off; DRY_RUN; WEAPON_COMPONENTS_SIZE raised and past its range; the game's configuration naming
 # the pool's size, below the list's and above it; DIAGNOSTIC_MODE with every site, write and status line word for word, the
 # measurement announced and its summary 10 seconds in, again once a pack's file loads, past the game's own 470, the list
@@ -30,7 +30,7 @@ TAG='\[WeaponLimits\] '
 DIAG="${TAG}DIAGNOSTIC: "
 NOT_RAISED="${TAG}PROBLEM: The weapon components limit is not raised this session: "
 # The report's field: the part's writes - the 17 loads to the moved list, which holds the game's entries and zeros up to
-# 16384, read/write; every other byte and the game's data as placed; the size call to TweaksV's read+execute stub - or none
+# 16854, read/write; every other byte and the game's data as placed; the size call to TweaksV's read+execute stub - or none
 # of them, the game as it was, the size call to the game's lookup; the report calls what the size call leads to twice
 APPLIED='wc: loads 17 moved 0 game 0 other, moved list RW, copied then 0, other bytes as placed, data as placed, size call to a stub, RX: '
 GAME='wc: loads 0 moved 17 game 0 other, other bytes as placed, data as placed, size call to the lookup: 470 and 470 slots, lookups 2 of 2 as called'
@@ -59,7 +59,7 @@ refused() { [ "$(count "${TAG}PROBLEM: The weapon components limit")" -eq 1 ] &&
 
 echo "== W1 the defaults: the list moved, the pool's size call redirected, nothing else written"
 fresh_ini; out=$(game full_game.exe); echo "      $out"
-check "the 17 loads lead to the moved list, read/write, which holds the game's entries and zeros up to 16384 entries; every other byte and the game's data as placed" "has '$APPLIED'"
+check "the 17 loads lead to the moved list, read/write, which holds the game's entries and zeros up to 16854 entries; every other byte and the game's data as placed" "has '$APPLIED'"
 check "the size call leads to TweaksV's read+execute stub: the room and 470 slots at each call, the game's lookup called each time with the game's arguments" "has 'size call to a stub, RX: 1494 and 1494 slots, lookups 2 of 2 as called'"
 check "the status lines word for word, the pool's line once for its two calls" "log_line '$MOVED_LINE' && log_line '$REDIRECTED' && replaced 470 1494 && [ \$(count 'for the weapon components, 470, is replaced by 1494.') -eq 1 ]"
 check "the guard: the loader hooked at its head, its line word for word" "has 'wc loader hooked, files mounted 0' && log_line '$HOOKED 1024 definitions are loaded is refused.\$'"
@@ -119,7 +119,7 @@ echo "== W9 the list overflowed - the 471st definition's pointer over the count:
 fresh_ini; setkey DIAGNOSTIC_MODE 1; setkey DRY_RUN 1; out=$(game full_game.exe wcover wait)
 check "DRY_RUN: the summary, word for word - no count within the game's own 470; nothing written" "log_line '${DIAG}the weapon component list.s count reads -1547607936, from 25 weaponcomponents.meta files - outside the game.s own list of 470: the list has overflowed, a definition past its end written over the count and the memory after it, and the game is likely to crash.\$' && has '$GAME' && quiet"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe wcover wait)
-check "the part on: the summary, word for word - no count within the moved list's 16384; the part applied" "log_line '${DIAG}the weapon component list.s count reads -1547607936, from 25 weaponcomponents.meta files - outside the moved list of 16854: the game.s data is damaged, and the game is likely to crash.\$' && has '$APPLIED' && quiet"
+check "the part on: the summary, word for word - no count within the moved list's 16854; the part applied" "log_line '${DIAG}the weapon component list.s count reads -1547607936, from 25 weaponcomponents.meta files - outside the moved list of 16854: the game.s data is damaged, and the game is likely to crash.\$' && has '$APPLIED' && quiet"
 
 echo "== W10 the game's configuration names the pool's size: 600, then 20000 - replaced by the list's size either way"
 fresh_ini; out=$(game full_game.exe wcconfig)
