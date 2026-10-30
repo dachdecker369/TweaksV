@@ -74,7 +74,7 @@ echo "== W3 DRY_RUN=1: everything found and checked, the line of what it would d
 fresh_ini; setkey DRY_RUN 1; out=$(game full_game.exe)
 check "the dry run's line, word for word" "log_line '${TAG}DRY_RUN: would move the weapon component list (17 references) and raise its limit from 470 to 1024 and redirect the pool size call at $RVA\.\$'"
 check "the game as it was, no status line, no problem" "has '$GAME' && untouched && log_lacks 'is redirected: the weapon components' && quiet"
-check "the guard's dry run, word for word: the loader as placed" "log_line '${TAG}DRY_RUN: would hook the weapon components. loader at $RVA to refuse the files that come once 1024 definitions are loaded.\$' && has 'wc loader as placed' && log_lacks 'loader at $RVA is hooked'"
+check "the guard's dry run, word for word: the loader as placed" "log_line '${TAG}DRY_RUN: would hook the weapon components. loader at $RVA to refuse the files that come once 1024 definitions are loaded.\$' && has 'wc loader as placed' && log_lacks 'weapon components. loader at $RVA is hooked'"
 
 echo "== W4 DIAGNOSTIC_MODE=1 for 12 seconds: every site and write logged, the measurement announced, its summary 10 s in"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe wait)
@@ -242,7 +242,7 @@ check "the problem, word for word; the rest applied" "log_line '${TAG}PROBLEM: T
 
 echo "== W33 the loader another mod hooked: the guard not made, the rest applied"
 fresh_ini; out=$(game full_game.exe wcloaderhooked)
-check "the problem, word for word; the rest applied" "log_line '${TAG}PROBLEM: The weapon components. guard is not made this session: the loader at $RVA starts with a jump (another mod may have hooked it already).\$' && has '$APPLIED' && log_lacks 'loader at $RVA is hooked'"
+check "the problem, word for word; the rest applied" "log_line '${TAG}PROBLEM: The weapon components. guard is not made this session: the loader at $RVA starts with a jump (another mod may have hooked it already).\$' && has '$APPLIED' && log_lacks 'weapon components. loader at $RVA is hooked'"
 
 echo "== W34 the store's page - the list and its count - unreadable while TweaksV starts: the count cannot be read"
 fresh_ini; out=$(game full_game.exe wccountnoaccess)
