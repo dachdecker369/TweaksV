@@ -145,6 +145,8 @@ breaktest "W-E-I2 (the weapon info loader): the weapon info limit neither raised
 	"has 'weapon infos: limits 160 160, loader as laid, the rest as laid, array 152 of 160,' && has '$ALL_ON_HEAP' && has '$MODKIT_ON' && has '$PACK_ON' && has '$ROV_ON' && has '$STORY_ON'"
 # [weapon components]
 # [ped props]
+breaktest "A-E-G3 (a ped props narrowing): the ped props' sites as placed, the rest applied" "A-E-G3" \
+	"has 'pedprops: sites as placed, data as placed |' && has '$ALL_ON_HEAP' && has '$MODKIT_ON' && has '$PACK_ON' && has '$ROV_ON' && has '$STORY_ON'"
 # [texture budget]
 # [static bounds]
 # [rt buffer]

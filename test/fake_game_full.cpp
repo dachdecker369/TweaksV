@@ -217,6 +217,9 @@
 //   pplookupsplit  A-E-G4's call leads to the texture count, not to the metadata lookup
 //   pphooked       A-E-T1's call leads outside the game (another mod hooked it)
 //   ppstoreout     A-E-S1's reference to the store's array pointer leads outside the game
+//   ppwidened      A-E-T3's narrowing holds 0F B7 C0 already (another mod widened it)
+//   ppg1widened    A-E-G1's second copy holds 44 0F B7 C6 already: the pattern matches once, its widened twin once
+//   pphuge         one more ped with 258 files of 255 props on anchor 0, 65790 in all: past even the part's 65535
 // [texture budget]
 // The texture budget's sites (the Resources part's measurement) are always there: the start-up's stores of the most streamed
 // objects and of the four budgets and the call after them, the budget's getter, a resource's placement and the update check,
@@ -686,6 +689,10 @@ static Site g_pedPropsSites[] = { SITE(g_pedPropsT1, 0), SITE(g_pedPropsT2, 0), 
 	SITE(g_pedPropsG5, 0), SITE(g_pedPropsG6, 0), SITE(g_pedPropsCount, 0), SITE(g_pedPropsStore, 0),
 	{ &g_pedPropsCalls[0][0], 0, sizeof(g_pedPropsCalls) }, { &g_pedPropsElsewhere[0][0], 0, sizeof(g_pedPropsElsewhere) },
 	{ &g_pedPropsExtra[0][0], 0, sizeof(g_pedPropsExtra) } };
+// The byte of each of the eleven narrowings the part makes B7, its B6 - G1's third copy, which matches only with
+// "ppg1thrice", not among them - so that the report tells the sites widened from the sites as placed
+static volatile unsigned char* const g_pedPropsWidenable[] = { &g_pedPropsT1[1], &g_pedPropsT2[11], &g_pedPropsT3[11], &g_pedPropsT4[11],
+	&g_pedPropsT5[11], &g_pedPropsG1a[17], &g_pedPropsG1b[17], &g_pedPropsG3[15], &g_pedPropsG4[24], &g_pedPropsG5[15], &g_pedPropsG6[7] };
 
 // [texture budget]
 // The texture budget (the Resources part's measurement): the start-up's store of the most streamed objects - "mov ecx,
@@ -1733,6 +1740,7 @@ static size_t g_pedPropsUsed = 0;
 static unsigned char* g_pedPropsNoAccess = nullptr;
 static unsigned char* g_pedPropsMale = nullptr;	// mp_m_freemode_01's variation collection, which "ppgrow" adds to
 static uint64_t g_pedPropsSitesSum = 0, g_pedPropsDataSum = 0;
+static uint64_t g_pedPropsWidenedSum = 0;		// the sites' sum with the eleven B6 made B7 and nothing else changed
 struct PedPropsEntry { uint32_t anchor; uint16_t props; };
 
 // size bytes of the fake's heap, zeroed, 16-byte aligned
@@ -1802,7 +1810,7 @@ static void PedPropsPed(int32_t index, uint32_t hash, const PedPropsEntry* entri
 }
 
 // The store and its models, as the top of this file describes them
-static void PedPropsBuild(bool many, bool unknown, bool flood, bool unreadable)
+static void PedPropsBuild(bool many, bool unknown, bool flood, bool unreadable, bool huge)
 {
 	g_pedPropsHeap = static_cast<unsigned char*>(VirtualAlloc(nullptr, kPedPropsHeapSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE));
 	g_pedPropsNoAccess = static_cast<unsigned char*>(VirtualAlloc(nullptr, 0x1000, MEM_COMMIT | MEM_RESERVE, PAGE_NOACCESS));
@@ -1857,6 +1865,15 @@ static void PedPropsBuild(bool many, bool unknown, bool flood, bool unreadable)
 	PedPropsPed(kPedPropsIndices - 1, 0x2B000000u, last, 1);
 	const PedPropsEntry past[] = { { 0, 600 } };
 	PedPropsPed(kPedPropsIndices, 0x2B000001u, past, 1);
+	// with "pphuge" one more ped of 258 files with 255 props on anchor 0 each, 65790 in all
+	if (huge)
+	{
+		unsigned char* const collection = PedPropsCollection(258);
+		const PedPropsEntry full[] = { { 0, 255 } };
+		for (int file = 0; file < 258; file++)
+			PedPropsAddFile(collection, full, 1);
+		PedPropsModel(30046, 0x2D000000u, 6, collection);
+	}
 	// with "ppflood" 10,001 more peds, each with one file of 300 props on anchor 1, between the other models
 	const PedPropsEntry flooding[] = { { 1, 300 } };
 	for (int32_t index = 40001, made = 0; flood && made < 10001; index++)
@@ -3953,11 +3970,26 @@ int wmain(int argc, wchar_t** argv)
 		if (HasOption(argc, argv, L"ppstoreout"))		// the reference to the array's pointer outside the game
 			SetRel32(g_pedPropsStoreRefs[2], ImageEnd() + 0x80000);
 		PedPropsBuild(HasOption(argc, argv, L"ppmany"), HasOption(argc, argv, L"ppunknown"), HasOption(argc, argv, L"ppflood"),
-			HasOption(argc, argv, L"ppunreadable"));
+			HasOption(argc, argv, L"ppunreadable"), HasOption(argc, argv, L"pphuge"));
 		if (HasOption(argc, argv, L"ppbadcount"))
 			*g_pedPropsStoreCount = 2000000;
 		if (HasOption(argc, argv, L"ppbadstride"))
 			*g_pedPropsStoreStride = 12;
+		if (HasOption(argc, argv, L"ppwidened"))		// A-E-T3's narrowing widened by another mod
+			g_pedPropsT3[11] = 0xB7;
+		if (HasOption(argc, argv, L"ppg1widened"))	// A-E-G1's second copy widened by another mod
+			g_pedPropsG1b[17] = 0xB7;
+		// the sums the report compares with: the sites as placed, and as the part leaves them - each of the eleven B6
+		// made B7, nothing else changed
+		unsigned char placed[sizeof(g_pedPropsWidenable) / sizeof(g_pedPropsWidenable[0])];
+		for (size_t i = 0; i < sizeof(placed); i++)
+		{
+			placed[i] = *g_pedPropsWidenable[i];
+			*g_pedPropsWidenable[i] = 0xB7;
+		}
+		g_pedPropsWidenedSum = PedPropsSum(true);
+		for (size_t i = 0; i < sizeof(placed); i++)
+			*g_pedPropsWidenable[i] = placed[i];
 		g_pedPropsSitesSum = PedPropsSum(true);
 		g_pedPropsDataSum = PedPropsSum(false);
 	}
@@ -4235,8 +4267,13 @@ int wmain(int argc, wchar_t** argv)
 	SirenCountReport();
 	CheckStub(Rel32Target(g_sirenCountRendererCall));
 	// [ped props]
-	wprintf(L"pedprops: sites %ls, data %ls | ", PedPropsSum(true) == g_pedPropsSitesSum ? L"as placed" : L"CHANGED",
-		PedPropsSum(false) == g_pedPropsDataSum ? L"as placed" : L"CHANGED");
+	{
+		// "pedprops: sites widened, data as placed | " - the sites as placed, as the part leaves them (the eleven B6 made
+		// B7 and nothing else), or changed otherwise; the store's data as placed
+		const uint64_t sites = PedPropsSum(true);
+		wprintf(L"pedprops: sites %ls, data %ls | ", sites == g_pedPropsSitesSum ? L"as placed" : sites == g_pedPropsWidenedSum ? L"widened" : L"CHANGED",
+			PedPropsSum(false) == g_pedPropsDataSum ? L"as placed" : L"CHANGED");
+	}
 	// [texture budget]
 	{
 		// "texture budget: sites as placed 4 of 4, data as set, its page RW; stores RVA 0x..., ... | " - the sites as they were before
