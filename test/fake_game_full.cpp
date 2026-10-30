@@ -230,7 +230,7 @@
 //   ppcountshort   one of the per-anchor count's calls no pattern names leads outside the game (another mod redirected it)
 //   pplookupshort  one of the metadata lookup's calls no pattern names leads outside the game (another mod redirected it)
 // [texture budget]
-// The texture budget's sites (the Resources part's measurement) are always there: the start-up's stores of the most streamed
+// The texture budget's sites (the Resources part) are always there: the start-up's stores of the most streamed
 // objects and of the four budgets and the call after them, the budget's getter, a resource's placement and the update check,
 // leading to the counters - textures 2456 MB and buffers 389 MB in 22222 and 1234 objects, the game's high-water mark at
 // 2900 MB, the most objects and the budgets 0 until the game's start-up stores them - to the texture quality's index 2, the
@@ -721,7 +721,7 @@ static volatile unsigned char* const g_pedPropsWidenable[] = { &g_pedPropsT1[1],
 	&g_pedPropsT5[11], &g_pedPropsG1a[17], &g_pedPropsG1b[17], &g_pedPropsG3[15], &g_pedPropsG4[24], &g_pedPropsG5[15], &g_pedPropsG6[7] };
 
 // [texture budget]
-// The texture budget (the Resources part's measurement): the start-up's store of the most streamed objects - "mov ecx,
+// The texture budget (the Resources part): the start-up's store of the most streamed objects - "mov ecx,
 // [rax+0x54C]", "mov [rip+disp32], ecx" with the rel32 at +8 - and its load, shift and store of budgets 0 and 1 (the rel32 at
 // +30), then right after them, at +34, those of budgets 2 and 3 (+52), "lea r14", "mov [rip+disp32], r14", "sub rsp, 0x20"
 // and the call after the stores (+75); the budget's getter, "movsxd rax, [rip+disp32]" (the index's rel32 at +3) and "mov
@@ -2001,9 +2001,10 @@ static void PedPropsGrow()
 // The texture budget's data, laid out as the game's: the counters - the buffers' and the textures' bytes and numbers, the game's
 // high-water mark of both, the most objects allowed and the four budgets in bytes - the index of the budget in use, the update
 // check's flag and its switch with its three factors, on a page of their own, so that "tbunreadable" can take the page away
-// while TweaksV starts; and the function of the game's the call after the budgets' stores leads to, which the harness never
-// calls. The harness reaches the data only through this pointer, as it does the arrays above, and keeps what it set, to tell
-// afterwards that TweaksV wrote nothing, with what the sites held before TweaksV loaded.
+// while TweaksV starts; and the function of the game's the call after the budgets' stores leads to, which the game's start-up
+// calls through that call (TextureBudgetStartUp, below). The harness reaches the data only through this pointer, as it does
+// the arrays above, and keeps what it set, to tell afterwards that TweaksV wrote nothing but the budgets and the call's rel32,
+// with what the sites held before TweaksV loaded.
 struct TextureBudgetCounters { uint64_t buffers, textures; uint32_t buffersNumber, texturesNumber; uint64_t highest; uint32_t most, unused;
 	uint64_t budgets[4]; };
 static_assert(sizeof(TextureBudgetCounters) == 0x48 && offsetof(TextureBudgetCounters, highest) == 0x18 &&
