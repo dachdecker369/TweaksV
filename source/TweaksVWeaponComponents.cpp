@@ -10,15 +10,23 @@
 // game's configuration names another size, and a full pool ends the game in a trap while it loads; a list past
 // its 470 would take the 471st definition over its count and then write through the garbage.
 //   WEAPON_COMPONENTS_SIZE  the room for definitions, from the game's own 470 up to 16384. The list is moved on
-//                    the relocation core to one of 16384 entries - its 17 leas re-pointed, 6 of them in the game's
+//                    the relocation core to one of 16854 entries - its 17 leas re-pointed, 6 of them in the game's
 //                    second, protected code - and its count left where it is (the core's follower: the list's size
 //                    is the distance to it); the call that reads the pool's size from the game's configuration is
-//                    redirected so that the pool gets exactly this many slots, also when the configuration names
-//                    more, so that the pool's trap always comes first. The 470 definitions one file may hold stay.
-//   DIAGNOSTIC_MODE  every site logged, and the measurement: 10 seconds in and then every minute while they
-//                    change, the definitions in the list and the weaponcomponents.meta files loaded; at every
-//                    reading the 17 loads are checked to lead to the moved list still, and a load the game's
-//                    protected code put back is reported, once
+//                    redirected so that the pool gets this many slots and 470 more, also when the configuration
+//                    names more, so that the pool's trap always comes first. The 470 definitions one file may hold
+//                    stay.
+//   DIAGNOSTIC_MODE  every site logged, a line per weaponcomponents.meta the guard sees, and the measurement: 10
+//                    seconds in and then every minute while they change, the definitions in the list, the files
+//                    loaded and those refused; at every reading the 17 loads are checked to lead to the moved list
+//                    still, and a load the game's protected code put back is reported, once
+// The guard (D12): the loader of one weaponcomponents.meta (W-E-C5) is hooked at its head, and a file that comes once
+// the definitions already loaded - the sum of the files' blobs, read bounded - have reached the room is refused before
+// the game makes any of its definitions, as is a file of a name refused before; the first refusal is a problem, in a
+// box, the others are logged. The pool gets the room and 470 more, the most one file brings, and the list room for
+// 16384 + 470, so that the last file let in always fits. A read of the blobs that does not add up lets the file
+// through and switches the guard off for the session, reported. In a test build TWEAKSV_TEST_GUARD_ROOM=1 gives the
+// guard the game's own room, 470 (GuardRoom). The hook is MinHook's, its trampoline writable and executable (T-HARDEN).
 // All of it in one write, all or nothing; a list another mod moved, a pool size call another mod hooked, a load
 // more or fewer than 17 are refused with the reason. Written for TweaksV from its own findings in the game's code
 // (PATTERNS.md, "WeaponLimits"); that the limit exists, and that the pool's size must grow with it, is what
@@ -30,6 +38,7 @@
 #include <windows.h>
 
 #include <array>
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
@@ -44,6 +53,7 @@
 #include "TweaksVPatch.h"
 #include "TweaksVPatterns.h"
 #include "TweaksVRelocation.h"
+#include "TweaksVScanner.h"
 #include "TweaksVSettings.h"
 #include "TweaksVSummary.h"
 
@@ -56,8 +66,10 @@ namespace TweaksV
 		// ---- the list, its count and the pool's size (PATTERNS.md, "WeaponLimits")
 
 		constexpr uint32_t kEntrySize = 8;					// an entry of the list: a definition's pointer
-		constexpr uint32_t kMaxEntries = 16384;				// the moved list always has this many entries, whatever WEAPON_COMPONENTS_SIZE says
-		static_assert(kMaxEntries == static_cast<uint32_t>(kWeaponComponentsSize.maxValue), "TweaksV: WEAPON_COMPONENTS_SIZE's maximum must be the list's size");
+		constexpr uint32_t kPerFile = 470;					// the most definitions one file brings: its blob's array of pointers
+		constexpr uint32_t kMaxEntries = 16384 + kPerFile;	// the moved list always has this many entries: the largest room and the last file let in
+		static_assert(kMaxEntries == static_cast<uint32_t>(kWeaponComponentsSize.maxValue) + kPerFile,
+			"TweaksV: the moved list must hold WEAPON_COMPONENTS_SIZE's maximum and one file more");
 		constexpr size_t kListLoads = 17;					// the "lea r64, [rip+disp32]" that load the list - every one of them, on 1.0.1158.16
 		constexpr char kLeaPrefixes[] = "\x48\x4C";			// the REX bytes the game's loads of the list start with
 		constexpr uint32_t kPoolNameHash = 0xBAE33CCF;		// the game's hash of the pool's name, "cweaponcomponentinfo"
@@ -86,6 +98,22 @@ namespace TweaksV
 		constexpr size_t kHashAt = 8;						// W-E-C4: the imm32 of "mov edx, imm32" - the pool's name
 		constexpr size_t kDefaultAt = 14;					// W-E-C4: the imm32 of "mov r8d, imm32" - the pool's default size
 		constexpr size_t kSizeCallAt = 18;					// W-E-C4: "call rel32" - the size lookup, the call the part redirects
+
+		constexpr const GamePattern& kLoaderPattern = Pattern("W-E-C5");	// the loader of one weaponcomponents.meta: the blob, the blob array
+		constexpr size_t kLoaderHead = 0x13;				// W-E-C5's match lies this far into the loader, whose head the guard hooks
+		constexpr uint32_t kBlobSize = 0xED8;				// W-E-C5's +0x07 and +0x15: a file's blob, allocated and zeroed
+		constexpr RipOperand kBlobsCount = { 0x26, 0x2A };	// W-E-C5: "movzx ebx, word [rip+disp32]" - the blobs' count, a uint16
+		constexpr RipOperand kBlobsCapacity = { 0x2D, 0x31 };	// W-E-C5: "cmp bx, word [rip+disp32]" - the blob array's capacity, the count + 2
+		constexpr RipOperand kBlobsArray = { 0x3E, 0x42 };	// W-E-C5: "mov rsi, [rip+disp32]" - the blob array's pointer, the count - 8
+		constexpr size_t kBlobCountAt = 0xEC0;				// a blob's definitions' count, an int32, after its kPerFile pointers from +0x10
+		static_assert((kBlobCountAt - 0x10) / kEntrySize == kPerFile && kBlobCountAt + sizeof(int32_t) <= kBlobSize,
+			"TweaksV: a blob holds kPerFile definitions and their count");
+		constexpr size_t kEntryNameSize = 0x90;				// a data file entry: the file's name, NUL-terminated, before its type
+		constexpr size_t kEntryTypeAt = 0x90;				// the entry's data file type, an int32
+		constexpr int32_t kComponentsFileType = 0x4F;		// the data file type of weaponcomponents.meta
+		constexpr size_t kCallableAt = 0x38;				// the loader's callback, passed by value: its callable's pointer
+		constexpr size_t kDestroyAt = 0x20;					// the callable's vtable: its destroy
+		constexpr size_t kMaxNames = 1024;					// the refused files' names the guard keeps, as 64-bit hashes
 
 		constexpr char kResetOpcode[] = "\xC7\x05";			// mov dword [rip+disp32], imm32
 		constexpr char kRebuildLea[] = "\x4C\x8D\x15";		// lea r10, [rip+disp32]
@@ -135,6 +163,13 @@ namespace TweaksV
 		static_assert(PatternHolds(kPoolPattern, kDefaultAt - 2, "\x41\xB8") && PatternImm32(kPoolPattern, kDefaultAt) == -1,
 			"TweaksV: W-E-C4 holds the pool's default, mov r8d, imm32, at +12, the imm32 read");
 		static_assert(PatternHolds(kPoolPattern, kSizeCallAt, "\xE8"), "TweaksV: W-E-C4 holds the size lookup's call at +18");
+		static_assert(PatternHolds(kLoaderPattern, 0x06, "\xB9") && PatternImm32(kLoaderPattern, 0x07) == kBlobSize &&
+			PatternHolds(kLoaderPattern, 0x13, "\x41\xB8") && PatternImm32(kLoaderPattern, 0x15) == kBlobSize,
+			"TweaksV: W-E-C5 holds the blob's size, 0xED8, allocated at +0x07 and zeroed at +0x15");
+		static_assert(PatternHolds(kLoaderPattern, kBlobsCount.field - 3, "\x0F\xB7\x1D") && kBlobsCount.end == kBlobsCount.field + 4 &&
+			PatternHolds(kLoaderPattern, kBlobsCapacity.field - 3, "\x66\x3B\x1D") && kBlobsCapacity.end == kBlobsCapacity.field + 4 &&
+			PatternHolds(kLoaderPattern, kBlobsArray.field - 3, "\x48\x8B\x35") && kBlobsArray.end == kBlobsArray.field + 4,
+			"TweaksV: W-E-C5 holds the blobs' count's movzx at +0x23, the capacity's cmp at +0x2A and the array's mov at +0x3B");
 
 		// The anchors on the core, in this order: the rebuild - its lea of the list, and its reset of the count, the
 		// variable that follows the list, whose distance from it is the list's size; the sort's lea of the list; the
@@ -220,6 +255,261 @@ namespace TweaksV
 			return g_poolSize;
 		}
 
+		// ---- the guard (D12): the loader of one weaponcomponents.meta hooked at its head
+
+		using Loader = uint64_t (*)(void* entry, void* callback);
+		Loader g_loader = nullptr;						// the game's loader, through MinHook's trampoline
+		const uint8_t* g_blobs = nullptr;				// the blob array: its pointer, then the count and the capacity, uint16 each
+		uint32_t g_room = 0;							// the definitions loaded at which a file is refused
+		std::atomic<bool> g_guardOn{ false };
+		std::atomic<uint32_t> g_refused{ 0 };			// the files refused this session
+		char g_firstRefused[kEntryNameSize + 1] = {};	// the first one's name, written before g_refused counts it
+		// the loader's thread alone: the hashes of the names refused, and the guard's lines
+		uint64_t g_names[kMaxNames] = {};
+		size_t g_nameCount = 0;
+		uint64_t g_lines = 0;
+
+		// The definitions already loaded: the sum of the blobs' counts, each read bounded - the count at most the capacity, the
+		// pointers and the counts copied safely, each count 0..470. False, why saying what, when a read does not add up.
+		bool LoadedDefinitions(uint64_t& sum, std::string& why)
+		{
+			uint8_t* array = nullptr;
+			uint16_t numbers[2] = {};	// the count and the capacity
+			if (!CopyMemorySafely(&array, g_blobs, sizeof(array)) || !CopyMemorySafely(numbers, g_blobs + sizeof(array), sizeof(numbers)))
+			{
+				why = "the blob array at " + DescribeAddress(g_blobs) + " cannot be read";
+				return false;
+			}
+			if (numbers[0] > numbers[1])
+			{
+				why = "the blob array holds " + std::to_string(numbers[0]) + " blobs, past its capacity of " + std::to_string(numbers[1]);
+				return false;
+			}
+			sum = 0;
+			uint8_t* pointers[64];
+			for (uint32_t i = 0; i < numbers[0]; i += 64)
+			{
+				const uint32_t n = numbers[0] - i < 64 ? numbers[0] - i : 64;
+				if (!CopyMemorySafely(pointers, array + static_cast<size_t>(i) * sizeof(void*), n * sizeof(void*)))
+				{
+					why = "the blob array's pointers at " + DescribeAddress(array) + " cannot be read";
+					return false;
+				}
+				for (uint32_t j = 0; j < n; j++)
+				{
+					int32_t definitions = 0;
+					if (!CopyMemorySafely(&definitions, pointers[j] + kBlobCountAt, sizeof(definitions)))
+					{
+						why = "blob " + std::to_string(i + j) + " at " + DescribeAddress(pointers[j]) + " cannot be read";
+						return false;
+					}
+					if (definitions < 0 || static_cast<uint32_t>(definitions) > kPerFile)
+					{
+						why = "blob " + std::to_string(i + j) + " holds " + std::to_string(definitions) + " definitions, outside 0.." + std::to_string(kPerFile);
+						return false;
+					}
+					sum += static_cast<uint32_t>(definitions);
+				}
+			}
+			return true;
+		}
+
+		// The file's name from its entry, read bounded: the type at +0x90 must be weaponcomponents.meta's, the name the bytes up
+		// to the first NUL within 0x90, any byte outside printable ASCII shown as '?'; hash, the name's 64-bit FNV-1a as read.
+		bool EntryName(const void* entry, char (&name)[kEntryNameSize + 1], uint64_t& hash)
+		{
+			uint8_t bytes[kEntryNameSize + sizeof(int32_t)];
+			if (!entry || !CopyMemorySafely(bytes, entry, sizeof(bytes)))
+				return false;
+			int32_t type = 0;
+			memcpy(&type, bytes + kEntryTypeAt, sizeof(type));
+			size_t length = 0;
+			while (length < kEntryNameSize && bytes[length])
+				length++;
+			if (type != kComponentsFileType || length == 0)
+				return false;
+			hash = 14695981039346656037ull;
+			for (size_t i = 0; i < length; i++)
+			{
+				hash = (hash ^ bytes[i]) * 1099511628211ull;
+				name[i] = bytes[i] >= 0x20 && bytes[i] < 0x7F ? static_cast<char>(bytes[i]) : '?';
+			}
+			name[length] = '\0';
+			return true;
+		}
+
+		bool Refused(uint64_t hash)
+		{
+			const size_t kept = g_nameCount < kMaxNames ? g_nameCount : kMaxNames;
+			for (size_t i = 0; i < kept; i++)
+				if (g_names[i] == hash)
+					return true;
+			return false;
+		}
+
+		// A refused file's name kept for the session, 1024 at most - past them, refusals by the count alone, said once.
+		void Remember(uint64_t hash)
+		{
+			if (g_nameCount < kMaxNames)
+				g_names[g_nameCount++] = hash;
+			else if (g_nameCount++ == kMaxNames)
+				WriteLog(kTag, "The weapon components' guard keeps " + std::to_string(kMaxNames) + " refused names at most: from now on a file is refused "
+					"by the definitions loaded alone.");
+		}
+
+		// The refused file's callback, which the loader would have destroyed at its end: its callable destroyed through its
+		// vtable, dl true when the callable lies outside the argument, then its pointer cleared - the vtable and the destroy
+		// inside the game first.
+		void DestroyCallback(void* callback)
+		{
+			uint8_t* const argument = static_cast<uint8_t*>(callback);
+			void* callable = nullptr;
+			const uint8_t* vtable = nullptr;
+			const void* destroy = nullptr;
+			if (!argument || !CopyMemorySafely(&callable, argument + kCallableAt, sizeof(callable)) || !callable ||
+				!CopyMemorySafely(&vtable, callable, sizeof(vtable)) || !IsInsideGameImage(vtable) ||
+				!CopyMemorySafely(&destroy, vtable + kDestroyAt, sizeof(destroy)) || !IsInsideGameImage(destroy))
+				return;
+			reinterpret_cast<void (*)(void*, bool)>(const_cast<void*>(destroy))(callable, callable != argument);
+			void* const none = nullptr;
+			memcpy(argument + kCallableAt, &none, sizeof(none));
+		}
+
+		// Whether the guard refuses the file of entry: the definitions loaded reached the room, or its name was refused before.
+		// A read that does not add up lets the file through and switches the guard off, reported.
+		bool Refuse(const void* entry)
+		{
+			char name[kEntryNameSize + 1] = {};
+			uint64_t hash = 0;
+			const bool named = EntryName(entry, name, hash);
+			const std::string file = named ? std::string(name) : std::string("a weaponcomponents.meta whose name cannot be read");
+			uint64_t sum = 0;
+			std::string why;
+			if (!LoadedDefinitions(sum, why))
+			{
+				g_guardOn = false;
+				ReportFailure(kTag, "The weapon components' guard is off this session: " + why + " - " + file + " and the files after it go to the game "
+					"unchecked, and past " + std::to_string(kPerFile) + " definitions above the room the game crashes while it loads.");
+				return false;
+			}
+			const bool before = named && Refused(hash);
+			const bool refuse = before || sum >= g_room;
+			const bool diagnostic = IsDiagnosticMode();
+			if ((refuse || diagnostic) && g_lines <= kMaxLinesPerKind)
+			{
+				if (g_lines++ == kMaxLinesPerKind)
+					WriteLog(kTag, std::to_string(kMaxLinesPerKind) + " lines of weapon components files written - from now on they are only counted.");
+				else
+					WriteLog(kTag, std::string(refuse ? "" : "DIAGNOSTIC: ") + "Weapon components file " + file + ": " + std::to_string(sum) +
+						" definitions loaded, the room " + std::to_string(g_room) + " - " + (before ? "refused, as before." : refuse ? "refused." : "let in."));
+			}
+			if (!refuse)
+				return false;
+			if (named && !before)
+				Remember(hash);
+			if (g_refused.load() == 0)
+			{
+				memcpy(g_firstRefused, name, sizeof(g_firstRefused));
+				ReportFailure(kTag, "Weapon component files are refused this session: " + file + ", the first, came once " + std::to_string(sum) +
+					" definitions were loaded, the room being " + std::to_string(g_room) + " - the weapon components of the files refused are missing in "
+					"the game. Raise WEAPON_COMPONENTS_SIZE in TweaksV.ini (at most " + std::to_string(kWeaponComponentsSize.maxValue) + "); the log names "
+					"every file refused.");
+			}
+			g_refused++;
+			return true;
+		}
+
+		// The game calls this for each weaponcomponents.meta it loads, the base game's and the packs', on the thread that
+		// applies the data file changes: nothing may throw out of here, and a file let in goes to the game's loader as it came.
+		uint64_t GuardedLoader(void* entry, void* callback)
+		{
+			bool refuse = false;
+			if (g_guardOn.load())
+			{
+				try
+				{
+					refuse = Refuse(entry);
+				}
+				catch (...)
+				{
+				}
+			}
+			if (!refuse)
+				return g_loader(entry, callback);
+			DestroyCallback(callback);
+			return 0;
+		}
+
+		// The guard's job not done: reported - the list's move and the pool's size stay.
+		void GuardNotMade(const std::string& why)
+		{
+			ReportFailure(kTag, "The weapon components' guard is not made this session: " + why);
+		}
+
+		// Finds the loader by W-E-C5, checks it and hooks its head - with DRY_RUN says what it would hook. files: the blobs'
+		// count W-E-C1 reads, which W-E-C5's must be.
+		void MakeGuard(const RelocationPlan& plan, const uint8_t* files)
+		{
+			const bool diagnostic = IsDiagnosticMode();
+			uint8_t* const match = Scanner::Find(kLoaderPattern);
+			if (!match)
+			{
+				GuardNotMade(std::string(kLoaderPattern.label) + " was not found.");
+				return;
+			}
+			uint8_t* const head = match - kLoaderHead;
+			std::string detail;
+			const bool start = IsReadable(head, kLoaderHead) && IsFunctionStart(head, detail);
+			if (diagnostic)
+				WriteLog(kTag, "DIAGNOSTIC: the weapon components' loader at " + DescribeAddress(head) + " (" + kLoaderPattern.label + " - 0x13): " + detail);
+			if (!start)
+			{
+				GuardNotMade("the loader at " + DescribeAddress(head) + " (" + kLoaderPattern.label + " - 0x13) is not a function start (" + detail + ").");
+				return;
+			}
+			if (StartsWithJump(head))
+			{
+				GuardNotMade("the loader at " + DescribeAddress(head) + " starts with a jump (another mod may have hooked it already).");
+				return;
+			}
+			const uint8_t* const count = Target(match, kBlobsCount);
+			const uint8_t* const capacity = Target(match, kBlobsCapacity);
+			const uint8_t* const array = Target(match, kBlobsArray);
+			if (diagnostic)
+				WriteLog(kTag, "DIAGNOSTIC: the blob array's count at " + DescribeAddress(count) + ", capacity at " + DescribeAddress(capacity) +
+					", pointer at " + DescribeAddress(array) + " (" + kLoaderPattern.label + ")");
+			if (count != files)
+			{
+				GuardNotMade("the blobs' count " + std::string(kLoaderPattern.label) + " reads at " + DescribeAddress(count) + " is not the one " +
+					kRebuildPattern.label + " reads at " + DescribeAddress(files) + ".");
+				return;
+			}
+			if (capacity != count + sizeof(uint16_t) || array != count - sizeof(void*) || !InsideGame(array, sizeof(void*) + 2 * sizeof(uint16_t)))
+			{
+				GuardNotMade("the blob array's pointer at " + DescribeAddress(array) + " and capacity at " + DescribeAddress(capacity) + " do not lie 8 bytes "
+					"before and 2 bytes after its count at " + DescribeAddress(count) + " inside the game (" + kLoaderPattern.label + ").");
+				return;
+			}
+			const uint32_t room = static_cast<uint32_t>(GuardRoom(kTag, "weapon component guard", static_cast<int>(plan.size), static_cast<int>(plan.gameSize)));
+			if (IsDryRun())
+			{
+				WriteLog(kTag, "DRY_RUN: would hook the weapon components' loader at " + DescribeAddress(head) + " to refuse the files that come once " +
+					std::to_string(room) + " definitions are loaded.");
+				return;
+			}
+			g_blobs = array;
+			g_room = room;
+			g_guardOn = true;
+			if (!HookFunctions({ { head, reinterpret_cast<const void*>(&GuardedLoader), reinterpret_cast<void**>(&g_loader), "weapon components' loader" } }, kTag))
+			{
+				g_guardOn = false;
+				GuardNotMade("the loader at " + DescribeAddress(head) + " could not be hooked (details in TweaksV.log).");
+				return;
+			}
+			WriteLog(kTag, "The weapon components' loader at " + DescribeAddress(head) + " is hooked: a weaponcomponents.meta file that comes once " +
+				std::to_string(room) + " definitions are loaded is refused.");
+		}
+
 		// ---- the measurement (DIAGNOSTIC_MODE): the list's count and the files' count, read as they are, and the loads
 
 		const volatile int32_t* g_count = nullptr;		// the list's count: the definitions of every file loaded
@@ -231,6 +521,7 @@ namespace TweaksV
 		bool g_putBackSaid = false;						// the measurement's thread alone reads and writes it
 		constexpr uint64_t kUnreadable = uint64_t{ 1 } << 48;	// the two counts cannot be read
 		constexpr uint64_t kPutBack = uint64_t{ 1 } << 49;		// a load of the list does not lead to the moved list
+		constexpr int kRefusedShift = 50;						// the files refused, 0..0x3FFF, above them
 
 		// The first load that no longer leads to the moved list - the game's protected code may put a load back - or null.
 		const uint8_t* LoadPutBack()
@@ -247,10 +538,11 @@ namespace TweaksV
 		// load was put back.
 		uint64_t Definitions()
 		{
-			const uint64_t putBack = LoadPutBack() ? kPutBack : 0;
+			const uint32_t refused = g_refused.load();
+			const uint64_t flags = (LoadPutBack() ? kPutBack : 0) | uint64_t{ refused < 0x3FFF ? refused : 0x3FFF } << kRefusedShift;
 			if (!IsReadable(const_cast<const int32_t*>(g_count), sizeof(int32_t)) || !IsReadable(const_cast<const uint16_t*>(g_files), sizeof(uint16_t)))
-				return kUnreadable | putBack;
-			return uint64_t{ static_cast<uint32_t>(*g_count) } | uint64_t{ *g_files } << 32 | putBack;
+				return kUnreadable | flags;
+			return uint64_t{ static_cast<uint32_t>(*g_count) } | uint64_t{ *g_files } << 32 | flags;
 		}
 
 		// A load put back, reported once: a search through it reads the game's own list, empty since the move, against
@@ -284,6 +576,7 @@ namespace TweaksV
 			}
 			const int32_t count = static_cast<int32_t>(static_cast<uint32_t>(numbers));
 			const std::string files = Counted(static_cast<uint16_t>(numbers >> 32), "weaponcomponents.meta file");
+			const uint32_t refused = g_refused.load();
 			const std::string gameSize = std::to_string(g_gameSize);
 			// past the list in use, the definition after its last entry was stored where the list ends: what the count
 			// reads is no count
@@ -304,8 +597,15 @@ namespace TweaksV
 				" (the game's own list holds " + gameSize + (g_moved ? ", this one " + std::to_string(g_size) + ")" : std::string(" and is in use)"));
 			if (g_moved && static_cast<uint32_t>(count) > g_gameSize)
 				line += " - the game's own list would have overflowed by " + std::to_string(static_cast<uint32_t>(count) - g_gameSize);
-			if (static_cast<uint32_t>(count) >= g_size)
+			if (!g_moved && static_cast<uint32_t>(count) >= g_size)
 				line += " - it is full: one more definition crashes the game while it loads";
+			else if (g_moved && static_cast<uint32_t>(count) >= g_size + kPerFile)
+				line += " - the pool is full: one more definition crashes the game while it loads";
+			else if (g_moved && static_cast<uint32_t>(count) >= g_size)
+				line += g_guardOn.load() ? " - the room is used up: the guard refuses every further file" :
+					" - the room is used up, and no guard refuses further files: past " + std::to_string(g_size + kPerFile) + " the game crashes while it loads";
+			if (refused > 0)
+				line += " - " + Counted(refused, "file") + " refused, the first " + (g_firstRefused[0] ? std::string(g_firstRefused) : std::string("not named"));
 			if (numbers & kPutBack)
 				line += " - a load of the list has changed, reported above";
 			WriteLog(kTag, line + ".");
@@ -390,17 +690,21 @@ namespace TweaksV
 		}
 
 		// 4. one write, all or nothing: the 17 loads to the moved list and the pool's size call to PoolSize
-		g_poolSize = static_cast<int32_t>(plan.size);
+		g_poolSize = static_cast<int32_t>(plan.size + kPerFile);
 		const std::string callAt = DescribeAddress(sizeCall);
 		const std::vector<CallRedirect> redirects = { { sizeCall, reinterpret_cast<const void*>(&PoolSize), "pool size call",
 			reinterpret_cast<void**>(&g_lookup) } };
 		if (!ApplyRelocation(kSpec, plan, {}, redirects, " and redirect the pool size call at " + callAt))
 			return;
 		if (!IsDryRun())
-			WriteLog(kTag, "The pool size call at " + callAt + " is redirected: the weapon components' pool gets " + std::to_string(plan.size) +
-				" slots, the list's size.");
+			WriteLog(kTag, "The pool size call at " + callAt + " is redirected: the weapon components' pool gets " + std::to_string(plan.size + kPerFile) +
+				" slots, the room of " + std::to_string(plan.size) + " and " + std::to_string(kPerFile) + " for the last file let in.");
 
-		// 5. the measurement (DIAGNOSTIC_MODE): the list's count and the files' count, and the 17 loads checked at every reading
+		// 5. the guard: the loader hooked at its head - a job of its own, whose failure leaves the move and the pool
+		MakeGuard(plan, files);
+
+		// 6. the measurement (DIAGNOSTIC_MODE): the list's count and the files' count, the files refused, and the 17 loads checked
+		// at every reading
 		if (!diagnostic)
 			return;
 		if (!InsideGame(files, sizeof(uint16_t)))

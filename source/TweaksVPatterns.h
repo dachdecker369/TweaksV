@@ -159,11 +159,14 @@ namespace TweaksV
 		// [weapon components]
 		// WeaponLimits' weapon components (TweaksVWeaponComponents.cpp): the rebuild of the list of every weapon component
 		// definition - its count's reset, the files' count and its lea of the list (C1) - its sort, with its lea of the list
-		// and the entry size (C2), its update of the count (C3), and the pool's size call, with the pool's name and default (C4)
+		// and the entry size (C2), its update of the count (C3), the pool's size call, with the pool's name and default (C4),
+		// and the loader of one weaponcomponents.meta, 0x13 bytes into it, where the guard hooks its head - the blob's size,
+		// allocated and zeroed, and the blob array's count, capacity and pointer (C5)
 		{ "W-E-C1", "C7 05 ? ? ? ? 00 00 00 00 44 0F B7 05 ? ? ? ? 66 45 85 C0 0F 84 ? ? ? ? 45 31 C9 4C 8D 15 ? ? ? ?" },
 		{ "W-E-C2", "48 63 15 ? ? ? ? EB 02 31 D2 48 8D 0D ? ? ? ? 4C 8D 0D ? ? ? ? 41 B8 08 00 00 00" },
 		{ "W-E-C3", "48 63 15 ? ? ? ? 8D 4A 01 89 0D ? ? ? ? 4D 89 04 D2" },
 		{ "W-E-C4", "48 8B 0D ? ? ? ? BA CF 3C E3 BA 41 B8 ? ? ? ? E8 ? ? ? ? 89 C3" },
+		{ "W-E-C5", "49 89 D7 49 89 CE B9 D8 0E 00 00 E8 ? ? ? ? 49 89 C4 41 B8 D8 0E 00 00 48 89 C1 31 D2 E8 ? ? ? ? 0F B7 1D ? ? ? ? 66 3B 1D ? ? ? ? 75 ? 44 0F B7 EB 49 8D 6D 10 48 8B 35 ? ? ? ?" },
 
 		// SirenSettings, the siren setting IDs (TweaksVSirenIds.cpp): the parser registrations of the siren settings (P1) and the
 		// vehicle variations (P2), whose tables lead to the members that carry an ID, and the simple member's XML reader (P3); the
