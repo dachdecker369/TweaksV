@@ -33,17 +33,22 @@ namespace TweaksV
 
 	// Where a limit lies in a pattern's match. Immediate: an imm32 that holds N x mul + add, N being
 	// the array's size. Variable: the rel32 of a variable the game compares against, which holds N + add.
+	// Follower: the disp32 of an instruction that addresses a variable lying right after the array, for an
+	// array whose size no instruction carries - the distance from the array to the variable is its size, in
+	// entries, and the variable is left as it is (the weapon component list's count follows the list).
 	// opcode: the bytes the instruction at offset must start with (nullptr: not checked).
 	struct LimitSite
 	{
-		enum class Kind { Immediate, Variable };
+		enum class Kind { Immediate, Variable, Follower };
 		Kind kind;
 		size_t offset;			// of the instruction in the match
 		const char* opcode;
 		size_t opcodeSize;
-		size_t valueOffset;		// of the imm32, or of the rel32 to the variable, in the match
+		size_t valueOffset;		// of the imm32, or of the rel32 or disp32 to the variable, in the match
 		int mul;
 		int add;
+		size_t end;				// Follower: where its instruction ends in the match - its disp32 counts from there, past an
+								// immediate that may follow it
 	};
 
 	// A pattern of the part and what its match holds: a reference to the array, up to three limits, both
@@ -67,20 +72,25 @@ namespace TweaksV
 
 	constexpr LimitSite Imm32(size_t imm32, int mul, int add)
 	{
-		return { LimitSite::Kind::Immediate, imm32, nullptr, 0, imm32, mul, add };
+		return { LimitSite::Kind::Immediate, imm32, nullptr, 0, imm32, mul, add, 0 };
 	}
 
 	constexpr LimitSite Imm32(size_t instruction, const char* opcode, size_t opcodeSize, size_t imm32, int mul, int add)
 	{
-		return { LimitSite::Kind::Immediate, instruction, opcode, opcodeSize, imm32, mul, add };
+		return { LimitSite::Kind::Immediate, instruction, opcode, opcodeSize, imm32, mul, add, 0 };
 	}
 
 	constexpr LimitSite Variable(size_t rel32, int add = 0)
 	{
-		return { LimitSite::Kind::Variable, rel32, nullptr, 0, rel32, 1, add };
+		return { LimitSite::Kind::Variable, rel32, nullptr, 0, rel32, 1, add, 0 };
 	}
 
-	constexpr LimitSite kNoLimit = { LimitSite::Kind::Immediate, 0, nullptr, 0, 0, 0, 0 };
+	constexpr LimitSite Follower(size_t instruction, const char* opcode, size_t opcodeSize, size_t disp32, size_t end)
+	{
+		return { LimitSite::Kind::Follower, instruction, opcode, opcodeSize, disp32, 1, 0, end };
+	}
+
+	constexpr LimitSite kNoLimit = { LimitSite::Kind::Immediate, 0, nullptr, 0, 0, 0, 0, 0 };
 
 	constexpr Anchor Site(const GamePattern& pattern)
 	{
@@ -137,7 +147,8 @@ namespace TweaksV
 											// r64", found by its address), every one of them an anchor's reference
 	};
 
-	// A limit as found: where its value lies (the imm32, or the variable itself) and how it encodes N.
+	// A limit as found and to be written: where its value lies (the imm32, or the variable itself) and how it
+	// encodes N. A follower is not one: it is left as it is.
 	struct FoundLimit
 	{
 		uint8_t* value;
@@ -161,16 +172,16 @@ namespace TweaksV
 
 	// Finds every site of spec and checks it: every anchor matches as often as it must, every reference
 	// points at one array inside the game, every limit is the expected instruction and decodes to the
-	// same plausible size, the scanned loads are exactly as many as expected, and with expectedReferences
-	// the anchors' references are every one the game has. Clamps the setting to the game's own
-	// size..maxEntries, reported when it lay outside. False, reported, if the part must leave the game as
-	// it is.
+	// same plausible size - a follower lies inside the game, a whole number of entries after the array -
+	// the scanned loads are exactly as many as expected, and with expectedReferences the anchors'
+	// references are every one the game has. Clamps the setting to the game's own size..maxEntries,
+	// reported when it lay outside. False, reported, if the part must leave the game as it is.
 	bool FindRelocation(const RelocationSpec& spec, RelocationPlan& plan);
 
 	// DRY_RUN: logs what would change (with also, the part's own addition to the line) and returns true.
 	// Otherwise allocates the new array - the full maxEntries, read/write, near the game, the game's own
 	// entries copied in and the rest zero - and writes every reference (its rel32 recomputed, with the distance check) and every limit (re-encoded
-	// for plan.size), together with the part's own writes and redirected calls, all or nothing; then logs
+	// for plan.size; a follower stays as it is), together with the part's own writes and redirected calls, all or nothing; then logs
 	// "The <name> moved and its limit raised from A to B entries." False, reported, if nothing was written.
 	bool ApplyRelocation(const RelocationSpec& spec, const RelocationPlan& plan, std::vector<CodeWrite> alsoWrite,
 		const std::vector<CallRedirect>& redirects, const std::string& also);

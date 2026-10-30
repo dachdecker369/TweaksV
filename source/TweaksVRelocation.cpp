@@ -138,32 +138,67 @@ namespace TweaksV
 							" is not the expected instruction (" + HexBytes(instruction, site.opcodeSize) + ") (" + label + ").");
 						return false;
 					}
-					const bool variable = site.kind == LimitSite::Kind::Variable;
-					if (variable)
+					const bool follower = site.kind == LimitSite::Kind::Follower;
+					uint64_t decoded = 0;
+					if (follower)
 					{
-						value = const_cast<uint8_t*>(Rel32Target(value));
-						if (!IsInsideGameImage(value) || !IsReadable(value, sizeof(uint32_t)))
+						// N from the distance to the variable that follows the array: a whole number of entries, the
+						// variable left as it is
+						if (!plan.array)	// the part's own mistake: its tables must name the array first
 						{
-							RelocationFailed(spec, "the variable that holds the limit of the " + name + " is not inside the game: " +
-								DescribeAddress(value) + " (" + label + ").");
+							RelocationFailed(spec, "its tables name the variable that follows the " + name + " before a reference to it.");
 							return false;
 						}
+						int32_t disp = 0;
+						memcpy(&disp, value, sizeof(disp));
+						const uint8_t* const target = match + site.end + disp;
+						if (!IsInsideGameImage(target))
+						{
+							RelocationFailed(spec, "the variable that follows the " + name + " is not inside the game: " + DescribeAddress(target) +
+								" (" + label + ").");
+							return false;
+						}
+						const ptrdiff_t distance = target - plan.array;
+						if (distance <= 0 || distance % static_cast<ptrdiff_t>(spec.entrySize) != 0)
+						{
+							RelocationFailed(spec, "the variable at " + DescribeAddress(target) + " does not lie a whole number of " +
+								std::to_string(spec.entrySize) + "-byte entries after the " + name + " at " + DescribeAddress(plan.array) + " (" + label + ").");
+							return false;
+						}
+						decoded = static_cast<uint64_t>(distance) / spec.entrySize;
+						if (diagnostic)
+							WriteLog(spec.tag, "DIAGNOSTIC: limit variable at " + DescribeAddress(target) + " lies " + std::to_string(distance) +
+								" bytes after the " + name + " (" + label + ") -> game size " + std::to_string(decoded));
 					}
-					uint32_t holds = 0;
-					memcpy(&holds, value, sizeof(holds));
-
-					// N from imm32 = N x mul + add
-					const int64_t numerator = static_cast<int64_t>(holds) - site.add;
-					if (site.mul <= 0 || numerator < 0 || numerator % site.mul != 0)
+					else
 					{
-						RelocationFailed(spec, "the limit of the " + name + " at " + DescribeAddress(value) + " holds " + std::to_string(holds) +
-							", which is " + EncodingText(site.mul, site.add) + " for no size (" + label + ").");
-						return false;
+						const bool variable = site.kind == LimitSite::Kind::Variable;
+						if (variable)
+						{
+							value = const_cast<uint8_t*>(Rel32Target(value));
+							if (!IsInsideGameImage(value) || !IsReadable(value, sizeof(uint32_t)))
+							{
+								RelocationFailed(spec, "the variable that holds the limit of the " + name + " is not inside the game: " +
+									DescribeAddress(value) + " (" + label + ").");
+								return false;
+							}
+						}
+						uint32_t holds = 0;
+						memcpy(&holds, value, sizeof(holds));
+
+						// N from imm32 = N x mul + add
+						const int64_t numerator = static_cast<int64_t>(holds) - site.add;
+						if (site.mul <= 0 || numerator < 0 || numerator % site.mul != 0)
+						{
+							RelocationFailed(spec, "the limit of the " + name + " at " + DescribeAddress(value) + " holds " + std::to_string(holds) +
+								", which is " + EncodingText(site.mul, site.add) + " for no size (" + label + ").");
+							return false;
+						}
+						decoded = static_cast<uint64_t>(numerator / site.mul);
+						if (diagnostic)
+							WriteLog(spec.tag, std::string("DIAGNOSTIC: limit") + (variable ? " variable" : "") + " at " + DescribeAddress(value) + " holds " +
+								std::to_string(holds) + " (" + EncodingText(site.mul, site.add) + ", " + label + ") -> game size " + std::to_string(decoded));
 					}
-					const uint64_t decoded = static_cast<uint64_t>(numerator / site.mul);
-					if (diagnostic)
-						WriteLog(spec.tag, std::string("DIAGNOSTIC: limit") + (variable ? " variable" : "") + " at " + DescribeAddress(value) + " holds " +
-							std::to_string(holds) + " (" + EncodingText(site.mul, site.add) + ", " + label + ") -> game size " + std::to_string(decoded));
 					if (!sizeKnown)
 					{
 						if (decoded == 0 || decoded > spec.maxEntries)
@@ -180,7 +215,8 @@ namespace TweaksV
 							" and " + std::to_string(decoded) + " (" + label + ").");
 						return false;
 					}
-					plan.limits.push_back({ value, site.mul, site.add });
+					if (!follower)
+						plan.limits.push_back({ value, site.mul, site.add });
 				}
 			}
 		}
@@ -271,10 +307,11 @@ namespace TweaksV
 	{
 		const std::string name = spec.name;
 		const std::string change = "from " + std::to_string(plan.gameSize) + " to " + std::to_string(plan.size);
-		if (IsDryRun())	// everything found and checked, nothing written
+		if (IsDryRun())	// everything found and checked, nothing written - the sites only where a limit is written
 		{
+			const std::string sites = plan.limits.empty() ? std::string() : " (" + std::to_string(plan.limits.size()) + " sites)";
 			WriteLog(spec.tag, "DRY_RUN: would move the " + name + " (" + std::to_string(plan.references.size()) + " references) and raise its limit " +
-				change + " (" + std::to_string(plan.limits.size()) + " sites)" + also + ".");
+				change + sites + also + ".");
 			return true;
 		}
 
