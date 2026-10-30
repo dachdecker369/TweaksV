@@ -39,17 +39,17 @@ re_item() { tr -d '\r' < TweaksV.log | grep -c -- "PROBLEM: .*TestRun.ResourceEx
 # features_say [PART...]: the log header's Features: line says off for each PART and on for every other part
 features_say() {
 	local want="Features:" part sep=" "
-	for part in HeapAdjuster ModkitLimit PackfileLimit BoxStreamer Decals RageOpenV StraightToStoryMode DirectStorage Blips WeaponLimits PedProps Resources StaticBounds; do
+	for part in HeapAdjuster ModkitLimit PackfileLimit BoxStreamer Decals RageOpenV StraightToStoryMode DirectStorage Blips WeaponLimits PedProps Resources StaticBounds RayTracing; do
 		if [[ " $* " == *" $part "* ]]; then want+="$sep$part off"; else want+="$sep$part on"; fi
 		sep=", "
 	done
 	tr -d '\r' < TweaksV.log | grep -qx -- ".* \[TweaksV\] $want"
 }
 # after_header PATTERN: the first line of TweaksV.log that matches PATTERN stands after the header, whose last line
-# in a release build holds the values of [STATICBOUNDS]
+# in a release build holds the values of [RAYTRACING]
 after_header() {
 	local header line
-	header=$(grep -n -m 1 -- '\[TweaksV\] StaticBounds: STATICBOUNDS_SIZE=' TweaksV.log | cut -d: -f1)
+	header=$(grep -n -m 1 -- '\[TweaksV\] RayTracing: DYNAMIC_BVH_VERTICES=' TweaksV.log | cut -d: -f1)
 	line=$(grep -n -m 1 -- "$1" TweaksV.log | cut -d: -f1)
 	[ -n "$header" ] && [ -n "$line" ] && [ "$line" -gt "$header" ]
 }
@@ -80,11 +80,11 @@ for dir in "" scripts plugins; do
 	check "in $at: the header's Features: line says off for RageOpenV and StraightToStoryMode and on for the rest, the check's lines stand after the header" "features_say RageOpenV StraightToStoryMode && after_header 'is installed and does this job too'"
 done
 
-echo "== I1c ResourceExtensions.asi, Resource Extensions [Enhanced], in the game folder: HeapAdjuster, PackfileLimit and Blips off while it is there"
+echo "== I1c ResourceExtensions.asi, Resource Extensions [Enhanced], in the game folder: HeapAdjuster, PackfileLimit, Blips and RayTracing off while it is there"
 fresh_ini; touch ResourceExtensions.asi; out=$(game full_game.exe); rm -f ResourceExtensions.asi
-check "HeapAdjuster, PackfileLimit and Blips off, the other parts applied, DirectStorage on" "has '$GAME_HEAP' && has '$PACK_OFF' && log_lacks '\[Blips\]' && has '$MODKIT_ON' && has '$BOX_ON' && has '$DECAL_ON' && has '$ROV_ON' && has '$STORY_ON' && log_has '\[DirectStorage\]'"
-check "one item per part, word for word, the only three problems of one summary" "[ \$(re_item HeapAdjuster HEAP_ADJUSTER) -eq 1 ] && [ \$(re_item PackfileLimit PACKFILE_LIMIT) -eq 1 ] && [ \$(re_item Blips BLIPS) -eq 1 ] && log_has 'Start-up summary not shown (ERROR_POPUP=0): 3 problem' && summary_once"
-check "the header's Features: line says off for HeapAdjuster, PackfileLimit and Blips and on for the rest, the check's lines stand after the header" "features_say HeapAdjuster PackfileLimit Blips && after_header 'is installed and does this job too'"
+check "HeapAdjuster, PackfileLimit, Blips and RayTracing off, the other parts applied, DirectStorage on" "has '$GAME_HEAP' && has '$PACK_OFF' && log_lacks '\[Blips\]' && log_lacks '\[RayTracing\]' && has '$MODKIT_ON' && has '$BOX_ON' && has '$DECAL_ON' && has '$ROV_ON' && has '$STORY_ON' && log_has '\[DirectStorage\]'"
+check "one item per part, word for word, the only four problems of one summary" "[ \$(re_item HeapAdjuster HEAP_ADJUSTER) -eq 1 ] && [ \$(re_item PackfileLimit PACKFILE_LIMIT) -eq 1 ] && [ \$(re_item Blips BLIPS) -eq 1 ] && [ \$(re_item RayTracing RAYTRACING) -eq 1 ] && log_has 'Start-up summary not shown (ERROR_POPUP=0): 4 problem' && summary_once"
+check "the header's Features: line says off for HeapAdjuster, PackfileLimit, Blips and RayTracing and on for the rest, the check's lines stand after the header" "features_say HeapAdjuster PackfileLimit Blips RayTracing && after_header 'is installed and does this job too'"
 
 echo "== I2 all old plugins at once, in the game folder, scripts\\ and plugins\\: everything skipped"
 fresh_ini
@@ -153,6 +153,8 @@ check "Q-E-T4 (the texture budget's placement check), VIDEO_MEMORY_BUDGET=6000: 
 	"has 'the call to the next step' && has 'budgets 1500, 1500, 3000 and 3000 MB' && has '$ALL_ON_HEAP' && has '$MODKIT_ON' && has '$PACK_ON' && has '$ROV_ON' && has '$STORY_ON' && log_has 'TEST BUILD - not for release' && grep -qi -- 'TEST BUILD: pattern Q-E-T4 is treated as not found' TweaksV.log && grep -qi -- 'Q-E-T4 was not found[ .]' TweaksV.log && summary_once && has 'protect: all restored'"
 # [static bounds]
 # [rt buffer]
+fresh_ini; setkey DYNAMIC_BVH_VERTICES 8388608; addkey TEST_BREAK_PATTERN T-E-C1; out=$(ASI=TweaksV_test.asi game full_game.exe)
+check "T-E-C1 (a check of the ray tracing buffer, with DYNAMIC_BVH_VERTICES=8388608): the buffer untouched, the rest applied" "has 'rt sites: as placed, count 4194304, checks 4194304 and 4194304, jumps to the game and the game' && has '$ALL_ON_HEAP' && has '$MODKIT_ON' && has '$PACK_ON' && has '$ROV_ON' && has '$STORY_ON' && log_has 'TEST BUILD - not for release' && grep -qi -- 'TEST BUILD: pattern T-E-C1 is treated as not found' TweaksV.log && grep -qi -- 'T-E-C1 was not found[ .]' TweaksV.log && summary_once && has 'protect: all restored'"
 breaktest "a label in small letters works too" "h-e1" \
 	"has '$GAME_HEAP' && has '$MODKIT_ON'"
 fresh_ini; addkey TEST_BREAK_PATTERN "H-E1"; out=$(game full_game.exe)

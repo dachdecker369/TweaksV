@@ -32,6 +32,7 @@ SUITES=(
 	texturebudget
 	# [static bounds]
 	# [rt buffer]
+	raytracing
 	sirenids
 	sirencount
 	# [streaming memory]

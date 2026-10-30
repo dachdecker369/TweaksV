@@ -285,6 +285,29 @@
 //                      for the box of a problem after the start-up summary; reported as "legacy packs: done" or "legacy packs: no
 //                      last line in 40 s"
 // [rt buffer]
+// The ray tracing buffer (RayTracing): its three sites are always there, as code the fake runs - the buffer's set-up (T-E-B1),
+// whose call leads to the fake's buffer maker, a function its unwind data names, and whose store sets the buffer object's
+// global; the checks of a frame's ranges, the geometry's (T-E-C1) and the ropes' (T-E-C2), each a function that takes a vertex
+// count and a record and takes the range from the slot's counter by lock cmpxchg, or jumps to its refusal, which writes every
+// register into the record - and a third lea of the counters, the frame's reset. The frame slot, the two counters and the
+// global, in the fake's data, are 0 while TweaksV starts. Once TweaksV has started, the fake makes the buffer through the
+// set-up, as the game's renderer does, and leaves the counters as a frame does: the last finished frame's, slot 1's, at
+// 2811203 vertices, the frame under way's, slot 0's, at 4000000.
+//   rtcheck        then the checks run: the ropes' takes 100 vertices, then 600 geometries from each of two threads at once and 10
+//                  ropes are refused - each count past what is left, 4400000 and more, the upper half of rcx not 0 - and every
+//                  refusal's registers are compared with those the check left
+//   rtgrow         once TweaksV's first ray tracing buffer summary is in TweaksV.log, the last finished frame took 3987120; once
+//                  the next one is, the frame flips to slot 1, and the finished one, slot 0's, took 4100000; then it waits for
+//                  that summary (the test build's TWEAKSV_TEST_SUMMARY_MS), 10 seconds at most each
+//   rtmade         the buffer object's global set while TweaksV starts - the buffer made already - and not made again
+//   rtraised       the buffer's count and both checks hold 8388608 (another mod raised them)
+//   rtmismatch     the ropes' check holds 8388608, the buffer's count and the geometry's check 4194304
+//   rtmakerhooked  the set-up's call leads outside the game (another mod's hook)
+//   rtmakerinside  the set-up's call leads 16 bytes into the buffer maker, not to its start
+//   rtslot         the ropes' check loads another frame slot
+//   rtcounters     the ropes' check loads the counters 4 bytes further on
+//   rtextra        a fourth lea of the counters (a changed game)
+//   rtjumphooked   the geometry's refusal jump leads outside the game (another mod's hook)
 #include <windows.h>
 #include <winternl.h>
 #include <cstddef>
@@ -797,6 +820,47 @@ static TextureBudgetOperand g_textureBudgetOperands[] = { { SITE(g_textureBudget
 // [static bounds]
 // [legacy packs]
 // [rt buffer]
+// The ray tracing buffer: its sites as code the fake runs. The set-up, a function of its own: "sub rsp, 0x38", then T-E-B1 at +4 -
+// the maker's flags, "mov ecx, 0x400000" (the count's imm32 at +13), "mov edx, 20", "mov r8b, 1", "xor r9d, r9d", the maker's
+// call (+28, its rel32 at +29) and "mov [rip+disp32], rax" of the buffer object (+33, its disp32 at +36) - "add rsp, 0x38",
+// "ret". A check, (count, record): rbx, rbp, rsi, rdi and r12 to r15 pushed, r15 the record, r8, r9 and r11 to r14 from it and
+// rsp into it; T-E-C1 or T-E-C2 at +42 - the slot's load (its disp32 at +44), "xor", the counters' lea (its disp32 at +53),
+// "mov r10d, 1", the filler, the slot's counter and the range's end, "cmp" with the capacity (its imm32 at +86 or +83) and "ja
+// rel32" to the refusal (+90 or +87, the rel32 at +92 or +89) - "mov eax, edi", "lock cmpxchg", "jne" back to the counter's load,
+// eax 1; the refusal (+112 or +109): every register but rax into the record, eax 0; the pops, "ret". The frame's reset: "lea
+// rax, [rip+disp32]" of the counters (+3), and a fourth lea, its first byte 48 only with "rtextra". Every site ends in CC.
+#define RT_PROLOGUE 0x53, 0x55, 0x56, 0x57, 0x41, 0x54, 0x41, 0x55, 0x41, 0x56, 0x41, 0x57, 0x49, 0x89, 0xD7, 0x4D, 0x8B, 0x07, \
+	0x4D, 0x8B, 0x4F, 0x08, 0x4D, 0x8B, 0x5F, 0x10, 0x4D, 0x8B, 0x67, 0x18, 0x4D, 0x8B, 0x6F, 0x20, 0x4D, 0x8B, 0x77, 0x28, 0x49, 0x89, 0x67, 0x30
+#define RT_REFUSAL 0x49, 0x89, 0x5F, 0x38, 0x49, 0x89, 0x4F, 0x40, 0x49, 0x89, 0x57, 0x48, 0x49, 0x89, 0x77, 0x50, 0x49, 0x89, 0x7F, 0x58, \
+	0x49, 0x89, 0x6F, 0x60, 0x4D, 0x89, 0x47, 0x68, 0x4D, 0x89, 0x4F, 0x70, 0x4D, 0x89, 0x57, 0x78, 0x4D, 0x89, 0x9F, 0x80, 0x00, 0x00, 0x00, \
+	0x4D, 0x89, 0xA7, 0x88, 0x00, 0x00, 0x00, 0x4D, 0x89, 0xAF, 0x90, 0x00, 0x00, 0x00, 0x4D, 0x89, 0xB7, 0x98, 0x00, 0x00, 0x00, \
+	0x4D, 0x89, 0xBF, 0xA0, 0x00, 0x00, 0x00, 0x49, 0x89, 0xA7, 0xA8, 0x00, 0x00, 0x00, 0x31, 0xC0, \
+	0x41, 0x5F, 0x41, 0x5E, 0x41, 0x5D, 0x41, 0x5C, 0x5F, 0x5E, 0x5D, 0x5B, 0xC3, 0xCC
+volatile unsigned char g_rtSetUp[] = { 0x48, 0x83, 0xEC, 0x38, 0xC7, 0x44, 0x24, 0x20, 0x89, 0x00, 0x00, 0x00, 0xB9, 0x00, 0x00, 0x40, 0x00,
+	0xBA, 0x14, 0x00, 0x00, 0x00, 0x41, 0xB0, 0x01, 0x45, 0x31, 0xC9, 0xE8, 0, 0, 0, 0, 0x48, 0x89, 0x05, 0, 0, 0, 0, 0x48, 0x83, 0xC4, 0x38,
+	0xC3, 0xCC };
+volatile unsigned char g_rtGeometry[] = { RT_PROLOGUE,
+	0x8B, 0x2D, 0, 0, 0, 0, 0x31, 0xD2, 0x48, 0x8D, 0x1D, 0, 0, 0, 0, 0x41, 0xBA, 0x01, 0x00, 0x00, 0x00,		// +42: T-E-C1
+	0x66, 0x0F, 0x1F, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00, 0x66, 0x0F, 0x1F, 0x44, 0x00, 0x00,					// +63: 15 bytes of filler
+	0x8B, 0x3C, 0xAB, 0x8D, 0x34, 0x0F, 0x81, 0xFE, 0x00, 0x00, 0x40, 0x00, 0x0F, 0x87, 0x10, 0x00, 0x00, 0x00,		// +78: the check
+	0x89, 0xF8, 0xF0, 0x0F, 0xB1, 0x34, 0xAB, 0x75, 0xE5, 0xB8, 0x01, 0x00, 0x00, 0x00, 0xEB, 0x50,				// +96: the range taken
+	RT_REFUSAL };																								// +112: the refusal
+volatile unsigned char g_rtRopes[] = { RT_PROLOGUE,
+	0x8B, 0x15, 0, 0, 0, 0, 0x31, 0xED, 0x48, 0x8D, 0x35, 0, 0, 0, 0, 0x41, 0xBA, 0x01, 0x00, 0x00, 0x00,		// +42: T-E-C2
+	0x66, 0x0F, 0x1F, 0x44, 0x00, 0x00, 0x66, 0x0F, 0x1F, 0x44, 0x00, 0x00,									// +63: 12 bytes of filler
+	0x8B, 0x3C, 0x96, 0x8D, 0x1C, 0x0F, 0x81, 0xFB, 0x00, 0x00, 0x40, 0x00, 0x0F, 0x87, 0x10, 0x00, 0x00, 0x00,		// +75: the check
+	0x89, 0xF8, 0xF0, 0x0F, 0xB1, 0x1C, 0x96, 0x75, 0xE5, 0xB8, 0x01, 0x00, 0x00, 0x00, 0xEB, 0x50,				// +93: the range taken
+	RT_REFUSAL };																								// +109: the refusal
+volatile unsigned char g_rtReset[] = { 0x48, 0x8D, 0x05, 0, 0, 0, 0, 0xCC };
+volatile unsigned char g_rtExtra[] = { 0xCC, 0x8D, 0x05, 0, 0, 0, 0, 0xCC };
+static Site g_rtCountSite = SITE(g_rtSetUp, 13);		// the buffer's count
+static Site g_rtMakerCall = SITE(g_rtSetUp, 29);		// the rel32 of the maker's call
+static Site g_rtObjectRef = SITE(g_rtSetUp, 36);		// the disp32 of the object's store
+static Site g_rtSlotRefs[] = { SITE(g_rtGeometry, 44), SITE(g_rtRopes, 44) };
+static Site g_rtCountersRefs[] = { SITE(g_rtGeometry, 53), SITE(g_rtRopes, 53), SITE(g_rtReset, 3), SITE(g_rtExtra, 3) };
+static Site g_rtCapacities[] = { SITE(g_rtGeometry, 86), SITE(g_rtRopes, 83) };
+static Site g_rtJumps[] = { SITE(g_rtGeometry, 92), SITE(g_rtRopes, 89) };	// the rel32 of each refusal jump
+static Site g_rtSites[] = { SITE(g_rtSetUp, 0), SITE(g_rtGeometry, 0), SITE(g_rtRopes, 0), SITE(g_rtReset, 0), SITE(g_rtExtra, 0) };
 #pragma data_seg()
 
 // The game's own modkit array (1024 entries of 2 bytes) and packfile array (4500 entries of 8 bytes). The
@@ -2688,6 +2752,269 @@ static void LpReport()
 		CloseHandle(g_lpLocked);
 }
 // [rt buffer]
+// The ray tracing buffer's data, in the fake's data as the game's are in its own, reached only through pointers: the frame slot and
+// a second one for "rtslot", the two counters - a dword per slot - with room past them for "rtcounters", and the buffer object's
+// global; the buffer object the fake's maker hands out, its count at +0x08 and its stride in the low 12 bits of the word at +0x0C;
+// the maker; what a check's refusal records; the checks' runs; and the sites' bytes as placed.
+static const unsigned char* ImageBase();
+static uint32_t Imm32(const Site& site);
+static void SetImm32(const Site& site, uint32_t value);
+static uint32_t g_rtSlotStorage[2] = {};
+static uint32_t* volatile g_rtSlot = g_rtSlotStorage;
+alignas(8) static uint32_t g_rtCountersStorage[4] = {};
+static uint32_t* volatile g_rtCounters = g_rtCountersStorage;
+static uint64_t g_rtObjectStorage = 0;
+static uint64_t* volatile g_rtObject = &g_rtObjectStorage;
+struct RtBufferObject
+{
+	unsigned char head[0x08];
+	uint32_t count;			// +0x08
+	uint16_t stride;		// +0x0C: the stride in its low 12 bits, the maker's flags above them
+	unsigned char rest[0x32];
+};
+static_assert(offsetof(RtBufferObject, count) == 0x08 && offsetof(RtBufferObject, stride) == 0x0C, "the buffer object at the game's offsets");
+static RtBufferObject g_rtBufferStorage{};
+static RtBufferObject* volatile g_rtBuffer = &g_rtBufferStorage;
+static volatile LONG g_rtMakerCalls = 0;
+static uint32_t g_rtMakerFlags = 0, g_rtMakerView = 0, g_rtMakerZero = 1;
+
+// The game's buffer maker, where the set-up's call leads: (count, stride, its view's flag, 0, flags) - the buffer object with the
+// count and the stride as the game's maker keeps them. Its call of GetCurrentThreadId gives it a frame of its own, which the
+// fake's unwind data names.
+static DWORD g_rtMakerThread = 0;
+static __declspec(noinline) const void* RtBufferMaker(uint32_t count, uint32_t stride, uint8_t view, uint32_t zero, uint32_t flags)
+{
+	RtBufferObject& buffer = *g_rtBuffer;
+	buffer.count = count;
+	buffer.stride = static_cast<uint16_t>(0x7000 | (stride & 0xFFF));
+	g_rtMakerView = view;
+	g_rtMakerZero = zero;
+	g_rtMakerFlags = flags;
+	g_rtMakerThread = GetCurrentThreadId();
+	InterlockedIncrement(&g_rtMakerCalls);
+	return &buffer;
+}
+
+// What a check's refusal finds: every register but rax and the flags as the check left them; the six it does not set are given
+// before it, and rsp is noted before it.
+struct RtRecord
+{
+	uint64_t in[6];			// r8, r9, r11, r12, r13 and r14, given
+	uint64_t rspBefore;		// +0x30
+	uint64_t rbx, rcx, rdx, rsi, rdi, rbp, r8, r9, r10, r11, r12, r13, r14, r15, rsp;	// +0x38 to +0xA8: at the refusal
+};
+static_assert(offsetof(RtRecord, rspBefore) == 0x30 && offsetof(RtRecord, rbx) == 0x38 && offsetof(RtRecord, rsp) == 0xA8,
+	"the record as the checks fill it");
+using RtCheck = int (*)(uint64_t count, RtRecord* record);
+constexpr uint32_t kRtFinished = 2811203, kRtUnderWay = 4000000, kRtTaken = 100, kRtRefused = 4400000, kRtGrown = 3987120, kRtFlipped = 4100000;
+
+// The registers a refusal found, as the check left them: the counters and the slot it loaded, rdx or rbp 0, the slot's counter
+// and the range's end, r10 1, the count with its upper half, the six given, the record and rsp.
+static bool RtRegistersKept(const RtRecord& r, uint64_t rcx, bool ropes)
+{
+	const uint64_t counters = reinterpret_cast<uintptr_t>(g_rtCounters);
+	const uint64_t base = ropes ? r.rsi : r.rbx, slot = ropes ? r.rdx : r.rbp, zero = ropes ? r.rbp : r.rdx, end = ropes ? r.rbx : r.rsi;
+	return base == counters && slot == *g_rtSlot && zero == 0 && r.rdi == kRtUnderWay + kRtTaken &&
+		end == static_cast<uint32_t>(r.rdi + static_cast<uint32_t>(rcx)) && r.rcx == rcx && r.r10 == 1 && r.r8 == r.in[0] && r.r9 == r.in[1] &&
+		r.r11 == r.in[2] && r.r12 == r.in[3] && r.r13 == r.in[4] && r.r14 == r.in[5] && r.r15 == reinterpret_cast<uintptr_t>(&r) && r.rsp == r.rspBefore;
+}
+
+// One thread's calls of a check, each count past what is left - the first count, then one more each call - a record of its own
+// each, the upper half of rcx not 0.
+struct RtRun
+{
+	const volatile unsigned char* code;
+	bool ropes;
+	int calls;
+	uint32_t count;
+	int took, refused, kept;
+	uint64_t vertices;
+};
+static DWORD WINAPI RtRunChecks(LPVOID parameter)
+{
+	RtRun& run = *static_cast<RtRun*>(parameter);
+	for (int i = 0; i < run.calls; i++)
+	{
+		RtRecord record{};
+		for (int k = 0; k < 6; k++)
+			record.in[k] = (0x0101010101010101ull * static_cast<uint64_t>(k + 1)) ^ (static_cast<uint64_t>(i) << 24);
+		const uint32_t count = run.count + static_cast<uint32_t>(i % 1000);
+		const uint64_t rcx = 0xA5A5A5A500000000ull | count;
+		if (reinterpret_cast<RtCheck>(const_cast<unsigned char*>(run.code))(rcx, &record))
+		{
+			run.took++;
+			continue;
+		}
+		run.refused++;
+		run.vertices += count;
+		if (RtRegistersKept(record, rcx, run.ropes))
+			run.kept++;
+	}
+	return 0;
+}
+
+// Where a check's refusal jump leads: the game's refusal, a TweaksV stub - read+execute, its counting instructions first and the
+// game's refusal last - or elsewhere.
+static const wchar_t* RtJumpWhere(size_t check)
+{
+	const unsigned char* const target = Rel32Target(g_rtJumps[check]);
+	if (InImage(target))
+		return L"the game";
+	MEMORY_BASIC_INFORMATION info{};
+	if (VirtualQuery(target, &info, sizeof(info)) != sizeof(info) || info.State != MEM_COMMIT || memcmp(target, "\xF0\x48\xFF\x05", 4) != 0)
+		return L"elsewhere";
+	const unsigned char* refusal = nullptr;
+	memcpy(&refusal, target + 24, sizeof(refusal));
+	const volatile unsigned char* const own = check == 0 ? g_rtGeometry + 112 : g_rtRopes + 109;
+	return info.Protect != PAGE_EXECUTE_READ ? L"a stub NOT RX" : refusal == own ? L"a stub, RX, on to its refusal" : L"a stub elsewhere";
+}
+
+// How many times TweaksV.log, read whole and shared as TweaksV shares it while it writes, holds text; and a wait for it, 100 ms
+// at a time and ms at most.
+static int RtLogHas(const char* text)
+{
+	static char log[4 << 20];
+	const HANDLE file = CreateFileW(L"TweaksV.log", GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING,
+		FILE_ATTRIBUTE_NORMAL, nullptr);
+	if (file == INVALID_HANDLE_VALUE)
+		return 0;
+	DWORD read = 0;
+	if (!ReadFile(file, log, sizeof(log) - 1, &read, nullptr))
+		read = 0;
+	CloseHandle(file);
+	log[read] = '\0';
+	int found = 0;
+	for (const char* at = log; (at = strstr(at, text)) != nullptr; at++)
+		found++;
+	return found;
+}
+static bool RtWaitFor(const char* text, int ms)
+{
+	for (int waited = 0; RtLogHas(text) == 0 && waited < ms; waited += 100)
+		Sleep(100);
+	return RtLogHas(text) != 0;
+}
+
+// Before TweaksV loads: the set-up's call to the maker and its store to the global, the checks' loads of the slot and the counters
+// and the reset's lea - but where an option asks otherwise; then the sites' bytes as placed.
+static unsigned char g_rtPlaced[5][208];
+static void RtSetUp(int argc, wchar_t** argv)
+{
+	SetRel32(g_rtMakerCall, reinterpret_cast<const void*>(&RtBufferMaker));
+	SetRel32(g_rtObjectRef, g_rtObject);
+	for (const Site& site : g_rtSlotRefs)
+		SetRel32(site, g_rtSlot);
+	for (const Site& site : g_rtCountersRefs)
+		SetRel32(site, g_rtCounters);
+	if (HasOption(argc, argv, L"rtraised"))
+	{
+		SetImm32(g_rtCountSite, 8388608);
+		SetImm32(g_rtCapacities[0], 8388608);
+		SetImm32(g_rtCapacities[1], 8388608);
+	}
+	if (HasOption(argc, argv, L"rtmismatch"))
+		SetImm32(g_rtCapacities[1], 8388608);
+	if (HasOption(argc, argv, L"rtmakerhooked"))
+		SetRel32(g_rtMakerCall, ImageEnd() + 0x90000);
+	if (HasOption(argc, argv, L"rtmakerinside"))
+		SetRel32(g_rtMakerCall, reinterpret_cast<const unsigned char*>(&RtBufferMaker) + 16);
+	if (HasOption(argc, argv, L"rtslot"))
+		SetRel32(g_rtSlotRefs[1], g_rtSlot + 1);
+	if (HasOption(argc, argv, L"rtcounters"))
+		SetRel32(g_rtCountersRefs[1], g_rtCounters + 1);
+	if (HasOption(argc, argv, L"rtextra"))
+		g_rtExtra[0] = 0x48;
+	if (HasOption(argc, argv, L"rtjumphooked"))
+		SetRel32(g_rtJumps[0], ImageEnd() + 0xA0000);
+	if (HasOption(argc, argv, L"rtmade"))
+		*g_rtObject = 0x0000BAD0B1EC7000ull;
+	for (size_t i = 0; i < 5; i++)
+		for (size_t at = 0; at < g_rtSites[i].size && at < sizeof(g_rtPlaced[i]); at++)
+			g_rtPlaced[i][at] = g_rtSites[i].bytes[at];
+}
+
+// Once TweaksV has started, as the game's renderer and its frames would: the buffer made through the set-up - unless "rtmade" made it
+// already, or the call leads elsewhere - and the counters as a frame leaves them; then, as asked, the checks and the frames.
+static wchar_t g_rtChecks[160] = L"";
+static void RtActions(int argc, wchar_t** argv)
+{
+	if (!HasOption(argc, argv, L"rtmade") && Rel32Target(g_rtMakerCall) == reinterpret_cast<const unsigned char*>(&RtBufferMaker))
+		reinterpret_cast<void (*)()>(const_cast<unsigned char*>(g_rtSetUp))();
+	uint32_t* const counters = g_rtCounters;
+	counters[1] = kRtFinished;	// the last finished frame, slot 1's
+	counters[0] = kRtUnderWay;	// the frame under way, slot 0's
+	const bool run = wcscmp(RtJumpWhere(0), L"elsewhere") != 0 && wcscmp(RtJumpWhere(1), L"elsewhere") != 0;
+	if (HasOption(argc, argv, L"rtcheck") && run)
+	{
+		RtRun took = { g_rtRopes, true, 1, kRtTaken, 0, 0, 0, 0 };	// 100 vertices fit: the counter at 4000100
+		RtRunChecks(&took);
+		RtRun runs[3] = { { g_rtGeometry, false, 600, kRtRefused, 0, 0, 0, 0 }, { g_rtGeometry, false, 600, kRtRefused, 0, 0, 0, 0 },
+			{ g_rtRopes, true, 10, kRtRefused, 0, 0, 0, 0 } };
+		HANDLE threads[2] = {};
+		DWORD started = 0;
+		for (size_t i = 0; i < 2; i++)
+			if (const HANDLE thread = CreateThread(nullptr, 0, RtRunChecks, &runs[i], 0, nullptr))
+				threads[started++] = thread;
+			else
+				RtRunChecks(&runs[i]);
+		if (started)
+			WaitForMultipleObjects(started, threads, TRUE, INFINITE);
+		for (DWORD i = 0; i < started; i++)
+			CloseHandle(threads[i]);
+		RtRunChecks(&runs[2]);
+		const int refused = runs[0].refused + runs[1].refused + runs[2].refused;
+		swprintf(g_rtChecks, sizeof(g_rtChecks) / sizeof(g_rtChecks[0]), L", checks took %d, refused %d (%llu vertices, %d ropes), registers kept %d of %d",
+			took.took + runs[0].took + runs[1].took + runs[2].took, refused, static_cast<unsigned long long>(runs[0].vertices + runs[1].vertices + runs[2].vertices),
+			runs[2].refused, runs[0].kept + runs[1].kept + runs[2].kept, refused);
+	}
+	if (HasOption(argc, argv, L"rtgrow"))
+	{
+		const size_t size = sizeof(g_rtChecks) / sizeof(g_rtChecks[0]);
+		if (!RtWaitFor("DIAGNOSTIC: ray tracing buffer of moving geometry, ", 25000))
+		{
+			swprintf(g_rtChecks, size, L", nothing grown: no first summary");
+			return;
+		}
+		counters[1] = kRtGrown;
+		RtWaitFor("at most 3987120 so far", 10000);
+		counters[0] = kRtFlipped;	// the frame flips to slot 1: slot 0's frame is the finished one
+		counters[1] = 50;
+		*g_rtSlot = 1;
+		RtWaitFor("at most 4100000 so far", 10000);
+		swprintf(g_rtChecks, size, L", grown and flipped after the first summary");
+	}
+}
+
+// "rt buffer: made with 4194304 vertices (stride word 0x7014), 1 maker call, flags 0x89, view 1, r9 0 | rt sites: as placed, count
+// 4194304, checks 4194304 and 4194304, jumps to the game and the game | rt rvas: set-up 0x..., ... | " - the buffer as made, the sites
+// but the five fields TweaksV may write as placed, those fields, and where the sites and the data lie, for the suite to compare with
+// the log's lines.
+static void RtReport()
+{
+	const RtBufferObject& buffer = *g_rtBuffer;
+	if (g_rtMakerCalls)
+		wprintf(L"rt buffer: made with %u vertices (stride word 0x%04X), %ld maker call%ls, flags 0x%X, view %u, r9 %u%ls | ", buffer.count,
+			static_cast<unsigned>(buffer.stride),
+			g_rtMakerCalls, g_rtMakerCalls == 1 ? L"" : L"s", g_rtMakerFlags, g_rtMakerView, g_rtMakerZero, g_rtChecks);
+	else
+		wprintf(L"rt buffer: not made%ls | ", g_rtChecks);
+	const size_t mayWrite[5][2] = { { 13, 0 }, { 86, 92 }, { 83, 89 }, { 0, 0 }, { 0, 0 } };	// the fields TweaksV may write, 4 bytes each
+	bool placed = true;
+	for (size_t i = 0; i < 5; i++)
+		for (size_t at = 0; at < g_rtSites[i].size && at < sizeof(g_rtPlaced[i]); at++)
+		{
+			const bool field = (mayWrite[i][0] && at - mayWrite[i][0] < 4) || (mayWrite[i][1] && at - mayWrite[i][1] < 4);
+			if (!field && g_rtSites[i].bytes[at] != g_rtPlaced[i][at])
+				placed = false;
+		}
+	const auto rva = [](const volatile void* p) {
+		return static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(const_cast<const void*>(p)) - reinterpret_cast<uintptr_t>(ImageBase()));
+	};
+	wprintf(L"rt sites: %ls, count %u, checks %u and %u, jumps to %ls and %ls | rt rvas: set-up 0x%llX, maker 0x%llX, object 0x%llX, geometry 0x%llX, "
+		L"ropes 0x%llX, slot 0x%llX, counters 0x%llX, reset 0x%llX | ", placed ? L"as placed" : L"CHANGED", Imm32(g_rtCountSite), Imm32(g_rtCapacities[0]),
+		Imm32(g_rtCapacities[1]), RtJumpWhere(0), RtJumpWhere(1), rva(g_rtSetUp), rva(reinterpret_cast<const void*>(&RtBufferMaker)), rva(g_rtObject),
+		rva(g_rtGeometry), rva(g_rtRopes), rva(g_rtSlot), rva(g_rtCounters), rva(g_rtReset));
+}
 
 // The game's two tree searches behind the box streamer's four calls: the first and the third call lead
 // to the first search, the second and the fourth to the second. Each writes the number of entries the
@@ -3178,6 +3505,7 @@ static void ForEachSite(void (*fn)(const Site&))
 	// [static bounds]
 	// [legacy packs]
 	// [rt buffer]
+	for (const Site& site : g_rtSites) fn(site);
 }
 
 static void MakeSitesReadExecute()
@@ -4654,6 +4982,8 @@ int wmain(int argc, wchar_t** argv)
 	// [legacy packs]
 	LpSetup(argc, argv);	// the Legacy packs check's archives, before TweaksV starts
 	// [rt buffer]
+	// The ray tracing buffer: the set-up's call to the maker, the checks' slot and counters, the reset's lea - as the options ask
+	RtSetUp(argc, argv);
 
 	RovSetup(argc, argv);
 	ForEachSite(TouchSite);
@@ -4771,6 +5101,8 @@ int wmain(int argc, wchar_t** argv)
 	// [legacy packs]
 	LpWait(argc, argv);
 	// [rt buffer]
+	// The ray tracing buffer: the game's renderer makes it and its frames take ranges of it - as the options ask, the checks run
+	RtActions(argc, argv);
 	if (HasOption(argc, argv, L"wait"))
 		Sleep(11000);	// TweaksV's UNLOCK_FILES summary comes 10 s after the first open it counts, the OpenFile summary 10 s
 						// after the first OpenFile, the interface check 10 s after the request
@@ -4858,6 +5190,7 @@ int wmain(int argc, wchar_t** argv)
 	// [legacy packs]
 	LpReport();
 	// [rt buffer]
+	RtReport();
 	CheckStub(Rel32Target(g_packCallSite));
 	CheckStub(Rel32Target(g_scriptCallSite));
 	for (const Site& site : g_boxCalls)
