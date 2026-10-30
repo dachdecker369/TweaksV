@@ -68,6 +68,12 @@ TweaksV's own part; the design comes from rootBrz's [Blip Limit Fix](https://git
 
 <!-- [weapon infos] -->
 
+**Weapon infos:** `WEAPON_INFO_FILES` under `[WEAPON_LIMITS]` (default 1024, 160 to 16384) is how many `weapons.meta` files the game can load. It reads each one - add-on weapons bring one each as a rule, packed on their own - into one entry of an array that has room for 160 on 1.0.1158.16, of which the base game alone fills 155, and never checks that room: a file past it is written into memory the array does not own, and the game crashes while loading or later. TweaksV gives the array the room you set before the game sets it up - 1024 take about 254 KB of the game's memory - and says so in the log: `The weapon info blob limit is raised from 160 to 1024 weapons.meta files.` It guards that room as well (`The weapon info blob limit is guarded: ...`): a `weapons.meta` file past it is not loaded at all, instead of being written past the array's end, and ten seconds after the first such file a message box names it and how many more were left out - raise `WEAPON_INFO_FILES` then and start the game again. The weapons of a file left out are missing from the game; what it does with the rest of their pack I have yet to test. Where another mod has raised the limit to your value or more already, TweaksV leaves it as it is (`The weapon info blob limit is 2048 already (WEAPON_INFO_FILES=1024) - nothing to patch.`) and guards that room.
+
+With `DIAGNOSTIC_MODE=1` the log has a line for each `weapons.meta` file the game loads, written before it loads it - so the file that ended a game shows - and, 10 seconds in and then every minute while it changes, how many it has loaded against the room: `N weapons.meta files loaded (the game's own array holds 160, this one 1024)`, the second number the room the array really got, with ` - the game's own array would have overflowed by M of them` once your load passes the game's own 160, and how many files the guard has refused.
+
+TweaksV's own code; the idea comes from alexguirre's [Weapon Limits Adjuster](https://github.com/alexguirre/gtav-WeaponLimitsAdjuster), its MIT half, of which one file was read and none of it used ([CREDITS.md](CREDITS.md)).
+
 <!-- [weapon components] -->
 
 ### PedProps
@@ -89,8 +95,6 @@ TweaksV's own part; the design comes from rootBrz's [Blip Limit Fix](https://git
 Four parts to come ([ROADMAP.md](ROADMAP.md)) lift seven more limits of the game: the number of `weapons.meta` files and of weapon components, the siren setting IDs and the sirens per vehicle, the props per anchor of a ped, and the video memory budget for streamed textures and the memory the game streams the world into. A part goes in only once a mod load reaches its limit, so these limits are measured first: with `DIAGNOSTIC_MODE=1`, TweaksV finds the places in the game's code each limit lies in, checks them as the part will, and logs how close the game and your mods come to the limit - 10 seconds in and then every minute while the numbers change. The measurements change nothing in the game - but the siren count's, which has the game's call that draws a vehicle's sirens pass through TweaksV, to look at each vehicle model's siren bones once - and they have no section in `TweaksV.ini` yet; without `DIAGNOSTIC_MODE`, nothing of them runs. What each one's lines tell you:
 
 <!-- [weapon infos] -->
-
-**Weapon infos** (WeaponLimits): the game reads each `weapons.meta` file - add-on weapons bring one each as a rule, packed on their own - into one entry of an array with room for 160 on 1.0.1158.16, and the game never checks that room: a file past it is written into memory the array does not own, and the game crashes while loading or later. The log says, 10 seconds in and then every minute while it changes, how many `weapons.meta` files the game has loaded against that room - `N weapons.meta files loaded (the game's own array holds 160, this one 160)`, the first number the room the game's code gives, the second the room the array really got - so the room left below 160 is how many more weapon files your game takes. At 160 the line adds that the array is full and the next file would be written past its end; past it, that the game's memory is already damaged.
 
 <!-- [weapon components] -->
 
