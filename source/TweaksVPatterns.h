@@ -196,11 +196,11 @@ namespace TweaksV
 		{ "I-E-B4", "41 57 41 56 41 55 41 54 56 57 53 48 83 EC 20 66 83 79 5E 00" },
 
 		// [ped props]
-		// PedProps (TweaksVPedProps.cpp): the eleven narrowings to 8 bits the part will widen - an anchor's total in the
-		// check the set-prop native asks (T1) and in the helmet code after its four calls of the per-anchor count
-		// (T2..T5), a worn prop's index before the metadata lookup (G1, which matches 2 times, G3..G6) - then, for the
-		// measurement, the per-anchor count's start (C1) and its loop (C2), which pin the variation data's layout, and
-		// the model info store's lookup followed by a ped's type (S1)
+		// PedProps (TweaksVPedProps.cpp): the eleven narrowings to 8 bits the part widens - an anchor's total in the check
+		// the set-prop native asks (T1) and in the helmet code after its four calls of the per-anchor count (T2..T5), a
+		// worn prop's index before the metadata lookup (G1, which matches 2 times, G3..G6) - and the per-anchor count's
+		// start (C1), where T2..T5's calls lead; then, for the measurement, the count's loop (C2), which with C1 pins the
+		// variation data's layout, and the model info store's lookup followed by a ped's type (S1)
 		{ "A-E-T1", "0F B6 C3 44 39 C0 7E ? E8 ? ? ? ? 0F B6 C0 44 39 F0 0F 9F C0" },
 		{ "A-E-T2", "48 8B 0E 31 D2 E8 ? ? ? ? 0F B6 C0 39 C5 0F 4C C5 83 FD FF" },
 		{ "A-E-T3", "48 8B 09 31 D2 E8 ? ? ? ? 0F B6 C0 39 C7 0F 4C C7 83 FF FF" },

@@ -1,31 +1,37 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// TweaksV - the props per anchor of a ped model, measured first (see TweaksVPedProps.h).
+// TweaksV - the PedProps part: the props per anchor of a ped model (see TweaksVPedProps.h).
 //
 // A ped model's props - hats, glasses, watches - hang on 13 anchors (0 is the head's) and come in variation files,
 // the model's own and one per clothing pack. The game counts an anchor's props over all of a model's files in 32
 // bits, but narrows that total to 8 bits where it checks a prop - in the check the set-prop native asks (A-E-T1)
 // and in the helmet code (A-E-T2..T5) - and narrows a worn prop's index to 8 bits before it looks up the prop's
 // metadata (A-E-G1, twice, and A-E-G3..G6). So from 256 props on one anchor, all files together, the game refuses
-// the props from (total mod 256) on and takes a worn prop past 255 for another one. The PedProps part to come will
-// widen those eleven narrowings from 8 to 16 bits; it goes in only once a mod load reaches the limit, so the limit
-// is measured first (SPECIFICATIONS.md 11.14):
-//   DIAGNOSTIC_MODE  the one switch: the table of the parts measured first starts the module only with it on.
-//                    Every pattern is found as often as it must match and every site checked as the part will
-//                    check it - each narrowing a movzx of 8 bits, T1's call into the game (the texture count),
-//                    T2..T5's to the per-anchor count whose start A-E-C1 matches, the calls after G1 and G3..G6
-//                    all to one function, the metadata lookup - and the complete sets: the game must call the
-//                    per-anchor count exactly 7 times and the metadata lookup exactly 17 times, so that a caller
-//                    an update adds, which would narrow again, shows. Every site is logged. Then the measurement:
-//                    10 seconds in and then every minute while the numbers change, every ped model of the model
-//                    info store (A-E-S1), its variation files and their props per anchor (the layout A-E-C1 and
-//                    A-E-C2 pin), the most props on one anchor, and a line for every anchor whose total is past
-//                    255 and every file that holds more than 255 on one anchor.
-// It writes nothing to the game and hooks nothing. The game adds variation files while it loads its packs, so the
-// measurement reads its heap through CopyMemorySafely, within bounds of its own, without a lock. A pattern not
-// found, a site not as expected, an address outside the game or a thread that cannot start is logged, not reported
-// - an aid (NOTES.md, T-DIAG) - and nothing more is measured. DRY_RUN changes nothing here.
-// Written for TweaksV from the research's own findings in the game's code (PATTERNS.md, "PedProps"); no code of
-// anyone's was read. The part's idea, and its credit, come with its writing half (ROADMAP.md).
+// the props from (total mod 256) on, the helmet code drops or clamps a head prop past it, and a worn prop past 255
+// is taken for another one. The part widens those eleven narrowings from 8 to 16 bits: each movzx r32, r/m8
+// (0F B6) becomes movzx r32, r/m16 (0F B7), the same length and the same registers, so that an anchor holds up to
+// 65535 props in all. Each narrowed register holds the whole value, so below 256 the widened reads give exactly
+// what the game's own give (PATTERNS.md, "PedProps").
+//   ENABLED          [PEDPROPS]'s only key: no size to choose, the width is fixed
+//   DIAGNOSTIC_MODE  every site and every write logged, then the measurement: 10 seconds in and then every minute
+//                    while the numbers change, every ped model of the model info store (A-E-S1), its variation
+//                    files and their props per anchor (the layout A-E-C1 and A-E-C2 pin), the most props on one
+//                    anchor, and a line for every anchor whose total is past 255 and every file that holds more
+//                    than 255 on one anchor - whether a load needs the part at all
+// Everything is found and checked before the one write: every pattern as often as it must match, each narrowing a
+// movzx of 8 bits (its pattern pins it), T1's call into the game (the texture count), T2..T5's to the per-anchor
+// count whose start A-E-C1 matches, the calls after G1 and G3..G6 all to one function, the metadata lookup; and the
+// complete sets: the game must call the per-anchor count exactly 7 times and the metadata lookup exactly 17 times,
+// so that a caller a game update adds, which would narrow again, refuses the job. A narrowing another mod has
+// widened already - its pattern no longer matches, its widened twin does - refuses the job too. Left as they are:
+// G7, the random props' builder, whose list keeps an index in a byte by its own format, and the 41 narrowings of
+// one file's count, a file holding 255 props on an anchor at most by its own data. The measurement reads the
+// game's heap through CopyMemorySafely, within bounds of its own, without a lock, since the game adds variation
+// files while it loads its packs; it is an aid: a site of its own not as expected, an address outside the game or
+// a thread that cannot start is logged, not reported (NOTES.md, T-DIAG), and it runs whether the part's job is
+// done or not.
+// Written for TweaksV from the research's own findings in the game's code (PATTERNS.md, "PedProps"); the idea comes
+// from PedProp Limit Adjuster by Zombieguy and from FiveM's pull request 2421 by Disquse - none of their code was
+// read or used.
 
 #include "TweaksVPedProps.h"
 
@@ -36,6 +42,7 @@
 #include <cstring>
 #include <iterator>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "TweaksVConflicts.h"
@@ -45,6 +52,8 @@
 #include "TweaksVPatterns.h"
 #include "TweaksVScanner.h"
 #include "TweaksVScripts.h"
+#include "TweaksVSettings.h"
+#include "TweaksVSummary.h"
 
 namespace TweaksV
 {
@@ -52,11 +61,16 @@ namespace TweaksV
 	{
 		constexpr const char* kTag = "PedProps";
 
-		// ---- the eleven narrowings the part will widen, and the calls around them (PATTERNS.md, "PedProps")
+		// ---- the eleven narrowings the part widens, and the calls around them (PATTERNS.md, "PedProps")
 
-		constexpr int kMovzx8 = 0xB6;		// 0F B6, movzx r32, r/m8 - the part will make it 0F B7, movzx r32, r/m16
+		constexpr int kMovzx8 = 0xB6;		// 0F B6, movzx r32, r/m8
+		constexpr int kMovzx16 = 0xB7;		// 0F B7, movzx r32, r/m16 - what the part makes of it
 		constexpr int kCallOpcode = 0xE8;	// call rel32
 		constexpr size_t kCallSize = 5;
+		constexpr uint32_t kGameLimit = 255;		// the props on one anchor the game's 8-bit checks take whole; one variation
+													// file holds at most this many on an anchor, its metadata keeping a prop's
+													// index in a byte
+		constexpr uint32_t kRaisedLimit = 65535;	// the most the widened 16-bit reads take whole
 
 		enum class Callee { TextureCount, PerAnchorCount, MetadataLookup };	// where a narrowing's call leads
 
@@ -101,10 +115,23 @@ namespace TweaksV
 			{ &Pattern("A-E-G6"), 1, 5, 4, kIndex, 22, Callee::MetadataLookup },	// for six lookups, the first at +22
 		};
 
+		// Where a pattern's byte at index begins in its text: the bytes one space apart, a ? one character.
+		constexpr size_t TextOffset(std::string_view text, size_t index)
+		{
+			size_t at = 0;
+			for (size_t i = 0; i < index && at < text.size(); i++)
+			{
+				const size_t space = text.find(' ', at);
+				at = space == std::string_view::npos ? text.size() : space + 1;
+			}
+			return at;
+		}
+
 		// Each narrowing as the table says, against its pattern's bytes, when TweaksV is compiled: 0F B6 - which the
-		// pattern pins, so that a match is the check the part will make - with a REX prefix where it is 4 bytes long,
-		// its ModRM a register (mod 11) that is never AH..BH, whose 16-bit form would be another register, so that the
-		// part's 16-bit read takes the low 16 bits of the register the game narrows; and an E8 where its call is.
+		// pattern pins, so that a match is the instruction the part widens, and "B6" in its text, which the widened
+		// twin replaces - with a REX prefix where it is 4 bytes long, its ModRM a register (mod 11) that is never
+		// AH..BH, whose 16-bit form would be another register, so that the widened read takes the low 16 bits of the
+		// register the game narrows; and an E8 where its call is.
 		consteval bool NarrowingsArePinned()
 		{
 			for (const Narrowing& site : kNarrowings)
@@ -117,6 +144,8 @@ namespace TweaksV
 					return false;
 				if (PatternByte(*site.pattern, opcode) != 0x0F || PatternByte(*site.pattern, opcode + 1) != kMovzx8)
 					return false;
+				if (std::string_view(site.pattern->text).substr(TextOffset(site.pattern->text, opcode + 1), 3) != "B6 ")
+					return false;
 				const int modrm = PatternByte(*site.pattern, opcode + 2);
 				if (modrm < 0 || (modrm & 0xC0) != 0xC0 || (!rex && (modrm & 7) >= 4))
 					return false;
@@ -126,6 +155,17 @@ namespace TweaksV
 			return true;
 		}
 		static_assert(NarrowingsArePinned(), "TweaksV: each ped props narrowing and its call must be where its pattern pins them");
+
+		// The sites the part writes: every match of every narrowing.
+		consteval size_t SiteCount()
+		{
+			size_t sites = 0;
+			for (const Narrowing& site : kNarrowings)
+				sites += site.matches;
+			return sites;
+		}
+		constexpr size_t kSites = SiteCount();
+		static_assert(kSites == 11, "TweaksV: the part widens eleven narrowings");
 
 		// The complete sets: how often the game calls each of the two functions (PATTERNS.md, "PedProps").
 		constexpr size_t kPerAnchorCountCalls = 7;		// the helmet code's: four narrowed (A-E-T2..T5), three unused
@@ -196,16 +236,13 @@ namespace TweaksV
 			PatternByte(kStorePattern, 37) == 0x8B && PatternByte(kStorePattern, 38) == 0x0D && PatternDword(kStorePattern, 55) == 0x05AF0F48,
 			"TweaksV: A-E-S1 holds the four instructions that reference the model info store, each ending in its disp32");
 
-		// The bounds a pass reads within (SPECIFICATIONS.md 11.14.5): the store's count, its stride, and the files and
+		// The bounds a pass reads within (SPECIFICATIONS.md 11.11): the store's count, its stride, and the files and
 		// anchor entries one pass may read - far above any load, so that data the pass misreads cannot keep it busy.
 		// A collection's files and a file's anchors are words, at most 65535 each.
 		constexpr int32_t kMaxModels = 1000000;
 		constexpr uint64_t kMinStride = 8;
 		constexpr uint64_t kMaxStride = 4096;
 		constexpr uint64_t kMaxReadsPerPass = 4000000;
-		constexpr uint32_t kGameLimit = 255;		// the props on one anchor the game's 8-bit checks take whole; one variation
-													// file holds at most this many on an anchor, its metadata keeping a prop's
-													// index in a byte
 
 		// The two models the summary names; every other one by its hash - the release game holds no model names. A
 		// model's hash is the game's hash of its name, as a script's is.
@@ -217,6 +254,7 @@ namespace TweaksV
 		const volatile uint64_t* g_storeBitmap = nullptr;	// the global that holds the bitmap's pointer
 		const volatile uint64_t* g_storeArray = nullptr;	// the global that holds the array's pointer
 		const volatile uint64_t* g_storeStride = nullptr;
+		bool g_raised = false;								// the eleven narrowings widened this session
 
 		// ---- the measurement: the model info store walked, every ped model's props per anchor
 
@@ -512,16 +550,25 @@ namespace TweaksV
 			return hash == UINT64_MAX ? 0 : hash;	// UINT64_MAX is the measurement loop's "no summary yet"
 		}
 
+		// An anchor past 255 says what the game makes of it this session: with the narrowings widened its props are
+		// taken whole up to 65535, past that from (total mod 65536) on refused; without, from (total mod 256) on.
 		void LogItem(const Item& item)
 		{
 			std::string line = "DIAGNOSTIC: ped props: " + ModelName(item.model) + ", anchor " + std::to_string(item.anchor) + ": ";
-			if (item.file == 0)
-				line += Count(item.props, "prop", "props") + " from " + Count(item.files, "file", "files") + " - past the game's own limit of " +
-					std::to_string(kGameLimit) + ": the game's own checks refuse its props from index " + std::to_string(item.props % (kGameLimit + 1)) + " on.";
-			else
+			if (item.file != 0)
 				line += "its file " + std::to_string(item.file) + " of " + std::to_string(item.files) + " holds " + std::to_string(item.props) +
 					" props - a file holds " + std::to_string(kGameLimit) + " at most, its props past " + std::to_string(kGameLimit) +
 					" stay unusable with or without TweaksV.";
+			else if (!g_raised)
+				line += Count(item.props, "prop", "props") + " from " + Count(item.files, "file", "files") + " - past the game's own limit of " +
+					std::to_string(kGameLimit) + ": the game's own checks refuse its props from index " + std::to_string(item.props % (kGameLimit + 1)) + " on.";
+			else if (item.props <= kRaisedLimit)
+				line += Count(item.props, "prop", "props") + " from " + Count(item.files, "file", "files") + " - past the game's own limit of " +
+					std::to_string(kGameLimit) + ", raised to " + std::to_string(kRaisedLimit) + " this session.";
+			else
+				line += Count(item.props, "prop", "props") + " from " + Count(item.files, "file", "files") + " - past the limit of " +
+					std::to_string(kRaisedLimit) + " it is raised to this session: the game's own checks refuse its props from index " +
+					std::to_string(item.props % (kRaisedLimit + 1)) + " on.";
 			WriteLog(kTag, line);
 		}
 
@@ -585,6 +632,12 @@ namespace TweaksV
 		// The first summary 10 seconds in, then one a minute while the numbers change.
 		constexpr Measurement kMeasurement = { "ped props summary", kFirstSummaryMs, &Numbers, &LogSummary };
 
+		// "The ped props' limit is not raised this session: <why>" - for the start-up summary; the game stays as it is
+		void Fail(const std::string& why)
+		{
+			ReportFailure(kTag, "The ped props' limit is not raised this session: " + why);
+		}
+
 		// "DIAGNOSTIC: the ped props are not measured: <why>" - logged, not reported: an aid (NOTES.md, T-DIAG)
 		void NotMeasured(const std::string& why)
 		{
@@ -597,151 +650,228 @@ namespace TweaksV
 			return std::to_string(found) + (found > expected ? " or more" : "") + (found == 1 ? " time" : " times") + ", not the expected " +
 				std::to_string(expected) + ".";
 		}
-	}
 
-	void MeasurePedProps()
-	{
-		// 1. the thirteen patterns, each as often as it must match: every one is looked for, so that the log names
-		// each one missing, and the first problem in the table's order is the reason
-		std::vector<uint8_t*> found[std::size(kNarrowings)];
-		std::string problem;
-		for (size_t i = 0; i < std::size(kNarrowings); i++)
+		// A narrowing whose pattern the game holds too seldom: widened already by another mod? Its widened twin - the
+		// pattern's text with the narrowing's B6 made B7, looked for as "<label> (widened)" - names such a site, and the
+		// job is refused, since what another mod changed TweaksV does not change again; "" when the twin is not there
+		// either.
+		std::string WidenedAlready(const Narrowing& site)
 		{
-			const Narrowing& site = kNarrowings[i];
-			const std::string label = site.pattern->label;
-			if (site.matches == 1)
+			const size_t index = site.at + site.length - 2;	// the B6, which NarrowingsArePinned holds as "B6" in the text
+			std::string text = site.pattern->text;
+			text.replace(TextOffset(text, index), 2, "B7");
+			const std::string label = std::string(site.pattern->label) + " (widened)";
+			const std::vector<uint8_t*> widened = Scanner::FindAll({ label.c_str(), text.c_str() }, 1);
+			if (widened.empty())
+				return {};
+			const uint8_t* const movzx = widened[0] + site.at;
+			std::vector<uint8_t> narrowed(movzx, movzx + site.length);	// what the game's own holds there
+			narrowed[site.length - 2] = static_cast<uint8_t>(kMovzx8);
+			return "the narrowing at " + DescribeAddress(movzx) + " holds " + HexBytes(movzx, site.length) + ", not " +
+				HexBytes(narrowed.data(), narrowed.size()) + " (another mod may have widened it already) (" + site.pattern->label + ").";
+		}
+
+		// The measurement's sites - the layout A-E-C1 and A-E-C2 pin, checked when TweaksV is compiled, and the model info
+		// store's four globals, each inside the game - and the measurement, on a thread of its own. perAnchorCount is
+		// A-E-C1's match, which the part found, or nullptr.
+		void Measure(const uint8_t* perAnchorCount)
+		{
+			// both patterns of its own are looked for, so that the log names each one missing; the first problem in
+			// the order A-E-C1, A-E-C2, A-E-S1 is the reason
+			const uint8_t* const loop = Scanner::Find(kLoopPattern);
+			const uint8_t* const store = Scanner::Find(kStorePattern);
+			const GamePattern* const layout[] = { &kCountPattern, &kLoopPattern, &kStorePattern };
+			const uint8_t* const layoutMatch[] = { perAnchorCount, loop, store };
+			for (size_t i = 0; i < std::size(layout); i++)
+				if (!layoutMatch[i])
+				{
+					NotMeasured(std::string(layout[i]->label) + " was not found.");
+					return;
+				}
+
+			WriteLog(kTag, "DIAGNOSTIC: per-anchor count at " + DescribeAddress(perAnchorCount) + ": a model info's variation collection at +" +
+				Hex(kCollectionOffset) + ", its count of variation files at +" + Hex(kFileCountOffset) + " (" + kCountPattern.label + ")");
+			WriteLog(kTag, "DIAGNOSTIC: its loop at " + DescribeAddress(loop) + ": a variation file's anchors at +" + Hex(kAnchorsOffset) + ", their count at +" +
+				Hex(kAnchorCountOffset) + ", entries of " + Hex(kAnchorEntrySize) + " bytes, an entry's props at +" + Hex(kPropCountOffset) + " (" +
+				kLoopPattern.label + ")");
+			const uint8_t* globals[std::size(kStoreGlobals)] = {};
+			std::string line = "DIAGNOSTIC: model info store at " + DescribeAddress(store) + ":";
+			for (size_t i = 0; i < std::size(kStoreGlobals); i++)
 			{
-				if (uint8_t* const match = Scanner::Find(*site.pattern))
-					found[i].push_back(match);
+				const StoreGlobal& global = kStoreGlobals[i];
+				globals[i] = Rel32Target(store + global.at);
+				if (!IsInsideGameImage(globals[i]) || !IsInsideGameImage(globals[i] + global.size - 1))
+				{
+					NotMeasured("the model info store's " + std::string(global.name) + " at " + DescribeAddress(globals[i]) + " (" + kStorePattern.label +
+						") is not inside the game.");
+					return;
+				}
+				if (!IsReadable(globals[i], global.size))
+				{
+					NotMeasured("the model info store's " + std::string(global.name) + " at " + DescribeAddress(globals[i]) + " (" + kStorePattern.label +
+						") cannot be read.");
+					return;
+				}
+				line += std::string(i ? ", its " : " its ") + global.name + " at " + DescribeAddress(globals[i]);
 			}
-			else
-				found[i] = Scanner::FindAll(*site.pattern, site.matches + 1);	// a match more shows
-			if (found[i].size() != site.matches && problem.empty())
-				problem = found[i].empty() ? label + " was not found." : "the game code holds " + label + " " + Times(found[i].size(), site.matches);
-		}
-		const uint8_t* const perAnchorCount = Scanner::Find(kCountPattern);
-		const uint8_t* const loop = Scanner::Find(kLoopPattern);
-		const uint8_t* const store = Scanner::Find(kStorePattern);
-		const GamePattern* const layout[] = { &kCountPattern, &kLoopPattern, &kStorePattern };
-		const uint8_t* const layoutMatch[] = { perAnchorCount, loop, store };
-		for (size_t i = 0; i < std::size(layout) && problem.empty(); i++)
-			if (!layoutMatch[i])
-				problem = std::string(layout[i]->label) + " was not found.";
-		if (!problem.empty())
-		{
-			NotMeasured(problem);
-			return;
+			WriteLog(kTag, line + "; a model info's type in the low 5 bits of +" + Hex(kTypeOffset) + ", " + std::to_string(kPedType) + " for a ped (" +
+				kStorePattern.label + ")");
+			g_storeCount = reinterpret_cast<const volatile int32_t*>(globals[kStoreCount]);
+			g_storeBitmap = reinterpret_cast<const volatile uint64_t*>(globals[kStoreBitmap]);
+			g_storeArray = reinterpret_cast<const volatile uint64_t*>(globals[kStoreArray]);
+			g_storeStride = reinterpret_cast<const volatile uint64_t*>(globals[kStoreStride]);
+
+			WriteLog(kTag, "DIAGNOSTIC: the model info store at " + DescribeAddress(globals[kStoreArray]) + " (" + kStorePattern.label + "): the props per "
+				"anchor of its ped models are logged after 10 seconds, then every minute while they change.");
+			StartMeasurement<kMeasurement>();	// one that cannot start is logged
 		}
 
-		// 2. every narrowing - 0F B6, pinned by its pattern - and the call in its match: T1's into the game, the texture
-		// count; T2..T5's to the per-anchor count, whose start A-E-C1 matches; the ones after G1 and G3..G6 all to one
-		// function, the metadata lookup
-		const uint8_t* lookup = nullptr;
-		for (size_t i = 0; i < std::size(kNarrowings); i++)
+		// The part's job: every site found and checked, then the eleven widened in one write. perAnchorCount gets A-E-C1's
+		// match, for the measurement, as soon as it is found.
+		void Widen(const uint8_t*& perAnchorCount)
 		{
-			const Narrowing& site = kNarrowings[i];
-			const std::string label = site.pattern->label;
-			for (const uint8_t* const match : found[i])
+			const bool diagnostic = IsDiagnosticMode();
+
+			// 1. the ten patterns of the narrowings, each as often as it must match, and the per-anchor count's start:
+			// every one is looked for, so that the log names each one missing, and the first problem in the table's order
+			// is the reason - for a narrowing the game holds too seldom, its widened twin if another mod has widened it
+			std::vector<uint8_t*> found[std::size(kNarrowings)];
+			std::string problem;
+			for (size_t i = 0; i < std::size(kNarrowings); i++)
 			{
-				const uint8_t* const movzx = match + site.at;
-				WriteLog(kTag, "DIAGNOSTIC: narrowing at " + DescribeAddress(movzx) + " holds " + HexBytes(movzx, site.length) + " (" + site.narrows +
-					", " + label + ")");
-				const uint8_t* const call = match + site.call;
-				const uint8_t* const target = IsReadable(call, kCallSize) ? CallTarget(call) : nullptr;	// its rel32 can lie past the match
-				const std::string name = CalleeName(site.callee);
-				WriteLog(kTag, "DIAGNOSTIC: " + name + " call at " + DescribeAddress(call) + " -> " + (target ? DescribeAddress(target) :
-					std::string("not a call")) + " (" + label + ")");
-				if (!target || !IsInsideGameImage(target))
+				const Narrowing& site = kNarrowings[i];
+				const std::string label = site.pattern->label;
+				if (site.matches == 1)
 				{
-					NotMeasured("the " + name + " call at " + DescribeAddress(call) + " is not a call into the game (another mod may have hooked it "
-						"already) (" + label + ").");
-					return;
+					if (uint8_t* const match = Scanner::Find(*site.pattern))
+						found[i].push_back(match);
 				}
-				if (site.callee == Callee::PerAnchorCount && target != perAnchorCount)
+				else
+					found[i] = Scanner::FindAll(*site.pattern, site.matches + 1);	// a match more shows
+				if (found[i].size() == site.matches || !problem.empty())
+					continue;
+				if (found[i].size() < site.matches)
+					problem = WidenedAlready(site);
+				if (problem.empty())
+					problem = found[i].empty() ? label + " was not found." : "the game code holds " + label + " " + Times(found[i].size(), site.matches);
+			}
+			perAnchorCount = Scanner::Find(kCountPattern);
+			if (!perAnchorCount && problem.empty())
+				problem = std::string(kCountPattern.label) + " was not found.";
+			if (!problem.empty())
+			{
+				Fail(problem);
+				return;
+			}
+
+			// 2. every narrowing - 0F B6, pinned by its pattern - and the call in its match: T1's into the game, the texture
+			// count; T2..T5's to the per-anchor count's start; the ones after G1 and G3..G6 all to one function, the metadata
+			// lookup. Each narrowing's write is made here: the movzx as it is, B6 made B7.
+			std::vector<CodeWrite> writes;
+			writes.reserve(kSites);
+			const uint8_t* lookup = nullptr;
+			for (size_t i = 0; i < std::size(kNarrowings); i++)
+			{
+				const Narrowing& site = kNarrowings[i];
+				const std::string label = site.pattern->label;
+				for (uint8_t* const match : found[i])
 				{
-					NotMeasured("the per-anchor count call at " + DescribeAddress(call) + " leads to " + DescribeAddress(target) + ", not to the "
-						"per-anchor count at " + DescribeAddress(perAnchorCount) + " (" + kCountPattern.label + ") (" + label + ").");
-					return;
-				}
-				if (site.callee == Callee::MetadataLookup)
-				{
-					if (!lookup)
-						lookup = target;
-					else if (target != lookup)
+					uint8_t* const movzx = match + site.at;
+					if (diagnostic)
+						WriteLog(kTag, "DIAGNOSTIC: narrowing at " + DescribeAddress(movzx) + " holds " + HexBytes(movzx, site.length) + " (" + site.narrows +
+							", " + label + ")");
+					const uint8_t* const call = match + site.call;
+					const uint8_t* const target = IsReadable(call, kCallSize) ? CallTarget(call) : nullptr;	// its rel32 can lie past the match
+					const std::string name = CalleeName(site.callee);
+					if (diagnostic)
+						WriteLog(kTag, "DIAGNOSTIC: " + name + " call at " + DescribeAddress(call) + " -> " + (target ? DescribeAddress(target) :
+							std::string("not a call")) + " (" + label + ")");
+					if (!target || !IsInsideGameImage(target))
 					{
-						NotMeasured("the metadata lookup calls do not lead to the same function: " + DescribeAddress(lookup) + " and " +
-							DescribeAddress(target) + " (" + label + ").");
+						Fail("the " + name + " call at " + DescribeAddress(call) + " is not a call into the game (another mod may have hooked it already) (" +
+							label + ").");
 						return;
 					}
+					if (site.callee == Callee::PerAnchorCount && target != perAnchorCount)
+					{
+						Fail("the per-anchor count call at " + DescribeAddress(call) + " leads to " + DescribeAddress(target) + ", not to the per-anchor "
+							"count at " + DescribeAddress(perAnchorCount) + " (" + kCountPattern.label + ") (" + label + ").");
+						return;
+					}
+					if (site.callee == Callee::MetadataLookup)
+					{
+						if (!lookup)
+							lookup = target;
+						else if (target != lookup)
+						{
+							Fail("the metadata lookup calls do not lead to the same function: " + DescribeAddress(lookup) + " and " + DescribeAddress(target) +
+								" (" + label + ").");
+							return;
+						}
+					}
+					std::vector<uint8_t> widened(movzx, movzx + site.length);
+					widened[site.length - 2] = static_cast<uint8_t>(kMovzx16);
+					writes.push_back({ movzx, std::move(widened), "narrowing of " + std::string(site.narrows) + " (" + label + ")" });
 				}
 			}
-		}
 
-		// 3. the complete sets: every call of the per-anchor count and of the metadata lookup in the game's code -
-		// exactly as many as the research found, so that a caller a game update adds, which would narrow again, shows
-		struct Callers
-		{
-			const char* name;
-			const uint8_t* function;
-			size_t expected;
-		};
-		const Callers callers[] = { { "per-anchor count", perAnchorCount, kPerAnchorCountCalls }, { "metadata lookup", lookup, kMetadataLookupCalls } };
-		for (const Callers& function : callers)
-		{
-			const std::vector<uint8_t*> calls = Scanner::FindCallsTo(function.function, function.expected + 1);	// a call more shows
-			for (const uint8_t* const call : calls)
-				WriteLog(kTag, "DIAGNOSTIC: " + std::string(function.name) + " call at " + DescribeAddress(call) + " -> " +
-					DescribeAddress(function.function) + " (call scan)");
-			if (calls.size() != function.expected)
+			// 3. the complete sets: every call of the per-anchor count and of the metadata lookup in the game's code -
+			// exactly as many as the research found, so that a caller a game update adds, which would narrow again, shows
+			struct Callers
 			{
-				NotMeasured("the game code calls the " + std::string(function.name) + " at " + DescribeAddress(function.function) + " in " +
-					std::to_string(calls.size()) + (calls.size() > function.expected ? " or more" : "") + " places, not the expected " +
-					std::to_string(function.expected) + " (another mod may have redirected some of them, or the game has changed).");
+				const char* name;
+				const uint8_t* function;
+				size_t expected;
+			};
+			const Callers callers[] = { { "per-anchor count", perAnchorCount, kPerAnchorCountCalls }, { "metadata lookup", lookup, kMetadataLookupCalls } };
+			for (const Callers& function : callers)
+			{
+				const std::vector<uint8_t*> calls = Scanner::FindCallsTo(function.function, function.expected + 1);	// a call more shows
+				if (diagnostic)
+					for (const uint8_t* const call : calls)
+						WriteLog(kTag, "DIAGNOSTIC: " + std::string(function.name) + " call at " + DescribeAddress(call) + " -> " +
+							DescribeAddress(function.function) + " (call scan)");
+				if (calls.size() != function.expected)
+				{
+					Fail("the game code calls the " + std::string(function.name) + " at " + DescribeAddress(function.function) + " in " +
+						std::to_string(calls.size()) + (calls.size() > function.expected ? " or more" : "") + " places, not the expected " +
+						std::to_string(function.expected) + " (another mod may have redirected some of them, or the game has changed).");
+					return;
+				}
+			}
+
+			// 4. one write, all or nothing: the eleven narrowings widened
+			const std::string limit = "from " + std::to_string(kGameLimit) + " to " + std::to_string(kRaisedLimit) + " per anchor";
+			if (IsDryRun())
+			{
+				WriteLog(kTag, "DRY_RUN: would widen the " + std::to_string(writes.size()) + " narrowings of the ped props from 8 to 16 bits and raise "
+					"their limit " + limit + ".");
 				return;
 			}
-		}
-
-		// 4. the measurement's sites: the layout A-E-C1 and A-E-C2 pin, checked when TweaksV is compiled, and the model
-		// info store's four globals, each inside the game
-		WriteLog(kTag, "DIAGNOSTIC: per-anchor count at " + DescribeAddress(perAnchorCount) + ": a model info's variation collection at +" +
-			Hex(kCollectionOffset) + ", its count of variation files at +" + Hex(kFileCountOffset) + " (" + kCountPattern.label + ")");
-		WriteLog(kTag, "DIAGNOSTIC: its loop at " + DescribeAddress(loop) + ": a variation file's anchors at +" + Hex(kAnchorsOffset) + ", their count at +" +
-			Hex(kAnchorCountOffset) + ", entries of " + Hex(kAnchorEntrySize) + " bytes, an entry's props at +" + Hex(kPropCountOffset) + " (" +
-			kLoopPattern.label + ")");
-		const uint8_t* globals[std::size(kStoreGlobals)] = {};
-		std::string line = "DIAGNOSTIC: model info store at " + DescribeAddress(store) + ":";
-		for (size_t i = 0; i < std::size(kStoreGlobals); i++)
-		{
-			const StoreGlobal& global = kStoreGlobals[i];
-			globals[i] = Rel32Target(store + global.at);
-			if (!IsInsideGameImage(globals[i]) || !IsInsideGameImage(globals[i] + global.size - 1))
+			if (!WriteCode(writes, kTag))
 			{
-				NotMeasured("the model info store's " + std::string(global.name) + " at " + DescribeAddress(globals[i]) + " (" + kStorePattern.label +
-					") is not inside the game.");
+				Fail("the game code could not be made writable (details in TweaksV.log).");
 				return;
 			}
-			if (!IsReadable(globals[i], global.size))
-			{
-				NotMeasured("the model info store's " + std::string(global.name) + " at " + DescribeAddress(globals[i]) + " (" + kStorePattern.label +
-					") cannot be read.");
-				return;
-			}
-			line += std::string(i ? ", its " : " its ") + global.name + " at " + DescribeAddress(globals[i]);
+			g_raised = true;
+			WriteLog(kTag, "The ped props' limit is raised " + limit + " (" + std::to_string(writes.size()) + " sites).");
 		}
-		WriteLog(kTag, line + "; a model info's type in the low 5 bits of +" + Hex(kTypeOffset) + ", " + std::to_string(kPedType) + " for a ped (" +
-			kStorePattern.label + ")");
-		g_storeCount = reinterpret_cast<const volatile int32_t*>(globals[kStoreCount]);
-		g_storeBitmap = reinterpret_cast<const volatile uint64_t*>(globals[kStoreBitmap]);
-		g_storeArray = reinterpret_cast<const volatile uint64_t*>(globals[kStoreArray]);
-		g_storeStride = reinterpret_cast<const volatile uint64_t*>(globals[kStoreStride]);
-
-		// 5. the measurement, on a thread of its own
-		WriteLog(kTag, "DIAGNOSTIC: the model info store at " + DescribeAddress(globals[kStoreArray]) + " (" + kStorePattern.label + "): the props per "
-			"anchor of its ped models are logged after 10 seconds, then every minute while they change.");
-		StartMeasurement<kMeasurement>();	// one that cannot start is logged
 	}
 
 	void InitPedProps()
 	{
+		const uint8_t* perAnchorCount = nullptr;
+		Widen(perAnchorCount);
+		if (!IsDiagnosticMode())
+			return;
+		// the measurement, whether the job was done or not, and an aid: an exception ends it alone, logged
+		try
+		{
+			Measure(perAnchorCount);
+		}
+		catch (...)
+		{
+			WriteLog(kTag, "DIAGNOSTIC: unexpected exception - the ped props' measurement is skipped for this session.");
+		}
 	}
 }
