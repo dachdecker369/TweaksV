@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-only
-# The streaming memory, measured first for the Resources part to come (SPECIFICATIONS.md 11.10.7), in the full fake game:
+# The streaming memory, measured first for the Resources part to come (SPECIFICATIONS.md 11.14.7), in the full fake game:
 # with DIAGNOSTIC_MODE=1 alone its four sites found once each, checked and logged with what each holds, and the fake's
 # resource heap summed up 10 seconds in and again when its numbers change - the regions made of 32, their sizes and bytes
 # in use, the streamed resources, the streaming budgets and what is counted against them, the refusals, the heap's own

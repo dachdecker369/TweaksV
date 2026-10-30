@@ -11,6 +11,7 @@ This file reproduces the copyright notices and license texts that this code requ
 | [MinHook](https://github.com/TsudaKageyu/minhook) 1.3.4 | Tsuda Kageyu; the Hacker Disassembler Engine in it by Vyacheslav Patkov | BSD-2-Clause | `vendor\MinHook`, unchanged; `hook.c`, `buffer.c`, `trampoline.c` and `hde64.c` are compiled into `TweaksV.asi`. The search for free memory near the game in `TweaksVPatch.cpp` is an adapted version of its `buffer.c` |
 | [ScriptHookVDotNet](https://github.com/scripthookvdotnet/scripthookvdotnet) memory scanner | crosire, kagikn; the C++ port by Chiheb-Bacha | zlib | the pattern parser in `TweaksVScanner.cpp`, an altered version (see the notes) |
 | [RageOpenV](https://github.com/Chiheb-Bacha/RageOpenV) | Chiheb-Bacha | GPL-3.0 | the console opener in `TweaksVLog.cpp`, carried over as it was |
+<!-- [static bounds] -->
 
 Everything else in `dllmain.cpp`, `version.rc` and the `TweaksV*` files is TweaksV's own code, Copyright (C) dachdecker369, licensed under the GPL-3.0-only.
 
@@ -18,6 +19,7 @@ Everything else in `dllmain.cpp`, `version.rc` and the `TweaksV*` files is Tweak
 
 - **ScriptHookVDotNet:** the pattern parser is an altered version, as the zlib license requires to be stated. It is Chiheb-Bacha's C++ port of ScriptHookVDotNet's `MemScanner.cs`, which came to TweaksV through his plugins, altered again for TweaksV: a malformed token is refused instead of throwing - `??` among them, so that one `?` is the only wildcard - and a miss returns nothing instead of ending the game. The search itself is TweaksV's own.
 - **RageOpenV:** its license is the GPL-3.0, the same as TweaksV's; the text is [LICENSE](LICENSE), which accompanies every copy.
+<!-- [static bounds] -->
 
 ## License texts
 

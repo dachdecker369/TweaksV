@@ -146,14 +146,16 @@ namespace TweaksV
 		{ "L-E-P1", "BA 04 00 00 00 31 C0 48 8D 1D ? ? ? ? 31 F6" },
 		{ "L-E-P2", "48 89 3B 39 35 ? ? ? ? 7F 09 8D 46 01 89 05" },
 
-		// The parts measured first (SPECIFICATIONS 11.10), looked for with DIAGNOSTIC_MODE only: WeaponLimits (W),
+		// The parts measured first (SPECIFICATIONS 11.14), looked for with DIAGNOSTIC_MODE only: WeaponLimits (W),
 		// SirenSettings (I), PedProps (A), Resources (Q), one group per limit
+		// [weapon infos]
 		// WeaponLimits, the weapon infos (TweaksVWeaponInfos.cpp): the game's initializer of the weapon info blob array -
 		// the number of blobs allocated, the call that allocates them, the block's store and the capacity's (I1) - and
 		// the loader's head - the count read and written, the blob's size and the block (I2)
 		{ "W-E-I1", "C7 05 ? ? ? ? 00 00 00 00 BA ? ? ? ? E8 ? ? ? ? 48 89 05 ? ? ? ? 66 C7 05 ? ? ? ? ? ? 48 8D 0D" },
 		{ "W-E-I2", "0F B7 05 ? ? ? ? 8D 48 01 66 89 0D ? ? ? ? 4C 69 E8 ? ? ? ? 4C 03 2D ? ? ? ?" },
 
+		// [weapon components]
 		// WeaponLimits' weapon components (TweaksVWeaponComponents.cpp): the rebuild of the list of every weapon component
 		// definition - its count's reset, the files' count and its lea of the list (C1) - its sort, with its lea of the list
 		// and the entry size (C2), its update of the count (C3), and the pool's size call, with the pool's name and default (C4)
@@ -192,6 +194,7 @@ namespace TweaksV
 		{ "I-E-B3", "0F BE 94 18 AD 00 00 00 48 8B 8E C0 09 00 00" },
 		{ "I-E-B4", "41 57 41 56 41 55 41 54 56 57 53 48 83 EC 20 66 83 79 5E 00" },
 
+		// [ped props]
 		// PedProps (TweaksVPedProps.cpp): the eleven narrowings to 8 bits the part will widen - an anchor's total in the
 		// check the set-prop native asks (T1) and in the helmet code after its four calls of the per-anchor count
 		// (T2..T5), a worn prop's index before the metadata lookup (G1, which matches 2 times, G3..G6) - then, for the
@@ -211,6 +214,7 @@ namespace TweaksV
 		{ "A-E-C2", "44 0F B7 54 39 08 41 0F B6 CA 01 C8 49 FF C3 4D 39 C3 74 ? 4B 8B 0C D9 0F B7 71 60 45 31 D2 48 85 F6 74 ? 48 8B 49 58 48 C1 E6 03 48 8D 34 76 31 FF" },
 		{ "A-E-S1", "3B 05 ? ? ? ? 0F 8D ? ? ? ? 48 8B 0D ? ? ? ? 89 C2 C1 EA 05 8B 0C 91 0F A3 C1 0F 83 ? ? ? ? 48 8B 0D ? ? ? ? 48 85 C9 74 ? 44 89 7C 24 34 48 98 48 0F AF 05 ? ? ? ? 4C 8B 3C 01 BB 02 00 00 00 4D 85 FF 74 ? 41 0F B6 87 9D 00 00 00 24 1F 3C 06" },
 
+		// [texture budget]
 		// Resources, the texture budget (TweaksVTextureBudget.cpp): the start-up's store of the most streamed objects and its
 		// load of budgets 0 and 1 (T1), its store of budgets 2 and 3 and the call after the stores (T2), the budget's getter
 		// and the index it reads (T3), a resource's placement and its loads of the counters (T4), the update check and its
@@ -221,6 +225,7 @@ namespace TweaksV
 		{ "Q-E-T4", "8B 05 ? ? ? ? 8B 0D ? ? ? ? 01 C1 3B 0D ? ? ? ? 73 ? 48 8B 05 ? ? ? ? 48 8B 35" },
 		{ "Q-E-T5", "83 3D ? ? ? ? 00 0F 84 ? ? ? ? 48 8D 0D ? ? ? ? 48 8B 3D ? ? ? ? 48 8B 35 ? ? ? ? E8" },
 
+		// [streaming memory]
 		// Resources, the streaming memory (TweaksVStreamingMemory.cpp), for its measurement: the start-up's lea of the
 		// resource heap, its page size, the region size asked and its constructor's call (H1); the streaming update's
 		// lea of the streaming allocator and its call of the budgets' reset (A1); the loader's call of timeGetTime and
@@ -230,6 +235,9 @@ namespace TweaksV
 		{ "Q-E-A1", "48 8D 0D ? ? ? ? E8 ? ? ? ? 8B 05 ? ? ? ? 89 05 ? ? ? ? 48 83 C4 28" },
 		{ "Q-E-S1", "FF 50 30 84 C0 75 0B E8 ? ? ? ? 89 05 ? ? ? ? 89 D8" },
 		{ "Q-E-R1", "49 8B 9F D8 01 00 00 48 81 FB 00 00 00 10 B8 00 00 00 10 48 0F 43 D8 48 81 FB 00 00 00 01" },
+
+		// [static bounds]
+		// [rt buffer]
 	};
 
 	// A text the scanner can use: bytes as two hex digits or ?, one space apart, at least one of them

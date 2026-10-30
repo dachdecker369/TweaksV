@@ -12,7 +12,7 @@ T="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 R="$(cd "$T/.." && pwd)"
 export TWEAKSV_TEST_DIR="$R/object/TestRun"
 # the suites, one a line, run in this order: the tables first, the parts in the order of the parts, the parts
-# measured first in the order of SPECIFICATIONS.md 11.10, the whole of TweaksV last
+# measured first in the order of SPECIFICATIONS.md 11.14, the whole of TweaksV last
 SUITES=(
 	patterns
 	ini_default
@@ -22,14 +22,18 @@ SUITES=(
 	boxstreamer
 	decals
 	rageopenv
+	# [legacy packs]
 	directstorage
 	blips
 	weaponinfos
 	weaponcomponents
-	sirenids
-	sirencount
 	pedprops
 	texturebudget
+	# [static bounds]
+	# [rt buffer]
+	sirenids
+	sirencount
+	# [streaming memory]
 	streamingmemory
 	integration
 )

@@ -38,6 +38,8 @@ Three switches under `[RAGEOPENV]`. With `MODS_FOLDER=1`, a file that exists und
 
 With `DIAGNOSTIC_MODE=1` the part logs every file the game asks for, every file served from the mods folder and every archive header read, 20,000 lines of each kind at most, with a summary 10 seconds in and then every minute while the numbers change.
 
+<!-- [legacy packs] -->
+
 ### StraightToStoryMode
 
 `SKIP_SPLASH_SCREEN`, `SKIP_LEGAL_SCREEN` and `SKIP_LANDING_PAGE` under `[STRAIGHTTOSTORYMODE]` (all on) skip the splash screen, the legal screen and the landing page, so the game goes straight into Story Mode. Replaces StraightToStoryMode. With NaturalVision Enhanced's `onigiri.asi` installed, TweaksV switches this part off (see "Other mods").
@@ -62,11 +64,35 @@ With `DIAGNOSTIC_MODE=1` the part logs the two natives the script's check calls,
 
 TweaksV's own part; the design comes from rootBrz's [Blip Limit Fix](https://github.com/rootBrz/gtav-blip-limit-fix), and none of its code was read or used. With `BlipLimitFix.asi` installed, TweaksV switches its own Blips part off.
 
+### WeaponLimits
+
+<!-- [weapon infos] -->
+
+<!-- [weapon components] -->
+
+### PedProps
+
+<!-- [ped props] -->
+
+### Resources
+
+<!-- [texture budget] -->
+
+### StaticBounds
+
+<!-- [static bounds] -->
+
+<!-- [rt buffer] -->
+
 ### Measured first: WeaponLimits, SirenSettings, PedProps and Resources
 
 Four parts to come ([ROADMAP.md](ROADMAP.md)) lift seven more limits of the game: the number of `weapons.meta` files and of weapon components, the siren setting IDs and the sirens per vehicle, the props per anchor of a ped, and the video memory budget for streamed textures and the memory the game streams the world into. A part goes in only once a mod load reaches its limit, so these limits are measured first: with `DIAGNOSTIC_MODE=1`, TweaksV finds the places in the game's code each limit lies in, checks them as the part will, and logs how close the game and your mods come to the limit - 10 seconds in and then every minute while the numbers change. The measurements change nothing in the game - but the siren count's, which has the game's call that draws a vehicle's sirens pass through TweaksV, to look at each vehicle model's siren bones once - and they have no section in `TweaksV.ini` yet; without `DIAGNOSTIC_MODE`, nothing of them runs. What each one's lines tell you:
 
+<!-- [weapon infos] -->
+
 **Weapon infos** (WeaponLimits): the game reads each `weapons.meta` file - add-on weapons bring one each as a rule, packed on their own - into one entry of an array with room for 160 on 1.0.1158.16, and the game never checks that room: a file past it is written into memory the array does not own, and the game crashes while loading or later. The log says, 10 seconds in and then every minute while it changes, how many `weapons.meta` files the game has loaded against that room - `N weapons.meta files loaded (the game's own array holds 160, this one 160)`, the first number the room the game's code gives, the second the room the array really got - so the room left below 160 is how many more weapon files your game takes. At 160 the line adds that the array is full and the next file would be written past its end; past it, that the game's memory is already damaged.
+
+<!-- [weapon components] -->
 
 **Weapon components** (WeaponLimits): the game keeps the weapon component definitions of all `weaponcomponents.meta` files - each scope, clip, suppressor, flashlight, grip and tint the game's weapons and add-on weapons can take - in one list of 470, and more than that ends the game while it loads. `[WeaponLimits] DIAGNOSTIC: 412 weapon component definitions from 23 weaponcomponents.meta files (the game's own list holds 470).` says how many your game has, from how many files, and so how much room is left for weapon packs; ` - it is full` at its end means that one more definition crashes the game, and a line that says the list's count reads a number outside 0 to 470 means that the list has overflowed already. A pack's definitions count once the game has mounted the pack, on the way into story mode.
 
@@ -74,15 +100,21 @@ Four parts to come ([ROADMAP.md](ROADMAP.md)) lift seven more limits of the game
 
 **Siren count** (SirenSettings): the game lights 20 sirens of a vehicle, `siren1` to `siren20`. An emergency vehicle made for 32 sirens, as some packs ship them, loads all the same, and its lights past the 20th stay dark without an error; and a siren whose bone lies past the model's 128th bone stays dark too, because the game cannot name it. With `DIAGNOSTIC_MODE=1` TweaksV looks once at each vehicle model whose sirens the game draws, and 10 seconds after the first logs how many such models it has seen, the most sirens the game names on one of them (20 at most), how many carry siren bones past `siren20` that the game never lights and how many lose siren bones past bone 127 - with a line for each model concerned, named by the hash of its name, saying how many of its siren and glass bones are lost. The game draws sirens only while they are on: drive an emergency vehicle with its sirens on, or let the police chase you. This is the one measurement that changes something in the game: the game's call that draws a vehicle's sirens passes through TweaksV, which has the game draw them unchanged first; with `DRY_RUN=1` the call stays as it is and nothing is counted.
 
+<!-- [ped props] -->
+
 **Ped props** (PedProps): a ped model - above all GTA Online's freemode characters, `mp_m_freemode_01` and `mp_f_freemode_01`, which clothing packs dress - carries its props, the hats, helmets, glasses, earrings and watches, on 13 anchors (anchor 0 is the head), and each pack adds a file of them per model. The game's checks take the props of one anchor, all files together, as 8 bits: with 300 props on an anchor, only the first 44 can be put on, and the game takes a worn prop past the 255th for another one. 10 seconds in and then every minute while the numbers change, the log says how many ped models it found and the most props on one anchor - `the most props on one anchor: 212 (mp_m_freemode_01, anchor 0, from 30 files, at most 38 in one)` - and gives every anchor past 255, and every file with more than 255 props on one anchor, a line of its own. An anchor past 255 is what the PedProps part will lift; a file past 255 is its pack's to split, which no part can do. The first summary can come before the game has loaded its peds; the next ones count them.
 
+<!-- [texture budget] -->
+
 **Texture budget** (Resources): the game streams the world's textures and buffers into a budget of video memory that its `gameconfig.xml` sets by texture quality - on 1.0.1158.16 1,500 MB at Normal and 3,000 MB at High and Very High, as far as my research tells, whatever your card has - and refuses to place more: what it cannot fit, it drops, and textures go missing even when the card has memory to spare. The line says how much of that budget the streamed textures and buffers take (`2845 MB of the 3000 MB budget`), the budget for your texture quality's index and the four in `gameconfig.xml`, how many of the 98,304 objects the game allows are in use, the most so far, and whether the game's own check is dropping textures ahead of time (`the update check's flag is up`); ` - at the budget` at its end means the game is dropping what it cannot place right now. It comes 10 seconds in and again whenever a new high is reached; a line before the first, and again should they change, gives the switch and the factors of the game's own check, and a line from before the game has read its `gameconfig.xml` says that the budgets are not set yet.
+
+<!-- [streaming memory] -->
 
 **Streaming memory** (Resources): the game streams the map, the props and everything else it streams into one heap - on this game build up to 32 regions of 256 MB, 8 GB in all, which the game adds as it needs them and keeps until it exits. The sizes the resource adjusters of the Legacy game raised are still there, but they no longer hold anything back - this heap does. The line `streaming memory: the resource heap has 9 of its 32 regions, 2304 of at most 8192 MB, 1864 MB of them in use, 1710 MB by streamed resources; ...` tells you how many regions the game has made, how much of them is in use and how much of that is the streamed map and props, and whether the game had to refuse something it wanted to stream for lack of memory since the line before: with all 32 regions made, the heap is at its limit, the one the Resources part would raise; with fewer, another budget refused it, such as the video memory budget above. The heap never shrinks, so the last line after a long drive with your mods shows the most they needed.
 
 ## TweaksV.ini
 
-TweaksV writes `TweaksV.ini` in the game folder, next to `GTA5_Enhanced.exe`, on the first start - or in `%LOCALAPPDATA%\TweaksV` if the game folder cannot be written to - with every setting at its default, and adds back any setting that goes missing. `1` is on, `0` is off (`true` and `false` work too). The file carries a short header and, after each key's value, a short comment from `//` to the end of the line; this is what each key does in full. A comment after a value - after `//` or `;` - is never part of it, so you can write your own there. A `TweaksV.ini` from an earlier 2.x version is kept as it is, without the comments: delete it to get the commented one, then set your values again. One from before the Blips part gets the two keys of `[BLIPS]` added and its `VERSION` raised to 3; its values stay as they are. The settings are read once, at start-up: TweaksV's parts patch the game before it runs, so a live panel would change nothing - there is none, by design; a changed file takes effect at the next start.
+TweaksV writes `TweaksV.ini` in the game folder, next to `GTA5_Enhanced.exe`, on the first start - or in `%LOCALAPPDATA%\TweaksV` if the game folder cannot be written to - with every setting at its default, and adds back any setting that goes missing. `1` is on, `0` is off (`true` and `false` work too). The file carries a short header and, after each key's value, a short comment from `//` to the end of the line; this is what each key does in full. A comment after a value - after `//` or `;` - is never part of it, so you can write your own there. A `TweaksV.ini` from an earlier 2.x version is kept as it is, without the comments: delete it to get the commented one, then set your values again. One from an earlier version gets the keys it lacks added - those of `[BLIPS]` to a file from before the Blips part, those of `[WEAPON_LIMITS]`, `[PEDPROPS]`, `[RESOURCES]` and `[STATICBOUNDS]` to one from before 2.6.0 - and its `VERSION` raised to 4; its values stay as they are. The settings are read once, at start-up: TweaksV's parts patch the game before it runs, so a live panel would change nothing - there is none, by design; a changed file takes effect at the next start.
 
 | Section | Key | Default | What it does |
 |---|---|---|---|
@@ -92,8 +124,8 @@ TweaksV writes `TweaksV.ini` in the game folder, next to `GTA5_Enhanced.exe`, on
 | | `DRY_RUN` | 0 | testing: everything is looked for and checked - but `blip_controller`'s guard, which the Blips part sees only through its hook; nothing in the game is written or hooked (only RageOpenV's one-shot hook on `GetSystemTimeAsFileTime`, which runs its checks and switches itself off); RageOpenV's hooks are off too, so the mods folder is not served - measuring with that part off alone means its own `ENABLED=0`, not `DRY_RUN` |
 | | `CONSOLE` | 0 | a console window that mirrors the log |
 | | `ERROR_POPUP` | 1 | a message box when something could not be applied, and one for a part that stops working later (at most three per session) |
-| | `CONFLICT_CHECK` | 1 | looks for the old plugins TweaksV replaces and for NaturalVision Enhanced's loader, in the game folder and its `scripts` and `plugins` subfolders, and switches the matching part off while they are there (see "Other mods") |
-| | `VERSION` | 3 | the layout of this file; TweaksV keeps it, and raises it when it adds the keys of a newer layout - leave the line in |
+| | `CONFLICT_CHECK` | 1 | looks for the old plugins TweaksV replaces and for NaturalVision Enhanced's loader and Resource Extensions, in the game folder and its `scripts` and `plugins` subfolders, and switches the matching part off while they are there (see "Other mods") |
+| | `VERSION` | 4 | the layout of this file; TweaksV keeps it, and raises it when it adds the keys of a newer layout - leave the line in |
 | `[HEAP_ADJUSTER]` | `ENABLED` | 1 | the part on or off - every part's section has this key |
 | | `HEAP_SIZE` | 2000 | the game's heap in MB, 1 to 2047; a value below the game's own is raised to it and reported |
 | `[MODKIT_LIMIT]` | `MODKITARRAY_SIZE` | 65536 | the number of vehicle modkit IDs, 1 to 65536; a value below the game's own 1024 is raised to it and reported |
@@ -108,6 +140,12 @@ TweaksV writes `TweaksV.ini` in the game folder, next to `GTA5_Enhanced.exe`, on
 | | `SKIP_LANDING_PAGE` | 1 | goes straight into Story Mode |
 | `[DIRECTSTORAGE]` | `UNLOCK_FILES` | 1 | the files in the game folder other than `.rpf` and `.cache` stay free while the game holds them open: other programs can write, rename and delete them, and mods inside the game can also replace them by renaming a new file over them - not a program that writes while letting no one else read, and not a program outside the game that replaces a file that way |
 | `[BLIPS]` | `ACTIVE_BLIP_LIMIT` | 1900 | the game's own blips are made while fewer blips than this are on the map, 150 to 1997 (the game's own: 150) |
+| `[WEAPON_LIMITS]` | `WEAPON_INFO_FILES` | 1024 | the `weapons.meta` files the game can load, 160 to 16384 (the game's own: 160) |
+| | `WEAPON_COMPONENTS_SIZE` | 1024 | the weapon component definitions of all `weaponcomponents.meta` files together, 470 to 16384 (the game's own: 470) |
+| `[PEDPROPS]` | `ENABLED` | 1 | the props per anchor of a ped model: 255 in the game's own checks, 65535 with the part on |
+| `[RESOURCES]` | `VIDEO_MEMORY_BUDGET` | 0 | the video memory in MB the game may stream textures and buffers into; 0 keeps the game's own budgets, 1500 to 16384 raises each budget below it to it |
+| `[STATICBOUNDS]` | `STATICBOUNDS_SIZE` | 16000 | the game's static collision bounds, 1 to 100000; a larger number in `gameconfig.xml` is kept |
+<!-- [rt buffer] -->
 
 **Coming from TweaksV 1.x:** the 1.x file has another layout and is not migrated. On the first start, TweaksV renames it to `TweaksV.old.ini`, writes a fresh `TweaksV.ini` with the defaults and says so in the start-up message - set your values again, the old file still holds them. You can also delete the old file before the first start. The same happens to any `TweaksV.ini` without `VERSION` under `[TWEAKSV]`, so leave that line in. What changed: `[HEAP_SETTINGS]` is `[HEAP_ADJUSTER]`, `[MODKIT_SETTINGS]` is `[MODKIT_LIMIT]`, `[PACKFILE_SETTINGS]` is `[PACKFILE_LIMIT]` and `[DECALDEFS_SETTINGS]` is `[DECALS]`; the other four sections lost their `_SETTINGS` ending (`[BOXSTREAMER]`, `[RAGEOPENV]`, `[STRAIGHTTOSTORYMODE]`, `[DIRECTSTORAGE]`), and `[TWEAKSV]` kept its name; `LOG_TO_FILE`, `SHOW_ERROR_POPUPS`, `CHECK_FOR_CONFLICTS` and `INI_VERSION` are `LOG`, `ERROR_POPUP`, `CONFLICT_CHECK` and `VERSION`; the testing switches `LOG_SEARCHES`, `LOG_DECALDEFS`, `LOG_INFO`, `LOG_MODS`, `LOG_CALLS` and `LOG_FILE_OPENS` are all `DIAGNOSTIC_MODE` now; `NEWMODS` and `LOG_DEVICE` are gone with the newmods folder.
 
@@ -155,7 +193,7 @@ Add these switches to the `msbuild` line above:
 ## Testing
 
 1. Use GTA V Enhanced in Story Mode with BattlEye disabled. Never go online with mods.
-2. Remove the old plugins TweaksV replaces from the game folder and its `scripts` and `plugins` folders: `HeapAdjuster.asi` (or `ZHeapAdjuster.asi`, the name its author suggests), `ModkitLimitAdjusterEnhanced.asi`, `PackfileLimitAdjusterEnhanced.asi`, `RageOpenV.asi`, `OpenRPF.asi`, `OpenIV.asi`, `StraightToStoryMode.asi`, alloc8or's `DirectStorageFix.asi`, `DecalPatch.asi` and rootBrz's `BlipLimitFix.asi` - the eleven old plugins the conflict check knows. While one of them is there, TweaksV switches its matching part off and says so in the start-up message. The twelfth file it knows stays: NaturalVision Enhanced's loader, `onigiri.asi`, which NVE needs; while it is there, TweaksV's RageOpenV and StraightToStoryMode parts are off (see "Other mods").
+2. Remove the old plugins TweaksV replaces from the game folder and its `scripts` and `plugins` folders: `HeapAdjuster.asi` (or `ZHeapAdjuster.asi`, the name its author suggests), `ModkitLimitAdjusterEnhanced.asi`, `PackfileLimitAdjusterEnhanced.asi`, `RageOpenV.asi`, `OpenRPF.asi`, `OpenIV.asi`, `StraightToStoryMode.asi`, alloc8or's `DirectStorageFix.asi`, `DecalPatch.asi`, rootBrz's `BlipLimitFix.asi` and Nochala's `StaticBoundLimitAdjuster.asi` (also named `StaticBoundsLimitAdjuster.asi`) - the thirteen old plugins the conflict check knows. While one of them is there, TweaksV switches its matching part off and says so in the start-up message. Two more files it knows stay: NaturalVision Enhanced's loader, `onigiri.asi`, which NVE needs - while it is there, TweaksV's RageOpenV and StraightToStoryMode parts are off - and Koukol's Resource Extensions, `ResourceExtensions.asi` - while it is there, the HeapAdjuster, PackfileLimit and Blips parts are off (see "Other mods").
 3. `TweaksV.asi` goes in the game folder next to `GTA5_Enhanced.exe`.
 4. Add the ASI loader file `xinput1_4.dll` from the [Script Hook V](http://www.dev-c.com/gtav/scripthookv/) download. It is the only file needed; Script Hook V itself is not.
 5. Coming from TweaksV 1.x: your old `TweaksV.ini` is renamed to `TweaksV.old.ini` on the first start and a fresh one is written - see "TweaksV.ini" above. You can also delete the old file first.
@@ -163,6 +201,7 @@ Add these switches to the `msbuild` line above:
 ## Other mods
 
 - **NaturalVision Enhanced** sets the heap size as well. TweaksV leaves a heap another mod has already set alone and says so in the log, so with NVE installed its heap size wins, whatever the load order. NVE also brings its own loader, `onigiri.asi`, next to `GTA5_Enhanced.exe`: a mods loader that serves the files and archives in its `onigiri` folder, and that skips the start-up screens its INI, `onigiri.ini`, names. It patches the same places in the game as TweaksV's RageOpenV and StraightToStoryMode parts, after TweaksV, and crashes the game when TweaksV has changed them first. So while `onigiri.asi` is installed, TweaksV switches those two parts off and says so in the start-up message; the other seven parts work as usual (with `CONFLICT_CHECK=0` TweaksV does not look for it, and the game crashes while those two parts are on). Your mods then go where onigiri serves them, in its `onigiri` folder, not in TweaksV's `mods` folder, and which start-up screens are skipped is onigiri's business, set in its `onigiri.ini` under `[PATCHES]`: with NVE's defaults the game went straight into Story Mode on my boots. To stop the message, set `ENABLED=0` under `[RAGEOPENV]` and under `[STRAIGHTTOSTORYMODE]` in `TweaksV.ini`.
+- **Resource Extensions [Enhanced]** by Koukol, a closed-source plugin that raises many of the game's capacities - the archive count and the story blips' threshold among them - asks to remove the heap and packfile adjusters. TweaksV leaves those jobs to it: while `ResourceExtensions.asi` is installed, TweaksV's HeapAdjuster, PackfileLimit and Blips parts are off, and the start-up message says so, with the `ENABLED=0` that stops it; the other parts work as usual.
 - **gameconfig.xml:** a gameconfig that raises the archive count has no effect while the Packfile part is on - TweaksV replaces that count with `PACKFILEARRAY_SIZE` when the game reads its configuration, exactly, also when the gameconfig's count is higher. Everything else in a gameconfig works as usual.
 - **Zolika Patch:** the ModkitLimit Extender's author warned that its modkit patch may not be compatible with Zolika Patch's; the same goes for TweaksV's Modkit part.
 - **DecalPatch.asi**, a closed-source plugin that raises the box streamer list and the decal definitions limit for GTA V Enhanced, is detected as an old plugin: TweaksV switches its decal definitions part and its box streamer part off while it is installed, so nothing is patched twice. Delete it - TweaksV replaces both halves.

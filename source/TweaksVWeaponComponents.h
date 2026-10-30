@@ -10,4 +10,8 @@ namespace TweaksV
 	// Finds and checks the sites of the weapon component list, its count and its pool's size, and starts the
 	// measurement. Called once by StartFeatures, with DIAGNOSTIC_MODE=1 only (the table of the parts measured first).
 	void MeasureWeaponComponents();
+
+	// The weapon components' half of the WeaponLimits part (SPECIFICATIONS 11.10.2), started by the part's entry of
+	// the feature table, from DllMain, while [WEAPON_LIMITS] is on, after the weapon infos' half. It changes nothing yet.
+	void InitWeaponComponents();
 }

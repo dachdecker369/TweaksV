@@ -56,6 +56,7 @@
 #include "TweaksVConflicts.h"
 #include "TweaksVFiles.h"
 #include "TweaksVIni.h"
+// [legacy packs]
 #include "TweaksVLog.h"
 #include "TweaksVMeasure.h"
 #include "TweaksVPatch.h"
@@ -612,6 +613,7 @@ namespace TweaksV
 					WriteLog(kTag, "DIAGNOSTIC: " + std::string(hook.what) + " hooked at " + DescribeAddress(hook.function) + ".");
 			WriteLog(kTag, "Files in the mods folder are used (8 file functions hooked).");
 			g_filesHooked = true;
+			// [legacy packs]
 		}
 
 		// ---- OPEN archives: the five redirected calls

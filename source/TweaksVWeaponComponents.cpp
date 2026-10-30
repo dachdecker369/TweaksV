@@ -353,4 +353,8 @@ namespace TweaksV
 			DescribeAddress(files) + ": the definitions and the files are logged after 10 seconds, then every minute while the numbers change.");
 		StartMeasurement<kMeasurement>();	// one that cannot start is logged
 	}
+
+	void InitWeaponComponents()
+	{
+	}
 }

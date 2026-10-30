@@ -9,7 +9,7 @@
 // in use. A resource is placed only while the objects stay below the most and the bytes below the budget;
 // otherwise the engine evicts what it cannot place and textures go missing, and an update check evicts ahead of
 // time once the bytes pass a factor of the budget. The Resources part to come would raise the budget, so this
-// module measures first whether a load reaches it, with DIAGNOSTIC_MODE=1 only (SPECIFICATIONS 11.10):
+// module measures first whether a load reaches it, with DIAGNOSTIC_MODE=1 only (SPECIFICATIONS 11.14):
 //   DIAGNOSTIC_MODE  Q-E-T1 to Q-E-T5 found once each - the start-up's stores of the most and the four budgets
 //                    and the call after them, which the part's writing half would redirect (T1, T2), the budget's
 //                    getter with the index (T3), the placement's check of the counters (T4) and the update check
@@ -475,5 +475,9 @@ namespace TweaksV
 		WriteLog(kTag, "DIAGNOSTIC: the texture budget's counters at " + DescribeAddress(g_counters) + At(kPlacement) + ": the streamed textures and buffers "
 			"are logged after 10 seconds, then every minute while their highs, the update check or the budget in use change.");
 		StartMeasurement<kMeasurement>();	// one that cannot start is logged
+	}
+
+	void InitTextureBudget()
+	{
 	}
 }

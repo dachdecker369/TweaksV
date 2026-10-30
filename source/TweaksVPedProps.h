@@ -12,4 +12,8 @@ namespace TweaksV
 	// With DIAGNOSTIC_MODE=1 only: finds and checks the ped props' sites and starts the measurement of the props per
 	// anchor. Called once by StartFeatures, through the table of the parts measured first.
 	void MeasurePedProps();
+
+	// The PedProps part (SPECIFICATIONS 11.11), started by its entry of the feature table, from DllMain, while
+	// [PEDPROPS] is on. It changes nothing yet.
+	void InitPedProps();
 }

@@ -8,7 +8,7 @@
 // metadata (A-E-G1, twice, and A-E-G3..G6). So from 256 props on one anchor, all files together, the game refuses
 // the props from (total mod 256) on and takes a worn prop past 255 for another one. The PedProps part to come will
 // widen those eleven narrowings from 8 to 16 bits; it goes in only once a mod load reaches the limit, so the limit
-// is measured first (SPECIFICATIONS.md 11.10):
+// is measured first (SPECIFICATIONS.md 11.14):
 //   DIAGNOSTIC_MODE  the one switch: the table of the parts measured first starts the module only with it on.
 //                    Every pattern is found as often as it must match and every site checked as the part will
 //                    check it - each narrowing a movzx of 8 bits, T1's call into the game (the texture count),
@@ -196,7 +196,7 @@ namespace TweaksV
 			PatternByte(kStorePattern, 37) == 0x8B && PatternByte(kStorePattern, 38) == 0x0D && PatternDword(kStorePattern, 55) == 0x05AF0F48,
 			"TweaksV: A-E-S1 holds the four instructions that reference the model info store, each ending in its disp32");
 
-		// The bounds a pass reads within (SPECIFICATIONS.md 11.10.5): the store's count, its stride, and the files and
+		// The bounds a pass reads within (SPECIFICATIONS.md 11.14.5): the store's count, its stride, and the files and
 		// anchor entries one pass may read - far above any load, so that data the pass misreads cannot keep it busy.
 		// A collection's files and a file's anchors are words, at most 65535 each.
 		constexpr int32_t kMaxModels = 1000000;
@@ -739,5 +739,9 @@ namespace TweaksV
 		WriteLog(kTag, "DIAGNOSTIC: the model info store at " + DescribeAddress(globals[kStoreArray]) + " (" + kStorePattern.label + "): the props per "
 			"anchor of its ped models are logged after 10 seconds, then every minute while they change.");
 		StartMeasurement<kMeasurement>();	// one that cannot start is logged
+	}
+
+	void InitPedProps()
+	{
 	}
 }

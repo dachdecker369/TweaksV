@@ -11,4 +11,8 @@ namespace TweaksV
 	// Finds and checks the sites of the weapon info blob array and starts its measurement. Started by the table of
 	// the parts measured first (TweaksVFeatures.cpp) with DIAGNOSTIC_MODE=1 only, once, from DllMain.
 	void MeasureWeaponInfos();
+
+	// The weapon infos' half of the WeaponLimits part (SPECIFICATIONS 11.10.1), started by the part's entry of the
+	// feature table, from DllMain, while [WEAPON_LIMITS] is on. It changes nothing yet.
+	void InitWeaponInfos();
 }

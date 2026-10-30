@@ -30,19 +30,27 @@ namespace TweaksV
 	inline constexpr SettingsSection kStoryModeSection{ "STRAIGHTTOSTORYMODE", "StraightToStoryMode" };
 	inline constexpr SettingsSection kDirectStorageSection{ "DIRECTSTORAGE", "DirectStorage" };
 	inline constexpr SettingsSection kBlipsSection{ "BLIPS", "Blips" };
+	inline constexpr SettingsSection kWeaponLimitsSection{ "WEAPON_LIMITS", "WeaponLimits" };
+	inline constexpr SettingsSection kPedPropsSection{ "PEDPROPS", "PedProps" };
+	inline constexpr SettingsSection kResourcesSection{ "RESOURCES", "Resources" };
+	inline constexpr SettingsSection kStaticBoundsSection{ "STATICBOUNDS", "StaticBounds" };
+	// [rt buffer]
 
 	// The sections in file order; every one but the first is a part of TweaksV with an ENABLED key.
 	inline constexpr const SettingsSection* kSections[] = { &kTweaksVSection, &kHeapSection, &kModkitSection,
 		&kPackfileSection, &kBoxStreamerSection, &kDecalsSection, &kRageOpenVSection, &kStoryModeSection, &kDirectStorageSection,
-		&kBlipsSection };
+		&kBlipsSection, &kWeaponLimitsSection, &kPedPropsSection, &kResourcesSection, &kStaticBoundsSection,
+		// [rt buffer]
+	};
 
 	// The layout of TweaksV.ini this build writes and reads: VERSION, the last key of [TWEAKSV]. A file
 	// without VERSION has the layout of TweaksV 1.x and is replaced (TweaksVIni.h); a file with a higher
 	// number comes from a newer TweaksV and is reported. It goes up with every new key in the file (the
 	// static_assert on IniKeyCount below), and when a key changes its meaning or moves. An older file is
 	// carried forward: from kIniFirstLayout on, it gets the keys it lacks and then the current number
-	// written back (TweaksVIni.h). Layout 2 came with TweaksV 2.0.0, layout 3 with the Blips part.
-	inline constexpr int kIniLayoutVersion = 3;
+	// written back (TweaksVIni.h). Layout 2 came with TweaksV 2.0.0, layout 3 with the Blips part, layout 4
+	// with the WeaponLimits, PedProps, Resources and StaticBounds parts.
+	inline constexpr int kIniLayoutVersion = 4;
 	inline constexpr int kIniFirstLayout = 2;		// the first layout with VERSION, the oldest one carried forward
 
 	enum class SettingKind { Switch, Number, Text };
@@ -120,9 +128,22 @@ namespace TweaksV
 
 		Switch(kBlipsSection, "ENABLED", true),
 		Number(kBlipsSection, "ACTIVE_BLIP_LIMIT", 1900, 150, 1997, "Number of map blips before the game stops adding its own - Maximum 1997"),
+
+		Switch(kWeaponLimitsSection, "ENABLED", true),
+		Number(kWeaponLimitsSection, "WEAPON_INFO_FILES", 1024, 160, 16384, "Number of weapons.meta files - Maximum 16384"),
+		Number(kWeaponLimitsSection, "WEAPON_COMPONENTS_SIZE", 1024, 470, 16384, "Number of weapon component definitions - Maximum 16384"),
+
+		Switch(kPedPropsSection, "ENABLED", true),
+
+		Switch(kResourcesSection, "ENABLED", true),
+		Number(kResourcesSection, "VIDEO_MEMORY_BUDGET", 0, 0, 16384, "Video memory for streamed textures in MB, 0 = the game's own - Maximum 16384"),
+
+		Switch(kStaticBoundsSection, "ENABLED", true),
+		Number(kStaticBoundsSection, "STATICBOUNDS_SIZE", 16000, 1, 100000, "Number of static collision bounds - Maximum 100000"),
+		// [rt buffer]
 	};
 
-	// The keys the default TweaksV.ini holds: layout 3 has 30.
+	// The keys the default TweaksV.ini holds: layout 4 has 38.
 	consteval size_t IniKeyCount()
 	{
 		size_t keys = 0;
@@ -131,7 +152,7 @@ namespace TweaksV
 				keys++;
 		return keys;
 	}
-	static_assert(IniKeyCount() == 30, "TweaksV: layout 3 of TweaksV.ini has 30 keys - a new key means a new layout");
+	static_assert(IniKeyCount() == 38, "TweaksV: layout 4 of TweaksV.ini has 38 keys - a new key means a new layout");
 
 	// The column at which a key's comment starts in the default file, the same for every key.
 	inline constexpr size_t kIniCommentColumn = 28;
@@ -193,6 +214,11 @@ namespace TweaksV
 	inline constexpr const Setting& kSkipLandingPage = FindSetting(kStoryModeSection, "SKIP_LANDING_PAGE");
 	inline constexpr const Setting& kUnlockFiles = FindSetting(kDirectStorageSection, "UNLOCK_FILES");
 	inline constexpr const Setting& kActiveBlipLimit = FindSetting(kBlipsSection, "ACTIVE_BLIP_LIMIT");
+	inline constexpr const Setting& kWeaponInfoFiles = FindSetting(kWeaponLimitsSection, "WEAPON_INFO_FILES");
+	inline constexpr const Setting& kWeaponComponentsSize = FindSetting(kWeaponLimitsSection, "WEAPON_COMPONENTS_SIZE");
+	inline constexpr const Setting& kVideoMemoryBudget = FindSetting(kResourcesSection, "VIDEO_MEMORY_BUDGET");
+	inline constexpr const Setting& kStaticBoundsSize = FindSetting(kStaticBoundsSection, "STATICBOUNDS_SIZE");
+	// [rt buffer]
 
 	// Reads every setting once, after CreateOrUpdateIni() has chosen TweaksV.ini. A value that is not
 	// valid, or outside its limits, is reported for the start-up summary; its default (or the nearest
@@ -215,6 +241,13 @@ namespace TweaksV
 	// value it holds and every write, and runs its measurement where it has one; the scanner logs its
 	// line per pattern. A part that is off does nothing, so it logs nothing.
 	inline bool IsDiagnosticMode() { return IsOn(kDiagnosticMode); }
+
+	// The room a guard of the WeaponLimits part checks a load against: partRoom, the room the part gave the game.
+	// A test build takes gameRoom, the game's own, while the environment variable TWEAKSV_TEST_GUARD_ROOM is 1, so
+	// that a load past the game's own limit reaches the guard while the part's room still keeps the game safe; it
+	// says so once under the guard's tag: "TEST BUILD: the <guard>'s room is the game's own N instead of M
+	// (TWEAKSV_TEST_GUARD_ROOM=1)." Each guard asks once, when it is set up (SPECIFICATIONS 13.1).
+	int GuardRoom(const char* tag, const char* guard, int partRoom, int gameRoom);
 
 	// The default TweaksV.ini, with CRLF line endings, and a setting's default as it is written there.
 	std::string DefaultIniText();

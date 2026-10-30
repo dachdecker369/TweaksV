@@ -33,26 +33,29 @@ nve_item() { tr -d '\r' < TweaksV.log | grep -c -- "PROBLEM: .*TestRun.$1onigiri
 # nve_line PART: how many lines of TweaksV.log are, word for word, the conflict check's line for onigiri.asi in the
 # game folder next to PART switched off in TweaksV.ini
 nve_line() { tr -d '\r' < TweaksV.log | grep -c -- "\\[TweaksV\\] Conflict check: .*TestRun.onigiri.asi is installed; TweaksV.s $1 part is off in TweaksV.ini already.\$"; }
+# re_item PART SECTION: how many lines of TweaksV.log are, word for word, the start-up summary's item for
+# ResourceExtensions.asi, Resource Extensions [Enhanced], in the game folder
+re_item() { tr -d '\r' < TweaksV.log | grep -c -- "PROBLEM: .*TestRun.ResourceExtensions.asi is installed and does this job too (Resource Extensions .Enhanced.): TweaksV.s $1 part is switched off while it is there, so nothing is patched twice. To stop this message, set ENABLED=0 under \\[$2\\] in TweaksV.ini.\$"; }
 # features_say [PART...]: the log header's Features: line says off for each PART and on for every other part
 features_say() {
 	local want="Features:" part sep=" "
-	for part in HeapAdjuster ModkitLimit PackfileLimit BoxStreamer Decals RageOpenV StraightToStoryMode DirectStorage Blips; do
+	for part in HeapAdjuster ModkitLimit PackfileLimit BoxStreamer Decals RageOpenV StraightToStoryMode DirectStorage Blips WeaponLimits PedProps Resources StaticBounds; do
 		if [[ " $* " == *" $part "* ]]; then want+="$sep$part off"; else want+="$sep$part on"; fi
 		sep=", "
 	done
 	tr -d '\r' < TweaksV.log | grep -qx -- ".* \[TweaksV\] $want"
 }
 # after_header PATTERN: the first line of TweaksV.log that matches PATTERN stands after the header, whose last line
-# in a release build holds the values of [BLIPS]
+# in a release build holds the values of [STATICBOUNDS]
 after_header() {
 	local header line
-	header=$(grep -n -m 1 -- '\[TweaksV\] Blips: ACTIVE_BLIP_LIMIT=' TweaksV.log | cut -d: -f1)
+	header=$(grep -n -m 1 -- '\[TweaksV\] StaticBounds: STATICBOUNDS_SIZE=' TweaksV.log | cut -d: -f1)
 	line=$(grep -n -m 1 -- "$1" TweaksV.log | cut -d: -f1)
 	[ -n "$header" ] && [ -n "$line" ] && [ "$line" -gt "$header" ]
 }
 
 echo "== I1 each old plugin on its own: only its part is skipped, and the log header says so"
-for old in HeapAdjuster.asi ZHeapAdjuster.asi ModkitLimitAdjusterEnhanced.asi PackfileLimitAdjusterEnhanced.asi DecalPatch.asi RageOpenV.asi OpenRPF.asi OpenIV.asi StraightToStoryMode.asi DirectStorageFix.asi; do
+for old in HeapAdjuster.asi ZHeapAdjuster.asi ModkitLimitAdjusterEnhanced.asi PackfileLimitAdjusterEnhanced.asi DecalPatch.asi RageOpenV.asi OpenRPF.asi OpenIV.asi StraightToStoryMode.asi DirectStorageFix.asi StaticBoundLimitAdjuster.asi StaticBoundsLimitAdjuster.asi; do
 	fresh_ini; touch "$old"; out=$(game full_game.exe); rm -f "$old"
 	case "$old" in
 		*HeapAdjuster.asi) off=HeapAdjuster; ok="has '$GAME_HEAP' && has '$MODKIT_ON' && has '$PACK_ON' && has '$BOX_ON' && has '$DECAL_ON' && has '$ROV_ON' && has '$STORY_ON'" ;;
@@ -62,6 +65,7 @@ for old in HeapAdjuster.asi ZHeapAdjuster.asi ModkitLimitAdjusterEnhanced.asi Pa
 		RageOpenV.asi|OpenRPF.asi|OpenIV.asi) off=RageOpenV; ok="has '$ALL_ON_HEAP' && has '$MODKIT_ON' && has '$PACK_ON' && has '$ROV_OFF' && has '$STORY_ON'" ;;
 		StraightToStoryMode.asi) off=StraightToStoryMode; ok="has '$ALL_ON_HEAP' && has '$MODKIT_ON' && has '$PACK_ON' && has '$ROV_ON' && has '$STORY_OFF'" ;;
 		DirectStorageFix.asi) off=DirectStorage; ok="has '$ALL_ON_HEAP' && has '$MODKIT_ON' && has '$PACK_ON' && has '$ROV_ON' && has '$STORY_ON' && log_lacks '\[DirectStorage\]'" ;;
+		StaticBound*) off=StaticBounds; ok="has '$ALL_ON_HEAP' && has '$MODKIT_ON' && has '$PACK_ON' && has '$BOX_ON' && has '$DECAL_ON' && has '$ROV_ON' && has '$STORY_ON' && log_lacks '\[StaticBounds\]'" ;;
 	esac
 	check "$old: its part skipped, the rest applied, reported once in the summary" "$ok && log_has 'Old plugin found: .*$old' && summary_once"
 	check "$old: the header's Features: line says off for ${off// /, } and on for the rest, the check's line stands after the header" "features_say $off && after_header 'Old plugin found'"
@@ -75,6 +79,12 @@ for dir in "" scripts plugins; do
 	check "in $at: one item per part, word for word, the only two problems of one summary" "[ \$(nve_item '$sub' RageOpenV RAGEOPENV) -eq 1 ] && [ \$(nve_item '$sub' StraightToStoryMode STRAIGHTTOSTORYMODE) -eq 1 ] && log_has 'Start-up summary not shown (ERROR_POPUP=0): 2 problem' && summary_once"
 	check "in $at: the header's Features: line says off for RageOpenV and StraightToStoryMode and on for the rest, the check's lines stand after the header" "features_say RageOpenV StraightToStoryMode && after_header 'is installed and does this job too'"
 done
+
+echo "== I1c ResourceExtensions.asi, Resource Extensions [Enhanced], in the game folder: HeapAdjuster, PackfileLimit and Blips off while it is there"
+fresh_ini; touch ResourceExtensions.asi; out=$(game full_game.exe); rm -f ResourceExtensions.asi
+check "HeapAdjuster, PackfileLimit and Blips off, the other parts applied, DirectStorage on" "has '$GAME_HEAP' && has '$PACK_OFF' && log_lacks '\[Blips\]' && has '$MODKIT_ON' && has '$BOX_ON' && has '$DECAL_ON' && has '$ROV_ON' && has '$STORY_ON' && log_has '\[DirectStorage\]'"
+check "one item per part, word for word, the only three problems of one summary" "[ \$(re_item HeapAdjuster HEAP_ADJUSTER) -eq 1 ] && [ \$(re_item PackfileLimit PACKFILE_LIMIT) -eq 1 ] && [ \$(re_item Blips BLIPS) -eq 1 ] && log_has 'Start-up summary not shown (ERROR_POPUP=0): 3 problem' && summary_once"
+check "the header's Features: line says off for HeapAdjuster, PackfileLimit and Blips and on for the rest, the check's lines stand after the header" "features_say HeapAdjuster PackfileLimit Blips && after_header 'is installed and does this job too'"
 
 echo "== I2 all old plugins at once, in the game folder, scripts\\ and plugins\\: everything skipped"
 fresh_ini
@@ -130,6 +140,12 @@ breaktest "R-E-E3 (an encryption call): no OPEN calls, files on" "R-E-E3" \
 	"has 'file hooks 8/8, redirect 8/8, pass 8/8, spellings ok, folder ok, outside ok | open calls 0/5'"
 breaktest "S-E2 (the legal screen): only that screen is left, the others skipped" "S-E2" \
 	"has 'splash: E9 86 01 00 00 90 | legal: 0F 84 07 05 00 00 | landing: 31 C0 C3 24 08' && has '$ROV_ON'"
+# [weapon infos]
+# [weapon components]
+# [ped props]
+# [texture budget]
+# [static bounds]
+# [rt buffer]
 breaktest "a label in small letters works too" "h-e1" \
 	"has '$GAME_HEAP' && has '$MODKIT_ON'"
 fresh_ini; addkey TEST_BREAK_PATTERN "H-E1"; out=$(game full_game.exe)

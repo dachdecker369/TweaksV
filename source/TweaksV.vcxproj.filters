@@ -46,6 +46,7 @@
     <ClCompile Include="TweaksVIni.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
+    <!-- [legacy packs] -->
     <ClCompile Include="TweaksVLog.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
@@ -85,6 +86,9 @@
     <ClCompile Include="TweaksVSirenIds.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
+    <ClCompile Include="TweaksVStaticBounds.cpp">
+      <Filter>TweaksV</Filter>
+    </ClCompile>
     <ClCompile Include="TweaksVStraightToStoryMode.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
@@ -103,6 +107,7 @@
     <ClCompile Include="TweaksVWeaponInfos.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
+    <!-- [rt buffer] -->
     <ClCompile Include="..\vendor\MinHook\src\buffer.c">
       <Filter>MinHook</Filter>
     </ClCompile>
@@ -153,6 +158,7 @@
     <ClInclude Include="TweaksVLock.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
+    <!-- [legacy packs] -->
     <ClInclude Include="TweaksVLog.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
@@ -195,6 +201,9 @@
     <ClInclude Include="TweaksVSirenIds.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
+    <ClInclude Include="TweaksVStaticBounds.h">
+      <Filter>TweaksV</Filter>
+    </ClInclude>
     <ClInclude Include="TweaksVStraightToStoryMode.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
@@ -213,6 +222,7 @@
     <ClInclude Include="TweaksVWeaponInfos.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
+    <!-- [rt buffer] -->
     <ClInclude Include="..\vendor\MinHook\include\MinHook.h">
       <Filter>MinHook</Filter>
     </ClInclude>

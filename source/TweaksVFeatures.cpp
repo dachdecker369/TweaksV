@@ -20,6 +20,7 @@
 #include "TweaksVRageOpenV.h"
 #include "TweaksVSirenCount.h"
 #include "TweaksVSirenIds.h"
+#include "TweaksVStaticBounds.h"
 #include "TweaksVStraightToStoryMode.h"
 #include "TweaksVStreamingMemory.h"
 #include "TweaksVSummary.h"
@@ -37,19 +38,27 @@ namespace TweaksV
 		// TweaksV has changed them. NVE needs it, so it stays, and those two parts are off while it is there.
 		constexpr PeerPlugin kNveLoader{ L"onigiri.asi", "NaturalVision Enhanced's loader" };
 
+		// Resource Extensions [Enhanced] by Koukol, closed source, raises many of the game's capacities - its page
+		// names the archive count and the story blips' threshold among them and asks to remove the heap and packfile
+		// adjusters. It stays for the jobs TweaksV does not do, so the three parts whose jobs it does too are off
+		// while it is there, and nothing is patched twice.
+		constexpr PeerPlugin kResourceExtensions{ L"ResourceExtensions.asi", "Resource Extensions [Enhanced]" };
+
 		// The five original plugins in the order an ASI loader loaded their .asi files (alphabetical),
 		// TweaksV's own box streamer and decal definitions parts among the limit adjusters, then its
-		// DirectStorage part and, last, its Blips part. ZHeapAdjuster.asi is the rename the HeapAdjuster
-		// author recommends; OpenRPF.asi and OpenIV.asi do RageOpenV's job, alloc8or's DirectStorageFix.asi
-		// that of the DirectStorage part, rootBrz's BlipLimitFix.asi that of the Blips part, and the
+		// DirectStorage part, its Blips part and the four parts of the parts' coding round. ZHeapAdjuster.asi
+		// is the rename the HeapAdjuster author recommends; OpenRPF.asi and OpenIV.asi do RageOpenV's job,
+		// alloc8or's DirectStorageFix.asi that of the DirectStorage part, rootBrz's BlipLimitFix.asi that of
+		// the Blips part, Nochala's Static Bounds Limit Adjuster - StaticBoundLimitAdjuster.asi on its page,
+		// StaticBoundsLimitAdjuster.asi in its repository - that of the StaticBounds part, and the
 		// closed-source DecalPatch.asi that of both the box streamer and the decal definitions parts, so it
-		// switches both off.
+		// switches both off. WeaponLimits is two modules, each started in turn.
 		constexpr Feature kFeatures[] = {
-			{ &kHeapSection, { L"HeapAdjuster.asi", L"ZHeapAdjuster.asi" }, {},
+			{ &kHeapSection, { L"HeapAdjuster.asi", L"ZHeapAdjuster.asi" }, { &kResourceExtensions },
 				[] { InitHeapAdjuster(); return false; } },
 			{ &kModkitSection, { L"ModkitLimitAdjusterEnhanced.asi" }, {},
 				[] { InitModkitLimit(); return false; } },
-			{ &kPackfileSection, { L"PackfileLimitAdjusterEnhanced.asi" }, {},
+			{ &kPackfileSection, { L"PackfileLimitAdjusterEnhanced.asi" }, { &kResourceExtensions },
 				[] { InitPackfileLimit(); return false; } },
 			{ &kBoxStreamerSection, { L"DecalPatch.asi" }, {},
 				[] { InitBoxStreamer(); return false; } },
@@ -62,8 +71,17 @@ namespace TweaksV
 				[] { InitStraightToStoryMode(); return false; } },
 			{ &kDirectStorageSection, { L"DirectStorageFix.asi" }, {},
 				[] { InitDirectStorage(); return false; } },
-			{ &kBlipsSection, { L"BlipLimitFix.asi" }, {},
+			{ &kBlipsSection, { L"BlipLimitFix.asi" }, { &kResourceExtensions },
 				[] { InitBlips(); return false; } },
+			{ &kWeaponLimitsSection, {}, {},
+				[] { InitWeaponInfos(); InitWeaponComponents(); return false; } },
+			{ &kPedPropsSection, {}, {},
+				[] { InitPedProps(); return false; } },
+			{ &kResourcesSection, {}, {},
+				[] { InitTextureBudget(); return false; } },
+			{ &kStaticBoundsSection, { L"StaticBoundLimitAdjuster.asi", L"StaticBoundsLimitAdjuster.asi" }, {},
+				[] { InitStaticBounds(); return false; } },
+			// [rt buffer]
 		};
 
 		// Every section of TweaksV.ini but [TWEAKSV] belongs to a feature, in the same order.
@@ -77,7 +95,7 @@ namespace TweaksV
 		}
 		static_assert(InSectionOrder(), "TweaksV: kFeatures must be in the order of kSections");
 
-		// A limit of a part to come, measured before its part writes anything (SPECIFICATIONS 11.10): with
+		// A limit of a part to come, measured before its part writes anything (SPECIFICATIONS 11.14): with
 		// DIAGNOSTIC_MODE=1 its module finds and checks the sites of the limit and measures it.
 		struct MeasuredFirst
 		{
@@ -85,15 +103,20 @@ namespace TweaksV
 			void (*start)();		// the module's Measure<Limit>()
 		};
 
-		// The parts measured first, one entry per limit in the order of SPECIFICATIONS 11.10. A limit leaves the
+		// The parts measured first, one entry per limit in the order of SPECIFICATIONS 11.14. A limit leaves the
 		// table when its part is built, or when it is not, so the table may be empty.
 		constexpr std::initializer_list<MeasuredFirst> kMeasuredFirst = {
+			// [weapon infos]
 			{ "WeaponLimits", MeasureWeaponInfos },
+			// [weapon components]
 			{ "WeaponLimits", MeasureWeaponComponents },
 			{ "SirenSettings", MeasureSirenIds },
 			{ "SirenSettings", MeasureSirenCount },
+			// [ped props]
 			{ "PedProps", MeasurePedProps },
+			// [texture budget]
 			{ "Resources", MeasureTextureBudget },
+			// [streaming memory]
 			{ "Resources", MeasureStreamingMemory },
 		};
 	}

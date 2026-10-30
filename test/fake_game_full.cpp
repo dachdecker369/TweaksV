@@ -97,7 +97,8 @@
 //   blipbadbyte    the byte 0xA0, no instruction, at 0x200
 // The blip pool's two sites are always there, the pool with 162 slots in use below its high-water mark, 170, and
 // two beyond it.
-// The parts measured first (TweaksV's SPECIFICATIONS.md 11.10), one block per limit: its options, and what is always there.
+// The parts measured first (TweaksV's SPECIFICATIONS.md 11.14), one block per limit: its options, and what is always there.
+// [weapon infos]
 // The weapon infos (WeaponLimits): the game's initializer of the weapon info blob array - its lea of the array, then
 // W-E-I1: "mov edx, 160", the call to the allocation, the block's store, "mov word [capacity], 160" -, the allocation's
 // first bytes, and the loader, a NOP before its start and W-E-I2 0x18 bytes into it, are always there; the array, in the
@@ -120,6 +121,7 @@
 //   wisize         the loader's blob size is 0x100, the allocation's element size 0xF8
 //   winotstart     the byte before the loader's start is 48, so that it is no function start
 //   wiextra        a third reference to the array, a second store of a block
+// [weapon components]
 // The weapon components' sites are always there (the WeaponLimits part's measurement): the rebuild of the list of every
 // weapon component definition, its sort and its update of the count, the pool's size call to a stand-in for the game's
 // size lookup, and the list's 15 other leas, 17 in all; the list of 470 entries with its count right after it, 412
@@ -177,6 +179,7 @@
 //   scelsewhere    the call of the renderer leads to another function of the game than the one the bone read lies in
 //   scnotstart     find-bone-by-name's pattern lies 16 bytes into its function, not at its start
 //   scnounwind     find-bone-by-name's pattern lies in .fakesit, CC before it, where no unwind data names a function
+// [ped props]
 // Ped props (PedProps): the eleven narrowings with the calls in their matches, A-E-G1's two copies among them, the
 // per-anchor count's start and loop and the model info store's lookup are always there, with the calls no pattern
 // names - the per-anchor count's 7 callers and the metadata lookup's 17 in all - and two calls that lead elsewhere,
@@ -203,6 +206,7 @@
 //   pplookupsplit  A-E-G4's call leads to the texture count, not to the metadata lookup
 //   pphooked       A-E-T1's call leads outside the game (another mod hooked it)
 //   ppstoreout     A-E-S1's reference to the store's array pointer leads outside the game
+// [texture budget]
 // The texture budget's sites (the Resources part's measurement) are always there: the start-up's stores of the most streamed
 // objects and of the four budgets and the call after them, the budget's getter, a resource's placement and the update check,
 // leading to the counters as the game's start-up leaves them - textures 2456 MB and buffers 389 MB in 22222 and 1234 objects,
@@ -223,6 +227,7 @@
 //   tbcounters     the update check's lea of the counters leads 8 bytes past them
 //   tbmost         the placement's check loads the most objects from 4 bytes past them
 //   tbfactor      the update check's multiplication by its raise factor is an addition (addss)
+// [streaming memory]
 //   smoutside      the streaming memory (Resources): the resource heap's lea (Q-E-H1) leads outside the game
 //   smhooked       the call of the game's timeGetTime before the refusal stamp (Q-E-S1) already leads outside the game
 //                  (another mod's hook)
@@ -240,6 +245,9 @@
 // The resource heap is made once TweaksV has started, as the game makes it after TweaksV's DllMain: 9 of its 32 regions
 // of 256 MB less a page of 8 KB, 1864 MB of them in use, 1710 MB by streamed resources, the streaming budgets the heap's
 // size, nothing counted against them and nothing refused.
+// [static bounds]
+// [legacy packs]
+// [rt buffer]
 #include <windows.h>
 #include <winternl.h>
 #include <cstddef>
@@ -510,6 +518,7 @@ static Site g_blipMarkRefs[] = { SITE(g_blipMarkSite, 5), SITE(g_blipMarkSite, 1
 
 // The parts measured first: the game code each limit's module finds and checks, one block per limit. What its
 // sites reference lies below, outside this section, as the game's does.
+// [weapon infos]
 // The weapon infos: the game's initializer of the weapon info blob array - its "lea rcx" of the array (0x58 bytes before
 // W-E-I1 in the game), then W-E-I1: a field of the manager zeroed, "mov edx, 160", the call to the allocation, the block's
 // "mov [rip+disp32], rax", the capacity's "mov word [rip+disp32], 160" - whose disp32 counts from the instruction's end,
@@ -535,6 +544,7 @@ static Site g_weaponInfosExtraRef = SITE(g_weaponInfosExtra, 3);
 static Site g_weaponInfosSites[] = { SITE(g_weaponInfosLea, 0), SITE(g_weaponInfosInit, 0), SITE(g_weaponInfosAllocation, 0),
 	SITE(g_weaponInfosLoader, 0), SITE(g_weaponInfosExtra, 0) };
 
+// [weapon components]
 // The weapon components (the WeaponLimits part's measurement): the list's rebuild - "mov dword [rip+disp32], 0" of its
 // count, the disp32 at +2 and the instruction 10 bytes long, "movzx r8d, word [rip+disp32]" of the files' count, the
 // disp32 at +14, and "lea r10, [rip+disp32]" of the list, the rel32 at +34 - its sort - "movsxd rdx, dword [rip+disp32]"
@@ -597,6 +607,7 @@ volatile unsigned char g_sirenCountFindBoneCopy[] = { 0xCC, 0xCC, 0x57, 0x41, 0x
 	0x66, 0x83, 0x79, 0x5E, 0x00, 0xCC };
 static Site g_sirenCountFindBoneSite = SITE(g_sirenCountFindBoneCopy, 1);
 
+// [ped props]
 // Ped props: the eleven narrowings to 8 bits, each with the call in its match - an anchor's total in the check the
 // set-prop native asks (T1, its call to the texture count) and in the helmet code after its calls of the per-anchor
 // count (T2..T5; T5's match ends in the next call, one of the count's three unused ones), a worn prop's index before
@@ -661,6 +672,7 @@ static Site g_pedPropsSites[] = { SITE(g_pedPropsT1, 0), SITE(g_pedPropsT2, 0), 
 	{ &g_pedPropsCalls[0][0], 0, sizeof(g_pedPropsCalls) }, { &g_pedPropsElsewhere[0][0], 0, sizeof(g_pedPropsElsewhere) },
 	{ &g_pedPropsExtra[0][0], 0, sizeof(g_pedPropsExtra) } };
 
+// [texture budget]
 // The texture budget (the Resources part's measurement): the start-up's store of the most streamed objects - "mov ecx,
 // [rax+0x54C]", "mov [rip+disp32], ecx" with the rel32 at +8 - and its load, shift and store of budgets 0 and 1 (the rel32 at
 // +30), then right after them, at +34, those of budgets 2 and 3 (+52), "lea r14", "mov [rip+disp32], r14", "sub rsp, 0x20"
@@ -694,6 +706,7 @@ static Site g_textureBudgetGetterCall = SITE(g_textureBudgetUpdate, 35);
 static Site g_textureBudgetFlagRef = SITE(g_textureBudgetUpdate, 0x4D);
 static Site g_textureBudgetFactorRefs[] = { SITE(g_textureBudgetUpdate, 0x58), SITE(g_textureBudgetUpdate, 0xA5) };	// the lower, the raise
 
+// [streaming memory]
 // Resources, the streaming memory: the start-up's "lea rcx, [rip+disp32]" of the resource heap, "mov edx, 0x2000" (its
 // page size), "mov r8d, 0x40000000" (the region size asked) and the call of its constructor (Q-E-H1); the streaming
 // update's lea of the streaming allocator, the call of the budgets' reset and two moves the measurement does not read
@@ -715,6 +728,9 @@ static Site g_streamingMemoryClockCall = SITE(g_streamingMemoryStampSite, 8);			
 static Site g_streamingMemoryStampRef = SITE(g_streamingMemoryStampSite, 14);
 static Site g_streamingMemorySites[] = { SITE(g_streamingMemoryHeapSite, 0), SITE(g_streamingMemoryAllocatorSite, 0),
 	SITE(g_streamingMemoryStampSite, 0), SITE(g_streamingMemoryCapSite, 0) };
+// [static bounds]
+// [legacy packs]
+// [rt buffer]
 #pragma data_seg()
 
 // The game's own modkit array (1024 entries of 2 bytes) and packfile array (4500 entries of 8 bytes). The
@@ -747,6 +763,7 @@ static int32_t* volatile g_blipMark = &g_blipMarkStorage;
 
 // The parts measured first: the game's data their sites reference and what stands in for the game's code they
 // call, one block per limit. The harness reaches the data only through pointers, as it does the arrays above.
+// [weapon infos]
 // The weapon info manager's array of blobs - the block's pointer, the count at +8, the capacity at +0xA - in the fake's
 // data, as the game's is in its own: zero while TweaksV starts. The block the fake's initializer allocates, the sites'
 // bytes as laid before TweaksV starts, and TweaksV.log as the fake reads it for "wipacks".
@@ -848,6 +865,7 @@ static void WeaponInfosMountPacks()
 		Sleep(2500);
 }
 
+// [weapon components]
 // The game's weapon component list, 470 entries of 8 bytes - a definition's pointer each - with its count, an int32, right
 // after it, then the array of the files' blobs and their count, a uint16, as the game lays them out; what the game's
 // configuration pointer leads to; and the game's pool size lookup behind the pool's size call, which gives a pool the size
@@ -1549,6 +1567,7 @@ static void SirenCountReport()
 	wprintf(L"siren sites and data: %ls | ", SirenCountPlaced() == g_sirenCountPlacedHash ? L"as placed" : L"CHANGED");
 }
 
+// [ped props]
 // Ped props: the stand-ins for the game's texture count and metadata lookup, which the sites' calls lead to and nothing
 // calls - two different functions, so that the linker cannot fold them into one - and the model info store: its four
 // globals, where A-E-S1's references lead, and its data in memory of the fake's own, laid out at the game's offsets as
@@ -1747,6 +1766,7 @@ static void PedPropsGrow()
 	g_pedPropsDataSum = PedPropsSum(false);
 }
 
+// [texture budget]
 // The texture budget's data, laid out as the game's: the counters - the buffers' and the textures' bytes and numbers, the game's
 // high-water mark of both, the most objects allowed and the four budgets in bytes - the index of the budget in use, the update
 // check's flag and its switch with its three factors; and the function of the game's the call after the budgets' stores leads
@@ -1872,6 +1892,7 @@ static void TextureBudgetLater(TextureBudgetChange change)
 		change == TextureBudgetChange::High ? L", highs raised one at a time after the first summary" : L", set after the first summary");
 }
 
+// [streaming memory]
 // Resources, the streaming memory: the game's resource heap - its object of 0x3FF0 bytes, all zeros until the harness
 // makes it once TweaksV has started, as the game does after TweaksV's DllMain - the streaming allocator, 0x38 bytes on a
 // page of its own (so that "smunreadable" can take the page away while TweaksV starts), and the refusal stamp; a copy of
@@ -1955,6 +1976,10 @@ static void StreamingMemoryLeave()
 	memcpy(g_streamingMemoryAllocatorAsLeft, g_streamingMemoryAllocator, kStreamingMemoryAllocatorSize);
 	g_streamingMemoryStampAsLeft = *g_streamingMemoryStamp;
 }
+
+// [static bounds]
+// [legacy packs]
+// [rt buffer]
 
 // The game's two tree searches behind the box streamer's four calls: the first and the third call lead
 // to the first search, the second and the fourth to the second. Each writes the number of entries the
@@ -2422,7 +2447,9 @@ static void ForEachSite(void (*fn)(const Site&))
 	Site indirect = { reinterpret_cast<volatile unsigned char*>(&g_packIndirectSize), 0, sizeof(g_packIndirectSize) };
 	fn(indirect);
 	// the parts measured first: every site of each limit
+	// [weapon infos]
 	for (const Site& site : g_weaponInfosSites) fn(site);
+	// [weapon components]
 	for (const Site& site : g_weaponComponentsSites) fn(site);
 	for (auto& row : g_weaponComponentsLeas) { Site site = { row, 0, sizeof(row) }; fn(site); }
 	for (const SirenIdsSite& sirenIds : g_sirenIdsSites)
@@ -2433,11 +2460,17 @@ static void ForEachSite(void (*fn)(const Site&))
 	fn(g_sirenCountRendererCall);
 	fn(g_sirenCountGlassSite);
 	fn(g_sirenCountFindBoneSite);
+	// [ped props]
 	for (const Site& site : g_pedPropsSites) fn(site);
+	// [texture budget]
 	static Site textureBudgetSites[] = { SITE(g_textureBudgetStores, 0), SITE(g_textureBudgetGetter, 0), SITE(g_textureBudgetPlacement, 0),
 		SITE(g_textureBudgetUpdate, 0) };
 	for (const Site& site : textureBudgetSites) fn(site);
+	// [streaming memory]
 	for (const Site& site : g_streamingMemorySites) fn(site);
+	// [static bounds]
+	// [legacy packs]
+	// [rt buffer]
 }
 
 static void MakeSitesReadExecute()
@@ -3670,6 +3703,7 @@ int wmain(int argc, wchar_t** argv)
 	for (const Site& site : g_blipMarkRefs)
 		SetRel32(site, g_blipMark);
 	// The parts measured first: each limit's sites lead to its data, as its options ask for them
+	// [weapon infos]
 	// The weapon infos: the sites lead to the array and to the allocation, but where an option asks otherwise; the array
 	// stays empty while TweaksV starts, unless "wisetup" sets it up first
 	{
@@ -3705,6 +3739,7 @@ int wmain(int argc, wchar_t** argv)
 			WeaponInfosInitialize(0, 152);
 		WeaponInfosKeepSites();
 	}
+	// [weapon components]
 	// The weapon components: 412 definitions from 23 files in the list - 470 from 25 with "wcfull" and "wcover" - and every
 	// site leading to the list, its count, the files' count, the configuration and the size lookup...
 	WeaponComponentsLoad(HasOption(argc, argv, L"wcfull") || HasOption(argc, argv, L"wcover") ? 470 : 412,
@@ -3744,6 +3779,7 @@ int wmain(int argc, wchar_t** argv)
 	SirenIdsSetup(argc, argv);
 	SirenCountSetup(HasOption(argc, argv, L"schooked"), HasOption(argc, argv, L"scgetterhooked"), HasOption(argc, argv, L"scelsewhere"),
 		HasOption(argc, argv, L"scnotstart"), HasOption(argc, argv, L"scnounwind"));
+	// [ped props]
 	// The ped props' calls lead to the stand-ins: T1's to the texture count, the per-anchor count's 7 callers to its start,
 	// the metadata lookup's 17 to it, the two others elsewhere, the two more to them too (their E8 only with an option);
 	// A-E-S1's four references to the store's globals; then the store built and the sites' and data's bytes summed
@@ -3788,6 +3824,7 @@ int wmain(int argc, wchar_t** argv)
 		g_pedPropsSitesSum = PedPropsSum(true);
 		g_pedPropsDataSum = PedPropsSum(false);
 	}
+	// [texture budget]
 	// The texture budget: the data as the game's start-up leaves them - with "tblate" all 0, as before it - and every site leading
 	// to them as the game's do, but where an option asks otherwise
 	{
@@ -3835,6 +3872,7 @@ int wmain(int argc, wchar_t** argv)
 		int asPlaced = 0;
 		TextureBudgetSites(g_textureBudgetSitesAsPlaced, false, asPlaced);
 	}
+	// [streaming memory]
 	// Resources, the streaming memory: the sites lead to the heap, the allocator, the stamp and the three functions...
 	SetRel32(g_streamingMemoryHeapRef, g_streamingMemoryHeap);
 	SetRel32(g_streamingMemoryConstructorCall, reinterpret_cast<const void*>(&StreamingMemoryConstruct));
@@ -3858,6 +3896,10 @@ int wmain(int argc, wchar_t** argv)
 		VirtualProtect(g_streamingMemoryAllocator, sizeof(g_streamingMemoryAllocatorPage), PAGE_NOACCESS, &old);
 	}
 	g_streamingMemoryStart = GetTickCount64();	// TweaksV is loaded a few milliseconds after this
+
+	// [static bounds]
+	// [legacy packs]
+	// [rt buffer]
 
 	RovSetup(argc, argv);
 	ForEachSite(TouchSite);
@@ -3924,10 +3966,12 @@ int wmain(int argc, wchar_t** argv)
 	if (HasOption(argc, argv, L"dsrenameflood"))
 		FloodRenames();
 	// The parts measured first: what the game does with each limit once TweaksV has started, as its options ask
+	// [weapon infos]
 	if (!HasOption(argc, argv, L"wisetup"))	// the game's initializer of the weapon info blob array, then its loader
 		WeaponInfosInitialize(HasOption(argc, argv, L"wiraised") ? 512 : 0, HasOption(argc, argv, L"wiraised") ? 170 : 152);
 	if (HasOption(argc, argv, L"wipacks"))
 		WeaponInfosMountPacks();
+	// [weapon components]
 	if (HasOption(argc, argv, L"wcpack"))	// a pack's weaponcomponents.meta loads: the list is rebuilt from 24 files
 	{
 		Sleep(11000);
@@ -3937,17 +3981,20 @@ int wmain(int argc, wchar_t** argv)
 	if (HasOption(argc, argv, L"scdraw"))
 		SirenCountDrawAll(HasOption(argc, argv, L"scodd"), HasOption(argc, argv, L"scmore"), HasOption(argc, argv, L"scfull"),
 			HasOption(argc, argv, L"scfault"));
+	// [ped props]
 	if (HasOption(argc, argv, L"ppgrow"))	// the game loads another pack, after the ped props' first summary, 10 s in
 	{
 		Sleep(10500);
 		PedPropsGrow();
 	}
+	// [texture budget]
 	if (HasOption(argc, argv, L"tbgrow"))
 		TextureBudgetLater(TextureBudgetChange::Grow);
 	else if (HasOption(argc, argv, L"tbhigh"))
 		TextureBudgetLater(TextureBudgetChange::High);
 	else if (HasOption(argc, argv, L"tblate"))
 		TextureBudgetLater(TextureBudgetChange::Late);
+	// [streaming memory]
 	// Resources, the streaming memory: the game makes its resource heap after TweaksV's DllMain - 9 of its 32 regions,
 	// 1864 MB of them in use, 1710 MB by streamed resources, the budgets the heap's size - and later, as asked, grows it
 	if (HasOption(argc, argv, L"smunreadable"))	// the allocator's page readable again
@@ -3999,6 +4046,9 @@ int wmain(int argc, wchar_t** argv)
 		StreamingMemoryLeave();
 		Sleep(6500);	// with TWEAKSV_TEST_SUMMARY_MS=3000, TweaksV's summaries 13 and 16 s in
 	}
+	// [static bounds]
+	// [legacy packs]
+	// [rt buffer]
 	if (HasOption(argc, argv, L"wait"))
 		Sleep(11000);	// TweaksV's UNLOCK_FILES summary comes 10 s after the first open it counts, the OpenFile summary 10 s
 						// after the first OpenFile, the interface check 10 s after the request
@@ -4028,9 +4078,11 @@ int wmain(int argc, wchar_t** argv)
 	wprintf(L"%ls%ls%ls%ls%ls%ls%ls%ls%ls%ls", g_dstorageResult, g_floodResult, g_shareResult, g_ownResult, g_fileOpensResult,
 		g_replaceResult, g_renamesResult, g_renameFloodResult, g_scriptResult, g_blipResult);
 	// The parts measured first: each limit's field of the report, and the stub of a call it redirected
+	// [weapon infos]
 	wprintf(L"weapon infos: sites %ls, array %u of %u%ls | ", WeaponInfosSitesAsLaid() ? L"as laid" : L"CHANGED",
 		static_cast<unsigned>(g_weaponInfosArray->count), static_cast<unsigned>(g_weaponInfosArray->capacity),
 		g_weaponInfosArray->block == g_weaponInfosBlock ? L"" : L", its block CHANGED");
+	// [weapon components]
 	{
 		unsigned char sites[sizeof(g_weaponComponentsPlacedSites)];
 		const size_t size = WeaponComponentsCopySites(sites, sizeof(sites));
@@ -4042,8 +4094,10 @@ int wmain(int argc, wchar_t** argv)
 	SirenIdsReport();
 	SirenCountReport();
 	CheckStub(Rel32Target(g_sirenCountRendererCall));
+	// [ped props]
 	wprintf(L"pedprops: sites %ls, data %ls | ", PedPropsSum(true) == g_pedPropsSitesSum ? L"as placed" : L"CHANGED",
 		PedPropsSum(false) == g_pedPropsDataSum ? L"as placed" : L"CHANGED");
+	// [texture budget]
 	{
 		// "texture budget: sites as placed 4 of 4, data as set, its page RW; stores RVA 0x..., ... | " - the sites as they were before
 		// TweaksV loaded, the data as the harness set it, and where each lies, for the suite to compare with the log's lines
@@ -4059,6 +4113,7 @@ int wmain(int argc, wchar_t** argv)
 			g_textureBudgetLater, rva(g_textureBudgetStores), rva(g_textureBudgetGetter), rva(g_textureBudgetPlacement), rva(g_textureBudgetUpdate),
 			rva(reinterpret_cast<const void*>(&TextureBudgetNextStep)), rva(&data.counters), rva(&data.index), rva(&data.flag), rva(&data.updateCheck));
 	}
+	// [streaming memory]
 	// "streaming memory: heap at RVA 0x..., ..., sites as placed 4 of 4, data as left 3 of 3 | " - where the heap, the
 	// allocator, the stamp and the three functions lie, and whether the sites and the data are as the harness left them
 	{
@@ -4084,6 +4139,9 @@ int wmain(int argc, wchar_t** argv)
 			rva(reinterpret_cast<const void*>(&StreamingMemoryConstruct)), rva(reinterpret_cast<const void*>(&StreamingMemoryResetBudgets)),
 			rva(reinterpret_cast<const void*>(&StreamingMemoryTimeGetTime)), streamingMemorySitesAsPlaced, streamingMemoryDataAsLeft);
 	}
+	// [static bounds]
+	// [legacy packs]
+	// [rt buffer]
 	CheckStub(Rel32Target(g_packCallSite));
 	CheckStub(Rel32Target(g_scriptCallSite));
 	for (const Site& site : g_boxCalls)

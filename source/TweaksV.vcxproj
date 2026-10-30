@@ -134,6 +134,7 @@
     <ClCompile Include="TweaksVGame.cpp" />
     <ClCompile Include="TweaksVHeapAdjuster.cpp" />
     <ClCompile Include="TweaksVIni.cpp" />
+    <!-- [legacy packs] -->
     <ClCompile Include="TweaksVLog.cpp" />
     <ClCompile Include="TweaksVMeasure.cpp" />
     <ClCompile Include="TweaksVModkitLimit.cpp" />
@@ -147,12 +148,14 @@
     <ClCompile Include="TweaksVSettings.cpp" />
     <ClCompile Include="TweaksVSirenCount.cpp" />
     <ClCompile Include="TweaksVSirenIds.cpp" />
+    <ClCompile Include="TweaksVStaticBounds.cpp" />
     <ClCompile Include="TweaksVStraightToStoryMode.cpp" />
     <ClCompile Include="TweaksVStreamingMemory.cpp" />
     <ClCompile Include="TweaksVSummary.cpp" />
     <ClCompile Include="TweaksVTextureBudget.cpp" />
     <ClCompile Include="TweaksVWeaponComponents.cpp" />
     <ClCompile Include="TweaksVWeaponInfos.cpp" />
+    <!-- [rt buffer] -->
     <!-- MinHook v1.3.4, compiled unchanged from vendor\MinHook (x64 only: hde64, not hde32), at warning
          level 3, which it builds without a warning: its code is not TweaksV's to change, and /W4 finds
          its own warnings -->
@@ -182,6 +185,7 @@
     <ClInclude Include="TweaksVHeapAdjuster.h" />
     <ClInclude Include="TweaksVIni.h" />
     <ClInclude Include="TweaksVLock.h" />
+    <!-- [legacy packs] -->
     <ClInclude Include="TweaksVLog.h" />
     <ClInclude Include="TweaksVMeasure.h" />
     <ClInclude Include="TweaksVModkitLimit.h" />
@@ -196,12 +200,14 @@
     <ClInclude Include="TweaksVSettings.h" />
     <ClInclude Include="TweaksVSirenCount.h" />
     <ClInclude Include="TweaksVSirenIds.h" />
+    <ClInclude Include="TweaksVStaticBounds.h" />
     <ClInclude Include="TweaksVStraightToStoryMode.h" />
     <ClInclude Include="TweaksVStreamingMemory.h" />
     <ClInclude Include="TweaksVSummary.h" />
     <ClInclude Include="TweaksVTextureBudget.h" />
     <ClInclude Include="TweaksVWeaponComponents.h" />
     <ClInclude Include="TweaksVWeaponInfos.h" />
+    <!-- [rt buffer] -->
     <ClInclude Include="..\vendor\MinHook\include\MinHook.h" />
   </ItemGroup>
   <ItemGroup>

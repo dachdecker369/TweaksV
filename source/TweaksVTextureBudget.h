@@ -11,4 +11,8 @@ namespace TweaksV
 	// Finds and checks the texture budget's sites and starts its measurement; writes nothing to the game. Called
 	// once by DllMain, through the table of the parts measured first, with DIAGNOSTIC_MODE=1 only.
 	void MeasureTextureBudget();
+
+	// The texture budget, the Resources part (SPECIFICATIONS 11.12), started by the part's entry of the feature
+	// table, from DllMain, while [RESOURCES] is on. It changes nothing yet.
+	void InitTextureBudget();
 }

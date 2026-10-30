@@ -186,6 +186,24 @@ namespace TweaksV
 		ReleaseSRWLockExclusive(&g_lock);
 	}
 
+	int GuardRoom(const char* tag, const char* guard, int partRoom, int gameRoom)
+	{
+#ifdef TWEAKSV_TEST_BUILD
+		wchar_t value[4]{};
+		if (GetEnvironmentVariableW(L"TWEAKSV_TEST_GUARD_ROOM", value, 4) == 1 && value[0] == L'1')
+		{
+			WriteLog(tag, std::string("TEST BUILD: the ") + guard + "'s room is the game's own " + std::to_string(gameRoom) +
+				" instead of " + std::to_string(partRoom) + " (TWEAKSV_TEST_GUARD_ROOM=1).");
+			return gameRoom;
+		}
+#else
+		(void)tag;
+		(void)guard;
+		(void)gameRoom;
+#endif
+		return partRoom;
+	}
+
 	std::string DefaultValueText(const Setting& setting)
 	{
 		return setting.kind == SettingKind::Text ? std::string() : std::to_string(setting.defaultValue);

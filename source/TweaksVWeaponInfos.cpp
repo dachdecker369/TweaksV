@@ -8,7 +8,7 @@
 // call that allocates and constructs that many blobs, "mov word [capacity], 160" gives the array its room - and the
 // game's loader adds a blob for each file without any check, so a 161st file is parsed into the memory after the
 // block. The part to come raises the two immediates together; it goes in only once a mod load reaches the limit,
-// so the limit is measured first (SPECIFICATIONS 11.10). The table of the parts measured first starts this module
+// so the limit is measured first (SPECIFICATIONS 11.14). The table of the parts measured first starts this module
 // with DIAGNOSTIC_MODE=1 only, after the parts; it reads no switch of its own, and DRY_RUN changes nothing in it:
 //   - W-E-I1, the initializer's allocation, and W-E-I2, the loader's head, are found once each, and every site is
 //     checked as the part's writing half will check it: the two immediates equal and not 0; the call into the
@@ -333,5 +333,9 @@ namespace TweaksV
 			" blobs of " + std::to_string(elementSize) + " bytes: the weapons.meta files loaded and its room are logged after 10 seconds, then every "
 			"minute while the numbers change.");
 		StartMeasurement<kMeasurement>();	// one that cannot start is logged
+	}
+
+	void InitWeaponInfos()
+	{
 	}
 }
