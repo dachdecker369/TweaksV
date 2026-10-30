@@ -250,8 +250,9 @@
 //                      starts; repeatable (LpMake has the kinds)
 //   lpmany KIND N DIR  the archive of KIND N times in DIR, p00001.rpf on: the first written, the others hard links to it
 //   lplock PATH        PATH held open without sharing from before TweaksV starts until the report, so the check cannot open it
-//   lpwait             waits up to 40 s for the check's last line in TweaksV.log, then 1.5 s for the box of a problem after the
-//                      start-up summary; reported as "legacy packs: done" or "legacy packs: no last line in 40 s"
+//   lpwait             waits up to 40 s for the check's last line in TweaksV.log, or its problem that it is not done, then 1.5 s
+//                      for the box of a problem after the start-up summary; reported as "legacy packs: done" or "legacy packs: no
+//                      last line in 40 s"
 // [rt buffer]
 #include <windows.h>
 #include <winternl.h>
@@ -2375,15 +2376,26 @@ static void LpSetup(int argc, wchar_t** argv)
 	}
 }
 
-// lpwait: the check's last line in TweaksV.log, read as TweaksV writes it - every 20 ms, on from where the last read ended - for
-// 40 s at most; then 1.5 s for the box of a problem after the start-up summary, which comes a second after the problem.
+// lpwait: the check's last line in TweaksV.log - or its problem that it is not done - read as TweaksV writes it, every 20 ms, on from
+// where the last read ended, for 40 s at most; then 1.5 s for the box of a problem after the start-up summary, which comes a second
+// after the problem.
+static bool LpFound(const char* bytes, size_t size, const char* text)
+{
+	const size_t length = strlen(text);
+	for (size_t i = 0; i + length <= size; i++)
+		if (memcmp(bytes + i, text, length) == 0)
+			return true;
+	return false;
+}
+
 static void LpWait(int argc, wchar_t** argv)
 {
 	if (!HasOption(argc, argv, L"lpwait"))
 		return;
 	static const char kLast[] = "] Packs checked for GTA V Legacy versions: ";
-	const size_t lastSize = sizeof(kLast) - 1;
-	static char buffer[65536 + sizeof(kLast)];
+	static const char kNotDone[] = "] PROBLEM: The check for packs made for GTA V Legacy is not done this session: ";
+	const size_t lastSize = sizeof(kNotDone) - 1;	// the longer of the two
+	static char buffer[65536 + sizeof(kNotDone)];
 	size_t kept = 0;			// the end of the bytes read before, so that a line split between two reads is found too
 	LARGE_INTEGER offset = {};
 	const ULONGLONG start = GetTickCount64();
@@ -2399,8 +2411,7 @@ static void LpWait(int argc, wchar_t** argv)
 			{
 				offset.QuadPart += read;
 				const size_t size = kept + read;
-				for (size_t i = 0; i + lastSize <= size && !found; i++)
-					found = memcmp(buffer + i, kLast, lastSize) == 0;
+				found = LpFound(buffer, size, kLast) || LpFound(buffer, size, kNotDone);
 				kept = size < lastSize ? size : lastSize;
 				memmove(buffer, buffer + size - kept, kept);
 			}

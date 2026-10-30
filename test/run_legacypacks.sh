@@ -121,6 +121,11 @@ check "the plain game: its file functions not found, so nothing checked" "log_ha
 fresh_ini; mv mods mods_off; out=$(game full_game.exe); mv mods_off mods
 check "no mods folder: nothing checked" "log_has 'No mods folder in the current directory' && log_lacks 'GTA V Legacy'"
 
+echo "== L13b a mods folder the check cannot list - reached through the test build's TWEAKSV_TEST_LEGACY_FOLDER, since RageOpenV stops at such a folder first: a problem, no last line"
+packs_gone; fresh_ini; mkdir -p unlisted; deny_listing unlisted
+out=$(TWEAKSV_TEST_LEGACY_FOLDER="$(cygpath -w "$B/unlisted")" ASI=TweaksV_test.asi game full_game.exe lpwait); allow_writes unlisted; rmdir unlisted
+check "the test build's line names the folder; the check not done, said as a problem with the Windows error; no last line" "has '$DONE' && log_has 'TEST BUILD: the check for packs made for GTA V Legacy reads .*unlisted in place of the mods folder (TWEAKSV_TEST_LEGACY_FOLDER)\.' && log_line 'PROBLEM: The check for packs made for GTA V Legacy is not done this session: the mods folder could not be read (Windows error 5, access denied)\.\$' && log_lacks 'Packs checked for GTA V Legacy versions' && one_box"
+
 echo "== L14 ERROR_POPUP=1 (the test build, which shows no box with TWEAKSV_TEST_NO_BOXES=1): one box for a Legacy pack and one that cannot be read"
 packs_gone; fresh_ini; setkey ERROR_POPUP 1; out=$(ASI=TweaksV_test.asi game full_game.exe lpmake legacy mods/lp.rpf lpmake empty mods/lpempty.rpf lpwait)
 check "one problem, one box" "[ \$(count 'PROBLEM') -eq 1 ] && log_has 'PROBLEM: A pack in the mods folder was made for GTA V Legacy, .*: mods.lp.rpf\. Not checked for Legacy versions (TweaksV.log says why): mods.lpempty.rpf\.' && [ \$(count 'TEST BUILD: message box not shown (TWEAKSV_TEST_NO_BOXES=1): ') -eq 1 ] && [ \$(grep -c -E 'Showing (the start-up summary|a problem after the start-up summary) \(1 problem\(s\)\)\.' TweaksV.log) -eq 1 ]"

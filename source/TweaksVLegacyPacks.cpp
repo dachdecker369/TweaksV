@@ -9,7 +9,8 @@
 //                  walked as RageOpenV's list reads the folder: 32 levels deep and 200,000 files and folders at most,
 //                  a name that is not valid Unicode, or whose path below mods\ is longer than 254 bytes in UTF-8,
 //                  left out, since the game is never served such a file; a folder that cannot be listed is skipped,
-//                  as RageOpenV skips it
+//                  as RageOpenV skips it, but the mods folder itself, which RageOpenV has just listed, is a problem: the
+//                  check is not done
 //   the tables     a pack's header of 16 bytes - the magic RPF7, the entry count, the names' length, the encryption
 //                  - then its entry table and the names behind it, read through a handle that shares reading, writing
 //                  and deleting, so that the game opens the pack as if the check were not there; an archive that is
@@ -252,6 +253,7 @@ namespace TweaksV
 			uint64_t tableBytes = 0;
 			bool walkStopped = false;		// at kMaxFolderEntries, where RageOpenV's list stops
 			bool limitReached = false;		// at kMaxTableBytes: every pack from there on is not checked
+			DWORD rootError = ERROR_SUCCESS;	// why the mods folder itself could not be listed: the check is not done
 			std::vector<std::string> legacyNamed;		// the first kMaxNamed of each, for the problem
 			std::vector<std::string> notCheckedNamed;
 			LineKind legacyLines{ "packs made for GTA V Legacy", false };
@@ -494,7 +496,18 @@ namespace TweaksV
 					const FindHandle find{ FindFirstFileExW((folder.path + L"\\*").c_str(), FindExInfoBasic, &found, FindExSearchNameMatch, nullptr,
 						FIND_FIRST_EX_LARGE_FETCH) };
 					if (find.handle == INVALID_HANDLE_VALUE)
-						continue;	// RageOpenV says so, and serves nothing of it
+					{
+						const DWORD error = GetLastError();
+						// a folder that holds nothing, not even "." (a drive's root behind a junction), is empty, as for RageOpenV;
+						// one that cannot be listed RageOpenV reports, and serves nothing of - but the mods folder itself it has
+						// just listed, so the check cannot say it found nothing
+						if (folder.below.empty() && error != ERROR_FILE_NOT_FOUND)
+						{
+							check.rootError = error;
+							return;
+						}
+						continue;
+					}
 					do
 					{
 						if (wcscmp(found.cFileName, L".") == 0 || wcscmp(found.cFileName, L"..") == 0)
@@ -597,7 +610,11 @@ namespace TweaksV
 					check.diagnostic = IsDiagnosticMode();
 					const ULONGLONG started = GetTickCount64();
 					Walk(check, g_root);
-					Report(check, started);
+					if (check.rootError != ERROR_SUCCESS)
+						ReportFailure(kTag, "The check for packs made for GTA V Legacy is not done this session: the mods folder could not be read (" +
+							DescribeError(check.rootError) + ").");
+					else
+						Report(check, started);
 				}
 				catch (...)
 				{
@@ -621,9 +638,23 @@ namespace TweaksV
 		};
 		try
 		{
-			const DWORD size = GetFullPathNameW(L"mods", 0, nullptr, nullptr);
+			std::wstring folder = L"mods";
+#ifdef TWEAKSV_TEST_BUILD
+			// test builds only: TWEAKSV_TEST_LEGACY_FOLDER=<folder> in the environment has the check read that folder in place of
+			// the mods folder, so that a suite reaches a folder the check cannot list - RageOpenV's own reading of the mods folder
+			// stops at one first
+			wchar_t other[MAX_PATH]{};
+			const DWORD otherLength = GetEnvironmentVariableW(L"TWEAKSV_TEST_LEGACY_FOLDER", other, MAX_PATH);
+			if (otherLength > 0 && otherLength < MAX_PATH)
+			{
+				folder.assign(other, otherLength);
+				WriteLog(kTag, "TEST BUILD: the check for packs made for GTA V Legacy reads " + ToUtf8(folder) + " in place of the mods folder "
+					"(TWEAKSV_TEST_LEGACY_FOLDER).");
+			}
+#endif
+			const DWORD size = GetFullPathNameW(folder.c_str(), 0, nullptr, nullptr);
 			std::wstring full(size, L'\0');
-			const DWORD length = size > 0 ? GetFullPathNameW(L"mods", size, full.data(), nullptr) : 0;
+			const DWORD length = size > 0 ? GetFullPathNameW(folder.c_str(), size, full.data(), nullptr) : 0;
 			if (length == 0 || length >= size)
 			{
 				const DWORD error = GetLastError();
