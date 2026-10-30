@@ -18,6 +18,7 @@
 #include "TweaksVPackfileLimit.h"
 #include "TweaksVPedProps.h"
 #include "TweaksVRageOpenV.h"
+#include "TweaksVRayTracing.h"
 #include "TweaksVSirenCount.h"
 #include "TweaksVSirenIds.h"
 #include "TweaksVStaticBounds.h"
@@ -38,9 +39,9 @@ namespace TweaksV
 		constexpr PeerPlugin kNveLoader{ L"onigiri.asi", "NaturalVision Enhanced's loader" };
 
 		// Resource Extensions [Enhanced] by Koukol, closed source, raises many of the game's capacities - its page
-		// names the archive count and the story blips' threshold among them and asks to remove the heap and packfile
-		// adjusters. It stays for the jobs TweaksV does not do, so the three parts whose jobs it does too are off
-		// while it is there, and nothing is patched twice.
+		// names the archive count, the story blips' threshold and extra capacity for the ray tracing of moving geometry
+		// among them and asks to remove the heap and packfile adjusters. It stays for the jobs TweaksV does not do, so
+		// the four parts whose jobs it does too are off while it is there, and nothing is patched twice.
 		constexpr PeerPlugin kResourceExtensions{ L"ResourceExtensions.asi", "Resource Extensions [Enhanced]" };
 
 		// The five original plugins in the order an ASI loader loaded their .asi files (alphabetical),
@@ -81,6 +82,8 @@ namespace TweaksV
 			{ &kStaticBoundsSection, { L"StaticBoundLimitAdjuster.asi", L"StaticBoundsLimitAdjuster.asi" }, {},
 				[] { InitStaticBounds(); return false; } },
 			// [rt buffer]
+			{ &kRayTracingSection, {}, { &kResourceExtensions },
+				[] { InitRayTracing(); return false; } },
 		};
 
 		// Every section of TweaksV.ini but [TWEAKSV] belongs to a feature, in the same order.

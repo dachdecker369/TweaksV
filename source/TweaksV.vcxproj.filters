@@ -108,6 +108,9 @@
       <Filter>TweaksV</Filter>
     </ClCompile>
     <!-- [rt buffer] -->
+    <ClCompile Include="TweaksVRayTracing.cpp">
+      <Filter>TweaksV</Filter>
+    </ClCompile>
     <ClCompile Include="..\vendor\MinHook\src\buffer.c">
       <Filter>MinHook</Filter>
     </ClCompile>
@@ -226,6 +229,9 @@
       <Filter>TweaksV</Filter>
     </ClInclude>
     <!-- [rt buffer] -->
+    <ClInclude Include="TweaksVRayTracing.h">
+      <Filter>TweaksV</Filter>
+    </ClInclude>
     <ClInclude Include="..\vendor\MinHook\include\MinHook.h">
       <Filter>MinHook</Filter>
     </ClInclude>

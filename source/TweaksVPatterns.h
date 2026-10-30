@@ -11,7 +11,7 @@ namespace TweaksV
 {
 	struct GamePattern
 	{
-		const char* label;	// as in PATTERNS.md: H- Heap, M- Modkit, P- Packfile, B- BoxStreamer, D- Decals, R- RageOpenV, S- StraightToStoryMode, Y- the script programs, L- Blips, W- WeaponLimits, I- SirenSettings, A- PedProps, Q- Resources
+		const char* label;	// as in PATTERNS.md: H- Heap, M- Modkit, P- Packfile, B- BoxStreamer, D- Decals, R- RageOpenV, S- StraightToStoryMode, Y- the script programs, L- Blips, W- WeaponLimits, I- SirenSettings, A- PedProps, Q- Resources, T- RayTracing
 		const char* text;	// the bytes in hex, one space apart; ? matches any byte
 	};
 
@@ -230,6 +230,13 @@ namespace TweaksV
 
 		// [static bounds]
 		// [rt buffer]
+		// RayTracing (TweaksVRayTracing.cpp): the set-up of the ray tracing buffer of moving geometry - its count, its stride, the
+		// call of the buffer maker and the store of the buffer object (B1) - and the two checks of a frame's ranges against its
+		// capacity, every moving object's geometry's (C1) and the ropes' (C2), each with the frame slot, the counters, the
+		// capacity and the refusal jump
+		{ "T-E-B1", "C7 44 24 20 89 00 00 00 B9 ? ? ? ? BA 14 00 00 00 41 B0 01 45 31 C9 E8 ? ? ? ? 48 89 05 ? ? ? ?" },
+		{ "T-E-C1", "8B 2D ? ? ? ? 31 D2 48 8D 1D ? ? ? ? 41 BA 01 00 00 00 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 8B 3C AB 8D 34 0F 81 FE ? ? ? ? 0F 87" },
+		{ "T-E-C2", "8B 15 ? ? ? ? 31 ED 48 8D 35 ? ? ? ? 41 BA 01 00 00 00 ? ? ? ? ? ? ? ? ? ? ? ? 8B 3C 96 8D 1C 0F 81 FB ? ? ? ? 0F 87" },
 	};
 
 	// A text the scanner can use: bytes as two hex digits or ?, one space apart, at least one of them
