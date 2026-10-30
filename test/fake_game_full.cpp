@@ -250,6 +250,8 @@
 //                      starts; repeatable (LpMake has the kinds)
 //   lpmany KIND N DIR  the archive of KIND N times in DIR, p00001.rpf on: the first written, the others hard links to it
 //   lplock PATH        PATH held open without sharing from before TweaksV starts until the report, so the check cannot open it
+//   lpbadname          makes mods\lpbad<U+D800>.rpf, a legacy archive whose name is not valid UTF-16 (an unpaired surrogate), before
+//                      TweaksV starts, and keeps it open with delete on close, so it goes when the fake ends - however it ends
 //   lpwait             waits up to 40 s for the check's last line in TweaksV.log, or its problem that it is not done, then 1.5 s
 //                      for the box of a problem after the start-up summary; reported as "legacy packs: done" or "legacy packs: no
 //                      last line in 40 s"
@@ -2282,6 +2284,44 @@ static bool LpMake(const wchar_t* kind, LpArchive& out)
 		LpPut(LpEntryAt(out, 2) + 2, 100, 3);
 		LpFree(inner);
 	}
+	else if (wcscmp(kind, L"nestedlong") == 0)		// a nested archive inside its holder whose size runs past the holder's end
+	{
+		LpArchive inner = LpBuild(enhancedModel, 1);
+		const LpEntry outer[] = { { "long.rpf", -1, inner.bytes, inner.size, 0 } };
+		out = LpBuild(outer, 1);
+		LpPut(LpEntryAt(out, 1) + 8, 0x7FFFFFFF, 4);
+		LpFree(inner);
+	}
+	else if (wcscmp(kind, L"longname") == 0)		// a Legacy model whose name has no zero within 256 bytes
+	{
+		char name[257];
+		memset(name, 'x', 252);
+		memcpy(name + 252, ".yft", 5);
+		const LpEntry model[] = { { name, 162 } };
+		out = LpBuild(model, 1);
+	}
+	else if (wcscmp(kind, L"farname") == 0)			// a Legacy model whose name of 255 bytes starts at 65,535, the last offset a file's
+	{												// name can have, in names of 70,000 bytes: only their first 65,792 are read
+		const size_t names = 70000, size = LpBlocks(16 + 3 * 16 + names);
+		out = { static_cast<unsigned char*>(LpAllocate(size)), size };
+		LpPut(out.bytes, 0x52504637, 4);
+		LpPut(out.bytes + 4, 3, 4);
+		LpPut(out.bytes + 8, static_cast<uint32_t>(names), 4);
+		LpPut(out.bytes + 12, kLpOpen, 4);
+		LpPut(LpEntryAt(out, 0) + 4, 0x7FFFFF00, 4);	// the root folder, its entries 1 and 2
+		LpPut(LpEntryAt(out, 0) + 8, 1, 4);
+		LpPut(LpEntryAt(out, 0) + 12, 2, 4);
+		LpPut(LpEntryAt(out, 1), 1, 2);					// a binary named "f", no bytes, at the end
+		LpPut(LpEntryAt(out, 1) + 5, static_cast<uint32_t>(size / 512), 3);
+		LpPut(LpEntryAt(out, 2), 0xFFFF, 2);			// the model
+		LpPut(LpEntryAt(out, 2) + 5, 0x800001, 3);
+		LpPut(LpEntryAt(out, 2) + 8, 0xAu << 28, 4);
+		LpPut(LpEntryAt(out, 2) + 12, 0x2u << 28, 4);
+		unsigned char* const nameBytes = out.bytes + 16 + 3 * 16;
+		nameBytes[1] = 'f';
+		memset(nameBytes + 0xFFFF, 'x', 251);
+		memcpy(nameBytes + 0xFFFF + 251, ".yft", 4);	// its zero at 65,790, inside the 65,792 bytes read
+	}
 	else if (wcscmp(kind, L"notrpf") == 0)			// a nested .rpf that is a zip
 	{
 		const LpEntry outer[] = { { "junk.rpf", -1, kLpZip, sizeof(kLpZip), 0 } };
@@ -2310,20 +2350,30 @@ static bool LpMake(const wchar_t* kind, LpArchive& out)
 	return true;
 }
 
-// The folders on the way to path ("mods/a/b/x.rpf": mods, mods/a and mods/a/b).
+// The folders on the way to path ("\\?\C:\...\mods\a\x.rpf": each folder from the drive on; those that are there stay).
+static const size_t kLpLongPath = 32768;
 static void LpMakeFolders(const wchar_t* path)
 {
-	wchar_t folder[MAX_PATH] = {};
-	for (size_t i = 0; path[i] && i < MAX_PATH - 1; i++)
+	static wchar_t folder[kLpLongPath];
+	for (size_t i = 0; path[i] && i < kLpLongPath - 1; i++)
 	{
-		if (path[i] == L'/' || path[i] == L'\\')
+		if (path[i] == L'\\')
+		{
+			folder[i] = 0;
 			CreateDirectoryW(folder, nullptr);
+		}
 		folder[i] = path[i];
 	}
 }
 
-static bool LpWrite(const wchar_t* path, const LpArchive& archive)
+// path in full, \\?\ in front, so that a path below mods\ of 254 bytes and more is written too
+static bool LpWrite(const wchar_t* relative, const LpArchive& archive)
 {
+	static wchar_t path[kLpLongPath];
+	memcpy(path, L"\\\\?\\", 4 * sizeof(wchar_t));
+	const DWORD length = GetFullPathNameW(relative, static_cast<DWORD>(kLpLongPath - 4), path + 4, nullptr);
+	if (length == 0 || length >= kLpLongPath - 4)
+		return false;
 	LpMakeFolders(path);
 	const HANDLE file = CreateFileW(path, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
 	if (file == INVALID_HANDLE_VALUE)
@@ -2336,9 +2386,10 @@ static bool LpWrite(const wchar_t* path, const LpArchive& archive)
 
 static int g_lpMade = 0;							// the archives lpmake and lpmany wrote
 static HANDLE g_lpLocked = INVALID_HANDLE_VALUE;	// lplock's file
+static HANDLE g_lpBadName = INVALID_HANDLE_VALUE;	// lpbadname's, gone when the fake ends
 static const wchar_t* g_lpWaited = nullptr;			// how lpwait ended
 
-// lpmake, lpmany and lplock, before TweaksV starts.
+// lpmake, lpmany, lplock and lpbadname, before TweaksV starts.
 static void LpSetup(int argc, wchar_t** argv)
 {
 	for (int i = 2; i < argc; i++)
@@ -2380,6 +2431,20 @@ static void LpSetup(int argc, wchar_t** argv)
 			if (g_lpLocked == INVALID_HANDLE_VALUE)
 				wprintf(L"lp: %ls NOT held | ", argv[i + 1]);
 			i += 1;
+		}
+		else if (wcscmp(argv[i], L"lpbadname") == 0)	// held open with delete on close until the fake ends, then gone: no shell has
+		{												// to delete a name it cannot spell
+			wchar_t name[] = L"mods\\lpbad_.rpf";
+			name[10] = static_cast<wchar_t>(0xD800);	// the _: half of a surrogate pair, alone
+			LpArchive archive = {};
+			LpMake(L"legacy", archive);
+			g_lpBadName = CreateFileW(name, GENERIC_READ | GENERIC_WRITE | DELETE, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr,
+				CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_DELETE_ON_CLOSE, nullptr);
+			DWORD written = 0;
+			const bool made = g_lpBadName != INVALID_HANDLE_VALUE &&
+				WriteFile(g_lpBadName, archive.bytes, static_cast<DWORD>(archive.size), &written, nullptr) && written == archive.size;
+			wprintf(L"lp: bad name %ls | ", made ? L"made" : L"NOT made");
+			LpFree(archive);
 		}
 	}
 }

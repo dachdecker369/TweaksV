@@ -15,7 +15,7 @@ FILES_OK='file hooks 8/8, redirect 8/8, pass 8/8,'
 DONE='legacy packs: done |'
 DLC=mods/update/x64/dlcpacks
 # the mods folder back to its one file, test/file.txt
-packs_gone() { find mods -mindepth 1 -maxdepth 1 ! -name test -exec rm -rf {} +; }
+packs_gone() { find mods -mindepth 1 -maxdepth 1 ! -name test -exec rm -rf {} +; rm -f mods/test/*.rpf; }
 # the check's one problem, in the start-up summary's box or in the box for problems after it, whichever came first
 one_box() { [ "$(grep -c -E '(Start-up summary|Problem after the start-up summary) not shown \(ERROR_POPUP=0\): 1 problem' TweaksV.log)" -eq 1 ]; }
 first_line() { tr -d '\r' < TweaksV.log | grep -n -- "$1" | head -n 1 | cut -d: -f1; }
@@ -131,6 +131,28 @@ check "the test build's line names the folder; the check not done, said as a pro
 echo "== L14 ERROR_POPUP=1 (the test build, which shows no box with TWEAKSV_TEST_NO_BOXES=1): one box for a Legacy pack and one that cannot be read"
 packs_gone; fresh_ini; setkey ERROR_POPUP 1; out=$(ASI=TweaksV_test.asi game full_game.exe lpmake legacy mods/lp.rpf lpmake empty mods/lpempty.rpf lpwait)
 check "one problem, one box" "[ \$(count 'PROBLEM') -eq 1 ] && log_has 'PROBLEM: A pack in the mods folder was made for GTA V Legacy, .*: mods.lp.rpf\. Not checked for Legacy versions (TweaksV.log says why): mods.lpempty.rpf\.' && [ \$(count 'TEST BUILD: message box not shown (TWEAKSV_TEST_NO_BOXES=1): ') -eq 1 ] && [ \$(grep -c -E 'Showing (the start-up summary|a problem after the start-up summary) \(1 problem\(s\)\)\.' TweaksV.log) -eq 1 ]"
+
+echo "== L15 the walk's limits, as RageOpenV's list has them: a path below mods\ of 254 bytes read, one of 255 not; a folder that cannot be listed skipped, the rest read; a name with an unpaired surrogate left out"
+a254=$(printf 'a%.0s' $(seq 1 245)); b255=$(printf 'b%.0s' $(seq 1 246))	# test\ and these and .rpf: 254 and 255 bytes
+packs_gone; fresh_ini; out=$(game full_game.exe lpmake legacy "mods/test/$a254.rpf" lpmake legacy "mods/test/$b255.rpf" lpwait)
+check "254 bytes: listed, read and named; 255: left out of the list and not read" "has 'lp: 2 made |' && log_has \"The pack mods.test.$a254.rpf was made for GTA V Legacy\" && log_has 'Names in the mods folder left out of the list: 1 whose path is longer than 254 bytes.' && log_lacks 'bbbbbbbbbb' && log_line 'Packs checked for GTA V Legacy versions: 1 in the mods folder, 1 made for Legacy\.\$'"
+packs_gone; fresh_ini; out=$(game full_game.exe lpmake legacy mods/locked/in.rpf lpmake legacy mods/open/in.rpf lpwait)
+check "two packs in two folders, both named while both can be listed" "log_has 'The pack mods.locked.in.rpf was made for GTA V Legacy' && log_has 'The pack mods.open.in.rpf was made for GTA V Legacy'"
+fresh_ini; deny_listing mods/locked; out=$(game full_game.exe lpwait); allow_writes mods/locked
+check "the folder that cannot be listed: RageOpenV reports it, the check skips its pack and reads the rest" "has '$DONE' && log_has 'PROBLEM: Only part of the mods folder is used this session: 1 folder could not be read (Windows error 5, access denied).' && log_lacks 'mods.locked.in.rpf' && log_has 'The pack mods.open.in.rpf was made for GTA V Legacy' && log_line 'Packs checked for GTA V Legacy versions: 1 in the mods folder, 1 made for Legacy\.\$'"
+packs_gone; fresh_ini; out=$(game full_game.exe lpbadname lpwait)
+if has 'lp: bad name NOT made'; then
+	skip "this file system refuses a name with an unpaired surrogate, so none can be left out"
+else
+	check "a pack whose name is not valid UTF-16: left out of the list and not read; the name gone with the fake" "has 'lp: bad name made |' && log_has 'Names in the mods folder left out of the list: 1 whose name is not valid Unicode' && log_line 'Packs checked for GTA V Legacy versions: none in the mods folder\.\$' && [ -z \"\$(ls -A mods | grep -v '^test\$')\" ]"
+fi
+
+echo "== L16 the names of a pack within their bounds: a name with no zero within 256 bytes, a name of 255 bytes at the last offset in names of 70,000 bytes, a nested archive whose size runs past its holder"
+packs_gone; fresh_ini; out=$(game full_game.exe lpmake longname mods/names/longname.rpf lpmake farname mods/names/farname.rpf lpmake nestedlong mods/names/nestedlong.rpf lpwait)
+check "no zero within 256 bytes: the name refused, nothing of it counted" "log_line 'The pack mods.names.longname.rpf was not checked for GTA V Legacy versions in full: it has a name outside its names (entry 1)\.\$' && log_lacks 'longname.rpf was made'"
+check "a name of 255 bytes at offset 65,535, its zero at 65,790 inside the 65,792 bytes read: the pack named by it" "log_line 'The pack mods.names.farname.rpf was made for GTA V Legacy: 1 yft 162 - the first x*\.yft\.\$'"
+check "a nested archive whose size runs past its holder's end: refused, as one that starts past it" "log_line 'The pack mods.names.nestedlong.rpf was not checked for GTA V Legacy versions in full: its nested archive long.rpf lies outside the archive that holds it\.\$'"
+check "the one problem and the last line" "log_line 'PROBLEM: A pack in the mods folder was made for GTA V Legacy, .*: mods.names.farname.rpf\. Not checked for Legacy versions (TweaksV.log says why): mods.names.longname.rpf, mods.names.nestedlong.rpf\.\$' && one_box && log_line 'Packs checked for GTA V Legacy versions: 3 in the mods folder, 1 made for Legacy, 2 not checked\.\$'"
 packs_gone
 
 echo
