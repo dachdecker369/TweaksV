@@ -86,7 +86,7 @@ The part widens those eleven checks to 16 bits, so that an anchor holds up to 65
 
 With `DIAGNOSTIC_MODE=1` the part logs every check and every change, and 10 seconds in and then every minute while the numbers change, how many ped models it found and the most props on one anchor - `the most props on one anchor: 212 (mp_m_freemode_01, anchor 0, from 30 files, at most 38 in one)` - and gives every anchor past 255, and every file with more than 255 props on one anchor, a line of its own; an anchor's line says whether its limit is raised this session. The first summary can come before the game has loaded its peds; the next ones count them.
 
-TweaksV's own part; the idea comes from Zombieguy's [PedProp Limit Adjuster](https://www.gta5-mods.com/scripts/pedprop-limit-adjuster), made for GTA V Legacy, and from FiveM's pull request 2421 by Disquse, which it ports - none of their code was read or used.
+TweaksV's own part; the idea comes from Zombieguy's [PedProp Limit Adjuster](https://www.gta5-mods.com/scripts/pedprop-limit-adjuster), made for GTA V Legacy, and from FiveM's pull request 2421 by Disquse, which that plugin ports - none of their code was read or used.
 
 ### Resources
 
