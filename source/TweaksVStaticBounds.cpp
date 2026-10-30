@@ -15,9 +15,10 @@
 // 0x2CDFE406" (C-E-H1), and exactly one load may be followed by one. A call another mod has redirected leads
 // elsewhere, so it is no call of the lookup: the job is then reported and not done, and nothing is changed.
 // The redirect raises the pool only if the game asks for its size after TweaksV's DllMain: a thread of the part
-// checks, 120 seconds after TweaksV's start - long after the game makes its pools, about 22 seconds into its start
-// on my boots - that the game has asked the redirected call, and reports a problem, with the part's box, when it
-// has not: the game made the pool before TweaksV started, or asks for its size another way.
+// checks, 60 seconds after the session's start - the first script program the game places, which the script
+// programs' hook sees while the Blips part, whose hook it is, is on; the game makes its pools as the session starts -
+// that the game has asked the redirected call, and reports a problem, with the part's box, when it has not: the game
+// made the pool before TweaksV started, or asks for its size another way. Without the hook no check is made, logged.
 //   DRY_RUN          nothing is redirected, nothing checked; the line says what would be
 //   DIAGNOSTIC_MODE  the lookup and the call at their RVAs, every load of the pool's name without a call after it,
 //                    and when the game asked
@@ -46,6 +47,7 @@
 #include "TweaksVPatch.h"
 #include "TweaksVPatterns.h"
 #include "TweaksVScanner.h"
+#include "TweaksVScripts.h"
 #include "TweaksVSettings.h"
 #include "TweaksVSummary.h"
 
@@ -134,20 +136,23 @@ namespace TweaksV
 		// ---- the check that the game asks: whichever comes first, the game's first ask for the static bounds pool's size or
 		// the check's end, takes the state - an ask after the check has reported is said once, with the sizes
 
-		constexpr DWORD kCheckSeconds = 120;		// the check's time after TweaksV's start; the game makes its pools far sooner
+		constexpr DWORD kCheckSeconds = 60;			// the check's time after the session's start, by when the game has made its pools
 		enum : int { kWaiting, kAsked, kReported };
 		std::atomic<int> g_check{ kWaiting };
-		HANDLE g_askedEvent = nullptr;				// set at the first ask, so that the check's thread ends early; none, it waits
+		HANDLE g_askedEvent = nullptr;				// set at the first ask, so that the check's thread ends early
+		HANDLE g_sessionEvent = nullptr;			// set at the session's start: the first script program the game places
+		std::atomic<bool> g_sessionStarted{ false };
+		ULONGLONG g_sessionTick = 0;				// when the session started, written before its event is set
 		DWORD g_checkSeconds = kCheckSeconds;
 
-		// "1 second", "120 seconds"
+		// "1 second", "60 seconds"
 		std::string Seconds(DWORD n)
 		{
 			return std::to_string(n) + (n == 1 ? " second" : " seconds");
 		}
 
-		// The check's time: 120 seconds - in test builds TWEAKSV_TEST_STATICBOUNDS_CHECK=<seconds> in the environment (1..120)
-		// instead, so that a suite sees the check within the minute a fake game runs, said once.
+		// The check's time after the session's start: 60 seconds - in test builds TWEAKSV_TEST_STATICBOUNDS_CHECK=<seconds> in the
+		// environment (1..60) instead, so that a suite sees the check within the minute a fake game runs, said once.
 		DWORD CheckSeconds()
 		{
 #ifdef TWEAKSV_TEST_BUILD
@@ -159,7 +164,7 @@ namespace TweaksV
 				const long seconds = wcstol(text, &end, 10);
 				if (end && *end == L'\0' && seconds >= 1 && seconds <= static_cast<long>(kCheckSeconds))
 				{
-					WriteLog(kTag, "TEST BUILD: the static bounds check comes " + Seconds(static_cast<DWORD>(seconds)) + " after TweaksV's start instead of " +
+					WriteLog(kTag, "TEST BUILD: the static bounds check comes " + Seconds(static_cast<DWORD>(seconds)) + " after the session's start instead of " +
 						Seconds(kCheckSeconds) + " (TWEAKSV_TEST_STATICBOUNDS_CHECK=" + std::to_string(seconds) + ").");
 					return static_cast<DWORD>(seconds);
 				}
@@ -168,23 +173,42 @@ namespace TweaksV
 			return kCheckSeconds;
 		}
 
-		// The check's thread: once the game has asked, or after the check's time - then, if the game has still not asked, the
-		// problem, after the start-up summary in a box of its own. Nothing leaves the thread, which drops the reference to the
-		// module StartModuleThread handed it as it ends.
+		// The script programs' hook calls this for every program the game places, on the game's thread: the first is the
+		// session's start, which starts the check's clock. Nothing more is done here.
+		void* SessionStarts(uint8_t*, uint32_t)
+		{
+			if (!g_sessionStarted.load(std::memory_order_relaxed) && !g_sessionStarted.exchange(true))
+			{
+				g_sessionTick = GetTickCount64();
+				SetEvent(g_sessionEvent);
+			}
+			return nullptr;
+		}
+
+		// The check's thread: from the session's start, until the game has asked or for the check's time - then, if the game has
+		// still not asked, the problem, after the start-up summary in a box of its own. A session that never starts leaves it
+		// waiting. Nothing leaves the thread, which drops the reference to the module StartModuleThread handed it as it ends.
 		DWORD WINAPI CheckAsked(LPVOID module)
 		{
-			if (g_askedEvent)
-				WaitForSingleObject(g_askedEvent, g_checkSeconds * 1000);
-			else
-				Sleep(g_checkSeconds * 1000);
+			WaitForSingleObject(g_sessionEvent, INFINITE);
+			try
+			{
+				if (g_diagnostic)
+					WriteLog(kTag, "DIAGNOSTIC: the session started " + std::to_string(g_sessionTick - g_start) + " ms after TweaksV's start (the first script "
+						"program placed): the static bounds check's clock runs.");
+			}
+			catch (...)
+			{
+			}
+			WaitForSingleObject(g_askedEvent, g_checkSeconds * 1000);
 			int waiting = kWaiting;
 			if (g_check.compare_exchange_strong(waiting, kReported))
 			{
 				try
 				{
-					Fail("the game did not ask the redirected call at " + DescribeAddress(g_call) + " for the pool's size in the first " +
-						Seconds(g_checkSeconds) + " after TweaksV started - it made the pool before TweaksV started, or asks for its size another "
-						"way, and the pool keeps the game's size.");
+					Fail("the game did not ask the redirected call at " + DescribeAddress(g_call) + " for the pool's size within " + Seconds(g_checkSeconds) +
+						" of the session's start - it made the pool before TweaksV started, or asks for its size another way, and the pool keeps the "
+						"game's size.");
 				}
 				catch (...)
 				{
@@ -309,10 +333,7 @@ namespace TweaksV
 		g_call = call;
 		const bool dryRun = IsDryRun();
 		if (!dryRun)
-		{
-			g_checkSeconds = CheckSeconds();
 			g_askedEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
-		}
 		const std::vector<CallRedirect> redirects = { { call, reinterpret_cast<const void*>(&StaticBoundsPoolSize), "static bounds pool's size call",
 			reinterpret_cast<void**>(&g_lookup) } };
 		if (!RedirectCalls(redirects, {}, kTag))
@@ -326,12 +347,33 @@ namespace TweaksV
 		if (dryRun)
 			return;
 		WriteLog(kTag, "The static bounds pool's size call at " + DescribeAddress(call) + " is redirected: the pool gets at least " + std::to_string(g_size) +
-			" slots (STATICBOUNDS_SIZE) when the game makes it, more where the game's configuration gives it more; a check " + Seconds(g_checkSeconds) +
-			" after TweaksV's start reports it if the game has not asked by then.");
+			" slots (STATICBOUNDS_SIZE) when the game makes it, more where the game's configuration gives it more.");
 
-		// 5. the check, on a thread of its own: a thread that cannot start leaves the redirect in place, unchecked - reported
+		// 5. the check, from the session's start - the first script program the game places, seen through the script programs'
+		// hook, which the part joins only while the Blips part, whose hook it is, is on: the part never makes that hook itself
+		// (Resource Extensions, for one, switches Blips off). A check that cannot be made is logged, the redirect staying; a
+		// thread that cannot start is reported
+		g_sessionEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+		std::string why;
+		if (!IsFeatureOn(kBlipsSection))
+			why = "it starts with the session, which TweaksV sees through the script programs' hook, and the Blips part, whose hook that is, is off.";
+		else if (!g_askedEvent || !g_sessionEvent)
+			why = "its events could not be made.";
+		else if (!Scripts::AddUser({ kTag, &SessionStarts, nullptr }, why) && why.empty())
+			why = "the script programs' hook is not there.";
+		if (!why.empty())
+		{
+			WriteLog(kTag, "The static bounds check is not made this session: " + why);
+			return;
+		}
+		g_checkSeconds = CheckSeconds();
 		if (!StartModuleThread(&CheckAsked, "static bounds check"))
+		{
 			ReportFailure(kTag, "The check that the game asks for the static bounds pool's size is not done this session: its thread could not be started "
 				"(details in TweaksV.log).");
+			return;
+		}
+		WriteLog(kTag, "The static bounds check waits for the session's start - the first script program the game places - and then " +
+			Seconds(g_checkSeconds) + " for the game to ask for the pool's size.");
 	}
 }
