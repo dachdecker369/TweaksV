@@ -219,8 +219,9 @@ namespace TweaksV
 
 		// The game calls this through the call stub, on its thread, when it makes the pool, with the arguments it hands its
 		// lookup: the static bounds pool gets the larger of the game's size and STATICBOUNDS_SIZE; a size below 0, which is
-		// none, and the size of another pool are passed on as the game gives them. The first ask for the static bounds pool
-		// ends the check. Nothing may throw out of here, and the game's last error after its lookup is the one the call leaves.
+		// none, and the size of another pool are passed on as the game gives them. The first ask ends the check - one for
+		// another pool too, which has a problem of its own, so that the check does not report the call a second time. Nothing
+		// may throw out of here, and the game's last error after its lookup is the one the call leaves.
 		int32_t StaticBoundsPoolSize(void* configuration, uint32_t pool, int32_t defaultSize)
 		{
 			const int32_t game = g_lookup(configuration, pool, defaultSize);
@@ -228,7 +229,7 @@ namespace TweaksV
 			const bool ours = pool == kStaticBoundsHash;
 			const int32_t size = ours && game >= 0 && game < g_size ? g_size : game;
 			int checked = kWaiting;
-			if (ours && g_check.compare_exchange_strong(checked, kAsked) && g_askedEvent)
+			if (g_check.compare_exchange_strong(checked, kAsked) && g_askedEvent)	// a call for another pool too: reported on its own below
 				SetEvent(g_askedEvent);
 			std::atomic<bool>& said = ours ? g_sizeSaid : g_otherSaid;
 			if (!said.exchange(true))

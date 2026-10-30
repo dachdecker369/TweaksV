@@ -181,7 +181,11 @@ for case in dryrun sbhooked nodyncode; do
 	out=$(ASI=TweaksV_test.asi game full_game.exe $options)
 	check "$case: no check - neither its line nor its test build's line nor its problem past its time" "log_lacks 'static bounds check' && log_lacks 'did not ask the redirected call'"
 done
+
+echo "== SB27 the pool made with the size of another pool, a script program placed (test build, TWEAKSV_TEST_STATICBOUNDS_CHECK=2): its problem once, and the check not again"
+fresh_ini; out=$(ASI=TweaksV_test.asi game full_game.exe sbother script wait)
 unset TWEAKSV_TEST_STATICBOUNDS_CHECK
+check "the call for another pool reported once, the check made and silent past its time" "[ \$(count 'asks for the size of the pool 0x0BADC0DE') -eq 1 ] && made '2 seconds' && log_lacks 'did not ask the redirected call'"
 
 echo
 echo "STATIC BOUNDS SCENARIOS: $pass passed, $fail failed"
