@@ -27,12 +27,13 @@ STORE='(the model info store.s 60010 indices, its stride 16)'
 SUMMARY="\[PedProps\] DIAGNOSTIC: ped props: 43 ped models with variation data in 99 files $STORE; the most props on one anchor: 212 (mp_m_freemode_01, anchor 0, from 30 files, at most 38 in one); no anchor and no file past 255.\$"
 ANNOUNCED='\[PedProps\] DIAGNOSTIC: the model info store at RVA 0x[0-9A-F]* (A-E-S1): the props per anchor of its ped models are logged after 10 seconds, then every minute while they change.$'
 # applied: the part's line, word for word, the eleven widened and nothing else, every page's protection its own, no problem
-applied() { log_line "$RAISED" && has "$WIDENED" && has 'protect: all restored (RX)' && log_lacks 'PROBLEM'; }
-# refused WHY: the part's problem, word for word, the only one, in one start-up summary; nothing written - the sites as
-# placed, no line of a raise, every page's protection its own
-refused() { log_line "$NOT_RAISED$1\$" && [ "$(count 'PROBLEM')" -eq 1 ] && log_has 'Start-up summary not shown (ERROR_POPUP=0): 1 problem' && has "$ASIS" && log_lacks 'limit is raised' && has 'protect: all restored (RX)'; }
+applied() { log_line "$RAISED" && has "$WIDENED" && has 'protect: all restored (RX)' && log_lacks '\[PedProps\] PROBLEM'; }
+# refused WHY: the part's problem, word for word, its only one, in the one start-up summary; nothing written - the sites
+# as placed, no line of the part's raise, every page's protection its own. Every check here and below that matches or
+# counts a line of the log matches the part's own lines alone, so that the other parts' lines change nothing in this suite
+refused() { log_line "$NOT_RAISED$1\$" && [ "$(count '\[PedProps\] PROBLEM')" -eq 1 ] && [ "$(count 'Start-up summary not shown (ERROR_POPUP=0): ')" -eq 1 ] && has "$ASIS" && log_lacks 'ped props. limit is raised' && has 'protect: all restored (RX)'; }
 # not_measured WHY: the measurement's line, word for word, and nothing more of it: not announced, no summary
-not_measured() { log_line "\[PedProps\] DIAGNOSTIC: the ped props are not measured: $1\$" && log_lacks 'DIAGNOSTIC: the model info store at' && log_lacks 'DIAGNOSTIC: ped props: '; }
+not_measured() { log_line "\[PedProps\] DIAGNOSTIC: the ped props are not measured: $1\$" && log_lacks '\[PedProps\] DIAGNOSTIC: the model info store at' && log_lacks '\[PedProps\] DIAGNOSTIC: ped props: '; }
 # not_counted WHY: the measurement announced, its pass ended with this line and no summary; the part applied
 not_counted() { log_line "\[PedProps\] DIAGNOSTIC: the ped props are not counted: $1\$" && log_line "$ANNOUNCED" && log_lacks 'DIAGNOSTIC: ped props: ' && applied; }
 # targets KIND: the targets of the KIND call lines, the patterns' and the scan's, each once; count_start: the per-anchor
@@ -86,11 +87,11 @@ check "no line of its patterns: found, they say nothing without DIAGNOSTIC_MODE,
 echo "== PP2 [PEDPROPS] ENABLED=0, with DIAGNOSTIC_MODE=1: nothing looked for, nothing widened, nothing measured"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; setkey ENABLED 0 PEDPROPS; out=$(game full_game.exe)
 check "the header says PedProps off; no line of the part, none of its patterns looked for" "log_has 'Features: .*, PedProps off, Resources' && log_lacks '\[PedProps\]' && log_lacks 'A-E-'"
-check "the sites and the data as placed, every page's protection its own, no problem" "has '$ASIS' && has 'protect: all restored (RX)' && log_lacks 'PROBLEM'"
+check "the sites and the data as placed, every page's protection its own, no problem" "has '$ASIS' && has 'protect: all restored (RX)' && log_lacks '\[PedProps\] PROBLEM'"
 
 echo "== PP3 DRY_RUN=1: everything found and checked, nothing written"
 fresh_ini; setkey DRY_RUN 1; out=$(game full_game.exe)
-check "the dry run's line, word for word; no line of a raise, no write's, no problem" "log_line '$DRYLINE' && log_lacks 'limit is raised' && log_lacks '\[PedProps\] DRY_RUN: would patch' && log_lacks 'PROBLEM'"
+check "the dry run's line, word for word; no line of a raise, no write's, no problem" "log_line '$DRYLINE' && log_lacks 'ped props. limit is raised' && log_lacks '\[PedProps\] DRY_RUN: would patch' && log_lacks '\[PedProps\] PROBLEM'"
 check "nothing written: the sites as placed, every page's protection its own" "has '$ASIS' && has 'protect: all restored (RX)'"
 
 echo "== PP4 DIAGNOSTIC_MODE=1: every pattern, every site, the complete sets, every write, then the measurement 10 s in"
@@ -99,9 +100,9 @@ check "12 patterns found once each, A-E-G1 twice with a line per match" "[ \$(gr
 check "the eleven narrowings, each with its bytes, and the calls in their matches; the layout's sites and the store's four globals" "sites_logged"
 check "the complete sets: exactly 7 calls of the per-anchor count and 17 of the metadata lookup - the calls that lead elsewhere not counted - each kind to one function, the count's to its start" "one_target_each"
 check "the eleven writes, word for word with their old and new bytes, at the RVAs of the eleven narrowings" "writes_logged"
-check "the part's line after the writes, then the measurement announced, word for word" "log_line '$RAISED' && log_line '$ANNOUNCED' && [ \$(first_line 'DIAGNOSTIC: narrowing of ') -lt \$(first_line 'limit is raised') ] && [ \$(first_line 'limit is raised') -lt \$(first_line 'DIAGNOSTIC: the model info store at') ]"
+check "the part's line after the writes, then the measurement announced, word for word" "log_line '$RAISED' && log_line '$ANNOUNCED' && [ \$(first_line '\[PedProps\] DIAGNOSTIC: narrowing of ') -lt \$(first_line 'ped props. limit is raised') ] && [ \$(first_line 'ped props. limit is raised') -lt \$(first_line '\[PedProps\] DIAGNOSTIC: the model info store at') ]"
 check "the summary 10 s in, word for word: 43 ped models of 60010 indices - the other models, the ped without variation data, the null model info, the bit that is clear and the index past the count not counted - the most on one anchor 212, the second entry of anchor 0 in a file not counted" "log_line \"$SUMMARY\" && [ \$(count 'DIAGNOSTIC: ped props: ') -eq 1 ]"
-check "no line past 255, no problem; the eleven widened and nothing else, every page's protection its own" "log_lacks 'past the game.s own limit' && applied"
+check "no line past 255, no problem; the eleven widened and nothing else, every page's protection its own" "log_lacks '\[PedProps\] DIAGNOSTIC: ped props: .*past the game.s own limit' && applied"
 
 echo "== PP5 two anchors and a file past 255, the limit raised: each named, word for word"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe ppmany wait)
@@ -109,12 +110,12 @@ check "the summary: the most on one anchor 356, two anchors and one file past 25
 check "mp_m_freemode_01's anchor 0: 302 props, the limit raised this session" "log_line '\[PedProps\] DIAGNOSTIC: ped props: mp_m_freemode_01, anchor 0: 302 props from 45 files - past the game.s own limit of 255, raised to 65535 this session.$'"
 check "mp_f_freemode_01's file 29 of 29 with 270 props on anchor 2: unusable with or without TweaksV" "log_line '\[PedProps\] DIAGNOSTIC: ped props: mp_f_freemode_01, anchor 2: its file 29 of 29 holds 270 props - a file holds 255 at most, its props past 255 stay unusable with or without TweaksV.$'"
 check "mp_f_freemode_01's anchor 2: 356 props, the limit raised this session" "log_line '\[PedProps\] DIAGNOSTIC: ped props: mp_f_freemode_01, anchor 2: 356 props from 29 files - past the game.s own limit of 255, raised to 65535 this session.$'"
-check "in that order, after the summary; the part applied" "[ \$(first_line 'DIAGNOSTIC: ped props: 43') -lt \$(first_line 'mp_m_freemode_01, anchor 0: 302') ] && [ \$(first_line 'mp_m_freemode_01, anchor 0: 302') -lt \$(first_line 'its file 29 of 29') ] && [ \$(first_line 'its file 29 of 29') -lt \$(first_line 'anchor 2: 356 props') ] && applied"
+check "in that order, after the summary; the part applied" "[ \$(first_line 'DIAGNOSTIC: ped props: 43') -lt \$(first_line 'ped props: mp_m_freemode_01, anchor 0: 302') ] && [ \$(first_line 'ped props: mp_m_freemode_01, anchor 0: 302') -lt \$(first_line 'ped props: mp_f_freemode_01, anchor 2: its file 29 of 29') ] && [ \$(first_line 'ped props: mp_f_freemode_01, anchor 2: its file 29 of 29') -lt \$(first_line 'ped props: mp_f_freemode_01, anchor 2: 356 props') ] && applied"
 
 echo "== PP6 the same with DRY_RUN=1: the game's own checks still refuse"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; setkey DRY_RUN 1; out=$(game full_game.exe ppmany wait)
 check "each anchor past 255 refused from (total mod 256) on, word for word" "log_line '\[PedProps\] DIAGNOSTIC: ped props: mp_m_freemode_01, anchor 0: 302 props from 45 files - past the game.s own limit of 255: the game.s own checks refuse its props from index 46 on.$' && log_line '\[PedProps\] DIAGNOSTIC: ped props: mp_f_freemode_01, anchor 2: 356 props from 29 files - past the game.s own limit of 255: the game.s own checks refuse its props from index 100 on.$'"
-check "the dry run's line, nothing raised, nothing written, no problem" "log_line '$DRYLINE' && log_lacks 'raised to 65535' && has '$ASIS' && log_lacks 'PROBLEM'"
+check "the dry run's line, nothing raised, nothing written, no problem" "log_line '$DRYLINE' && log_lacks '\[PedProps\] .*raised to 65535' && has '$ASIS' && log_lacks '\[PedProps\] PROBLEM'"
 
 echo "== PP7 a ped with 258 files of 255 props on one anchor: past even the 65535 it is raised to"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe pphuge wait)
@@ -126,7 +127,7 @@ fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(TWEAKSV_TEST_SUMMARY_MS=2000 ASI=Twea
 check "the switch said once for this measurement" "[ \$(count 'TEST BUILD: the ped props summary comes every 2000 ms after its first (TWEAKSV_TEST_SUMMARY_MS=2000).') -eq 1 ]"
 check "the first summary, word for word: 212 on anchor 0 from 30 files; the entry of anchor 13 counted apart" "log_line \"\[PedProps\] DIAGNOSTIC: ped props: 43 ped models with variation data in 99 files $STORE; the most props on one anchor: 212 (mp_m_freemode_01, anchor 0, from 30 files, at most 38 in one); 1 anchor entry names no anchor of 0..12; no anchor and no file past 255.\\\$\""
 check "the second, once the numbers changed: 242 from 35 files of 104" "log_line \"\[PedProps\] DIAGNOSTIC: ped props: 43 ped models with variation data in 104 files $STORE; the most props on one anchor: 242 (mp_m_freemode_01, anchor 0, from 35 files, at most 38 in one); 1 anchor entry names no anchor of 0..12; no anchor and no file past 255.\\\$\""
-check "two summaries, in that order - none while the numbers stayed, over 11 s of passes every 2 s" "[ \$(count 'DIAGNOSTIC: ped props: 43') -eq 2 ] && [ \$(first_line 'in 99 files') -lt \$(first_line 'in 104 files') ]"
+check "two summaries, in that order - none while the numbers stayed, over 11 s of passes every 2 s" "[ \$(count 'DIAGNOSTIC: ped props: 43') -eq 2 ] && [ \$(first_line 'ped props: 43 ped models with variation data in 99 files') -lt \$(first_line 'ped props: 43 ped models with variation data in 104 files') ]"
 check "the entry of anchor 13, word for word, logged once over both summaries" "[ \$(count 'names anchor 13') -eq 1 ] && log_line '\[PedProps\] DIAGNOSTIC: ped props: an anchor entry of mp_m_freemode_01 names anchor 13, not one of 0..12 - such entries are counted apart (logged once).$'"
 check "the part applied; the data as the fake grew it" "applied"
 
@@ -152,7 +153,7 @@ check "the line names the model and the file; no summary, the part applied" "not
 echo "== PP13 TEST_BREAK_PATTERN=A-E-T1 (the test build), DIAGNOSTIC_MODE=1: refused, the measurement all the same"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; addkey TEST_BREAK_PATTERN A-E-T1; out=$(ASI=TweaksV_test.asi game full_game.exe wait)
 check "the pattern treated as not found, its widened twin looked for and missing; every other pattern still looked for" "log_has 'TEST BUILD: pattern A-E-T1 is treated as not found (TEST_BREAK_PATTERN).' && log_has 'Pattern A-E-T1 (widened) not found: 0F B7 C3 44 39 C0 7E ? E8 ? ? ? ? 0F B6 C0 44 39 F0 0F 9F C0' && [ \$(grep -c -E 'Pattern A-E-(T[2-5]|G[13-6]|C[12]|S1) found: ' TweaksV.log) -eq 12 ]"
-check "the problem, word for word, the only one; no site checked, nothing written" "refused 'A-E-T1 was not found.' && log_lacks 'DIAGNOSTIC: narrowing at'"
+check "the problem, word for word, the only one; no site checked, nothing written" "refused 'A-E-T1 was not found.' && log_lacks '\[PedProps\] DIAGNOSTIC: narrowing at'"
 check "the measurement all the same: its sites, the announcement and the summary 10 s in" "log_line '$ANNOUNCED' && log_line \"$SUMMARY\""
 
 echo "== PP14 TEST_BREAK_PATTERN=A-E-G1, the pattern that must match twice"
@@ -161,7 +162,7 @@ check "refused, word for word; its widened twin looked for and missing" "refused
 
 echo "== PP15 TEST_BREAK_PATTERN=A-E-C1, the per-anchor count's start, DIAGNOSTIC_MODE=1"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; addkey TEST_BREAK_PATTERN A-E-C1; out=$(ASI=TweaksV_test.asi game full_game.exe)
-check "refused, word for word; no narrowing checked; no widened twin looked for, every narrowing found" "refused 'A-E-C1 was not found.' && log_lacks 'DIAGNOSTIC: narrowing at' && log_lacks '(widened)'"
+check "refused, word for word; no narrowing checked; no widened twin looked for, every narrowing found" "refused 'A-E-C1 was not found.' && log_lacks '\[PedProps\] DIAGNOSTIC: narrowing at' && log_lacks 'Pattern A-E-[TG][0-9] (widened)'"
 check "nor measured, its layout's first pattern missing" "not_measured 'A-E-C1 was not found.'"
 
 echo "== PP16 TEST_BREAK_PATTERN=A-E-S1, the measurement's own pattern: the part applied, the measurement stopped"
@@ -178,7 +179,7 @@ check "refused, word for word; its widened twin looked for and missing" "refused
 
 echo "== PP19 A-E-G1 three times (a changed game)"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe ppg1thrice)
-check "the scanner's 3 matches; refused, word for word; no twin looked for" "log_has 'Pattern A-E-G1 found: .* 3 matches,' && refused 'the game code holds A-E-G1 3 or more times, not the expected 2.' && log_lacks '(widened)'"
+check "the scanner's 3 matches; refused, word for word; no twin looked for" "log_has 'Pattern A-E-G1 found: .* 3 matches,' && refused 'the game code holds A-E-G1 3 or more times, not the expected 2.' && log_lacks 'Pattern A-E-[TG][0-9] (widened)'"
 
 echo "== PP20 A-E-T3's narrowing widened already (another mod): its pattern missing, its widened twin found"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe ppwidened)
@@ -218,13 +219,13 @@ check "the measurement's line, word for word; the part applied" "not_measured 't
 
 echo "== PP28 the plain game, DIAGNOSTIC_MODE=1: every pattern missing, the part's problem, nothing measured"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game plain_game.exe)
-check "the 13 patterns each named by the scanner, and A-E-T1's widened twin alone" "[ \$(grep -c -E 'Pattern A-E-(T[1-5]|G[13-6]|C[12]|S1) not found: ' TweaksV.log) -eq 13 ] && [ \$(count '(widened) not found') -eq 1 ] && log_has 'Pattern A-E-T1 (widened) not found: '"
+check "the 13 patterns each named by the scanner, and A-E-T1's widened twin alone" "[ \$(grep -c -E 'Pattern A-E-(T[1-5]|G[13-6]|C[12]|S1) not found: ' TweaksV.log) -eq 13 ] && [ \$(count 'Pattern A-E-[TG][0-9] (widened) not found') -eq 1 ] && log_has 'Pattern A-E-T1 (widened) not found: '"
 check "the part's problem, word for word, its only one; the measurement's line names A-E-C1" "log_line '${NOT_RAISED}A-E-T1 was not found.\$' && [ \$(count '\[PedProps\] PROBLEM') -eq 1 ] && not_measured 'A-E-C1 was not found.'"
 
 echo "== PP29 DRY_RUN=1 with DIAGNOSTIC_MODE=1: every site checked and logged, nothing written, the measurement alike"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; setkey DRY_RUN 1; out=$(game full_game.exe wait)
-check "every site logged and checked, the complete sets, then the dry run's line instead of the writes" "sites_logged && one_target_each && log_line '$DRYLINE' && log_lacks 'DIAGNOSTIC: narrowing of '"
-check "the measurement announced and its summary 10 s in, word for word; nothing written, no problem" "log_line '$ANNOUNCED' && log_line \"$SUMMARY\" && has '$ASIS' && has 'protect: all restored (RX)' && log_lacks 'PROBLEM'"
+check "every site logged and checked, the complete sets, then the dry run's line instead of the writes" "sites_logged && one_target_each && log_line '$DRYLINE' && log_lacks '\[PedProps\] DIAGNOSTIC: narrowing of '"
+check "the measurement announced and its summary 10 s in, word for word; nothing written, no problem" "log_line '$ANNOUNCED' && log_line \"$SUMMARY\" && has '$ASIS' && has 'protect: all restored (RX)' && log_lacks '\[PedProps\] PROBLEM'"
 
 echo
 echo "PED PROPS SCENARIOS: $pass passed, $fail failed"
