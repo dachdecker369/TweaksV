@@ -1,17 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// TweaksV - the weapon components limit of the WeaponLimits part to come, measured first. The game keeps every
-// weapon component definition of all weaponcomponents.meta files in one list of 470 entries and writes past its
-// end when a mod load brings more. With DIAGNOSTIC_MODE=1 the module finds and checks every site the part's
-// writing half will use and logs how many definitions the game holds, from how many files; it writes nothing.
+// TweaksV - the weapon components limit, the WeaponLimits part's second half. The game keeps every weapon component
+// definition of all weaponcomponents.meta files in one list of 470 entries and in a pool of 470 slots, and ends in its
+// trap - or writes past the list's end - when a mod load brings more. The module moves the list on the relocation core
+// and gives the pool the list's new size, WEAPON_COMPONENTS_SIZE, through the call that reads the pool's size.
 #pragma once
 
 namespace TweaksV
 {
-	// Finds and checks the sites of the weapon component list, its count and its pool's size, and starts the
-	// measurement. Called once by StartFeatures, with DIAGNOSTIC_MODE=1 only (the table of the parts measured first).
-	void MeasureWeaponComponents();
-
-	// The weapon components' half of the WeaponLimits part (SPECIFICATIONS 11.10.2), started by the part's entry of
-	// the feature table, from DllMain, while [WEAPON_LIMITS] is on, after the weapon infos' half. It changes nothing yet.
+	// The weapon components' half of the WeaponLimits part (SPECIFICATIONS 11.10.2), started by the part's entry of the
+	// feature table, from DllMain, while [WEAPON_LIMITS] is on, after the weapon infos' half: the list moved and the pool's
+	// size call redirected, all or nothing, and with DIAGNOSTIC_MODE=1 the measurement.
 	void InitWeaponComponents();
 }

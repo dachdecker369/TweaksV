@@ -110,7 +110,6 @@ namespace TweaksV
 		constexpr std::initializer_list<MeasuredFirst> kMeasuredFirst = {
 			// [weapon infos]
 			// [weapon components]
-			{ "WeaponLimits", MeasureWeaponComponents },
 			{ "SirenSettings", MeasureSirenIds },
 			{ "SirenSettings", MeasureSirenCount },
 			// [ped props]

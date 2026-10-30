@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // TweaksV - the relocation core: moves one of the game's static arrays to a larger one and raises the
-// limit the game's code carries for it. The four array parts - the modkit array, the packfile array,
-// the box streamer's traversal list and the decal definitions array - describe their array in the
-// tables below, and the core does the work once for all of them: it finds every site, checks
-// everything before anything is written, clamps the setting, allocates the new array in full as
-// read/write data near the game and writes every reference and every limit in one go, all or nothing.
-// What is particular to a part - a hooked call, counted calls, a loop end - stays in the part's file,
-// which reads its sites from the plan and adds its writes to the one write.
+// limit the game's code carries for it. The five array parts - the modkit array, the packfile array,
+// the box streamer's traversal list, the decal definitions array and the weapon component list -
+// describe their array in the tables below, and the core does the work once for all of them: it finds
+// every site, checks everything before anything is written, clamps the setting, allocates the new array
+// in full as read/write data near the game and writes every reference and every limit in one go, all or
+// nothing. What is particular to a part - a hooked call, counted calls, a loop end - stays in the part's
+// file, which reads its sites from the plan and adds its writes to the one write.
 #pragma once
 
 #include <cstddef>
