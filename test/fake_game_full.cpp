@@ -232,13 +232,17 @@
 // [texture budget]
 // The texture budget's sites (the Resources part's measurement) are always there: the start-up's stores of the most streamed
 // objects and of the four budgets and the call after them, the budget's getter, a resource's placement and the update check,
-// leading to the counters as the game's start-up leaves them - textures 2456 MB and buffers 389 MB in 22222 and 1234 objects,
-// the game's high-water mark at 2900 MB, 98304 objects allowed, the budgets 1500, 1500, 3000 and 3000 MB - to the texture
-// quality's index 2, the update check's flag down and its switch on with its factors 0.9, 0.8 and 0.95. Once TweaksV has
-// started, the game's start-up stores the most and the budgets again and makes the call after its stores, with four arguments
-// the function behind it checks - through TweaksV's stub when TweaksV raises the budgets - and its result checked in turn.
+// leading to the counters - textures 2456 MB and buffers 389 MB in 22222 and 1234 objects, the game's high-water mark at
+// 2900 MB, the most objects and the budgets 0 until the game's start-up stores them - to the texture quality's index 2, the
+// update check's flag down and its switch on with its factors 0.9, 0.8 and 0.95. Once TweaksV has started, the game's start-up
+// stores the most, 98304 objects, and the budgets, 1500, 1500, 3000 and 3000 MB, and makes the call after its stores, with four
+// arguments the function behind it checks - through TweaksV's stub when TweaksV raises the budgets - and its result checked in
+// turn.
 //   tbconfigbig    the start-up's gameconfig.xml gives budgets 2 and 3 9000 MB
 //   tbnoindex      the texture quality's index is 7, outside 0 to 3
+//   tbearly        the game's start-up runs before TweaksV starts, as with a loader that starts TweaksV late: its stores and
+//                  the call after them made before TweaksV's DllMain, and not again
+//   tbunreadable   the data's page cannot be read while TweaksV starts
 //   tbgrow        once TweaksV's first texture budget summary is in TweaksV.log, the textures grow by 200 MB and 800 objects,
 //                  past the budget, the game's mark with them, and the update check's flag goes up; then it waits for the
 //                  next summary (TWEAKSV_TEST_SUMMARY_MS), 10 seconds at most
@@ -1988,17 +1992,20 @@ static void PedPropsGrow()
 // [texture budget]
 // The texture budget's data, laid out as the game's: the counters - the buffers' and the textures' bytes and numbers, the game's
 // high-water mark of both, the most objects allowed and the four budgets in bytes - the index of the budget in use, the update
-// check's flag and its switch with its three factors; and the function of the game's the call after the budgets' stores leads
-// to, which the harness never calls. The harness reaches the data only through this pointer, as it does the arrays above, and
-// keeps what it set, to tell afterwards that TweaksV wrote nothing, with what the sites held before TweaksV loaded.
+// check's flag and its switch with its three factors, on a page of their own, so that "tbunreadable" can take the page away
+// while TweaksV starts; and the function of the game's the call after the budgets' stores leads to, which the harness never
+// calls. The harness reaches the data only through this pointer, as it does the arrays above, and keeps what it set, to tell
+// afterwards that TweaksV wrote nothing, with what the sites held before TweaksV loaded.
 struct TextureBudgetCounters { uint64_t buffers, textures; uint32_t buffersNumber, texturesNumber; uint64_t highest; uint32_t most, unused;
 	uint64_t budgets[4]; };
 static_assert(sizeof(TextureBudgetCounters) == 0x48 && offsetof(TextureBudgetCounters, highest) == 0x18 &&
 	offsetof(TextureBudgetCounters, most) == 0x20 && offsetof(TextureBudgetCounters, budgets) == 0x28, "the counters as the game lays them out");
 struct TextureBudgetSwitch { int32_t on; float raise, lower, windows; };
 struct TextureBudgetData { TextureBudgetCounters counters; int32_t index; uint8_t flag; TextureBudgetSwitch updateCheck; };
-alignas(16) static TextureBudgetData g_textureBudgetDataStorage;
-static TextureBudgetData* volatile g_textureBudgetData = &g_textureBudgetDataStorage;
+struct TextureBudgetPage { TextureBudgetData data; unsigned char rest[4096 - sizeof(TextureBudgetData)]; };
+static_assert(sizeof(TextureBudgetPage) == 4096, "the data alone on their page");
+alignas(4096) static TextureBudgetPage g_textureBudgetPage;
+static TextureBudgetData* volatile g_textureBudgetData = &g_textureBudgetPage.data;
 static TextureBudgetData g_textureBudgetDataAsSet;
 static uint64_t g_textureBudgetDummy[8];	// where the writers of the budgets lead without their options
 static unsigned char g_textureBudgetSitesAsPlaced[sizeof(g_textureBudgetStores) + sizeof(g_textureBudgetGetter) +
@@ -2038,10 +2045,10 @@ static const wchar_t* TextureBudgetCallLeads(const unsigned char* target)
 	return L"elsewhere";
 }
 
-// The game's start-up after TweaksV's DllMain: its stores of the most and the four budgets from gameconfig.xml - the game's own
-// file's 98304 objects and 1500, 1500, 3000 and 3000 MB, or with "tbconfigbig" a file that gives budgets 2 and 3 9000 MB - then
-// the call after them, with the four arguments the next step checks: through TweaksV's stub when TweaksV redirected it, to the
-// next step when not, and not made when it leads to another mod.
+// The game's start-up, after TweaksV's DllMain - with "tbearly" before it: its stores of the most and the four budgets from
+// gameconfig.xml - the game's own file's 98304 objects and 1500, 1500, 3000 and 3000 MB, or with "tbconfigbig" a file that gives
+// budgets 2 and 3 9000 MB - then the call after them, with the four arguments the next step checks: through TweaksV's stub when
+// TweaksV redirected it, to the next step when not, and not made when it leads to another mod.
 static bool g_textureBudgetBigConfig = false;
 static wchar_t g_textureBudgetStartUp[192] = L"start-up: not made";
 static void TextureBudgetStartUp()
@@ -2071,9 +2078,9 @@ static void TextureBudgetStartUp()
 		static_cast<unsigned long long>(g_textureBudgetBudgetsThen[3] >> 20));
 }
 
-// The data as the game's start-up leaves them, at the game's own sizes: textures 2456 MB and buffers 389 MB in 22222 and 1234
-// objects, the mark at 2900 MB, 98304 objects allowed, the budgets 1500, 1500, 3000 and 3000 MB, the texture quality's index 2,
-// the update check's flag down and its switch on with its factors 0.9, 0.8 and 0.95
+// The data as the game has them, at the game's own sizes, but for the most objects and the budgets, which its start-up stores:
+// textures 2456 MB and buffers 389 MB in 22222 and 1234 objects, the mark at 2900 MB, the texture quality's index 2, the update
+// check's flag down and its switch on with its factors 0.9, 0.8 and 0.95
 static void TextureBudgetSetAsTheGame(TextureBudgetData& data)
 {
 	data.counters.buffers = (389ull << 20) + 12345;
@@ -2081,10 +2088,6 @@ static void TextureBudgetSetAsTheGame(TextureBudgetData& data)
 	data.counters.buffersNumber = 1234;
 	data.counters.texturesNumber = 22222;
 	data.counters.highest = 2900ull << 20;
-	data.counters.most = 98304;
-	const uint64_t budgetsMb[] = { 1500, 1500, 3000, 3000 };
-	for (int i = 0; i < 4; i++)
-		data.counters.budgets[i] = budgetsMb[i] << 20;
 	data.index = 2;
 	data.flag = 0;
 	data.updateCheck = { 1, 0.9f, 0.8f, 0.95f };
@@ -4553,8 +4556,9 @@ int wmain(int argc, wchar_t** argv)
 		g_pedPropsDataSum = PedPropsSum(false);
 	}
 	// [texture budget]
-	// The texture budget: the data as the game's start-up leaves them - with "tblate" all 0, as before it - and every site leading
-	// to them as the game's do, but where an option asks otherwise
+	// The texture budget: the data as the game has them before its start-up - the most and the budgets 0, with "tblate" all of
+	// them - and every site leading to them as the game's do, but where an option asks otherwise; with "tbearly" the start-up
+	// made before TweaksV loads, and with "tbunreadable" the data's page taken away until TweaksV has started
 	{
 		TextureBudgetData& data = *g_textureBudgetData;
 		if (!HasOption(argc, argv, L"tblate"))
@@ -4603,9 +4607,16 @@ int wmain(int argc, wchar_t** argv)
 		for (const TextureBudgetOperand& operand : g_textureBudgetOperands)
 			SetRel32(operand.site, !operand.option || HasOption(argc, argv, operand.option) ?
 				reinterpret_cast<const void*>(counters + 0x28 + operand.from - operand.immediate) : reinterpret_cast<const void*>(g_textureBudgetDummy));
+		if (HasOption(argc, argv, L"tbearly"))		// the game's start-up before TweaksV's DllMain: its stores and the call after them
+			TextureBudgetStartUp();
 		g_textureBudgetDataAsSet = data;
 		int asPlaced = 0;
 		TextureBudgetSites(g_textureBudgetSitesAsPlaced, false, asPlaced);
+		if (HasOption(argc, argv, L"tbunreadable"))	// the data's page cannot be read while TweaksV starts
+		{
+			DWORD old = 0;
+			VirtualProtect(&g_textureBudgetPage, sizeof(g_textureBudgetPage), PAGE_NOACCESS, &old);
+		}
 	}
 	// [streaming memory]
 
@@ -4711,8 +4722,13 @@ int wmain(int argc, wchar_t** argv)
 	}
 	// [texture budget]
 	// the game's start-up after TweaksV's DllMain: the budgets' stores and the call after them - with "tblate" once TweaksV's
-	// first summary is in its log
-	if (!HasOption(argc, argv, L"tblate"))
+	// first summary is in its log, with "tbearly" not again; with "tbunreadable" the data's page readable again first
+	if (HasOption(argc, argv, L"tbunreadable"))
+	{
+		DWORD old = 0;
+		VirtualProtect(&g_textureBudgetPage, sizeof(g_textureBudgetPage), PAGE_READWRITE, &old);
+	}
+	if (!HasOption(argc, argv, L"tblate") && !HasOption(argc, argv, L"tbearly"))
 		TextureBudgetStartUp();
 	if (HasOption(argc, argv, L"tbgrow"))
 		TextureBudgetLater(TextureBudgetChange::Grow);

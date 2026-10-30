@@ -5,7 +5,8 @@
 # read+execute, and nothing else written - the call's four arguments and its result as they came, the budgets raised before
 # the game's function runs; none lowered, a gameconfig.xml's larger budgets kept; none below 1500 left as they are; 1000
 # raised to 1500 and reported; an index outside 0 to 3 named; the part off, DRY_RUN, each check failing on its own, a writer
-# besides the start-up's, the plain game and Windows' dynamic code policy - each reported word for word, nothing written; and
+# besides the start-up's, the game's start-up before TweaksV started, its data unreadable while TweaksV starts, the plain game
+# and Windows' dynamic code policy - each reported word for word, nothing written; and
 # the measurement with DIAGNOSTIC_MODE=1, also beside a raise:
 # the five patterns found in the full fake game, every site checked and logged with the addresses the fake reports, and the
 # counters summed up 10 seconds in, at the game's own sizes - the budgets 1500, 1500, 3000 and 3000 MB, 98304 objects - and
@@ -81,6 +82,8 @@ sites_logged() {
 	log_line "\[Resources\] DIAGNOSTIC: update check at $(rva update): its switch at $(rva switch), the counters at $(rva counters), the getter.s call at $(rva update 0x22) -> $(rva getter) (Q-E-T5)\$" &&
 	log_line "\[Resources\] DIAGNOSTIC: update check.s flag at $(rva update 0x4B) -> $(rva flag), its factors at $(rva update 0x54) -> $(rva switch 8) and $(rva update 0xA0) -> $(rva switch 4) (Q-E-T5)\$"
 }
+# still_unset: the raise's line with DIAGNOSTIC_MODE that the most and the budgets are still 0 at TweaksV's start
+still_unset() { log_line "\[Resources\] DIAGNOSTIC: the most objects at $(rva counters 0x20) and the budgets at $(rva counters 0x28) are still 0 at TweaksV.s start: the game.s start-up sets them after TweaksV.s DllMain, so the call after its stores is still to come\$"; }
 announced() { log_line "\[Resources\] DIAGNOSTIC: the texture budget.s counters at $(rva counters) (Q-E-T4): the streamed textures and buffers are logged after 10 seconds, then every minute while their highs, the update check or the budget in use change.\$"; }
 # nothing_measured: no announcement, no summary, no line of the update check
 nothing_measured() { log_lacks 'texture budget.s counters at' && log_lacks 'DIAGNOSTIC: texture budget:'; }
@@ -249,7 +252,7 @@ check "nothing written: the call made to the game's function, the budgets as the
 
 echo "== TB33 DIAGNOSTIC_MODE=1 with VIDEO_MEMORY_BUDGET=6000: the sites, the call's write, the summary 10 s in of the raised budget"
 fresh_ini; setkey VIDEO_MEMORY_BUDGET 6000 RESOURCES; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe wait)
-check "the nine lines of the sites and the call's write, word for word" "sites_logged && call_written && redirected 6000"
+check "the nine lines of the sites, the most and the budgets still 0 at TweaksV's start, and the call's write, word for word" "sites_logged && still_unset && call_written && redirected 6000"
 check "the summary 10 s in, word for word, of the raised budget, the game's own four beside it" "log_line '$SUMMARY_RAISED' && first_after_10s"
 check "no problem; the budgets raised, nothing else written" "log_lacks 'PROBLEM' && report_is 'a TweaksV stub' '6000, 6000, 6000 and 6000'"
 
@@ -257,6 +260,15 @@ echo "== TB34 the test build, TWEAKSV_TEST_SUMMARY_MS=500, VIDEO_MEMORY_BUDGET=6
 fresh_ini; setkey VIDEO_MEMORY_BUDGET 6000 RESOURCES; setkey DIAGNOSTIC_MODE 1; out=$(TWEAKSV_TEST_SUMMARY_MS=500 ASI=TweaksV_test.asi game full_game.exe tblate)
 check "the first summary with the data all 0, then the raise's line and the summary of the raised budget, word for word" "log_line '$UNSET' && log_has 'are raised to 6000 MB where they are below it: 6000, 6000, 6000 and 6000 MB now' && log_line '$SUMMARY_RAISED'"
 check "the start-up's call through the stub after the first summary; no problem" "has 'set after the first summary' && startup 'a TweaksV stub' '6000, 6000, 6000 and 6000' && log_lacks 'PROBLEM'"
+
+echo "== TB35 the game's start-up before TweaksV started (a loader that starts TweaksV late), VIDEO_MEMORY_BUDGET=6000: the raise refused, reported"
+fresh_ini; setkey VIDEO_MEMORY_BUDGET 6000 RESOURCES; out=$(game full_game.exe tbearly)
+check "the problem, word for word, with the most and the budgets as the start-up set them, the only one, in one summary; nothing written" "refused 'the most objects at $(rva counters 0x20) and the budgets at $(rva counters 0x28) were set before TweaksV started (MaxStreamingResources: 98304, MaxStreamingMemory_0..3_Base: 1500, 1500, 3000 and 3000 MB): the game.s start-up ran before TweaksV.s DllMain, and the call after its stores with it.'"
+check "the start-up's call made before TweaksV, once, to the game's function itself; no line of a redirect" "startup 'the next step' '1500, 1500, 3000 and 3000' && log_lacks 'budgets. stores at RVA 0x[0-9A-F]* is redirected'"
+
+echo "== TB36 the data's page unreadable while TweaksV starts, VIDEO_MEMORY_BUDGET=6000: the raise refused, reported"
+fresh_ini; setkey VIDEO_MEMORY_BUDGET 6000 RESOURCES; out=$(game full_game.exe tbunreadable)
+check "the problem, word for word, the only one, in one summary; nothing written, the start-up's call made to the game's function" "refused 'the most objects at $(rva counters 0x20) and the budgets at $(rva counters 0x28) cannot be read.' && startup 'the next step' '1500, 1500, 3000 and 3000'"
 
 echo
 echo "TEXTURE BUDGET SCENARIOS: $pass passed, $fail failed"

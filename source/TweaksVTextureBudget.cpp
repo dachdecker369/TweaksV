@@ -14,22 +14,22 @@
 //   1 to 1499        raised to 1500, the lowest budget the game's own file gives, and reported
 //   1500 to 16384    once Q-E-T1 to Q-E-T4 are found and every site checked - the start-up's stores of the most and the four
 //                    budgets and the call after them (T1, T2), the budget's getter with the index (T3), the placement's check
-//                    of the counters (T4), every address inside the game and the sites agreeing on the counters - and the
-//                    scanner's search for stores has found the start-up's two the budgets' only writers, the call after the
-//                    stores is redirected through a call stub to a function that raises the budgets the game has just
-//                    written, logs the four it found and the index in use, and calls the game's function; nothing else is
-//                    written
+//                    of the counters (T4), every address inside the game and the sites agreeing on the counters - the
+//                    scanner's search for stores has found the start-up's two the budgets' only writers, and the most and
+//                    the budgets are still 0, the start-up still to come, the call after the stores is redirected through a
+//                    call stub to a function that raises the budgets the game has just written, logs the four it found and
+//                    the index in use, and calls the game's function; nothing else is written
 //   DRY_RUN          everything found and checked, the call not redirected
 //   DIAGNOSTIC_MODE  every site logged, the budgets' writers among them; and the measurement, with Q-E-T5, the update check
 //                    with its switch, flag and factors: the counters read 10 seconds in and again every minute that brings a
 //                    new high, a change of the update check or of the budgets; the update check's switch and factors logged
 //                    at the first summary and again if they change, a summary before the game has read gameconfig.xml saying
 //                    that its budgets are not set yet
-// Every read of the game's data - the counters, the index, the flag, the switch and its factors - is an aligned read after
-// IsReadable, or of the budgets and the index the checks found, by the raise; the raise writes the four budgets alone, right
-// after the game's own stores made them, on the game's start-up thread. Windows' own budget for the game's video memory is
-// not read: VIDEO_MEMORY_BUDGET has a documented maximum in its place, since the update check evicts against Windows' budget
-// anyway.
+// Every read of the game's data - the counters, the index, the flag, the switch and its factors, and the most and the budgets
+// at TweaksV's start - is an aligned read after IsReadable, or of the budgets and the index the checks found, by the raise;
+// the raise writes the four budgets alone, right after the game's own stores made them, on the game's start-up thread.
+// Windows' own budget for the game's video memory is not read: VIDEO_MEMORY_BUDGET has a documented maximum in its place,
+// since the update check evicts against Windows' budget anyway.
 // Written for TweaksV from the findings of its own research in the game's code (PATTERNS.md, "Resources"); the idea of a
 // larger budget is that of zombieguy's Resource Adjuster for the Legacy game, which published no code - none was read.
 
@@ -619,6 +619,34 @@ namespace TweaksV
 
 		// ---- the raise
 
+		// The most objects and the four budgets still 0 at TweaksV's start, read after IsReadable: the game's start-up has not
+		// stored them yet, so the call after its stores, which the raise redirects, is still to come. A start-up that ran before
+		// TweaksV's DllMain - a loader that starts TweaksV late, a game build that stores them earlier - has made that call
+		// already, and a redirect would never run. False with the reason in why.
+		bool StartUpToCome(std::string& why)
+		{
+			const uint8_t* const most = g_counters + kMost;
+			const std::string where = "the most objects at " + DescribeAddress(most) + " and the budgets at " + DescribeAddress(g_budgets);
+			if (!IsReadable(g_counters, kCountersSize))
+			{
+				why = where + " cannot be read";
+				return false;
+			}
+			const uint32_t mostObjects = Load<uint32_t>(most);
+			uint64_t budgets[kBudgetCount] = {};
+			for (size_t i = 0; i < kBudgetCount; i++)
+				budgets[i] = Load<uint64_t>(g_budgets + i * sizeof(uint64_t));
+			if (mostObjects != 0 || std::any_of(std::begin(budgets), std::end(budgets), [](uint64_t bytes) { return bytes != 0; }))
+			{
+				why = where + " were set before TweaksV started (MaxStreamingResources: " + std::to_string(mostObjects) + ", MaxStreamingMemory_0..3_Base: " +
+					FourMb(budgets) + " MB): the game's start-up ran before TweaksV's DllMain, and the call after its stores with it";
+				return false;
+			}
+			LogSite(where + " are still 0 at TweaksV's start: the game's start-up sets them after TweaksV's DllMain, so the call after its stores "
+				"is still to come");
+			return true;
+		}
+
 		// The game's call after its start-up has stored the budgets, redirected: each budget below VIDEO_MEMORY_BUDGET raised
 		// to it, none lowered, then the game's function, with its result handed back - on the start-up thread, before any
 		// streaming. The research did not read that function's arguments: the start-up sets none up between its stores and
@@ -690,11 +718,17 @@ namespace TweaksV
 			return;
 		}
 
-		// the raise, refused while the budgets have a writer besides the start-up's stores: it could undo the raise later
+		// the raise, refused while the budgets have a writer besides the start-up's stores - it could undo the raise later - and
+		// once the start-up has stored them before TweaksV started: the call the raise redirects is made already
 		if (raise && g_otherWriters != 0)
 		{
 			NotRaised("the budgets at " + DescribeAddress(g_budgets) + " have " + std::to_string(g_otherWriters) + (g_otherWriters == 1 ? " writer" : " writers") +
 				" besides the start-up's stores, the first at " + DescribeAddress(g_firstOtherWriter) + ", which could undo the raise later");
+			raise = false;
+		}
+		else if (raise && !StartUpToCome(why))
+		{
+			NotRaised(why);
 			raise = false;
 		}
 		if (raise)
