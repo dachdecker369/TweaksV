@@ -204,12 +204,13 @@ check "W-E-C1 looked for and missing, the problem word for word" "log_has 'Patte
 
 echo "== W27 the guard, test build with TWEAKSV_TEST_GUARD_ROOM=1 and DIAGNOSTIC_MODE=1: 11 files of packs, 91 definitions, past the game's own 470"
 export TWEAKSV_TEST_GUARD_ROOM=1
-fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(ASI=TweaksV_test.asi game full_game.exe wcmount)
+fresh_ini; setkey DIAGNOSTIC_MODE 1; setkey ERROR_POPUP 1; out=$(ASI=TweaksV_test.asi game full_game.exe wcmount)
 unset TWEAKSV_TEST_GUARD_ROOM
 check "the test build's line once, the guard's room the game's own 470, word for word" "[ \$(count 'TEST BUILD: the weapon component guard.s room is the game.s own 470 instead of 1024 (TWEAKSV_TEST_GUARD_ROOM=1).') -eq 1 ] && log_line '$HOOKED 470 definitions are loaded is refused.\$'"
 check "the loader's head, word for word" "log_line '${DIAG}the weapon components. loader at $RVA (W-E-C5 - 0x13): no unwind data, byte before it 90\$'"
 check "files 01 to 07 let in while fewer than 470 are loaded, 08 to 11 refused, a line each" "[ \$(file 0[1-7] 'let in') -eq 7 ] && [ \$(file '\(08\|09\|10\|11\)' refused) -eq 4 ] && [ \$(count 'definitions loaded, the room') -eq 11 ]"
 check "the first refused file's problem, word for word, once" "[ \$(count 'Weapon component files are refused this session') -eq 1 ] && log_line '${GUARD_PROBLEM}08/common/data/weaponcomponents.meta, the first, came once 472 definitions were loaded, the room being 470 - the weapon components of the files refused are missing in the game. Raise WEAPON_COMPONENTS_SIZE in TweaksV.ini (at most 16384); the log names every file refused.\$'"
+check "the part's box for the first file refused (the test build's line in its place)" "log_has 'TEST BUILD: message box not shown (TWEAKSV_TEST_NO_BOXES=1): TweaksV'"
 check "7 files loaded, every callback destroyed once - the refused ones by the guard - the list's count 472; the game's last error kept by each refusal" "has 'files mounted 11, loaded 7, destroyed 11 (0 on the heap), list 472, last error kept 4'"
 
 echo "== W28 WEAPON_COMPONENTS_SIZE=480: the room the key gives, the 9th file the first refused"
@@ -258,6 +259,10 @@ check "the page readable again, the 17 loads to the moved list" "has '$APPLIED' 
 echo "== W36 the byte before the loader's head 48: no function start, the guard not made, the rest applied"
 fresh_ini; out=$(game full_game.exe wcloadernotstart)
 check "the problem, word for word; the rest applied" "log_line '${TAG}PROBLEM: The weapon components. guard is not made this session: the loader at $RVA (W-E-C5 - 0x13) is not a function start (no unwind data, byte before it 48).\$' && has '$APPLIED' && log_lacks 'weapon components. loader at $RVA is hooked'"
+
+echo "== W37 the loader's head returns at once (C3): MinHook cannot hook it, the guard not made, the rest applied"
+fresh_ini; out=$(game full_game.exe wcloaderret)
+check "the problem, word for word; the rest applied" "log_line '${TAG}PROBLEM: The weapon components. guard is not made this session: the loader at $RVA could not be hooked (details in TweaksV.log).\$' && has '$APPLIED'"
 
 echo
 echo "WEAPON COMPONENTS SCENARIOS: $pass passed, $fail failed"

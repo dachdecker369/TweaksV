@@ -172,6 +172,7 @@
 //   wcbadblob      the first blob's count holds 500, past the 470 a blob holds, when the files are mounted
 //   wcloaderhooked the loader's head starts with a jump (another mod's hook); the files are not mounted then
 //   wcloadernotstart the byte before the loader's head is 48: no function start there; the files are not mounted then
+//   wcloaderret   the loader's head returns at once (C3), which MinHook cannot hook; the files are not mounted then
 //   wccountnoaccess the store's page - the list and its count - cannot be read while TweaksV starts, readable again after
 //   wcloadnoaccess once TweaksV.log holds the first weapon components summary, the page of the list's 15 leas cannot be read
 //                  until TweaksV's problem is in the log, up to 10 s (for the test build's TWEAKSV_TEST_SUMMARY_MS)
@@ -5176,6 +5177,8 @@ int wmain(int argc, wchar_t** argv)
 			g_weaponComponentsLoader[1] = 0xE9;
 		if (HasOption(argc, argv, L"wcloadernotstart"))
 			g_weaponComponentsLoader[0] = 0x48;
+		if (HasOption(argc, argv, L"wcloaderret"))
+			g_weaponComponentsLoader[1] = 0xC3;
 		WeaponComponentsCopySites(g_weaponComponentsPlacedSites, sizeof(g_weaponComponentsPlacedSites));
 		g_weaponComponentsAtStart = *store;
 	}
@@ -5437,8 +5440,12 @@ int wmain(int argc, wchar_t** argv)
 	if (HasOption(argc, argv, L"wcputback"))	// the game puts one of the list's loads back
 		WeaponComponentsPutBack();
 	if ((HasOption(argc, argv, L"wcmount") || HasOption(argc, argv, L"wcmany")) && !HasOption(argc, argv, L"wcloaderhooked") &&
-		!HasOption(argc, argv, L"wcloadernotstart"))	// packs mounted
+		!HasOption(argc, argv, L"wcloadernotstart") && !HasOption(argc, argv, L"wcloaderret"))	// packs mounted
+	{
 		WeaponComponentsMountPacks(HasOption(argc, argv, L"wcbase"), HasOption(argc, argv, L"wcmany"), HasOption(argc, argv, L"wcbadblob"));
+		if (g_weaponComponentsLoaded < g_weaponComponentsMounted)	// a file refused: up to 3 s for its box, or the line that it is not shown
+			WeaponComponentsAwait("start-up summary", 1, 3000);
+	}
 	SirenIdsLater();
 	if (HasOption(argc, argv, L"scdraw"))
 		SirenCountDrawAll(HasOption(argc, argv, L"scodd"), HasOption(argc, argv, L"scmore"), HasOption(argc, argv, L"scfull"),

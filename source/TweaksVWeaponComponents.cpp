@@ -267,6 +267,7 @@ namespace TweaksV
 		// the loader's thread alone: the hashes of the names refused, and the guard's lines
 		uint64_t g_names[kMaxNames] = {};
 		size_t g_nameCount = 0;
+		bool g_namesFull = false;
 		uint64_t g_lines = 0;
 
 		// The definitions already loaded: the sum of the blobs' counts, each read bounded - the count at most the capacity, the
@@ -340,8 +341,7 @@ namespace TweaksV
 
 		bool Refused(uint64_t hash)
 		{
-			const size_t kept = g_nameCount < kMaxNames ? g_nameCount : kMaxNames;
-			for (size_t i = 0; i < kept; i++)
+			for (size_t i = 0; i < g_nameCount; i++)
 				if (g_names[i] == hash)
 					return true;
 			return false;
@@ -352,9 +352,12 @@ namespace TweaksV
 		{
 			if (g_nameCount < kMaxNames)
 				g_names[g_nameCount++] = hash;
-			else if (g_nameCount++ == kMaxNames)
+			else if (!g_namesFull)
+			{
+				g_namesFull = true;
 				WriteLog(kTag, "The weapon components' guard keeps " + std::to_string(kMaxNames) + " refused names at most: from now on a file is refused "
 					"by the definitions loaded alone.");
+			}
 		}
 
 		// The refused file's callback, which the loader would have destroyed at its end: its callable destroyed through its
@@ -382,7 +385,7 @@ namespace TweaksV
 			char name[kEntryNameSize + 1] = {};
 			uint64_t hash = 0;
 			const bool named = EntryName(entry, name, hash);
-			const std::string file = named ? std::string(name) : std::string("a weaponcomponents.meta whose name cannot be read");
+			const char* const file = named ? name : "a weaponcomponents.meta whose name cannot be read";	// no string made per file
 			uint64_t sum = 0;
 			std::string why;
 			if (!LoadedDefinitions(sum, why))
@@ -410,7 +413,7 @@ namespace TweaksV
 			if (g_refused.load() == 0)
 			{
 				memcpy(g_firstRefused, name, sizeof(g_firstRefused));
-				ReportFailure(kTag, "Weapon component files are refused this session: " + file + ", the first, came once " + std::to_string(sum) +
+				ReportFailure(kTag, std::string("Weapon component files are refused this session: ") + file + ", the first, came once " + std::to_string(sum) +
 					" definitions were loaded, the room being " + std::to_string(g_room) + " - the weapon components of the files refused are missing in "
 					"the game. Raise WEAPON_COMPONENTS_SIZE in TweaksV.ini (at most " + std::to_string(kWeaponComponentsSize.maxValue) + "); the log names "
 					"every file refused.");
