@@ -400,7 +400,7 @@ namespace TweaksV
 				if (g_lines++ == kMaxLinesPerKind)
 					WriteLog(kTag, std::to_string(kMaxLinesPerKind) + " lines of weapon components files written - from now on they are only counted.");
 				else
-					WriteLog(kTag, std::string(refuse ? "" : "DIAGNOSTIC: ") + "Weapon components file " + file + ": " + std::to_string(sum) +
+					WriteLog(kTag, std::string(refuse ? "Weapon components file " : "DIAGNOSTIC: weapon components file ") + file + ": " + std::to_string(sum) +
 						" definitions loaded, the room " + std::to_string(g_room) + " - " + (before ? "refused, as before." : refuse ? "refused." : "let in."));
 			}
 			if (!refuse)

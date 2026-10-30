@@ -12,7 +12,11 @@
 # box; each check failing on its own - TEST_BREAK_PATTERN, the list another mod moved, a lea fewer, one more, one with
 # another prefix, the count's references disagreeing, the count not a whole number of entries after the list, before it,
 # outside the game, too far for a plausible size, the pool's default 0 and the size call another mod hooked - each a
-# problem word for word with nothing written; and the plain game. The weapon infos half logs and reports under the same tag,
+# problem word for word with nothing written; the plain game; and the guard on the loader of a weaponcomponents.meta - by default
+# hooked, its line; with the test build's TWEAKSV_TEST_GUARD_ROOM=1 or a smaller room, the files that come once the room is used
+# up refused - each a line, the first a problem - and their callbacks destroyed; the names refused kept through a base loader's
+# run, 1,024 of them; a blob that does not add up switching it off; W-E-C5 missing and the loader another mod hooked, the guard
+# not made and the rest applied. The weapon infos half logs and reports under the same tag,
 # so every check matches the weapon components' lines and problems by their wording. Fake LOCALAPPDATA: the real one is
 # never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
@@ -31,7 +35,11 @@ NOT_RAISED="${TAG}PROBLEM: The weapon components limit is not raised this sessio
 APPLIED='wc: loads 17 moved 0 game 0 other, moved list RW, copied then 0, other bytes as placed, data as placed, size call to a stub, RX: '
 GAME='wc: loads 0 moved 17 game 0 other, other bytes as placed, data as placed, size call to the lookup: 470 and 470 slots, lookups 2 of 2 as called'
 MOVED_LINE="${TAG}The weapon component list moved and its limit raised from 470 to 1024 entries.\$"
-REDIRECTED="${TAG}The pool size call at $RVA is redirected: the weapon components. pool gets 1024 slots, the list.s size.\$"
+REDIRECTED="${TAG}The pool size call at $RVA is redirected: the weapon components. pool gets 1494 slots, the room of 1024 and 470 for the last file let in.\$"
+HOOKED="${TAG}The weapon components. loader at $RVA is hooked: a weaponcomponents.meta file that comes once"
+GUARD_PROBLEM="${TAG}PROBLEM: Weapon component files are refused this session: dlcpacks:/weaponpack"
+# file N VERDICT: the guard's line of pack N's file (two digits), its verdict ("let in", "refused" or "refused, as before"), and how many
+file() { count "eapon components file dlcpacks:/weaponpack$1/common/data/weaponcomponents.meta: [0-9]* definitions loaded, the room [0-9]* - $2\.\$"; }
 ANNOUNCED="${DIAG}the weapon component definitions in the list and the weaponcomponents.meta files are logged after 10 seconds, then every minute while the numbers change, and the list.s 17 loads are checked at each reading to lead to the moved list still.\$"
 # replaced G N: the pool's line, word for word; summary N F REST: the summary of N definitions from F files, word for word
 # (REST: what follows the game's 470, from ", this one" or " and is in use" on); summaries: how many
@@ -44,7 +52,7 @@ target() { tr -d '\r' < TweaksV.log | sed -n "s/.*${DIAG}$1 at RVA 0x[0-9A-F]* -
 follower() { tr -d '\r' < TweaksV.log | sed -n "s/.*${DIAG}limit variable at RVA \(0x[0-9A-F]*\) lies 3760 bytes after the weapon component list (W-E-C1) -> game size 470\$/\1/p"; }
 # quiet: no problem of the weapon components - neither the part's nor its setting's; untouched: nothing of the part written -
 # none of the 17 loads moved, every other byte and the data as placed, every page its own protection
-quiet() { log_lacks 'PROBLEM: The weapon components limit' && log_lacks 'PROBLEM: TweaksV.ini: \[WEAPON_LIMITS\] WEAPON_COMPONENTS_SIZE'; }
+quiet() { log_lacks 'PROBLEM: The weapon components limit' && log_lacks 'PROBLEM: TweaksV.ini: \[WEAPON_LIMITS\] WEAPON_COMPONENTS_SIZE' && log_lacks 'PROBLEM: The weapon components. guard' && log_lacks 'PROBLEM: Weapon component files are refused'; }
 untouched() { has 'wc: loads 0 moved' && has 'other bytes as placed, data as placed' && has 'protect: all restored (RX)' && log_lacks 'moved and its limit raised from 470'; }
 # refused REASON: the weapon components' one problem, word for word - its reason after the job's words - and nothing written
 refused() { [ "$(count "${TAG}PROBLEM: The weapon components limit")" -eq 1 ] && log_line "${NOT_RAISED}$1\$" && untouched; }
@@ -52,8 +60,9 @@ refused() { [ "$(count "${TAG}PROBLEM: The weapon components limit")" -eq 1 ] &&
 echo "== W1 the defaults: the list moved, the pool's size call redirected, nothing else written"
 fresh_ini; out=$(game full_game.exe); echo "      $out"
 check "the 17 loads lead to the moved list, read/write, which holds the game's entries and zeros up to 16384 entries; every other byte and the game's data as placed" "has '$APPLIED'"
-check "the size call leads to TweaksV's read+execute stub: 1024 slots at each call, the game's lookup called each time with the game's arguments" "has 'size call to a stub, RX: 1024 and 1024 slots, lookups 2 of 2 as called'"
-check "the status lines word for word, the pool's line once for its two calls" "log_line '$MOVED_LINE' && log_line '$REDIRECTED' && replaced 470 1024 && [ \$(count 'for the weapon components, 470, is replaced by 1024.') -eq 1 ]"
+check "the size call leads to TweaksV's read+execute stub: the room and 470 slots at each call, the game's lookup called each time with the game's arguments" "has 'size call to a stub, RX: 1494 and 1494 slots, lookups 2 of 2 as called'"
+check "the status lines word for word, the pool's line once for its two calls" "log_line '$MOVED_LINE' && log_line '$REDIRECTED' && replaced 470 1494 && [ \$(count 'for the weapon components, 470, is replaced by 1494.') -eq 1 ]"
+check "the guard: the loader hooked at its head, its line word for word" "has 'wc loader hooked, files mounted 0' && log_line '$HOOKED 1024 definitions are loaded is refused.\$'"
 check "every page back to its own protection, no line of DIAGNOSTIC_MODE, no problem" "has 'protect: all restored (RX)' && log_lacks '${TAG}DIAGNOSTIC' && quiet"
 
 echo "== W2 [WEAPON_LIMITS] ENABLED=0, with DIAGNOSTIC_MODE=1: nothing looked for, nothing written"
@@ -65,6 +74,7 @@ echo "== W3 DRY_RUN=1: everything found and checked, the line of what it would d
 fresh_ini; setkey DRY_RUN 1; out=$(game full_game.exe)
 check "the dry run's line, word for word" "log_line '${TAG}DRY_RUN: would move the weapon component list (17 references) and raise its limit from 470 to 1024 and redirect the pool size call at $RVA\.\$'"
 check "the game as it was, no status line, no problem" "has '$GAME' && untouched && log_lacks 'is redirected: the weapon components' && quiet"
+check "the guard's dry run, word for word: the loader as placed" "log_line '${TAG}DRY_RUN: would hook the weapon components. loader at $RVA to refuse the files that come once 1024 definitions are loaded.\$' && has 'wc loader as placed' && log_lacks 'loader at $RVA is hooked'"
 
 echo "== W4 DIAGNOSTIC_MODE=1 for 12 seconds: every site and write logged, the measurement announced, its summary 10 s in"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe wait)
@@ -95,8 +105,8 @@ check "the part applied, no problem" "has '$APPLIED' && quiet"
 
 echo "== W7 WEAPON_COMPONENTS_SIZE=556 with those 556 definitions: the list and the pool full"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; setkey WEAPON_COMPONENTS_SIZE 556; out=$(game full_game.exe wcmore wait)
-check "raised to 556, the pool given 556 slots, word for word" "log_line '${TAG}The weapon component list moved and its limit raised from 470 to 556 entries.\$' && log_line '${TAG}The pool size call at $RVA is redirected: the weapon components. pool gets 556 slots, the list.s size.\$' && replaced 470 556 && has 'size call to a stub, RX: 556 and 556 slots'"
-check "the summary, word for word: past the game's own, and full" "summary 556 40 ', this one 556) - the game.s own list would have overflowed by 86 - it is full: one more definition crashes the game while it loads.'"
+check "raised to 556, the pool given 556 and 470 slots, word for word" "log_line '${TAG}The weapon component list moved and its limit raised from 470 to 556 entries.\$' && log_line '${TAG}The pool size call at $RVA is redirected: the weapon components. pool gets 1026 slots, the room of 556 and 470 for the last file let in.\$' && replaced 470 1026 && has 'size call to a stub, RX: 1026 and 1026 slots'"
+check "the summary, word for word: past the game's own, and the room used up" "summary 556 40 ', this one 556) - the game.s own list would have overflowed by 86 - the room is used up: the guard refuses every further file.'"
 check "nothing else, no problem" "has '$APPLIED' && quiet"
 
 echo "== W8 DRY_RUN=1 with DIAGNOSTIC_MODE=1, the game's own list full (470 from 25): measured in place"
@@ -109,18 +119,18 @@ echo "== W9 the list overflowed - the 471st definition's pointer over the count:
 fresh_ini; setkey DIAGNOSTIC_MODE 1; setkey DRY_RUN 1; out=$(game full_game.exe wcover wait)
 check "DRY_RUN: the summary, word for word - no count within the game's own 470; nothing written" "log_line '${DIAG}the weapon component list.s count reads -1547607936, from 25 weaponcomponents.meta files - outside the game.s own list of 470: the list has overflowed, a definition past its end written over the count and the memory after it, and the game is likely to crash.\$' && has '$GAME' && quiet"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe wcover wait)
-check "the part on: the summary, word for word - no count within the moved list's 16384; the part applied" "log_line '${DIAG}the weapon component list.s count reads -1547607936, from 25 weaponcomponents.meta files - outside the moved list of 16384: the game.s data is damaged, and the game is likely to crash.\$' && has '$APPLIED' && quiet"
+check "the part on: the summary, word for word - no count within the moved list's 16384; the part applied" "log_line '${DIAG}the weapon component list.s count reads -1547607936, from 25 weaponcomponents.meta files - outside the moved list of 16854: the game.s data is damaged, and the game is likely to crash.\$' && has '$APPLIED' && quiet"
 
 echo "== W10 the game's configuration names the pool's size: 600, then 20000 - replaced by the list's size either way"
 fresh_ini; out=$(game full_game.exe wcconfig)
-check "600 replaced by 1024, word for word; the stub's 1024 slots, the lookup called each time" "replaced 600 1024 && has 'size call to a stub, RX: 1024 and 1024 slots, lookups 2 of 2 as called' && quiet"
+check "600 replaced by 1494, word for word; the stub's 1494 slots, the lookup called each time" "replaced 600 1494 && has 'size call to a stub, RX: 1494 and 1494 slots, lookups 2 of 2 as called' && quiet"
 fresh_ini; out=$(game full_game.exe wcconfigbig)
-check "20000, more than the list's size, replaced by 1024 exactly, word for word" "replaced 20000 1024 && has 'size call to a stub, RX: 1024 and 1024 slots, lookups 2 of 2 as called' && quiet"
+check "20000, more than the room and 470, replaced by 1494 exactly, word for word" "replaced 20000 1494 && has 'size call to a stub, RX: 1494 and 1494 slots, lookups 2 of 2 as called' && quiet"
 
 echo "== W11 WEAPON_COMPONENTS_SIZE=20000, past its range: 16384, reported"
 fresh_ini; setkey WEAPON_COMPONENTS_SIZE 20000; out=$(game full_game.exe)
 check "the setting's problem, word for word, once; none of the part's" "log_line '\[TweaksV\] PROBLEM: TweaksV.ini: \[WEAPON_LIMITS\] WEAPON_COMPONENTS_SIZE=20000 is outside 470..16384 - using 16384.\$' && [ \$(count 'PROBLEM: TweaksV.ini') -eq 1 ] && log_lacks 'PROBLEM: The weapon components limit'"
-check "raised to 16384, the pool given 16384 slots" "log_line '${TAG}The weapon component list moved and its limit raised from 470 to 16384 entries.\$' && replaced 470 16384 && has 'size call to a stub, RX: 16384 and 16384 slots' && has '$APPLIED'"
+check "raised to 16384, the pool given 16384 and 470 slots, the moved list's 16854 entries" "log_line '${TAG}The weapon component list moved and its limit raised from 470 to 16384 entries.\$' && replaced 470 16854 && has 'size call to a stub, RX: 16854 and 16854 slots' && has '$APPLIED'"
 
 echo "== W12 a load the game puts back, after the first summary (test build, ERROR_POPUP=1, TWEAKSV_TEST_SUMMARY_MS=1000): reported once, in a box"
 export TWEAKSV_TEST_SUMMARY_MS=1000
@@ -191,6 +201,48 @@ echo "== W26 none of the game code present (plain fake game): reported, the firs
 fresh_ini; out=$(game plain_game.exe)
 check "the harness survived" "grep -q 'harness: .* loaded' harness.out"
 check "W-E-C1 looked for and missing, the problem word for word" "log_has 'Pattern W-E-C1 not found: ' && log_line '${NOT_RAISED}W-E-C1 was not found.\$'"
+
+echo "== W27 the guard, test build with TWEAKSV_TEST_GUARD_ROOM=1 and DIAGNOSTIC_MODE=1: 11 files of packs, 91 definitions, past the game's own 470"
+export TWEAKSV_TEST_GUARD_ROOM=1
+fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(ASI=TweaksV_test.asi game full_game.exe wcmount)
+unset TWEAKSV_TEST_GUARD_ROOM
+check "the test build's line once, the guard's room the game's own 470, word for word" "[ \$(count 'TEST BUILD: the weapon component guard.s room is the game.s own 470 instead of 1024 (TWEAKSV_TEST_GUARD_ROOM=1).') -eq 1 ] && log_line '$HOOKED 470 definitions are loaded is refused.\$'"
+check "the loader's head, word for word" "log_line '${DIAG}the weapon components. loader at $RVA (W-E-C5 - 0x13): no unwind data, byte before it 90\$'"
+check "files 01 to 07 let in while fewer than 470 are loaded, 08 to 11 refused, a line each" "[ \$(file 0[1-7] 'let in') -eq 7 ] && [ \$(file '\(08\|09\|10\|11\)' refused) -eq 4 ] && [ \$(count 'definitions loaded, the room') -eq 11 ]"
+check "the first refused file's problem, word for word, once" "[ \$(count 'Weapon component files are refused this session') -eq 1 ] && log_line '${GUARD_PROBLEM}08/common/data/weaponcomponents.meta, the first, came once 472 definitions were loaded, the room being 470 - the weapon components of the files refused are missing in the game. Raise WEAPON_COMPONENTS_SIZE in TweaksV.ini (at most 16384); the log names every file refused.\$'"
+check "7 files loaded, every callback destroyed once - the refused ones by the guard - the list's count 472" "has 'files mounted 11, loaded 7, destroyed 11 (0 on the heap), list 472'"
+
+echo "== W28 WEAPON_COMPONENTS_SIZE=480: the room the key gives, the 9th file the first refused"
+fresh_ini; setkey WEAPON_COMPONENTS_SIZE 480; out=$(game full_game.exe wcmount)
+check "08 let in at 472, 09 to 11 refused, each a line; the problem names 09" "[ \$(file '\(09\|10\|11\)' refused) -eq 3 ] && log_line '${GUARD_PROBLEM}09/common/data/weaponcomponents.meta, the first, came once 480 definitions were loaded, the room being 480 - ' && has 'files mounted 11, loaded 8, destroyed 11 (0 on the heap), list 480'"
+check "no line for the files let in without DIAGNOSTIC_MODE" "[ \$(count 'definitions loaded, the room') -eq 3 ]"
+
+echo "== W29 a base loader's run after the packs (test build, TWEAKSV_TEST_GUARD_ROOM=1): the refused names refused again, below the room"
+export TWEAKSV_TEST_GUARD_ROOM=1
+fresh_ini; out=$(ASI=TweaksV_test.asi game full_game.exe wcmount wcbase)
+unset TWEAKSV_TEST_GUARD_ROOM
+check "the 4 refused before, refused again by their names while fewer than 470 are loaded; the 7 let in again" "[ \$(file '\(08\|09\|10\|11\)' 'refused, as before') -eq 4 ] && [ \$(count 'definitions loaded, the room 470 - refused, as before') -eq 4 ] && has 'files mounted 22, loaded 14, destroyed 22 (0 on the heap), list 60'"
+check "the problem once only" "[ \$(count 'Weapon component files are refused this session') -eq 1 ]"
+
+echo "== W30 1,100 files refused (test build, TWEAKSV_TEST_GUARD_ROOM=1): 1,024 names kept, then the count alone"
+export TWEAKSV_TEST_GUARD_ROOM=1
+fresh_ini; out=$(ASI=TweaksV_test.asi game full_game.exe wcmany)
+unset TWEAKSV_TEST_GUARD_ROOM
+check "every one refused, a line each; the names' line once, word for word" "[ \$(count 'definitions loaded, the room 470 - refused\.') -eq 1100 ] && [ \$(count 'keeps 1024 refused names at most') -eq 1 ] && log_line '${TAG}The weapon components. guard keeps 1024 refused names at most: from now on a file is refused by the definitions loaded alone.\$'"
+check "the big file let in, the 1,100 not loaded and their callbacks destroyed; the problem once" "has 'files mounted 1101, loaded 1, destroyed 1101 (0 on the heap), list 472' && [ \$(count 'Weapon component files are refused this session') -eq 1 ]"
+
+echo "== W31 a blob whose count does not add up: the guard off, the files let through"
+fresh_ini; out=$(game full_game.exe wcmount wcbadblob)
+check "the problem, word for word, once" "[ \$(count 'guard is off this session') -eq 1 ] && log_line '${TAG}PROBLEM: The weapon components. guard is off this session: blob 0 holds 500 definitions, outside 0..470 - dlcpacks:/weaponpack01/common/data/weaponcomponents.meta and the files after it go to the game unchecked, and past 470 definitions above the room the game crashes while it loads.\$'"
+check "all 11 loaded, none refused" "has 'files mounted 11, loaded 11, destroyed 11 (0 on the heap)' && log_lacks 'definitions loaded, the room'"
+
+echo "== W32 TEST_BREAK_PATTERN=W-E-C5 (test build): the guard not made, the list moved and the pool's size all the same"
+fresh_ini; addkey TEST_BREAK_PATTERN W-E-C5; out=$(ASI=TweaksV_test.asi game full_game.exe)
+check "the problem, word for word; the rest applied" "log_line '${TAG}PROBLEM: The weapon components. guard is not made this session: W-E-C5 was not found.\$' && has '$APPLIED' && log_line '$REDIRECTED' && has 'wc loader as placed'"
+
+echo "== W33 the loader another mod hooked: the guard not made, the rest applied"
+fresh_ini; out=$(game full_game.exe wcloaderhooked)
+check "the problem, word for word; the rest applied" "log_line '${TAG}PROBLEM: The weapon components. guard is not made this session: the loader at $RVA starts with a jump (another mod may have hooked it already).\$' && has '$APPLIED' && log_lacks 'loader at $RVA is hooked'"
 
 echo
 echo "WEAPON COMPONENTS SCENARIOS: $pass passed, $fail failed"

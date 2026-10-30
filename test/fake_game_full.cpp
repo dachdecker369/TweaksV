@@ -166,6 +166,11 @@
 //   wcfar          the count's four references lead 20000 entries of 8 bytes past the list, inside the fake's image
 //   wcdefault      the pool's default holds 0
 //   wchooked       the pool size call already leads outside the game (another mod's hook)
+//   wcmount        once TweaksV has started, 11 files of packs mounted through the loader's head, 91 definitions in all
+//                  (9, 8, 9, 8, 9, 8, 9, 8, 9, 8 and 6); wcbase then clears the blobs and loads the 11 again, as the game's
+//                  base loader would; wcmany mounts 60 definitions in one file, then 1,100 files of one definition each
+//   wcbadblob      the first blob's count holds 500, past the 470 a blob holds, when the files are mounted
+//   wcloaderhooked the loader's head starts with a jump (another mod's hook); the files are not mounted then
 // The siren setting IDs (SirenSettings): their 14 sites are always there - the parser registrations of the siren settings
 // and the vehicle variations with their tables and the two ID members' data (type 0x01), the XML reader, the base and a
 // pack's loops and builders with the four lea of the ID table, the dedupe and its loop, the three constructors, the init's
@@ -646,9 +651,20 @@ volatile unsigned char g_weaponComponentsLeas[15][8] = {
 	WEAPON_COMPONENTS_LEA(0x48, 0x15), WEAPON_COMPONENTS_LEA(0x4C, 0x0D), WEAPON_COMPONENTS_LEA(0x4C, 0x0D) };
 // an 18th lea, which the game does not have: its first byte becomes 48 only with the option "wcextra"
 volatile unsigned char g_weaponComponentsLeaExtra[] = { 0xCC, 0x8D, 0x05, 0, 0, 0, 0, 0xCC };
+// The loader of one weaponcomponents.meta, after a NOP - .fakesit has no unwind data: its head as the game's begins, W-E-C5's
+// 66 bytes at +0x13 - the allocator's and memset's calls, the blob array's count, capacity and pointer - then the fake's own
+// tail: its body called with the entry, the callback and the blob, the frame given back.
+volatile unsigned char g_weaponComponentsLoader[] = { 0x90,
+	0x41, 0x57, 0x41, 0x56, 0x41, 0x55, 0x41, 0x54, 0x56, 0x57, 0x55, 0x53, 0x48, 0x81, 0xEC, 0xD8, 0x00, 0x00, 0x00,
+	0x49, 0x89, 0xD7, 0x49, 0x89, 0xCE, 0xB9, 0xD8, 0x0E, 0x00, 0x00, 0xE8, 0, 0, 0, 0, 0x49, 0x89, 0xC4, 0x41, 0xB8, 0xD8, 0x0E, 0x00,
+	0x00, 0x48, 0x89, 0xC1, 0x31, 0xD2, 0xE8, 0, 0, 0, 0, 0x0F, 0xB7, 0x1D, 0, 0, 0, 0, 0x66, 0x3B, 0x1D, 0, 0, 0, 0, 0x75, 0x00, 0x44,
+	0x0F, 0xB7, 0xEB, 0x49, 0x8D, 0x6D, 0x10, 0x48, 0x8B, 0x35, 0, 0, 0, 0,
+	0x4C, 0x89, 0xF1, 0x4C, 0x89, 0xFA, 0x4D, 0x89, 0xE0, 0xE8, 0, 0, 0, 0,
+	0x48, 0x81, 0xC4, 0xD8, 0x00, 0x00, 0x00, 0x5B, 0x5D, 0x5F, 0x5E, 0x41, 0x5C, 0x41, 0x5D, 0x41, 0x5E, 0x41, 0x5F, 0xC3, 0xCC };
+static_assert(sizeof(g_weaponComponentsLoader) == 121, "the loader's bytes");
 // every site but the 15 leas, whole, for the protection check and the report; the size lookup's call and the pool's default
 static Site g_weaponComponentsSites[] = { SITE(g_weaponComponentsRebuild, 0), SITE(g_weaponComponentsSort, 0), SITE(g_weaponComponentsUpdate, 0),
-	SITE(g_weaponComponentsPool, 0), SITE(g_weaponComponentsLeaExtra, 0) };
+	SITE(g_weaponComponentsPool, 0), SITE(g_weaponComponentsLeaExtra, 0), SITE(g_weaponComponentsLoader, 0) };
 static Site g_weaponComponentsSizeCall = SITE(g_weaponComponentsPool, 19);
 static Site g_weaponComponentsDefault = SITE(g_weaponComponentsPool, 14);
 
@@ -1191,19 +1207,135 @@ static int32_t WeaponComponentsPoolSize(const void* configuration, uint32_t hash
 	return configuration && hash == 0xBAE33CCF && g_weaponComponentsConfigured >= 0 ? g_weaponComponentsConfigured : defaultSize;
 }
 
-// The list as the game leaves it after a rebuild: count definitions from files files - their pointers, as on the heap - the
-// rest of it empty; kept as placed
+// The blob array, 256 at most, and the files' blobs of 0xED8 bytes on the heap, their definitions' count at +0xEC0
+static unsigned char* g_weaponComponentsBlobs[256];
+static unsigned char* WeaponComponentsBlob(int definitions)
+{
+	const auto blob = static_cast<unsigned char*>(calloc(1, 0xED8));
+	if (blob)
+		memcpy(blob + 0xEC0, &definitions, sizeof(definitions));
+	return blob;
+}
+
+// The list as the game leaves it after a rebuild: count definitions from files files - their pointers, as on the heap, and the
+// files' blobs, as many definitions each, the first the rest - the rest of it empty; kept as placed
 static void WeaponComponentsLoad(int count, int files)
 {
 	WeaponComponentsStore* const store = g_weaponComponentsStore;
 	for (int i = 0; i < 470; i++)
 		store->list[i] = i < count ? 0x000001D4A3C00000ull + 0xC0ull * static_cast<uint64_t>(i) : 0;
+	for (int i = 0; i < files && i < 256; i++)
+		g_weaponComponentsBlobs[i] = WeaponComponentsBlob((count < 470 ? count : 470) / files + (i == 0 ? (count < 470 ? count : 470) % files : 0));
 	store->count = count;
 	store->unused = 0;
-	store->blobs = 0x000001D4A3B00000ull;
+	store->blobs = reinterpret_cast<uint64_t>(g_weaponComponentsBlobs);
 	store->files = static_cast<uint16_t>(files);
-	store->capacity = 32;
+	store->capacity = 256;
 	g_weaponComponentsPlacedStore = *store;
+}
+
+// The loader's callees and its body: the blob allocated and zeroed as the game's allocator and memset would; then the file
+// "parsed" - its definitions, which the fake keeps at +0xA0 of its entry, its blob's count - the blob appended, the list's
+// count the sum of the blobs', as the rebuild leaves it, and the callback destroyed as the game's loader does
+struct WeaponComponentsEntry { char name[0x90]; int32_t type; int32_t index; unsigned char flags[8]; int32_t definitions; int32_t unused; };
+static_assert(sizeof(WeaponComponentsEntry) == 0xA8 && offsetof(WeaponComponentsEntry, definitions) == 0xA0, "a data file entry");
+struct WeaponComponentsCallback { const void* const* vtable; unsigned char rest[0x30]; void* callable; };
+static_assert(offsetof(WeaponComponentsCallback, callable) == 0x38, "the callable's pointer at +0x38");
+static int g_weaponComponentsMounted = 0, g_weaponComponentsLoaded = 0, g_weaponComponentsDestroyed = 0, g_weaponComponentsHeapDestroys = 0;
+static void WeaponComponentsDestroy(void*, bool heap)
+{
+	g_weaponComponentsDestroyed++;
+	g_weaponComponentsHeapDestroys += heap ? 1 : 0;
+}
+static const void* const g_weaponComponentsCallbackVtable[5] = { nullptr, nullptr, nullptr, nullptr, reinterpret_cast<const void*>(&WeaponComponentsDestroy) };
+static void* WeaponComponentsAllocate(size_t size)
+{
+	return malloc(size);
+}
+static void* WeaponComponentsZero(void* p, int value, size_t size)
+{
+	return memset(p, value, size);
+}
+static void WeaponComponentsLoadFile(void* entry, void* callback, unsigned char* blob)
+{
+	WeaponComponentsStore* const store = g_weaponComponentsStore;
+	memcpy(blob + 0xEC0, &static_cast<WeaponComponentsEntry*>(entry)->definitions, sizeof(int32_t));
+	if (store->files < store->capacity)
+		g_weaponComponentsBlobs[store->files++] = blob;
+	int32_t sum = 0;
+	for (int i = 0; i < store->files; i++)
+	{
+		int32_t definitions = 0;
+		memcpy(&definitions, g_weaponComponentsBlobs[i] + 0xEC0, sizeof(definitions));
+		sum += definitions;
+	}
+	store->count = sum;
+	g_weaponComponentsLoaded++;
+	const auto argument = static_cast<WeaponComponentsCallback*>(callback);
+	if (argument->callable)
+	{
+		const void* const* const vtable = *static_cast<const void* const* const*>(argument->callable);
+		reinterpret_cast<void (*)(void*, bool)>(const_cast<void*>(vtable[4]))(argument->callable, argument->callable != argument);
+		argument->callable = nullptr;
+	}
+	g_weaponComponentsPlacedStore = *store;
+}
+
+// A file mounted as the game's mounter does: its entry - the name, type 0x4F, its definitions - and a callback passed by value,
+// its callable stored inline, through the loader's head; the entries kept for the session
+static WeaponComponentsEntry g_weaponComponentsEntries[1200];
+static void WeaponComponentsMount(const char* name, int definitions)
+{
+	if (g_weaponComponentsMounted >= 1200)
+		return;
+	WeaponComponentsEntry& entry = g_weaponComponentsEntries[g_weaponComponentsMounted++];
+	memset(&entry, 0, sizeof(entry));
+	strncpy_s(entry.name, name, _TRUNCATE);
+	entry.type = 0x4F;
+	entry.index = g_weaponComponentsMounted;
+	entry.definitions = definitions;
+	WeaponComponentsCallback callback{};
+	callback.vtable = g_weaponComponentsCallbackVtable;
+	callback.callable = &callback;
+	reinterpret_cast<uint64_t (*)(void*, void*)>(const_cast<unsigned char*>(g_weaponComponentsLoader + 1))(&entry, &callback);
+}
+
+// wcmount, wcbase, wcmany and wcbadblob: the packs' files mounted once TweaksV has started
+static void WeaponComponentsMountPacks(bool base, bool many, bool badBlob)
+{
+	static const int definitions[11] = { 9, 8, 9, 8, 9, 8, 9, 8, 9, 8, 6 };
+	if (badBlob)
+	{
+		const int32_t past = 500;
+		memcpy(g_weaponComponentsBlobs[0] + 0xEC0, &past, sizeof(past));
+	}
+	if (many)
+	{
+		WeaponComponentsMount("dlcpacks:/weaponpack_big/weaponcomponents.meta", 60);
+		char name[64];
+		for (int i = 0; i < 1100; i++)
+		{
+			sprintf_s(name, "dlcpacks:/weaponpack_%04d/weaponcomponents.meta", i);
+			WeaponComponentsMount(name, 1);
+		}
+		return;
+	}
+	char name[64];
+	for (int i = 0; i < 11; i++)
+	{
+		sprintf_s(name, "dlcpacks:/weaponpack%02d/common/data/weaponcomponents.meta", i + 1);
+		WeaponComponentsMount(name, definitions[i]);
+	}
+	if (base)	// the base loader's run: every blob cleared, the list's count left, the files loaded again
+	{
+		g_weaponComponentsStore->files = 0;
+		g_weaponComponentsPlacedStore = *g_weaponComponentsStore;
+		for (int i = 0; i < 11; i++)
+		{
+			sprintf_s(name, "dlcpacks:/weaponpack%02d/common/data/weaponcomponents.meta", i + 1);
+			WeaponComponentsMount(name, definitions[i]);
+		}
+	}
 }
 
 // A rip-relative operand set to lead to target: its disp32 at field, the instruction ending at end
@@ -1271,15 +1403,15 @@ static WeaponComponentsLoads WeaponComponentsWhereLoadsLead()
 	return loads;
 }
 
-// The moved list: read/write data of 16384 entries, the game's 470 as TweaksV found them, then zeros
+// The moved list: read/write data of 16854 entries, the game's 470 as TweaksV found them, then zeros
 static bool WeaponComponentsMovedAsCopied(const unsigned char* list)
 {
 	MEMORY_BASIC_INFORMATION info{};
 	if (VirtualQuery(list, &info, sizeof(info)) != sizeof(info) || info.Protect != PAGE_READWRITE ||
-		static_cast<size_t>(static_cast<const unsigned char*>(info.BaseAddress) + info.RegionSize - list) < 16384 * 8)
+		static_cast<size_t>(static_cast<const unsigned char*>(info.BaseAddress) + info.RegionSize - list) < 16854 * 8)
 		return false;
 	const auto entries = reinterpret_cast<const uint64_t*>(list);
-	for (size_t i = 0; i < 16384; i++)
+	for (size_t i = 0; i < 16854; i++)
 		if (entries[i] != (i < 470 ? g_weaponComponentsAtStart.list[i] : 0))
 			return false;
 	return true;
@@ -1353,7 +1485,7 @@ static void WeaponComponentsReport()
 	MEMORY_BASIC_INFORMATION info{};
 	if (target != lookup && (InImage(target) || VirtualQuery(target, &info, sizeof(info)) != sizeof(info) || info.State != MEM_COMMIT))
 	{
-		wprintf(L"elsewhere | ");
+		wprintf(L"elsewhere | wc loader %ls, files mounted %d | ", g_weaponComponentsLoader[1] == 0xE9 ? L"hooked" : L"as placed", g_weaponComponentsMounted);
 		return;
 	}
 	using Lookup = int32_t (*)(const void* configuration, uint32_t hash, int32_t defaultSize);
@@ -1362,6 +1494,9 @@ static void WeaponComponentsReport()
 	const int32_t second = call(g_weaponComponentsConfiguration, 0xBAE33CCF, g_weaponComponentsGameDefault);
 	wprintf(L"%ls: %d and %d slots, lookups %ld of %ld as called | ", target == lookup ? L"to the lookup" : info.Protect == PAGE_EXECUTE_READ ?
 		L"to a stub, RX" : L"to a stub, NOT RX", first, second, g_weaponComponentsLookupsAsCalled, g_weaponComponentsLookups);
+	wprintf(L"wc loader %ls, files mounted %d, loaded %d, destroyed %d (%d on the heap), list %d | ", g_weaponComponentsLoader[1] == 0xE9 ? L"hooked" :
+		L"as placed", g_weaponComponentsMounted, g_weaponComponentsLoaded, g_weaponComponentsDestroyed, g_weaponComponentsHeapDestroys,
+		g_weaponComponentsStore->count);
 }
 
 // The siren setting IDs: the game's data their sites lead to, at the game's sizes and offsets (TweaksV's PATTERNS.md,
@@ -5002,6 +5137,15 @@ int wmain(int argc, wchar_t** argv)
 			g_weaponComponentsLeaExtra[0] = 0x48;
 		if (HasOption(argc, argv, L"wcprefix"))	// ...or one has a prefix the game's never have
 			g_weaponComponentsLeas[0][0] = 0x49;
+		// ...the loader's calls of the allocator and memset, its blob array, its body - or another mod's hook at its head
+		WeaponComponentsPoint(g_weaponComponentsLoader, 32, 36, reinterpret_cast<const void*>(&WeaponComponentsAllocate));
+		WeaponComponentsPoint(g_weaponComponentsLoader, 51, 55, reinterpret_cast<const void*>(&WeaponComponentsZero));
+		WeaponComponentsPoint(g_weaponComponentsLoader, 58, 62, &store->files);
+		WeaponComponentsPoint(g_weaponComponentsLoader, 65, 69, &store->capacity);
+		WeaponComponentsPoint(g_weaponComponentsLoader, 82, 86, &store->blobs);
+		WeaponComponentsPoint(g_weaponComponentsLoader, 96, 100, reinterpret_cast<const void*>(&WeaponComponentsLoadFile));
+		if (HasOption(argc, argv, L"wcloaderhooked"))
+			g_weaponComponentsLoader[1] = 0xE9;
 		WeaponComponentsCopySites(g_weaponComponentsPlacedSites, sizeof(g_weaponComponentsPlacedSites));
 		g_weaponComponentsAtStart = *store;
 	}
@@ -5252,6 +5396,8 @@ int wmain(int argc, wchar_t** argv)
 	}
 	if (HasOption(argc, argv, L"wcputback"))	// the game puts one of the list's loads back
 		WeaponComponentsPutBack();
+	if ((HasOption(argc, argv, L"wcmount") || HasOption(argc, argv, L"wcmany")) && !HasOption(argc, argv, L"wcloaderhooked"))	// packs mounted
+		WeaponComponentsMountPacks(HasOption(argc, argv, L"wcbase"), HasOption(argc, argv, L"wcmany"), HasOption(argc, argv, L"wcbadblob"));
 	SirenIdsLater();
 	if (HasOption(argc, argv, L"scdraw"))
 		SirenCountDrawAll(HasOption(argc, argv, L"scodd"), HasOption(argc, argv, L"scmore"), HasOption(argc, argv, L"scfull"),
