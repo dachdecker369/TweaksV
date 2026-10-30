@@ -55,6 +55,7 @@
 #include "TweaksVLog.h"
 #include "TweaksVMeasure.h"
 #include "TweaksVPatch.h"
+#include "TweaksVRpf.h"
 #include "TweaksVSettings.h"
 #include "TweaksVSummary.h"
 
@@ -62,20 +63,12 @@ namespace TweaksV
 {
 	namespace
 	{
+		using namespace Rpf;	// the RPF7 facts and the mods folder's limits, which RageOpenV shares
+
 		constexpr const char* kTag = "RageOpenV";
 
-		// ---- the RPF7 format (PATTERNS.md, "RageOpenV")
+		// ---- the names a file can reach
 
-		constexpr uint32_t kMagic = 0x52504637;			// "RPF7" as a dword: the bytes 37 46 50 52
-		constexpr uint32_t kOpenTag = 0x4E45504F;		// "OPEN": not encrypted
-		constexpr uint32_t kAesTag = 0x0FFFFFF9;
-		constexpr uint32_t kNgMask = 0x0FF00000;		// NG-encrypted, as the game's FindEncryption tells it: these bits...
-		constexpr uint32_t kNgTag = 0x0FE00000;			// ...hold this
-		constexpr size_t kHeaderSize = 16;				// the magic, the entry count, the names' length, the encryption
-		constexpr size_t kEntrySize = 16;
-		constexpr uint32_t kFolderType = 0x7FFFFF00;	// the dword at +4 of a folder
-		constexpr uint32_t kResourceBit = 0x80000000;	// set in it for a resource; every other entry is a binary
-		constexpr uint64_t kBlockSize = 512;			// a binary's offset counts these
 		constexpr size_t kMaxNameSize = 256;			// a name and its zero
 		constexpr size_t kNamesReached = 0x10000 + kMaxNameSize;	// a file's name offset is 16 bits: the names it can reach
 
@@ -88,16 +81,12 @@ namespace TweaksV
 		constexpr std::array<Kind, 4> kKinds = { { { ".yft", 162 }, { ".ydr", 165 }, { ".ydd", 165 }, { ".ytd", 13 } } };
 		constexpr size_t kVersions = 256;				// a version is two nibbles
 
-		// ---- the bounds
+		// ---- the bounds (the walk's - files and folders, depth, a path's bytes - are those of RageOpenV's list, TweaksVRpf.h)
 
-		constexpr uint32_t kMaxEntries = 0x100000;				// per entry table: more means a header not read right, as for RageOpenV's archives
 		constexpr size_t kMaxNesting = 8;						// levels of archives nested in a pack
 		constexpr size_t kMaxArchives = 4096;					// per pack, its own included
 		constexpr uint64_t kMaxPackTableBytes = 64ull << 20;	// entry tables and names read for one pack...
 		constexpr uint64_t kMaxTableBytes = 1ull << 30;			// ...and for the whole check
-		constexpr size_t kMaxFolderEntries = 200000;			// the walk, as RageOpenV's list: files and folders,
-		constexpr size_t kMaxFolderDepth = 32;					// levels of folders, the mods folder the first,
-		constexpr size_t kMaxPathBytes = 254;					// and a path below mods\ in UTF-8
 		constexpr size_t kMaxNamed = 10;						// packs of each kind the problem names; the rest it counts
 
 		// ---- reading
@@ -254,7 +243,7 @@ namespace TweaksV
 			uint64_t notOpenPacks = 0;		// among them, those not OPEN
 			uint64_t archives = 0;
 			uint64_t tableBytes = 0;
-			bool walkStopped = false;		// at kMaxFolderEntries, where RageOpenV's list stops
+			bool walkStopped = false;		// at kMaxModsEntries, where RageOpenV's list stops
 			bool limitReached = false;		// at kMaxTableBytes: every pack from there on is not checked
 			DWORD rootError = ERROR_SUCCESS;	// why the mods folder itself could not be listed: the check is not done
 			std::vector<std::string> legacyNamed;		// the first kMaxNamed of each, for the problem
@@ -278,7 +267,7 @@ namespace TweaksV
 		// graphics flags (+12) - and the first with Legacy's version kept.
 		void CountResource(Pack& pack, const Archive& archive, std::string_view name, const uint8_t* entry)
 		{
-			const unsigned version = ((Get<uint32_t>(entry + 8) >> 28) << 4) | (Get<uint32_t>(entry + 12) >> 28);
+			const unsigned version = ((Get<uint32_t>(entry + kEntryDataSizeField) >> 28) << 4) | (Get<uint32_t>(entry + kEntryEncryptedField) >> 28);
 			for (size_t kind = 0; kind < kKinds.size(); kind++)
 			{
 				if (!HasExtension(name, kKinds[kind].extension))
@@ -308,9 +297,9 @@ namespace TweaksV
 			uint8_t header[kHeaderSize];
 			if (const DWORD error = ReadAt(file, archive.start, header, sizeof(header)); error != ERROR_SUCCESS)
 				return notRead(it + " could not be read (" + DescribeError(error) + ")");
-			const uint32_t count = Get<uint32_t>(header + 4);
-			const uint32_t namesSize = Get<uint32_t>(header + 8);
-			const uint32_t encryption = Get<uint32_t>(header + 12);
+			const uint32_t count = Get<uint32_t>(header + kHeaderCountField);
+			const uint32_t namesSize = Get<uint32_t>(header + kHeaderNamesField);
+			const uint32_t encryption = Get<uint32_t>(header + kHeaderEncryptionField);
 			if (Get<uint32_t>(header) != kMagic)
 				return notRead(it + " is not an RPF7 archive (its first bytes are " + HexBytes(header, 4) + ")");
 			if (encryption != kOpenTag && encryption != 0)	// 0 names no encryption: its table is read as it is
@@ -325,7 +314,7 @@ namespace TweaksV
 			}
 			if (count == 0)
 				return notRead(it + " has no entries");
-			if (count > kMaxEntries)
+			if (count > static_cast<uint32_t>(kMaxEntries))
 				return notRead(it + " has " + std::to_string(count) + " entries, more than " + std::to_string(kMaxEntries));
 			const uint64_t tableSize = static_cast<uint64_t>(count) * kEntrySize;
 			const uint64_t tableEnd = kHeaderSize + tableSize + namesSize;
@@ -358,11 +347,11 @@ namespace TweaksV
 			for (uint32_t i = 1; i < count; i++)	// the first entry is the root folder
 			{
 				const uint8_t* const entry = check.table.data() + static_cast<size_t>(i) * kEntrySize;
-				const uint32_t type = Get<uint32_t>(entry + 4);
+				const uint32_t type = Get<uint32_t>(entry + kEntryTypeField);
 				if (type == kFolderType)
 					continue;
 				std::string_view name;
-				if (!NameAt(check.names, Get<uint16_t>(entry), name))
+				if (!NameAt(check.names, Get<uint16_t>(entry + kEntryNameField), name))
 					return notRead(it + " has a name outside its names (entry " + std::to_string(i) + ")");
 				if ((type & kResourceBit) != 0)
 				{
@@ -374,11 +363,11 @@ namespace TweaksV
 				// an archive nested in this one: its bytes not encrypted in it, stored (no compressed size at +2), at its
 				// block (+5) and of its size (+8) inside this archive, past this one's names
 				const std::string nested = (archive.name.empty() ? std::string() : archive.name + "/") + Printable(name);
-				const uint64_t start = static_cast<uint64_t>(Get24(entry + 5)) * kBlockSize;
-				const uint64_t size = Get<uint32_t>(entry + 8);
-				if (Get<uint32_t>(entry + 12) != 0)
+				const uint64_t start = static_cast<uint64_t>(Get24(entry + kEntryBlockField)) * kBlockSize;
+				const uint64_t size = Get<uint32_t>(entry + kEntryDataSizeField);
+				if (Get<uint32_t>(entry + kEntryEncryptedField) != 0)
 					pack.nestedNotOpen++;
-				else if (Get24(entry + 2) != 0)
+				else if (Get24(entry + kEntryStoredField) != 0)
 					notRead("its nested archive " + nested + " is compressed");
 				else if (start < tableEnd || start > archive.size || size > archive.size - start)
 					notRead("its nested archive " + nested + " lies outside the archive that holds it");
@@ -524,13 +513,13 @@ namespace TweaksV
 					{
 						if (wcscmp(found.cFileName, L".") == 0 || wcscmp(found.cFileName, L"..") == 0)
 							continue;
-						char name[kMaxPathBytes + 1];
+						char name[kMaxModsPath + 1];
 						if (WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, found.cFileName, -1, name, sizeof(name), nullptr, nullptr) <= 1)
 							continue;	// not valid Unicode, or too long: never served
 						std::string below = folder.below.empty() ? std::string(name) : folder.below + "\\" + name;
-						if (below.size() > kMaxPathBytes)
+						if (below.size() > kMaxModsPath)
 							continue;
-						if (++entries > kMaxFolderEntries)
+						if (++entries > kMaxModsEntries)
 						{
 							check.walkStopped = true;
 							break;
@@ -538,7 +527,7 @@ namespace TweaksV
 						std::wstring path = folder.path + L"\\" + found.cFileName;
 						if ((found.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0)
 						{
-							if (folder.depth < kMaxFolderDepth)
+							if (folder.depth < kMaxModsDepth)
 								folders.push_back({ std::move(path), std::move(below), folder.depth + 1 });
 						}
 						else if (const size_t length = wcslen(found.cFileName); length >= 4 && _wcsicmp(found.cFileName + length - 4, L".rpf") == 0)
@@ -605,7 +594,7 @@ namespace TweaksV
 						std::to_string(check.notOpenPacks) + " of them not OPEN)" : std::string());
 			}
 			if (check.walkStopped)
-				line += " - the walk stopped at " + std::to_string(kMaxFolderEntries) + " files and folders, where RageOpenV's list stops";
+				line += " - the walk stopped at " + std::to_string(kMaxModsEntries) + " files and folders, where RageOpenV's list stops";
 			WriteLog(kTag, line + ".");
 		}
 

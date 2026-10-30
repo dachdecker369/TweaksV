@@ -62,6 +62,7 @@
 #include "TweaksVMeasure.h"
 #include "TweaksVPatch.h"
 #include "TweaksVPatterns.h"
+#include "TweaksVRpf.h"
 #include "TweaksVScanner.h"
 #include "TweaksVSettings.h"
 #include "TweaksVSummary.h"
@@ -79,9 +80,9 @@ namespace TweaksV
 		template <typename F> const void* Code(F* function) { return reinterpret_cast<const void*>(function); }
 		template <typename F> void** Original(F*& variable) { return reinterpret_cast<void**>(&variable); }
 
-		// ---- the diagnostic lines: each kind capped (kMaxLinesPerKind), then only counted; a summary every minute
+		using namespace Rpf;	// the RPF7 facts and the mods folder's limits, which the check for Legacy packs shares
 
-		constexpr size_t kMaxPathText = 259;		// bytes of a game path the game's file functions read (MAX_PATH less the terminator)
+		// ---- the diagnostic lines: each kind capped (kMaxLinesPerKind), then only counted; a summary every minute
 
 		struct EventKind
 		{
@@ -182,15 +183,8 @@ namespace TweaksV
 		// The first summary 10 seconds in, then one a minute while the numbers change.
 		constexpr Measurement kMeasurement = { "RageOpenV summary", kFirstSummaryMs, &Events, &LogSummary };
 
-		// ---- the mods folder: its list, read once, and the eight file functions
+		// ---- the mods folder: its list, read once, and the eight file functions (its limits in TweaksVRpf.h)
 
-		constexpr size_t kMaxModsEntries = 200000;	// files and folders the list holds at most
-		constexpr size_t kMaxModsDepth = 32;		// folders deep
-		constexpr char kModsPrefix[] = "mods/";
-		constexpr size_t kModsPrefixSize = sizeof(kModsPrefix) - 1;
-		// A path of the list, and a request redirected, at most: a hook hands the game "mods/" and the
-		// path, and its functions read kMaxPathText bytes of that - a longer path would be cut short.
-		constexpr size_t kMaxModsPath = kMaxPathText - kModsPrefixSize;
 		constexpr size_t kMaxFolded = 3 * kMaxModsPath;	// what the fold can make of kMaxModsPath bytes: 3 bytes of UTF-8 per UTF-16 unit
 		constexpr size_t kDevices = 2;				// the game's two file devices, each with the four functions
 		constexpr size_t kFunctionsPerDevice = 4;
@@ -618,23 +612,13 @@ namespace TweaksV
 			StartLegacyPacksCheck();	// the packs the folder serves, checked for Legacy versions on a thread of their own
 		}
 
-		// ---- OPEN archives: the five redirected calls
+		// ---- OPEN archives: the five redirected calls (the RPF7 facts in TweaksVRpf.h)
 
-		constexpr uint32_t kOpenTag = 0x4E45504F;			// "OPEN": the encryption field of an archive that is not encrypted
-		constexpr uint32_t kNgMask = 0x0FF00000;			// FindEncryption answers yes to an NG-encrypted archive: these bits...
-		constexpr uint32_t kNgTag = 0x0FE00000;				// ...hold this
 		constexpr uint32_t kEntryMark = 0x0FEFFFFF;			// what an OPEN archive's named binary entries and its current offset get
-		constexpr int32_t kMaxArchiveEntries = 0x100000;	// more means the header was not read right
 		constexpr size_t kPackfileShift = 8;				// Enhanced's fiPackfile has 8 bytes more before these fields
 		constexpr size_t kEntryTableField = 0x20;			// char*: the entry table
 		constexpr size_t kFileCountField = 0x28;			// int32: entries in it
 		constexpr size_t kCurrentOffsetField = 0xB4;		// int32: the current file offset
-		constexpr size_t kEntrySize = 16;					// every RPF7 entry
-		constexpr size_t kEntryNameField = 0;				// uint16: a binary entry's name offset
-		constexpr size_t kEntryTypeField = 4;				// uint32: kFolderType, or kResourceBit set, else a binary entry
-		constexpr size_t kEntryEncryptedField = 12;			// uint32: a binary entry's encryption
-		constexpr uint32_t kFolderType = 0x7FFFFF00;
-		constexpr uint32_t kResourceBit = 0x80000000;
 		constexpr size_t kArchiveCalls = 5;
 		constexpr size_t kFirstDecryptHeader2 = 2;			// the two DecryptHeader2 calls in kCalls below...
 		constexpr size_t kSecondDecryptHeader2 = 3;			// ...share one original, so they must lead to the same function
@@ -706,7 +690,7 @@ namespace TweaksV
 				return;
 			g_openArchives.fetch_add(1, std::memory_order_relaxed);
 			const std::string entries = std::to_string(count) + " entries";
-			if (!table || count < 0 || count > kMaxArchiveEntries)
+			if (!table || count < 0 || count > kMaxEntries)
 			{
 				Unprepared(name, "has an implausible entry table (" + entries + ")", "is implausible (" + entries + ")");
 				return;

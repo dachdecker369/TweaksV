@@ -187,6 +187,7 @@
     <ClInclude Include="TweaksVLock.h" />
     <!-- [legacy packs] -->
     <ClInclude Include="TweaksVLegacyPacks.h" />
+    <ClInclude Include="TweaksVRpf.h" />
     <ClInclude Include="TweaksVLog.h" />
     <ClInclude Include="TweaksVMeasure.h" />
     <ClInclude Include="TweaksVModkitLimit.h" />

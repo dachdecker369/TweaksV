@@ -162,6 +162,9 @@
     <ClInclude Include="TweaksVLegacyPacks.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
+    <ClInclude Include="TweaksVRpf.h">
+      <Filter>TweaksV</Filter>
+    </ClInclude>
     <ClInclude Include="TweaksVLog.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
