@@ -403,6 +403,20 @@ namespace TweaksV
 			}
 		}
 
+		// The first refusal's line, at once - the report comes 10 seconds later, and a game that dies in between keeps this
+		// one; nothing may throw back into the game.
+		void LogFirstRefusal(const char* name, uint32_t room)
+		{
+			try
+			{
+				WriteLog(kTag, std::string("The weapons.meta file ") + name + " is refused: the game's room for weapons.meta files, " +
+					std::to_string(room) + ", is full - the files refused are reported 10 seconds after this first one.");
+			}
+			catch (...)
+			{
+			}
+		}
+
 		// The room the guard keeps the count below: its own, or what the array has where that is less - its capacity and
 		// the blobs the initializer allocated, as the imm32 of "mov edx" stands - so that an array another mod gave less
 		// room, or fewer blobs than its capacity, after TweaksV still holds.
@@ -431,6 +445,7 @@ namespace TweaksV
 				{
 					memcpy(g_firstRefused, name, sizeof(name));
 					g_refusedRoom = room;
+					LogFirstRefusal(name, room);
 					SetEvent(g_refusedEvent);
 				}
 				if (g_diagnostic)

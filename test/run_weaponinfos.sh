@@ -96,6 +96,7 @@ echo "== WI3 the room full - 872 files to it, then 14 more (test build, ERROR_PO
 fresh_ini; setkey ERROR_POPUP 1; run_test wifill wifew
 check "the count at the room, 1024; the 14 refused, the game's loader not called for them, each given 0 with its last error kept" "field '1024 1024' hooked '1024 of 1024' '872 passed 14 refused, 886 of 886 as expected'"
 check "the report 10 s after the first refusal, once, word for word: the first file's name, 13 more, the room and what to set" "problem 'The weapons.meta file dlc_wi01:/common/data/ai/weapons.meta and 13 more were not loaded: the game.s room for weapons.meta files, 1024, is full - raise WEAPON_INFO_FILES in TweaksV.ini above 1024 (at most 16384).' && [ \$(count 'PROBLEM: The weapons.meta file') -eq 1 ]"
+check "the first refusal's line at once, word for word, once" "[ \$(count 'is refused: the game.s room for weapons.meta files') -eq 1 ] && log_line '$W The weapons.meta file dlc_wi01:/common/data/ai/weapons.meta is refused: the game.s room for weapons.meta files, 1024, is full - the files refused are reported 10 seconds after this first one.\$'"
 check "in a box of its own after the start-up summary; no line per file without DIAGNOSTIC_MODE" "late && log_lacks 'weapons.meta file 1'"
 
 echo "== WI4 the guards' test switch (test build, TWEAKSV_TEST_GUARD_ROOM=1, TWEAKSV_TEST_SUMMARY_MS=1000, DIAGNOSTIC_MODE=1): the game's own room, 14 files, then 3 more"
