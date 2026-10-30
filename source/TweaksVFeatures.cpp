@@ -107,7 +107,6 @@ namespace TweaksV
 		// table when its part is built, or when it is not, so the table may be empty.
 		constexpr std::initializer_list<MeasuredFirst> kMeasuredFirst = {
 			// [weapon infos]
-			{ "WeaponLimits", MeasureWeaponInfos },
 			// [weapon components]
 			{ "WeaponLimits", MeasureWeaponComponents },
 			{ "SirenSettings", MeasureSirenIds },
