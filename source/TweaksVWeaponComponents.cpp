@@ -461,14 +461,31 @@ namespace TweaksV
 				GuardNotMade(std::string(kLoaderPattern.label) + " was not found.");
 				return;
 			}
+			// the head a function start: where the game's unwind data covers the match, the function it names must begin at the
+			// head, so that a shorter prologue after a game update cannot put the hook into the padding between functions; the
+			// byte before the head counts only for code without unwind data (TweaksV's fake game)
 			uint8_t* const head = match - kLoaderHead;
-			std::string detail;
-			const bool start = IsReadable(head, kLoaderHead) && IsFunctionStart(head, detail);
+			const std::string where = DescribeAddress(head) + " (" + kLoaderPattern.label + " - 0x13)";
+			std::string detail = "not readable game code";
+			bool start = IsInsideGameImage(head) && IsReadable(head, kLoaderHead);
+			DWORD64 imageBase = 0;
+			if (start)
+			{
+				if (const PRUNTIME_FUNCTION function = RtlLookupFunctionEntry(reinterpret_cast<DWORD64>(match), &imageBase, nullptr))
+				{
+					const auto begin = reinterpret_cast<const uint8_t*>(imageBase + function->BeginAddress);
+					start = begin == head;
+					detail = start ? std::string("a function start (unwind data)") : std::string(kLoaderPattern.label) + " lies in the function at " +
+						DescribeAddress(begin) + " (unwind data)";
+				}
+				else
+					start = IsFunctionStart(head, detail);
+			}
 			if (diagnostic)
-				WriteLog(kTag, "DIAGNOSTIC: the weapon components' loader at " + DescribeAddress(head) + " (" + kLoaderPattern.label + " - 0x13): " + detail);
+				WriteLog(kTag, "DIAGNOSTIC: the weapon components' loader at " + where + ": " + detail);
 			if (!start)
 			{
-				GuardNotMade("the loader at " + DescribeAddress(head) + " (" + kLoaderPattern.label + " - 0x13) is not a function start (" + detail + ").");
+				GuardNotMade("the loader at " + where + " is not a function start (" + detail + ").");
 				return;
 			}
 			if (StartsWithJump(head))

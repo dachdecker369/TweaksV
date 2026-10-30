@@ -255,5 +255,9 @@ unset TWEAKSV_TEST_SUMMARY_MS
 check "the problem, word for word, once, and its box" "[ \$(count 'may not be kept this session') -eq 1 ] && log_line '${TAG}PROBLEM: The weapon components limit may not be kept this session: the load of the weapon component list at $RVA cannot be read any more, so whether it still leads to the moved list at 0x[0-9A-F]* (outside the game) cannot be told.\$' && log_has 'Showing a problem after the start-up summary ('"
 check "the page readable again, the 17 loads to the moved list" "has '$APPLIED' && has 'protect: all restored (RX)'"
 
+echo "== W36 the byte before the loader's head 48: no function start, the guard not made, the rest applied"
+fresh_ini; out=$(game full_game.exe wcloadernotstart)
+check "the problem, word for word; the rest applied" "log_line '${TAG}PROBLEM: The weapon components. guard is not made this session: the loader at $RVA (W-E-C5 - 0x13) is not a function start (no unwind data, byte before it 48).\$' && has '$APPLIED' && log_lacks 'weapon components. loader at $RVA is hooked'"
+
 echo
 echo "WEAPON COMPONENTS SCENARIOS: $pass passed, $fail failed"
