@@ -8,10 +8,11 @@
 # anchor at the game's offsets, only the first entry of an anchor in a file counted, anchors and files past 255 named -
 # raised, not raised in a dry run, past even 65535 - the lines capped, a bound broken and memory that cannot be read ending
 # a pass with a line. Each check failing on its own refuses the whole job, a problem word for word, nothing written: each
-# pattern missing, A-E-G1 once and three times, a narrowing another mod widened, an 8th and an 18th call and one of each
-# redirected away, a call into the count's loop, a lookup call to another function, a call another mod hooked, the write
-# refused by Windows' dynamic code policy; a site of the measurement's own not as
-# expected only stops the measurement, logged, the part applied; the plain game. Every page's protection its own, always.
+# pattern missing, A-E-G1 once and three times, A-E-T1 and A-E-C1 twice, a narrowing another mod widened, an 8th and an 18th
+# call and one of each redirected away, a call into the count's loop, a lookup call to another function, a call another mod
+# hooked, the write refused by Windows' dynamic code policy; a site of the measurement's own not as expected - A-E-C2 and
+# A-E-S1 twice among them - only stops the measurement, logged, the part applied; the plain game. Every page's protection
+# its own, always.
 # Fake LOCALAPPDATA: the real one is never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 cd "$B" || exit 1
@@ -239,6 +240,24 @@ check "6 calls logged; refused, word for word" "[ \$(count 'per-anchor count cal
 echo "== PP32 one of the metadata lookup's 17 calls redirected by another mod: 16 found, refused"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe pplookupshort)
 check "the count's 7 calls, then 16 of the lookup logged; refused, word for word" "[ \$(count 'per-anchor count call at RVA .* (call scan)') -eq 7 ] && [ \$(count 'metadata lookup call at RVA .* (call scan)') -eq 16 ] && refused 'the game code calls the metadata lookup at RVA 0x[0-9A-F]* in 16 places, not the expected 17 (another mod may have redirected some of them, or the game has changed).'"
+
+echo "== PP33 A-E-T1 twice, a narrowing's pattern that must match once (a changed game)"
+fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe ppt1twice)
+check "the scanner's 2 matches; refused, named so, not as missing, word for word; no twin looked for, no narrowing checked" "log_has 'Pattern A-E-T1 found: .* 2 matches,' && refused 'the game code holds A-E-T1 2 or more times, not the expected 1.' && log_lacks 'A-E-T1 was not found' && log_lacks 'Pattern A-E-[TG][0-9] (widened)' && log_lacks '\[PedProps\] DIAGNOSTIC: narrowing at'"
+check "the measurement all the same, its own sites found" "log_line '$ANNOUNCED'"
+
+echo "== PP34 A-E-C1 twice, the per-anchor count's start: the job's reason and the measurement's"
+fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe ppc1twice)
+check "the scanner's 2 matches; refused, named so, not as missing, word for word; no twin looked for, no narrowing checked" "log_has 'Pattern A-E-C1 found: .* 2 matches,' && refused 'the game code holds A-E-C1 2 or more times, not the expected 1.' && log_lacks 'A-E-C1 was not found' && log_lacks 'Pattern A-E-[TG][0-9] (widened)' && log_lacks '\[PedProps\] DIAGNOSTIC: narrowing at'"
+check "nor measured, its layout's first pattern named in the same words" "not_measured 'the game code holds A-E-C1 2 or more times, not the expected 1.'"
+
+echo "== PP35 A-E-C2 twice, the measurement's own pattern: the part applied, the measurement stopped"
+fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe ppc2twice)
+check "the scanner's 2 matches; the measurement's line, word for word, named so, not as missing, A-E-S1 still looked for; the part applied" "log_has 'Pattern A-E-C2 found: .* 2 matches,' && not_measured 'the game code holds A-E-C2 2 or more times, not the expected 1.' && log_lacks 'A-E-C2 was not found' && log_has 'Pattern A-E-S1 found: ' && applied"
+
+echo "== PP36 A-E-S1 twice, the measurement's other pattern"
+fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe pps1twice)
+check "the scanner's 2 matches; the measurement's line, word for word, named so, not as missing; the part applied" "log_has 'Pattern A-E-S1 found: .* 2 matches,' && not_measured 'the game code holds A-E-S1 2 or more times, not the expected 1.' && log_lacks 'A-E-S1 was not found' && applied"
 
 echo
 echo "PED PROPS SCENARIOS: $pass passed, $fail failed"

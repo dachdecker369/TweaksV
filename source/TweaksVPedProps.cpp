@@ -651,6 +651,13 @@ namespace TweaksV
 				std::to_string(expected) + ".";
 		}
 
+		// A pattern the game does not hold as often as it must: "A-E-T1 was not found.", "the game code holds A-E-T1 2 or
+		// more times, not the expected 1."
+		std::string NotAsOften(const char* label, size_t found, size_t expected)
+		{
+			return found == 0 ? std::string(label) + " was not found." : "the game code holds " + std::string(label) + " " + Times(found, expected);
+		}
+
 		// A narrowing whose pattern the game holds too seldom: widened already by another mod? Its widened twin - the
 		// pattern's text with the narrowing's B6 made B7, looked for as "<label> (widened)" - names such a site, and the
 		// job is refused, since what another mod changed TweaksV does not change again; "" when the twin is not there
@@ -672,22 +679,25 @@ namespace TweaksV
 		}
 
 		// The measurement's sites - the layout A-E-C1 and A-E-C2 pin, checked when TweaksV is compiled, and the model info
-		// store's four globals, each inside the game - and the measurement, on a thread of its own. perAnchorCount is
-		// A-E-C1's match, which the part found, or nullptr.
-		void Measure(const uint8_t* perAnchorCount)
+		// store's four globals, each inside the game - and the measurement, on a thread of its own. countMatches holds
+		// A-E-C1's matches, which the part looked for.
+		void Measure(const std::vector<uint8_t*>& countMatches)
 		{
-			// both patterns of its own are looked for, so that the log names each one missing; the first problem in
-			// the order A-E-C1, A-E-C2, A-E-S1 is the reason
-			const uint8_t* const loop = Scanner::Find(kLoopPattern);
-			const uint8_t* const store = Scanner::Find(kStorePattern);
+			// both patterns of its own are looked for, each asked for one match more, so that a match more shows and the
+			// log names each one missing; the first problem in the order A-E-C1, A-E-C2, A-E-S1 is the reason
+			const std::vector<uint8_t*> loopMatches = Scanner::FindAll(kLoopPattern, 2);
+			const std::vector<uint8_t*> storeMatches = Scanner::FindAll(kStorePattern, 2);
 			const GamePattern* const layout[] = { &kCountPattern, &kLoopPattern, &kStorePattern };
-			const uint8_t* const layoutMatch[] = { perAnchorCount, loop, store };
+			const size_t layoutMatches[] = { countMatches.size(), loopMatches.size(), storeMatches.size() };
 			for (size_t i = 0; i < std::size(layout); i++)
-				if (!layoutMatch[i])
+				if (layoutMatches[i] != 1)
 				{
-					NotMeasured(std::string(layout[i]->label) + " was not found.");
+					NotMeasured(NotAsOften(layout[i]->label, layoutMatches[i], 1));
 					return;
 				}
+			const uint8_t* const perAnchorCount = countMatches[0];
+			const uint8_t* const loop = loopMatches[0];
+			const uint8_t* const store = storeMatches[0];
 
 			WriteLog(kTag, "DIAGNOSTIC: per-anchor count at " + DescribeAddress(perAnchorCount) + ": a model info's variation collection at +" +
 				Hex(kCollectionOffset) + ", its count of variation files at +" + Hex(kFileCountOffset) + " (" + kCountPattern.label + ")");
@@ -726,43 +736,38 @@ namespace TweaksV
 			StartMeasurement<kMeasurement>();	// one that cannot start is logged
 		}
 
-		// The part's job: every site found and checked, then the eleven widened in one write. perAnchorCount gets A-E-C1's
-		// match, for the measurement, as soon as it is found.
-		void Widen(const uint8_t*& perAnchorCount)
+		// The part's job: every site found and checked, then the eleven widened in one write. countMatches gets A-E-C1's
+		// matches, for the measurement, as soon as they are found.
+		void Widen(std::vector<uint8_t*>& countMatches)
 		{
 			const bool diagnostic = IsDiagnosticMode();
 
-			// 1. the ten patterns of the narrowings, each as often as it must match, and the per-anchor count's start:
-			// every one is looked for, so that the log names each one missing, and the first problem in the table's order
-			// is the reason - for a narrowing the game holds too seldom, its widened twin if another mod has widened it
+			// 1. the ten patterns of the narrowings, each as often as it must match, and the per-anchor count's start,
+			// each asked for one match more, so that a match more shows: every one is looked for, so that the log names
+			// each one missing, and the first problem in the table's order is the reason - for a narrowing the game holds
+			// too seldom, its widened twin if another mod has widened it
 			std::vector<uint8_t*> found[std::size(kNarrowings)];
 			std::string problem;
 			for (size_t i = 0; i < std::size(kNarrowings); i++)
 			{
 				const Narrowing& site = kNarrowings[i];
-				const std::string label = site.pattern->label;
-				if (site.matches == 1)
-				{
-					if (uint8_t* const match = Scanner::Find(*site.pattern))
-						found[i].push_back(match);
-				}
-				else
-					found[i] = Scanner::FindAll(*site.pattern, site.matches + 1);	// a match more shows
+				found[i] = Scanner::FindAll(*site.pattern, site.matches + 1);
 				if (found[i].size() == site.matches || !problem.empty())
 					continue;
 				if (found[i].size() < site.matches)
 					problem = WidenedAlready(site);
 				if (problem.empty())
-					problem = found[i].empty() ? label + " was not found." : "the game code holds " + label + " " + Times(found[i].size(), site.matches);
+					problem = NotAsOften(site.pattern->label, found[i].size(), site.matches);
 			}
-			perAnchorCount = Scanner::Find(kCountPattern);
-			if (!perAnchorCount && problem.empty())
-				problem = std::string(kCountPattern.label) + " was not found.";
+			countMatches = Scanner::FindAll(kCountPattern, 2);
+			if (countMatches.size() != 1 && problem.empty())
+				problem = NotAsOften(kCountPattern.label, countMatches.size(), 1);
 			if (!problem.empty())
 			{
 				Fail(problem);
 				return;
 			}
+			const uint8_t* const perAnchorCount = countMatches[0];
 
 			// 2. every narrowing - 0F B6, pinned by its pattern - and the call in its match: T1's into the game, the texture
 			// count; T2..T5's to the per-anchor count's start; the ones after G1 and G3..G6 all to one function, the metadata
@@ -860,14 +865,14 @@ namespace TweaksV
 
 	void InitPedProps()
 	{
-		const uint8_t* perAnchorCount = nullptr;
-		Widen(perAnchorCount);
+		std::vector<uint8_t*> countMatches;
+		Widen(countMatches);
 		if (!IsDiagnosticMode())
 			return;
 		// the measurement, whether the job was done or not, and an aid: an exception ends it alone, logged
 		try
 		{
-			Measure(perAnchorCount);
+			Measure(countMatches);
 		}
 		catch (...)
 		{

@@ -248,6 +248,10 @@
 //   pphuge         one more ped with 258 files of 255 props on anchor 0, 65790 in all: past even the part's 65535
 //   ppcountshort   one of the per-anchor count's calls no pattern names leads outside the game (another mod redirected it)
 //   pplookupshort  one of the metadata lookup's calls no pattern names leads outside the game (another mod redirected it)
+//   ppt1twice      a second copy of A-E-T1, a narrowing's pattern that must match once
+//   ppc1twice      a second copy of A-E-C1, the per-anchor count's start
+//   ppc2twice      a second copy of A-E-C2, the per-anchor count's loop
+//   pps1twice      a second copy of A-E-S1, the model info store's lookup
 // The texture budget's sites (the Resources part) are always there: the start-up's stores of the most streamed
 // objects and of the four budgets and the call after them, the budget's getter, a resource's placement and the update check,
 // leading to the counters - textures 2456 MB and buffers 389 MB in 22222 and 1234 objects, the game's high-water mark at
@@ -761,6 +765,9 @@ volatile unsigned char g_pedPropsCalls[13][6] = { { 0xE8, 0, 0, 0, 0, 0xCC }, { 
 	{ 0xE8, 0, 0, 0, 0, 0xCC }, { 0xE8, 0, 0, 0, 0, 0xCC }, { 0xE8, 0, 0, 0, 0, 0xCC }, { 0xE8, 0, 0, 0, 0, 0xCC }, { 0xE8, 0, 0, 0, 0, 0xCC } };
 volatile unsigned char g_pedPropsElsewhere[2][6] = { { 0xE8, 0, 0, 0, 0, 0xCC }, { 0xE8, 0, 0, 0, 0, 0xCC } };
 volatile unsigned char g_pedPropsExtra[2][6] = { { 0xCC, 0, 0, 0, 0, 0xCC }, { 0xCC, 0, 0, 0, 0, 0xCC } };
+// Room for a second copy of one match, which only "ppt1twice", "ppc1twice", "ppc2twice" or "pps1twice" puts there; S1's is
+// the longest.
+volatile unsigned char g_pedPropsSecondCopy[sizeof(g_pedPropsStore)] = { 0xCC };
 static Site g_pedPropsTextureCall = SITE(g_pedPropsT1, 9);	// the rel32 of each call
 static Site g_pedPropsCountCalls[] = { SITE(g_pedPropsT2, 6), SITE(g_pedPropsT3, 6), SITE(g_pedPropsT4, 6), SITE(g_pedPropsT5, 6),
 	SITE(g_pedPropsT5, 23), SITE(g_pedPropsCalls[0], 1), SITE(g_pedPropsCalls[1], 1) };
@@ -775,7 +782,7 @@ static Site g_pedPropsSites[] = { SITE(g_pedPropsT1, 0), SITE(g_pedPropsT2, 0), 
 	SITE(g_pedPropsT5, 0), SITE(g_pedPropsG1a, 0), SITE(g_pedPropsG1b, 0), SITE(g_pedPropsG1c, 0), SITE(g_pedPropsG3, 0), SITE(g_pedPropsG4, 0),
 	SITE(g_pedPropsG5, 0), SITE(g_pedPropsG6, 0), SITE(g_pedPropsCount, 0), SITE(g_pedPropsStore, 0),
 	{ &g_pedPropsCalls[0][0], 0, sizeof(g_pedPropsCalls) }, { &g_pedPropsElsewhere[0][0], 0, sizeof(g_pedPropsElsewhere) },
-	{ &g_pedPropsExtra[0][0], 0, sizeof(g_pedPropsExtra) } };
+	{ &g_pedPropsExtra[0][0], 0, sizeof(g_pedPropsExtra) }, SITE(g_pedPropsSecondCopy, 0) };
 // The byte of each of the eleven narrowings the part makes B7, its B6 - G1's third copy, which matches only with
 // "ppg1thrice", not among them - so that the report tells the sites widened from the sites as placed
 static volatile unsigned char* const g_pedPropsWidenable[] = { &g_pedPropsT1[1], &g_pedPropsT2[11], &g_pedPropsT3[11], &g_pedPropsT4[11],
@@ -5307,6 +5314,19 @@ int wmain(int argc, wchar_t** argv)
 			SetRel32(g_pedPropsCountCalls[5], ImageEnd() + 0x70000);
 		if (HasOption(argc, argv, L"pplookupshort"))	// one of the metadata lookup's 17 calls redirected by another mod
 			SetRel32(g_pedPropsLookupCalls[6], ImageEnd() + 0x70000);
+		const auto pedPropsSecondCopy = [](const volatile unsigned char* match, size_t size)
+		{
+			for (size_t i = 0; i < size; i++)
+				g_pedPropsSecondCopy[i] = match[i];
+		};
+		if (HasOption(argc, argv, L"ppt1twice"))		// a second copy of A-E-T1
+			pedPropsSecondCopy(g_pedPropsT1, sizeof(g_pedPropsT1));
+		if (HasOption(argc, argv, L"ppc1twice"))		// a second copy of A-E-C1, the 0x20 bytes of the count's start
+			pedPropsSecondCopy(g_pedPropsCount, 0x20);
+		if (HasOption(argc, argv, L"ppc2twice"))		// a second copy of A-E-C2, the count's loop to its end
+			pedPropsSecondCopy(g_pedPropsCount + 0x30, sizeof(g_pedPropsCount) - 0x30);
+		if (HasOption(argc, argv, L"pps1twice"))		// a second copy of A-E-S1
+			pedPropsSecondCopy(g_pedPropsStore, sizeof(g_pedPropsStore));
 		if (HasOption(argc, argv, L"ppg1once"))		// A-E-G1's second copy gone
 			g_pedPropsG1b[0] = 0xCC;
 		if (HasOption(argc, argv, L"ppg1thrice"))		// a third copy of A-E-G1
