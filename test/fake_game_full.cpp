@@ -309,6 +309,7 @@
 //   tbcountersout  the placement's load of the buffers' bytes, the start of the counters, leads outside the game
 //   tbmoststore    the start-up stores the most objects 4 bytes past where the placement's check reads them
 //   tbbudgetsoff   both stores of the budgets lead 16 bytes past them, the counters' +0x38
+//   tbindexunreadable  the getter's index lies on a page of its own, which cannot be read while TweaksV starts
 //   tbwritemov, tbwritebyte, tbwritesse, tbwriteavx, tbwritelock, tbwriteimm
 //                  a writer of the budgets besides the start-up's two stores, each of another kind: "mov" of 8 bytes from 4
 //                  bytes before them, "mov" of their last byte with an imm8, "movups" of budgets 2 and 3, "vmovdqu" of 32 bytes
@@ -2581,6 +2582,7 @@ alignas(4096) static TextureBudgetPage g_textureBudgetPage;
 static TextureBudgetData* volatile g_textureBudgetData = &g_textureBudgetPage.data;
 static TextureBudgetData g_textureBudgetDataAsSet;
 static uint64_t g_textureBudgetDummy[8];	// where the writers of the budgets lead without their options
+alignas(4096) static unsigned char g_textureBudgetIndexPage[4096];	// where the getter's index lies with "tbindexunreadable"
 static unsigned char g_textureBudgetSitesAsPlaced[sizeof(g_textureBudgetStores) + sizeof(g_textureBudgetGetter) +
 	sizeof(g_textureBudgetPlacement) + sizeof(g_textureBudgetUpdate) + sizeof(g_textureBudgetWriters)];
 // The game's function the call after the budgets' stores leads to: it counts its calls, checks the four arguments the start-up
@@ -5737,6 +5739,8 @@ int wmain(int argc, wchar_t** argv)
 			SetRel32(g_textureBudgetBudgetRefs[0], counters + 0x38);
 			SetRel32(g_textureBudgetBudgetRefs[1], counters + 0x48);
 		}
+		if (HasOption(argc, argv, L"tbindexunreadable"))	// the index on a page of its own, taken away below
+			SetRel32(g_textureBudgetIndexRef, g_textureBudgetIndexPage);
 		// the budgets' neighbours and readers where they lie; a writer at the budgets only with its option, else at the dummy
 		for (const TextureBudgetOperand& operand : g_textureBudgetOperands)
 			SetRel32(operand.site, !operand.option || HasOption(argc, argv, operand.option) ?
@@ -5750,6 +5754,11 @@ int wmain(int argc, wchar_t** argv)
 		{
 			DWORD old = 0;
 			VirtualProtect(&g_textureBudgetPage, sizeof(g_textureBudgetPage), PAGE_NOACCESS, &old);
+		}
+		if (HasOption(argc, argv, L"tbindexunreadable"))	// the index's page cannot be read while TweaksV starts
+		{
+			DWORD old = 0;
+			VirtualProtect(g_textureBudgetIndexPage, sizeof(g_textureBudgetIndexPage), PAGE_NOACCESS, &old);
 		}
 	}
 	// StaticBounds: the configuration's load leads to the configuration, the calls to the stand-in for the game's lookup - the one
@@ -5896,6 +5905,11 @@ int wmain(int argc, wchar_t** argv)
 		DWORD old = 0;
 		VirtualProtect(&g_textureBudgetPage, sizeof(g_textureBudgetPage), PAGE_READWRITE, &old);
 	}
+	if (HasOption(argc, argv, L"tbindexunreadable"))	// as with "tbunreadable", the index's page alone
+	{
+		DWORD old = 0;
+		VirtualProtect(g_textureBudgetIndexPage, sizeof(g_textureBudgetIndexPage), PAGE_READWRITE, &old);
+	}
 	if (!HasOption(argc, argv, L"tblate") && !HasOption(argc, argv, L"tbearly"))
 		TextureBudgetStartUp();
 	if (HasOption(argc, argv, L"tbgrow"))
@@ -5980,10 +5994,11 @@ int wmain(int argc, wchar_t** argv)
 			static_cast<unsigned long long>(data.counters.budgets[1] >> 20), static_cast<unsigned long long>(data.counters.budgets[2] >> 20),
 			static_cast<unsigned long long>(data.counters.budgets[3] >> 20), g_textureBudgetLater, g_textureBudgetStartUp);
 		wprintf(L"stores RVA 0x%llX, getter RVA 0x%llX, placement RVA 0x%llX, "
-			L"update RVA 0x%llX, writers RVA 0x%llX, next step RVA 0x%llX, counters RVA 0x%llX, index RVA 0x%llX, flag RVA 0x%llX, switch RVA 0x%llX | ",
+			L"update RVA 0x%llX, writers RVA 0x%llX, next step RVA 0x%llX, counters RVA 0x%llX, index RVA 0x%llX, flag RVA 0x%llX, switch RVA 0x%llX, "
+			L"index page RVA 0x%llX | ",
 			rva(g_textureBudgetStores), rva(g_textureBudgetGetter),
 			rva(g_textureBudgetPlacement), rva(g_textureBudgetUpdate), rva(g_textureBudgetWriters), rva(reinterpret_cast<const void*>(&TextureBudgetNextStep)),
-			rva(&data.counters), rva(&data.index), rva(&data.flag), rva(&data.updateCheck));
+			rva(&data.counters), rva(&data.index), rva(&data.flag), rva(&data.updateCheck), rva(g_textureBudgetIndexPage));
 	}
 	StaticBoundsReport();
 	LpReport();

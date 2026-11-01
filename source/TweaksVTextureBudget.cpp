@@ -15,10 +15,10 @@
 //   1500 to 16384    once Q-E-T1 to Q-E-T4 are found and every site checked - the start-up's stores of the most and the four
 //                    budgets and the call after them (T1, T2), the budget's getter with the index (T3), the placement's check
 //                    of the counters (T4), every address inside the game and the sites agreeing on the counters - the
-//                    scanner's search for stores has found the start-up's two the budgets' only writers, and the most and
-//                    the budgets are still 0, the start-up still to come, the call after the stores is redirected through a
-//                    call stub to a function that raises the budgets the game has just written, logs the four it found and
-//                    the index in use, and calls the game's function; nothing else is written
+//                    scanner's search for stores has found the start-up's two the budgets' only writers, the most and the
+//                    budgets are still 0, the start-up still to come, and the index can be read, the call after the stores
+//                    is redirected through a call stub to a function that raises the budgets the game has just written, logs
+//                    the four it found and the index in use, and calls the game's function; nothing else is written
 //   DRY_RUN          everything found and checked, the call not redirected
 //   DIAGNOSTIC_MODE  every site logged, the budgets' writers among them; and the measurement, with Q-E-T5, the update check
 //                    with its switch, flag and factors: the counters read 10 seconds in and again every minute that brings a
@@ -26,8 +26,9 @@
 //                    at the first summary and again if they change, a summary before the game has read gameconfig.xml saying
 //                    that its budgets are not set yet
 // Every read of the game's data - the counters, the index, the flag, the switch and its factors, and the most and the budgets
-// at TweaksV's start - is an aligned read after IsReadable, or of the budgets and the index the checks found, by the raise;
-// the raise writes the four budgets alone, right after the game's own stores made them, on the game's start-up thread.
+// at TweaksV's start - is an aligned read after IsReadable, the raise's of the budgets and the index after TweaksV's start
+// found them readable; the raise writes the four budgets alone, right after the game's own stores made them, on the game's
+// start-up thread.
 // Windows' own budget for the game's video memory is not read: VIDEO_MEMORY_BUDGET has a documented maximum in its place,
 // since the update check evicts against Windows' budget anyway.
 // Written for TweaksV from the findings of its own research in the game's code (PATTERNS.md, "Resources"); the idea of a
@@ -633,7 +634,8 @@ namespace TweaksV
 		// The most objects and the four budgets still 0 at TweaksV's start, read after IsReadable: the game's start-up has not
 		// stored them yet, so the call after its stores, which the raise redirects, is still to come. A start-up that ran before
 		// TweaksV's DllMain - a loader that starts TweaksV late, a game build that stores them earlier - has made that call
-		// already, and a redirect would never run. False with the reason in why.
+		// already, and a redirect would never run. The index must be readable too: the raise reads it, on the game's start-up
+		// thread. False with the reason in why.
 		bool StartUpToCome(std::string& why)
 		{
 			const uint8_t* const most = g_counters + kMost;
@@ -641,6 +643,11 @@ namespace TweaksV
 			if (!IsReadable(g_counters, kCountersSize))
 			{
 				why = where + " cannot be read";
+				return false;
+			}
+			if (!IsReadable(g_index, sizeof(int32_t)))
+			{
+				why = "the index at " + DescribeAddress(g_index) + At(kGetter) + " cannot be read";
 				return false;
 			}
 			const uint32_t mostObjects = Load<uint32_t>(most);

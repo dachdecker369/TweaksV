@@ -6,8 +6,9 @@
 # the game's function runs; none lowered, a gameconfig.xml's larger budgets kept; none below 1500 left as they are; 1000
 # raised to 1500 and reported; an index outside 0 to 3 named; the part off, DRY_RUN, each check failing on its own - those of
 # the sites also with DIAGNOSTIC_MODE=1, the measurement's line beside the problem - a writer besides the start-up's, also with
-# DIAGNOSTIC_MODE=1, named and measured all the same, the game's start-up before TweaksV started, its data unreadable while
-# TweaksV starts, the plain game and Windows' dynamic code policy - each reported word for word, nothing written; and
+# DIAGNOSTIC_MODE=1, named and measured all the same, the game's start-up before TweaksV started, its data or its index alone
+# unreadable while TweaksV starts, the plain game and Windows' dynamic code policy - each reported word for word, nothing
+# written; and
 # the measurement with DIAGNOSTIC_MODE=1, also beside a raise:
 # the five patterns found in the full fake game, every site checked and logged with the addresses the fake reports, and the
 # counters summed up 10 seconds in, at the game's own sizes - the budgets 1500, 1500, 3000 and 3000 MB, 98304 objects - and
@@ -298,6 +299,12 @@ both_keys; out=$(game full_game.exe tbmoststore)
 check "the most objects stored 4 bytes past where the placement's check reads them" "refused_both 'the most objects the placement.s check reads at $(rva counters 0x20) are not those Q-E-T1 stores at $(rva counters 0x24).'"
 both_keys; out=$(game full_game.exe tbbudgetsoff)
 check "the budgets stored 16 bytes past the counters' +0x28" "refused_both 'the budgets at $(rva counters 0x38) (Q-E-T1) are not at +0x28 of the counters at $(rva counters) (Q-E-T4).'"
+
+echo "== TB37b the index's page alone unreadable while TweaksV starts, the counters' readable, VIDEO_MEMORY_BUDGET=6000: the raise refused with its own reason, reported"
+fresh_ini; setkey VIDEO_MEMORY_BUDGET 6000 RESOURCES; out=$(game full_game.exe tbindexunreadable)
+check "the problem, word for word, the part's only one, in the start-up summary; nothing written, the start-up's call made to the game's function" "refused 'the index at $(rva 'index page') (Q-E-T3) cannot be read.' && startup 'the next step' '1500, 1500, 3000 and 3000'"
+both_keys; out=$(game full_game.exe tbindexunreadable)
+check "with DIAGNOSTIC_MODE=1 the same problem, the measurement announced all the same; the most and the budgets not read, no redirect" "refused 'the index at $(rva 'index page') (Q-E-T3) cannot be read.' && announced && log_lacks 'are still 0 at TweaksV' && log_lacks 'budgets. stores at RVA 0x[0-9A-F]* is redirected'"
 
 echo "== TB38 a writer besides the start-up's stores, VIDEO_MEMORY_BUDGET=6000 and DIAGNOSTIC_MODE=1: the raise refused, the writer named, the budget measured"
 both_keys; out=$(game full_game.exe tbwritemov wait)
