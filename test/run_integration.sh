@@ -3,7 +3,7 @@
 # TweaksV as a whole, in the fake game: old plugins present, NaturalVision Enhanced's loader present, one
 # pattern deliberately broken per plugin with the TEST build, another game exe, no C runtime DLLs, a renamed
 # .asi, no code changes allowed, the user name kept out of the log, the log's limit, links, a read-only game
-# folder, a held log, the code dump, the copy of a script program.
+# folder, a held log, the code dump, the copy of a script program, a half of WeaponLimits that throws.
 # Fake LOCALAPPDATA: the real one is never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 cd "$B" || exit 1

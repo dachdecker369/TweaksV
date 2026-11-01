@@ -35,7 +35,7 @@ FULL=' - the buffer is full: those objects had no ray traced shadow, reflection 
 REFUSED="1210 geometries refused (5324359445 vertices in all), 10 of them ropes$FULL"
 
 # rva NAME [PLUS]: "RVA 0x..." of what the fake's report places at NAME (set-up, maker, object, geometry, ropes, slot, counters,
-# reset), plus PLUS
+# reset, hole, edge), plus PLUS
 rva() {
 	local at
 	at=$(sed -nE "s/.*rt rvas:.*[ ,]$1 (0x[0-9A-F]+)[ ,|].*/\1/p" <<< "$out" | head -n 1)
