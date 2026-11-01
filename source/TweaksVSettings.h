@@ -130,7 +130,7 @@ namespace TweaksV
 		Number(kWeaponLimitsSection, "WEAPON_INFO_FILES", 1024, 160, 16384, "Number of weapons.meta files - Maximum 16384"),
 		Number(kWeaponLimitsSection, "WEAPON_COMPONENTS_SIZE", 1024, 470, 16384, "Number of weapon component definitions - Maximum 16384"),
 
-		Switch(kPedPropsSection, "ENABLED", true),
+		Switch(kPedPropsSection, "ENABLED", false, "EXPERIMENTAL & UNTESTED - USE AT YOUR OWN RISK!!!"),
 
 		Switch(kResourcesSection, "ENABLED", true),
 		Number(kResourcesSection, "VIDEO_MEMORY_BUDGET", 0, 0, 16384, "Video memory for streamed textures in MB, 0 = the game's own - Maximum 16384"),

@@ -140,11 +140,13 @@ namespace TweaksV
 			void (*start)();		// the module's Measure<Limit>()
 		};
 
-		// The parts measured first, one entry per limit in the order of SPECIFICATIONS 11.14. A limit leaves the
-		// table when its part is built, or when it is not, so the table may be empty.
+		// The parts measured first, one entry per limit in the order of SPECIFICATIONS 11.14, and last the ped props'
+		// measurement, which goes on while that part, which ships off, is off (11.11). A limit leaves the table when
+		// its part is built, or when it is not, so the table may be empty.
 		constexpr std::initializer_list<MeasuredFirst> kMeasuredFirst = {
 			{ "SirenSettings", MeasureSirenIds },
 			{ "SirenSettings", MeasureSirenCount },
+			{ "PedProps", MeasurePedPropsWhileOff },
 		};
 	}
 

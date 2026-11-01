@@ -33,12 +33,13 @@ check() {
 skip() { echo "SKIP  $1"; pass=$((pass+1)); }
 
 # TweaksV.ini in B, with CRLF line endings, as TweaksV writes it.
-# fresh_ini [FILE]: a copy of FILE from this folder (default $INI), without message boxes.
+# fresh_ini [FILE]: a copy of FILE from this folder (default $INI), without message boxes; with PEDPROPS_ON set, in
+# a suite that runs that part, which ships off and which base.ini has off as the default file does, with [PEDPROPS] on.
 # setkey KEY VALUE [SECTION [FILE]]: the first KEY in the file, or the KEY in [SECTION] ("" for the first
 # KEY), in FILE (default TweaksV.ini).
 # addkey KEY VALUE: a key under [TWEAKSV] that the file does not have yet.
 INI=base.ini
-fresh_ini() { sed 's/$/\r/' "$T/${1:-$INI}" > TweaksV.ini; setkey ERROR_POPUP 0; }
+fresh_ini() { sed 's/$/\r/' "$T/${1:-$INI}" > TweaksV.ini; setkey ERROR_POPUP 0; [ -z "${PEDPROPS_ON:-}" ] || setkey ENABLED 1 PEDPROPS; }
 setkey() {
 	if [ -n "${3:-}" ]; then sed -b -i "/^\[$3\]/,/^\[/s/^$1=.*\r\$/$1=$2\r/" "${4:-TweaksV.ini}"
 	else sed -b -i "0,/^$1=.*\r\$/s//$1=$2\r/" "${4:-TweaksV.ini}"; fi

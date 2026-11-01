@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-only
-# The PedProps part (TweaksVPedProps): the full fake game's eleven narrowings widened from 8 to 16 bits by default, B6 made
-# B7 and nothing else, one line; the part off; DRY_RUN; with DIAGNOSTIC_MODE=1 every pattern, every narrowing with the
-# call in its match, the complete sets through the scanner's FindCallsTo - the per-anchor count called exactly 7 times and
+# The PedProps part (TweaksVPedProps), which ships off (NOTES.md, T-PEDPROPS): as it ships, not a word of it and nothing
+# looked for, and with DIAGNOSTIC_MODE=1 the measurement alone. Every other scenario switches it on: the full fake game's
+# eleven narrowings widened from 8 to 16 bits, B6 made B7 and nothing else, one line; DRY_RUN; with DIAGNOSTIC_MODE=1
+# every pattern, every narrowing with the call in its match, the complete sets through the scanner's FindCallsTo - the per-anchor count called exactly 7 times and
 # the metadata lookup exactly 17, the calls that lead elsewhere not counted - and every write, word for word; then the
 # measurement: the model info store walked 10 seconds in and again when its numbers change, every ped model's props per
 # anchor at the game's offsets, only the first entry of an anchor in a file counted, anchors and files past 255 named -
@@ -19,6 +20,7 @@ cd "$B" || exit 1
 cp "$R/x64/Release/TweaksV.asi" TweaksV.asi
 cp "$R/object/Test/Release/TweaksV.asi" TweaksV_test.asi
 mkdir -p appdata
+PEDPROPS_ON=1
 
 ASIS='pedprops: sites as placed, data as placed |'
 WIDENED='pedprops: sites widened, data as placed |'
@@ -80,15 +82,17 @@ writes_logged() {
 # each kind of call leads to one function, the per-anchor count's to its start
 one_target_each() { [ "$(targets 'per-anchor count' | wc -l)" -eq 1 ] && [ "$(targets 'per-anchor count')" = "$(count_start)" ] && [ "$(targets 'metadata lookup' | wc -l)" -eq 1 ]; }
 
-echo "== PP1 the defaults: the eleven narrowings widened, one line"
+echo "== PP1 the part on: the eleven narrowings widened, one line"
 fresh_ini; out=$(game full_game.exe); echo "      $out"
 check "the part's line, word for word, its only line" "log_line '$RAISED' && [ \$(count '\[PedProps\]') -eq 1 ]"
 check "the eleven narrowings widened, B6 made B7 and nothing else of the sites or the data; every page's protection its own; no problem" "applied"
 check "no line of its patterns: found, they say nothing without DIAGNOSTIC_MODE, and the measurement's are not looked for" "log_lacks 'A-E-'"
 
-echo "== PP2 [PEDPROPS] ENABLED=0, with DIAGNOSTIC_MODE=1: nothing looked for, nothing widened, nothing measured"
-fresh_ini; setkey DIAGNOSTIC_MODE 1; setkey ENABLED 0 PEDPROPS; out=$(game full_game.exe)
-check "the header says PedProps off; no line of the part, none of its patterns looked for" "log_has 'Features: .*, PedProps off, Resources' && log_lacks '\[PedProps\]' && log_lacks 'A-E-'"
+echo "== PP2 [PEDPROPS] ENABLED=0, with DIAGNOSTIC_MODE=1: the measurement alone, nothing of the job looked for, nothing widened"
+fresh_ini; setkey DIAGNOSTIC_MODE 1; setkey ENABLED 0 PEDPROPS; out=$(game full_game.exe ppmany wait)
+check "the header says PedProps off; none of the job's patterns looked for, no line of a narrowing, a write or a raise" "log_has 'Features: .*, PedProps off, Resources' && log_lacks 'A-E-[TG]' && log_lacks '\[PedProps\] DIAGNOSTIC: narrowing' && log_lacks 'ped props. limit is raised'"
+check "the measurement's three patterns found once each, its sites logged, announced word for word" "[ \$(grep -c -E 'Pattern A-E-(C[12]|S1) found: .* 1 match,' TweaksV.log) -eq 3 ] && log_line '\[PedProps\] DIAGNOSTIC: per-anchor count at RVA 0x[0-9A-F]*: ' && log_line '$ANNOUNCED'"
+check "each anchor past 255 refused from (total mod 256) on, word for word: nothing is raised" "log_line '\[PedProps\] DIAGNOSTIC: ped props: mp_m_freemode_01, anchor 0: 302 props from 45 files - past the game.s own limit of 255: the game.s own checks refuse its props from index 46 on.$'"
 check "the sites and the data as placed, every page's protection its own, no problem" "has '$ASIS' && has 'protect: all restored (RX)' && log_lacks '\[PedProps\] PROBLEM'"
 
 echo "== PP3 DRY_RUN=1: everything found and checked, nothing written"
@@ -258,6 +262,16 @@ check "the scanner's 2 matches; the measurement's line, word for word, named so,
 echo "== PP36 A-E-S1 twice, the measurement's other pattern"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe pps1twice)
 check "the scanner's 2 matches; the measurement's line, word for word, named so, not as missing; the part applied" "log_has 'Pattern A-E-S1 found: .* 2 matches,' && not_measured 'the game code holds A-E-S1 2 or more times, not the expected 1.' && log_lacks 'A-E-S1 was not found' && applied"
+
+echo "== PP37 as the part ships: base.ini's default, off, without DIAGNOSTIC_MODE: not a word of it, nothing looked for"
+PEDPROPS_ON=; fresh_ini; out=$(game full_game.exe); PEDPROPS_ON=1
+check "the header says PedProps off; no line of the part, none of its patterns looked for" "log_has 'Features: .*, PedProps off, Resources' && log_lacks '\[PedProps\]' && log_lacks 'A-E-'"
+check "the sites and the data as placed, every page's protection its own, no problem and so no box" "has '$ASIS' && has 'protect: all restored (RX)' && log_lacks 'PROBLEM' && log_lacks 'Start-up summary'"
+
+echo "== PP38 no TweaksV.ini: the file TweaksV writes has the part off and says it is experimental, and the part does nothing"
+rm -f TweaksV.ini; out=$(game full_game.exe)
+check "[PEDPROPS] in the new file: ENABLED=0 with its comment, word for word" "[ \"\$(tr -d '\r' < TweaksV.ini | sed -n '/^\[PEDPROPS\]/{n;p}')\" = 'ENABLED=0                   //EXPERIMENTAL & UNTESTED - USE AT YOUR OWN RISK!!!' ]"
+check "the part off in the header, no line of it, the sites as placed, no problem" "log_has 'Features: .*, PedProps off, Resources' && log_lacks '\[PedProps\]' && has '$ASIS' && log_lacks 'PROBLEM'"
 
 echo
 echo "PED PROPS SCENARIOS: $pass passed, $fail failed"
