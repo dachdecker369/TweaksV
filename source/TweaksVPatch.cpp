@@ -9,6 +9,7 @@
 #include "MinHook.h"
 #include "TweaksVConflicts.h"
 #include "TweaksVLog.h"
+#include "TweaksVPatterns.h"
 #include "TweaksVSettings.h"
 
 namespace TweaksV
@@ -24,17 +25,6 @@ namespace TweaksV
 			uint8_t* page;
 			DWORD oldProtect;
 		};
-
-		size_t PageSize()
-		{
-			static const size_t size = []
-			{
-				SYSTEM_INFO info{};
-				GetSystemInfo(&info);
-				return static_cast<size_t>(info.dwPageSize ? info.dwPageSize : 0x1000);
-			}();
-			return size;
-		}
 
 		// The pages a write made writable, each given its own protection back when the scope ends - on an
 		// exception too, so nothing can leave a page of the game's code writable - newest first.
@@ -93,6 +83,17 @@ namespace TweaksV
 		}
 	}
 
+	size_t PageSize()
+	{
+		static const size_t size = []
+		{
+			SYSTEM_INFO info{};
+			GetSystemInfo(&info);
+			return static_cast<size_t>(info.dwPageSize ? info.dwPageSize : 0x1000);
+		}();
+		return size;
+	}
+
 	std::string DescribeAddress(const void* address)
 	{
 		char text[64];
@@ -108,6 +109,25 @@ namespace TweaksV
 				static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(address)));
 		}
 		return text;
+	}
+
+	std::string Hex(uint64_t value)
+	{
+		char text[24];
+		snprintf(text, sizeof(text), "0x%llX", static_cast<unsigned long long>(value));
+		return text;
+	}
+
+	std::string Hex32(uint32_t value)
+	{
+		char text[16];
+		snprintf(text, sizeof(text), "0x%08X", value);
+		return text;
+	}
+
+	std::string At(const GamePattern& pattern)
+	{
+		return std::string(" (") + pattern.label + ")";
 	}
 
 	std::string HexBytes(const void* bytes, size_t size)

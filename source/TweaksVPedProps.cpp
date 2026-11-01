@@ -179,20 +179,6 @@ namespace TweaksV
 		constexpr const GamePattern& kLoopPattern = Pattern("A-E-C2");	// its loop over a variation file's anchors
 		constexpr const GamePattern& kStorePattern = Pattern("A-E-S1");	// the model info store's lookup and a ped's type
 
-		// The dword a pattern holds at index, or -1 where it holds a wildcard.
-		consteval int64_t PatternDword(const GamePattern& pattern, size_t index)
-		{
-			int64_t value = 0;
-			for (size_t i = 0; i < 4; i++)
-			{
-				const int byte = PatternByte(pattern, index + i);
-				if (byte < 0)
-					return -1;
-				value |= static_cast<int64_t>(byte) << (8 * i);
-			}
-			return value;
-		}
-
 		constexpr size_t kCollectionOffset = 0x240;	// a model info's variation collection, a pointer (A-E-C1, +9)
 		constexpr size_t kFileCountOffset = 8;		// the collection's count of variation files, a word; the files' pointers
 													// at +0 (A-E-C1, +17)
@@ -206,14 +192,14 @@ namespace TweaksV
 		constexpr uint8_t kTypeMask = 0x1F;			// its low 5 bits (A-E-S1, +86)
 		constexpr uint8_t kPedType = 6;				// a ped's (A-E-S1, +88)
 		constexpr size_t kHashOffset = 0x18;		// a model info's hash, a dword (no pattern)
-		static_assert(PatternDword(kCountPattern, 9) == kCollectionOffset && PatternByte(kCountPattern, 17) == kFileCountOffset,
+		static_assert(PatternImm32(kCountPattern, 9) == kCollectionOffset && PatternByte(kCountPattern, 17) == kFileCountOffset,
 			"TweaksV: A-E-C1 holds the variation collection's offset at +9 and its count's at +17");
 		static_assert(PatternByte(kLoopPattern, 5) == kPropCountOffset && PatternByte(kLoopPattern, 27) == kAnchorCountOffset &&
 			PatternByte(kLoopPattern, 39) == kAnchorsOffset, "TweaksV: A-E-C2 holds the props', the anchors' count's and the anchors' offsets");
 		static_assert(PatternByte(kLoopPattern, 40) == 0x48 && PatternByte(kLoopPattern, 41) == 0xC1 && PatternByte(kLoopPattern, 42) == 0xE6 &&
-			PatternDword(kLoopPattern, 44) == 0x76348D48 && (size_t{ 1 } << PatternByte(kLoopPattern, 43)) * 3 == kAnchorEntrySize,
+			PatternImm32(kLoopPattern, 44) == 0x76348D48 && (size_t{ 1 } << PatternByte(kLoopPattern, 43)) * 3 == kAnchorEntrySize,
 			"TweaksV: A-E-C2 holds an anchor entry's size as shl rsi, 3 and lea rsi, [rsi+rsi*2] at +40");
-		static_assert(PatternDword(kStorePattern, 81) == kTypeOffset && PatternByte(kStorePattern, 86) == kTypeMask &&
+		static_assert(PatternImm32(kStorePattern, 81) == kTypeOffset && PatternByte(kStorePattern, 86) == kTypeMask &&
 			PatternByte(kStorePattern, 88) == kPedType, "TweaksV: A-E-S1 holds a model info's type offset, its mask and the ped type");
 
 		// A-E-S1's four references to the model info store: the disp32 of each instruction, which ends the instruction
@@ -233,7 +219,7 @@ namespace TweaksV
 		enum StoreIndex { kStoreCount, kStoreBitmap, kStoreArray, kStoreStride };
 		static_assert(PatternByte(kStorePattern, 0) == 0x3B && PatternByte(kStorePattern, 1) == 0x05 && PatternByte(kStorePattern, 12) == 0x48 &&
 			PatternByte(kStorePattern, 13) == 0x8B && PatternByte(kStorePattern, 14) == 0x0D && PatternByte(kStorePattern, 36) == 0x48 &&
-			PatternByte(kStorePattern, 37) == 0x8B && PatternByte(kStorePattern, 38) == 0x0D && PatternDword(kStorePattern, 55) == 0x05AF0F48,
+			PatternByte(kStorePattern, 37) == 0x8B && PatternByte(kStorePattern, 38) == 0x0D && PatternImm32(kStorePattern, 55) == 0x05AF0F48,
 			"TweaksV: A-E-S1 holds the four instructions that reference the model info store, each ending in its disp32");
 
 		// The bounds a pass reads within (SPECIFICATIONS.md 11.11): the store's count, its stride, and the files and
@@ -293,13 +279,6 @@ namespace TweaksV
 		Pass g_pass;
 		uint64_t g_itemLines = 0;		// the lines of anchors and files past 255 written this session
 		bool g_unknownLogged = false;
-
-		std::string Hex(uint64_t value)
-		{
-			char text[24];
-			snprintf(text, sizeof(text), "0x%llX", static_cast<unsigned long long>(value));
-			return text;
-		}
 
 		std::string ModelName(uint32_t hash)
 		{
@@ -644,20 +623,6 @@ namespace TweaksV
 			WriteLog(kTag, "DIAGNOSTIC: the ped props are not measured: " + why);
 		}
 
-		// "1 time, not the expected 2." - "3 or more times, not ..." for a search that stopped at its limit
-		std::string Times(size_t found, size_t expected)
-		{
-			return std::to_string(found) + (found > expected ? " or more" : "") + (found == 1 ? " time" : " times") + ", not the expected " +
-				std::to_string(expected) + ".";
-		}
-
-		// A pattern the game does not hold as often as it must: "A-E-T1 was not found.", "the game code holds A-E-T1 2 or
-		// more times, not the expected 1."
-		std::string NotAsOften(const char* label, size_t found, size_t expected)
-		{
-			return found == 0 ? std::string(label) + " was not found." : "the game code holds " + std::string(label) + " " + Times(found, expected);
-		}
-
 		// A narrowing whose pattern the game holds too seldom: widened already by another mod? Its widened twin - the
 		// pattern's text with the narrowing's B6 made B7, looked for as "<label> (widened)" - names such a site, and the
 		// job is refused, since what another mod changed TweaksV does not change again; "" when the twin is not there
@@ -692,7 +657,7 @@ namespace TweaksV
 			for (size_t i = 0; i < std::size(layout); i++)
 				if (layoutMatches[i] != 1)
 				{
-					NotMeasured(NotAsOften(layout[i]->label, layoutMatches[i], 1));
+					NotMeasured(Scanner::NotAsOften(*layout[i], layoutMatches[i], 1) + ".");
 					return;
 				}
 			const uint8_t* const perAnchorCount = countMatches[0];
@@ -757,11 +722,11 @@ namespace TweaksV
 				if (found[i].size() < site.matches)
 					problem = WidenedAlready(site);
 				if (problem.empty())
-					problem = NotAsOften(site.pattern->label, found[i].size(), site.matches);
+					problem = Scanner::NotAsOften(*site.pattern, found[i].size(), site.matches) + ".";
 			}
 			countMatches = Scanner::FindAll(kCountPattern, 2);
 			if (countMatches.size() != 1 && problem.empty())
-				problem = NotAsOften(kCountPattern.label, countMatches.size(), 1);
+				problem = Scanner::NotAsOften(kCountPattern, countMatches.size(), 1) + ".";
 			if (!problem.empty())
 			{
 				Fail(problem);

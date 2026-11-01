@@ -42,7 +42,6 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
-#include <initializer_list>
 #include <string>
 #include <vector>
 
@@ -62,16 +61,6 @@ namespace TweaksV
 		constexpr const char* kTag = "RayTracing";
 		constexpr const char* kJob = "The ray tracing buffer of moving geometry is not raised this session: ";
 		constexpr const char* kNotMeasured = "DIAGNOSTIC: the ray tracing buffer of moving geometry is not measured: ";
-
-		// True if the pattern holds these bytes from at on - for the checks, when TweaksV is compiled, that an instruction the
-		// code reads is the one its pattern pins.
-		consteval bool PatternHolds(const GamePattern& pattern, size_t at, std::initializer_list<int> bytes)
-		{
-			for (const int byte : bytes)
-				if (PatternByte(pattern, at++) != byte)
-					return false;
-			return true;
-		}
 
 		// The bytes a pattern's match spans.
 		consteval size_t PatternSize(const GamePattern& pattern)
@@ -163,18 +152,6 @@ namespace TweaksV
 			return *static_cast<const volatile T*>(at);
 		}
 
-		std::string Hex(uint64_t value)
-		{
-			char text[24];
-			snprintf(text, sizeof(text), "0x%llX", static_cast<unsigned long long>(value));
-			return text;
-		}
-
-		std::string At(const GamePattern& pattern)
-		{
-			return std::string(" (") + pattern.label + ")";
-		}
-
 		// "RVA 0x1, RVA 0x2 and RVA 0x3"
 		std::string Addresses(const std::vector<uint8_t*>& addresses)
 		{
@@ -216,33 +193,18 @@ namespace TweaksV
 			return false;
 		}
 
-		// "1 time, not the expected 2." - "3 or more times, not ..." for a search that stopped at its limit
-		std::string Times(size_t found, size_t expected)
-		{
-			return std::to_string(found) + (found > expected ? " or more" : "") + (found == 1 ? " time" : " times") + ", not the expected " +
-				std::to_string(expected) + ".";
-		}
-
-		// The one match of a pattern, or nullptr, and why if nothing else has said why yet.
-		uint8_t* FindOnce(const GamePattern& pattern, std::string& why)
-		{
-			const std::vector<uint8_t*> found = Scanner::FindAll(pattern, 2);	// a second match shows
-			if (found.size() == 1)
-				return found[0];
-			if (why.empty())
-				why = found.empty() ? std::string(pattern.label) + " was not found." : "the game code holds " + std::string(pattern.label) + " " + Times(found.size(), 1);
-			return nullptr;
-		}
-
 		// T-E-B1, T-E-C1 and T-E-C2 found and every site checked - with DIAGNOSTIC_MODE each logged; false at the first that is
 		// not as the research found it, and why.
 		bool FindAndCheck(Sites& sites, std::string& why)
 		{
 			const bool diagnostic = IsDiagnosticMode();
-			uint8_t* const setUp = FindOnce(kSetUp, why);	// all three looked for, so that the log names each one missing
-			uint8_t* const matches[2] = { FindOnce(*kChecks[0].pattern, why), FindOnce(*kChecks[1].pattern, why) };
+			uint8_t* const setUp = Scanner::FindOnce(kSetUp, why);	// all three looked for, so that the log names each one missing
+			uint8_t* const matches[2] = { Scanner::FindOnce(*kChecks[0].pattern, why), Scanner::FindOnce(*kChecks[1].pattern, why) };
 			if (!setUp || !matches[0] || !matches[1])
+			{
+				why += ".";
 				return false;
+			}
 
 			// T-E-B1: the count; the buffer maker's call into the game, to a function start by the game's unwind data; the
 			// buffer object's global inside the game - 0 until the game makes the buffer
@@ -597,13 +559,6 @@ namespace TweaksV
 		constexpr size_t kStubSize = sizeof(kStub);
 		constexpr size_t kGeometriesDispAt = 4, kGeometriesEnd = 8, kVerticesDispAt = 14, kVerticesEnd = 18, kTargetAt = 24;
 		static_assert(kStubSize == 32 && kTargetAt + sizeof(uint64_t) == kStubSize, "TweaksV: a counting stub is 32 bytes, its target last");
-
-		size_t PageSize()
-		{
-			SYSTEM_INFO info{};
-			GetSystemInfo(&info);
-			return info.dwPageSize ? info.dwPageSize : 0x1000;
-		}
 
 		void NotCounted(const std::string& why)
 		{

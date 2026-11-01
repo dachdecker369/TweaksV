@@ -74,11 +74,7 @@ namespace TweaksV
 			matches = Scanner::FindAll(*anchor.pattern, anchor.matches + 1);
 			if (matches.size() != anchor.matches)
 			{
-				if (matches.empty())
-					RelocationFailed(spec, label + " was not found.");
-				else
-					RelocationFailed(spec, "the game code holds " + label + " " + std::to_string(matches.size()) +
-						(matches.size() > anchor.matches ? " or more" : "") + " times, not the expected " + std::to_string(anchor.matches) + ".");
+				RelocationFailed(spec, Scanner::NotAsOften(*anchor.pattern, matches.size(), anchor.matches) + ".");
 				return false;
 			}
 

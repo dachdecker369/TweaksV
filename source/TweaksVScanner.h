@@ -5,7 +5,9 @@
 // is in TweaksVScanner.cpp and THIRD_PARTY_NOTICES.md. The search itself is TweaksV's own.
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
+#include <string>
 #include <vector>
 
 #include "TweaksVPatterns.h"
@@ -18,6 +20,15 @@ namespace TweaksV
 		// pattern's label, and so is a pattern that matches twice or more, which is not used - the site it
 		// is meant for must be unique.
 		uint8_t* Find(const GamePattern& pattern);
+
+		// Find, for a part that looks for all its patterns and refuses its job with the first reason: nullptr, with
+		// NotAsOften's words in why when why is still empty, unless the pattern matches exactly once.
+		uint8_t* FindOnce(const GamePattern& pattern, std::string& why);
+
+		// Why a search found a pattern other than as often as it must: "A-E-T1 was not found", "the game code holds A-E-T1 2 or
+		// more times, not the expected 1" - "or more" for a search that stopped at the match it asked for over expected, "1
+		// time, not the expected 2" for one that found too few. No point: the part's sentence ends with its own.
+		std::string NotAsOften(const GamePattern& pattern, size_t found, size_t expected);
 
 		// Every match of a pattern, in address order, at most limit of them (a site the game must have
 		// exactly n times is asked for n + 1 - the decals part's "add decal" check). A miss is logged like

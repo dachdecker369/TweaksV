@@ -165,13 +165,6 @@ namespace TweaksV
 			uint16_t Index(uint32_t at) const { return static_cast<uint16_t>(At(at) << 8 | At(at + 1)); }
 		};
 
-		std::string Hex(uint64_t value)
-		{
-			char text[24];
-			snprintf(text, sizeof(text), "0x%llX", static_cast<unsigned long long>(value));
-			return text;
-		}
-
 		// The length of the instruction at at, which lies in the code; 0, with why, when it is none: a byte above
 		// the last opcode, or an instruction that does not end within the code or within its page - SWITCH: its
 		// count within its page, its entries within the page of at + 2, as the interpreter reads them.

@@ -247,14 +247,6 @@ namespace TweaksV
 			return false;
 		}
 
-		// "0x4B" - for a number the game holds
-		std::string Hex(uint64_t value)
-		{
-			char text[24];
-			snprintf(text, sizeof(text), "0x%llX", static_cast<unsigned long long>(value));
-			return text;
-		}
-
 		// size bytes at address inside the game and readable: what a site outside its match must be, and a table or a
 		// member's data the game's code leads to - the scan read the matches alone
 		bool Readable(const void* address, size_t size, std::string_view what, const char* label)

@@ -90,13 +90,6 @@ namespace TweaksV
 		static_assert(HoldsNameLoad(kNamePattern, 0, kStaticBoundsHash) && PatternByte(kNamePattern, kNameLoadSize) == -1,
 			"TweaksV: C-E-H1 is the load of the pool's name, mov edx, 0x2CDFE406, and no more");
 
-		std::string Hex32(uint32_t value)
-		{
-			char text[16];
-			snprintf(text, sizeof(text), "0x%08X", value);
-			return text;
-		}
-
 		// The call of lookup after a load of the pool's name: the first "call rel32" wholly inside the 64 bytes after the
 		// load that leads to it, or nullptr - also when those bytes cannot be read. An E8 inside another instruction leads
 		// elsewhere and is passed over, as the original's search passes it over.

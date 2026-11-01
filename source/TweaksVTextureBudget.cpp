@@ -44,7 +44,6 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
-#include <initializer_list>
 #include <iterator>
 #include <string>
 #include <vector>
@@ -63,23 +62,6 @@ namespace TweaksV
 	namespace
 	{
 		constexpr const char* kTag = "Resources";
-
-		// True if the pattern holds these bytes from at on - for the checks, when TweaksV is compiled, that an
-		// instruction the code reads is the one its pattern pins.
-		consteval bool PatternHolds(const GamePattern& pattern, size_t at, std::initializer_list<int> bytes)
-		{
-			for (const int byte : bytes)
-				if (PatternByte(pattern, at++) != byte)
-					return false;
-			return true;
-		}
-		consteval bool PatternHolds(const GamePattern& pattern, size_t at, const uint8_t* bytes, size_t size)
-		{
-			for (size_t i = 0; i < size; i++)
-				if (PatternByte(pattern, at + i) != bytes[i])
-					return false;
-			return true;
-		}
 
 		// ---- the counters, one object of the game's data (PATTERNS.md, "Resources"): offsets from its start
 
@@ -181,18 +163,6 @@ namespace TweaksV
 		std::atomic<bool> g_raising{ false };
 		std::atomic<bool> g_raised{ false };
 
-		std::string Hex(uint64_t value)
-		{
-			char text[24];
-			snprintf(text, sizeof(text), "0x%llX", static_cast<unsigned long long>(value));
-			return text;
-		}
-
-		std::string At(const GamePattern& pattern)
-		{
-			return std::string(" (") + pattern.label + ")";
-		}
-
 		// The 4 bytes of an operand in the game's code, which need not be aligned.
 		uint32_t Imm32(const uint8_t* at)
 		{
@@ -237,37 +207,17 @@ namespace TweaksV
 			std::string updateWhy;
 		};
 
-		// "2 or more times, not the expected 1" for a search that stopped at its limit - Times of the ped props, without its
-		// point: the reasons here take theirs from NotRaised and NotMeasured.
-		std::string Times(size_t found, size_t expected)
-		{
-			return std::to_string(found) + (found > expected ? " or more" : "") + (found == 1 ? " time" : " times") + ", not the expected " +
-				std::to_string(expected);
-		}
-
-		// A pattern's one match, by a search that goes on to a second, so that a match more shows; nullptr with the reason in why
-		// when it has not exactly one, the first such pattern's kept.
-		uint8_t* FindOnce(const GamePattern& pattern, std::string& why)
-		{
-			const std::vector<uint8_t*> matches = Scanner::FindAll(pattern, 2);
-			if (matches.size() == 1)
-				return matches[0];
-			if (why.empty())
-				why = matches.empty() ? std::string(pattern.label) + " was not found" : std::string("the game code holds ") + pattern.label + " " +
-					Times(matches.size(), 1);
-			return nullptr;
-		}
-
-		// Every pattern the jobs need, looked for before anything is checked, so that the scanner names each one missing.
+		// Every pattern the jobs need, looked for before anything is checked, so that the scanner names each one missing. The
+		// reasons have no point: they take theirs from NotRaised and NotMeasured.
 		Matches FindPatterns(bool measure)
 		{
 			Matches found;
-			found.storeMost = FindOnce(kStoreMost, found.sitesWhy);
-			found.storeBudgets = FindOnce(kStoreBudgets, found.sitesWhy);
-			found.getter = FindOnce(kGetter, found.sitesWhy);
-			found.placement = FindOnce(kPlacement, found.sitesWhy);
+			found.storeMost = Scanner::FindOnce(kStoreMost, found.sitesWhy);
+			found.storeBudgets = Scanner::FindOnce(kStoreBudgets, found.sitesWhy);
+			found.getter = Scanner::FindOnce(kGetter, found.sitesWhy);
+			found.placement = Scanner::FindOnce(kPlacement, found.sitesWhy);
 			if (measure)
-				found.update = FindOnce(kUpdate, found.updateWhy);
+				found.update = Scanner::FindOnce(kUpdate, found.updateWhy);
 			return found;
 		}
 

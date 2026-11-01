@@ -298,13 +298,6 @@ namespace TweaksV
 			std::wstring name;			// Script-<name>-<n>.bin
 		};
 
-		std::string Hex(uint32_t value)
-		{
-			char text[16];
-			snprintf(text, sizeof(text), "0x%08X", value);
-			return text;
-		}
-
 		std::string Ordinal(uint32_t n)
 		{
 			const uint32_t lastTwo = n % 100;
@@ -380,7 +373,7 @@ namespace TweaksV
 			const bool named = Scripts::ReadName(Scripts::Field<const char*>(program, Scripts::kNameOffset), name);
 			const auto shown = [&] { return named ? Scripts::Printable(name) : std::string("(a name that cannot be read)"); };
 			if (g_firstPlacement.exchange(false))
-				WriteLog(kTag, "TEST BUILD: TEST_DUMP_SCRIPT: the first script program the game placed is " + shown() + " (hash " + Hex(hash) +
+				WriteLog(kTag, "TEST BUILD: TEST_DUMP_SCRIPT: the first script program the game placed is " + shown() + " (hash " + Hex32(hash) +
 					"), on thread " + std::to_string(GetCurrentThreadId()) + " - the hook runs.");
 
 			const bool hashMatches = hash == g_scriptHash;
@@ -391,8 +384,8 @@ namespace TweaksV
 			{
 				if (!g_halfMatchLogged.exchange(true))
 					WriteLog(kTag, "TEST BUILD: TEST_DUMP_SCRIPT: a script program " + (hashMatches ? "has the hash of " + g_script + ", " +
-						Hex(g_scriptHash) + ", but is named " + shown() : "is named " + shown() + " but has the hash " + Hex(hash) + ", not " +
-						Hex(g_scriptHash)) + " - it is not saved (logged once).");
+						Hex32(g_scriptHash) + ", but is named " + shown() : "is named " + shown() + " but has the hash " + Hex32(hash) + ", not " +
+						Hex32(g_scriptHash)) + " - it is not saved (logged once).");
 				return nullptr;
 			}
 
@@ -579,7 +572,7 @@ namespace TweaksV
 		if (IsDryRun())
 			WriteLog(kTag, "TEST BUILD: TEST_DUMP_SCRIPT=" + value + ": DRY_RUN - the call is not redirected, so no script program is saved.");
 		else
-			WriteLog(kTag, "TEST BUILD: TEST_DUMP_SCRIPT=" + value + ": the script program " + g_script + " (hash " + Hex(g_scriptHash) +
+			WriteLog(kTag, "TEST BUILD: TEST_DUMP_SCRIPT=" + value + ": the script program " + g_script + " (hash " + Hex32(g_scriptHash) +
 				") is saved each time the game places it, at most " + std::to_string(kMaxScriptCopies) + " times, as Script-" + g_script +
 				"-<n>.bin in " + ToUtf8(folder) + ".");
 	}

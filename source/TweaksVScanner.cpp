@@ -349,13 +349,28 @@ namespace TweaksV
 
 		uint8_t* Find(const GamePattern& gamePattern)
 		{
+			std::string why;
+			return FindOnce(gamePattern, why);
+		}
+
+		uint8_t* FindOnce(const GamePattern& gamePattern, std::string& why)
+		{
 			const std::vector<uint8_t*> found = FindAll(gamePattern, 2);
+			if (found.size() == 1)
+				return found[0];
 			if (found.size() > 1)	// what would be written over cannot be known
-			{
 				WriteLog(kTag, std::string("Pattern ") + gamePattern.label + " matches 2 or more times - not used (the site must be unique).");
-				return nullptr;
-			}
-			return found.empty() ? nullptr : found[0];
+			if (why.empty())
+				why = NotAsOften(gamePattern, found.size(), 1);
+			return nullptr;
+		}
+
+		std::string NotAsOften(const GamePattern& gamePattern, size_t found, size_t expected)
+		{
+			if (found == 0)
+				return std::string(gamePattern.label) + " was not found";
+			return std::string("the game code holds ") + gamePattern.label + " " + std::to_string(found) + (found > expected ? " or more" : "") +
+				(found == 1 ? " time" : " times") + ", not the expected " + std::to_string(expected);
 		}
 
 		// The search behind Find, carried on from each match until limit matches are found.

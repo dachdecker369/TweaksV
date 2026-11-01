@@ -47,7 +47,6 @@
 #include <cstdio>
 #include <cstring>
 #include <string>
-#include <string_view>
 #include <vector>
 
 #include "TweaksVConflicts.h"
@@ -118,28 +117,6 @@ namespace TweaksV
 		constexpr char kRebuildLea[] = "\x4C\x8D\x15";		// lea r10, [rip+disp32]
 		constexpr char kSortLea[] = "\x48\x8D\x0D";			// lea rcx, [rip+disp32]
 
-		// The bytes a pattern holds from index at, none of them a wildcard - checked when TweaksV is compiled, so that
-		// each offset above reads the instruction its comment names.
-		consteval bool PatternHolds(const GamePattern& pattern, size_t at, std::string_view bytes)
-		{
-			for (size_t i = 0; i < bytes.size(); i++)
-				if (PatternByte(pattern, at + i) != static_cast<uint8_t>(bytes[i]))
-					return false;
-			return true;
-		}
-		// The imm32 a pattern holds at index at, or -1 when a byte of it is a wildcard.
-		consteval int64_t PatternImm32(const GamePattern& pattern, size_t at)
-		{
-			int64_t value = 0;
-			for (size_t i = 0; i < 4; i++)
-			{
-				const int byte = PatternByte(pattern, at + i);
-				if (byte < 0)
-					return -1;
-				value |= static_cast<int64_t>(byte) << (8 * i);
-			}
-			return value;
-		}
 		static_assert(PatternHolds(kRebuildPattern, kCountReset.field - 2, kResetOpcode) && PatternImm32(kRebuildPattern, kCountReset.field + 4) == 0 &&
 			kCountReset.end == kCountReset.field + 8, "TweaksV: W-E-C1 holds the count's reset, mov dword [rip+disp32], 0, at +0");
 		static_assert(PatternHolds(kRebuildPattern, kFilesRead.field - 4, "\x44\x0F\xB7\x05") && kFilesRead.end == kFilesRead.field + 4,
@@ -192,24 +169,10 @@ namespace TweaksV
 			return value;
 		}
 
-		// "2 or more times, not the expected 1." - for a pattern a search asked for 2 matches of, so that a match more shows
-		std::string Times(size_t found, size_t expected)
-		{
-			return std::to_string(found) + (found > expected ? " or more" : "") + (found == 1 ? " time" : " times") + ", not the expected " +
-				std::to_string(expected) + ".";
-		}
-
 		// True if the size bytes at p lie inside the game and can be read.
 		bool InsideGame(const void* p, size_t size)
 		{
 			return IsInsideGameImage(p) && IsInsideGameImage(static_cast<const uint8_t*>(p) + size - 1) && IsReadable(p, size);
-		}
-
-		std::string Hex32(uint32_t value)
-		{
-			char text[16];
-			snprintf(text, sizeof(text), "0x%08X", value);
-			return text;
 		}
 
 		// "1 weaponcomponents.meta file", "23 weaponcomponents.meta files"
@@ -533,14 +496,13 @@ namespace TweaksV
 		void MakeGuard(const RelocationPlan& plan, const uint8_t* files)
 		{
 			const bool diagnostic = IsDiagnosticMode();
-			const std::vector<uint8_t*> matches = Scanner::FindAll(kLoaderPattern, 2);	// a match more shows
-			if (matches.size() != 1)
+			std::string notFound;
+			uint8_t* const match = Scanner::FindOnce(kLoaderPattern, notFound);
+			if (!match)
 			{
-				const std::string label = kLoaderPattern.label;
-				GuardNotMade(matches.empty() ? label + " was not found." : "the game code holds " + label + " " + Times(matches.size(), 1));
+				GuardNotMade(notFound + ".");
 				return;
 			}
-			uint8_t* const match = matches[0];
 			// the head a function start: where the game's unwind data covers the match, the function it names must begin at the
 			// head, so that a shorter prologue after a game update cannot put the hook into the padding between functions; the
 			// byte before the head counts only for code without unwind data (TweaksV's fake game)

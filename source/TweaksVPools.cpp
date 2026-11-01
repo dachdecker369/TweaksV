@@ -33,20 +33,7 @@ namespace TweaksV
 		constexpr size_t kCallSize = 5;
 		constexpr uint32_t kPoolName = 0xBAE33CCF;	// the game's hash of the pool's name, "cweaponcomponentinfo"
 
-		// The imm32 a pattern holds at index at, or -1 when a byte of it is a wildcard - for the checks below, made when
-		// TweaksV is compiled, that each offset above reads the instruction its comment names.
-		consteval int64_t PatternImm32(const GamePattern& pattern, size_t at)
-		{
-			int64_t value = 0;
-			for (size_t i = 0; i < 4; i++)
-			{
-				const int byte = PatternByte(pattern, at + i);
-				if (byte < 0)
-					return -1;
-				value |= static_cast<int64_t>(byte) << (8 * i);
-			}
-			return value;
-		}
+		// Checked when TweaksV is compiled: each offset above reads the instruction its comment names.
 		static_assert(PatternByte(kPoolSizeCallPattern, kConfigurationAt - 3) == 0x48 && PatternByte(kPoolSizeCallPattern, kConfigurationAt - 2) == 0x8B &&
 			PatternByte(kPoolSizeCallPattern, kConfigurationAt - 1) == 0x0D && kConfigurationEnd == kConfigurationAt + 4 &&
 			PatternImm32(kPoolSizeCallPattern, kConfigurationAt) == -1, "TweaksV: W-E-C4 holds the configuration's mov rcx, [rip+disp32] at +0, its disp32 read");
@@ -62,13 +49,6 @@ namespace TweaksV
 		State g_state = State::NotTried;
 		PoolSizeCall g_found;
 		std::string g_reason;	// why the lookup is not known
-
-		// "2 or more times, not the expected 1." - for a pattern a search asked for 2 matches of, so that a match more shows
-		std::string Times(size_t found, size_t expected)
-		{
-			return std::to_string(found) + (found > expected ? " or more" : "") + (found == 1 ? " time" : " times") + ", not the expected " +
-				std::to_string(expected) + ".";
-		}
 	}
 
 	bool FindPoolSizeCall(PoolSizeCall& found, std::string& reason)
@@ -78,15 +58,11 @@ namespace TweaksV
 			// the outcome is kept only once it is whole: an exception on the way leaves the next part to try again
 			PoolSizeCall call;
 			std::string why;
-			const std::vector<uint8_t*> matches = Scanner::FindAll(kPoolSizeCallPattern, 2);	// a match more shows
-			if (matches.size() != 1)
-			{
-				const std::string label = kPoolSizeCallPattern.label;
-				why = matches.empty() ? label + " was not found." : "the game code holds " + label + " " + Times(matches.size(), 1);
-			}
+			uint8_t* const match = Scanner::FindOnce(kPoolSizeCallPattern, why);
+			if (!match)
+				why += ".";
 			else
 			{
-				uint8_t* const match = matches[0];
 				// every site lies inside the match, which the scan has read
 				call.call = match + kCallAt;
 				memcpy(&call.pool, match + kPoolAt, sizeof(call.pool));

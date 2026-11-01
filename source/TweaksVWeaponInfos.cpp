@@ -120,20 +120,6 @@ namespace TweaksV
 			return value;
 		}
 
-		std::string Hex(uint32_t value)
-		{
-			char text[16];
-			snprintf(text, sizeof(text), "0x%X", value);
-			return text;
-		}
-
-		// "2 or more times, not the expected 1." - for a pattern a search asked for 2 matches of, so that a match more shows
-		std::string Times(size_t found, size_t expected)
-		{
-			return std::to_string(found) + (found > expected ? " or more" : "") + (found == 1 ? " time" : " times") + ", not the expected " +
-				std::to_string(expected) + ".";
-		}
-
 		// " (W-E-I1)" - the pattern a line's site lies in
 		std::string In(const GamePattern& pattern)
 		{
@@ -164,16 +150,11 @@ namespace TweaksV
 		{
 			// 1. the two patterns, both looked for, so that the log names each one missing, and each asked for a match more,
 			// so that one the game holds twice is said to be
-			const std::vector<uint8_t*> inits = Scanner::FindAll(kInitPattern, 2);
-			const std::vector<uint8_t*> loaders = Scanner::FindAll(kLoaderPattern, 2);
-			if (inits.size() != 1 || loaders.size() != 1)
-			{
-				const std::string label = inits.size() != 1 ? kInitPattern.label : kLoaderPattern.label;
-				const size_t found = inits.size() != 1 ? inits.size() : loaders.size();
-				return found == 0 ? label + " was not found." : "the game code holds " + label + " " + Times(found, 1);
-			}
-			sites.init = inits[0];
-			sites.loader = loaders[0];
+			std::string why;
+			sites.init = Scanner::FindOnce(kInitPattern, why);
+			sites.loader = Scanner::FindOnce(kLoaderPattern, why);
+			if (!sites.init || !sites.loader)
+				return why + ".";
 			const uint8_t* const init = sites.init;
 			const uint8_t* const loader = sites.loader;
 

@@ -5,6 +5,9 @@
 // code that uses a pattern names it with Pattern("label"), which is checked when TweaksV is compiled.
 #pragma once
 
+#include <cstddef>
+#include <cstdint>
+#include <initializer_list>
 #include <string_view>
 
 namespace TweaksV
@@ -302,5 +305,43 @@ namespace TweaksV
 		if (i >= text.size() || text[i] == '?')
 			return -1;
 		return hex(text[i]) * 16 + hex(text[i + 1]);
+	}
+
+	// True if the pattern holds these bytes from index at on, none of them a wildcard - for the checks, when TweaksV is
+	// compiled, that an instruction the code reads is the one its pattern pins.
+	consteval bool PatternHolds(const GamePattern& pattern, size_t at, std::initializer_list<int> bytes)
+	{
+		for (const int byte : bytes)
+			if (PatternByte(pattern, at++) != byte)
+				return false;
+		return true;
+	}
+	consteval bool PatternHolds(const GamePattern& pattern, size_t at, const uint8_t* bytes, size_t size)
+	{
+		for (size_t i = 0; i < size; i++)
+			if (PatternByte(pattern, at + i) != bytes[i])
+				return false;
+		return true;
+	}
+	consteval bool PatternHolds(const GamePattern& pattern, size_t at, std::string_view bytes)
+	{
+		for (size_t i = 0; i < bytes.size(); i++)
+			if (PatternByte(pattern, at + i) != static_cast<uint8_t>(bytes[i]))
+				return false;
+		return true;
+	}
+
+	// The imm32 or dword a pattern holds at index at, or -1 when a byte of it is a wildcard.
+	consteval int64_t PatternImm32(const GamePattern& pattern, size_t at)
+	{
+		int64_t value = 0;
+		for (size_t i = 0; i < 4; i++)
+		{
+			const int byte = PatternByte(pattern, at + i);
+			if (byte < 0)
+				return -1;
+			value |= static_cast<int64_t>(byte) << (8 * i);
+		}
+		return value;
 	}
 }

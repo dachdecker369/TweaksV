@@ -16,12 +16,26 @@
 
 namespace TweaksV
 {
+	struct GamePattern;
+
 	// "RVA 0x1234" for an address inside GTA5_Enhanced.exe, "0x7FF6... (outside the game)"
 	// otherwise - for log lines.
 	std::string DescribeAddress(const void* address);
 
 	// "0F 84 07 05" - for log lines.
 	std::string HexBytes(const void* bytes, size_t size);
+
+	// "0x4B" - for log lines.
+	std::string Hex(uint64_t value);
+
+	// "0x2CDFE406", all eight digits - for a name of 32 bits, such as a pool's hash, in log lines.
+	std::string Hex32(uint32_t value);
+
+	// " (T-E-B1)" - the pattern a site in a log line comes from.
+	std::string At(const GamePattern& pattern);
+
+	// The bytes of a page of memory.
+	size_t PageSize();
 
 	// One write into the game: the bytes to put at address. what names it for the log, e.g.
 	// "splash screen" or "modkit limit".
