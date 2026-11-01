@@ -26,8 +26,10 @@
 // the game makes any of its definitions, as is a file of a name refused before; the first refusal is a problem, in a
 // box, the others are logged. The pool gets the room and 470 more, the most one file brings, and the list room for
 // 16384 + 470, so that the last file let in always fits. A read of the blobs that does not add up lets the file
-// through and switches the guard off for the session, reported. In a test build TWEAKSV_TEST_GUARD_ROOM=1 gives the
-// guard the game's own room, 470 (GuardRoom). The hook is MinHook's, its trampoline writable and executable (T-HARDEN).
+// through and switches the guard off for the session, reported. Definitions loaded while the game has never asked the
+// redirected pool size call mean that it made the pool without the redirect, which keeps the game's size: a problem, in a
+// box, once. In a test build TWEAKSV_TEST_GUARD_ROOM=1 gives the guard the game's own room, 470 (GuardRoom). The hook is
+// MinHook's, its trampoline writable and executable (T-HARDEN).
 // All of it in one write, all or nothing; a list another mod moved, a pool size call another mod hooked, a load
 // more or fewer than 17 are refused with the reason. Written for TweaksV from its own findings in the game's code
 // (PATTERNS.md, "WeaponLimits"); that the limit exists, and that the pool's size must grow with it, is what
@@ -215,7 +217,8 @@ namespace TweaksV
 		using PoolSizeLookup = int32_t (*)(const void* configuration, uint32_t hash, int32_t defaultSize);
 		PoolSizeLookup g_lookup = nullptr;	// the game's lookup behind the call
 		int32_t g_poolSize = 0;				// the slots the pool gets: the list's new size
-		volatile LONG g_poolSaid = 0;		// the pool's line is written once
+		const uint8_t* g_sizeCall = nullptr;	// the redirected call, for the guard's problem when the game never asks it
+		volatile LONG g_poolSaid = 0;		// the game has asked the call: the pool's line is written once
 
 		// The game calls this when its weapon system makes the weapon components' pool - again when it makes the pool
 		// anew - on a thread of its own: nothing may throw out of here, and the game's lookup is always called, so that
@@ -253,6 +256,7 @@ namespace TweaksV
 		size_t g_nameCount = 0;
 		bool g_namesFull = false;
 		uint64_t g_lines = 0;
+		bool g_poolUnasked = false;						// the game never asked the size call: reported once
 
 		// The definitions already loaded: the sum of the blobs' counts, each read bounded - the count at most the capacity, the
 		// pointers and the counts copied safely, each count 0..470. False, why saying what, when a read does not add up.
@@ -362,6 +366,25 @@ namespace TweaksV
 			memcpy(argument + kCallableAt, &none, sizeof(none));
 		}
 
+		// Definitions loaded, so the pool exists, while the game has never asked the redirected call: it made the pool without
+		// the redirect, as the static bounds' check would say. One problem, once, whatever becomes of the file - the guard goes on.
+		void CheckPoolAsked(uint64_t sum)
+		{
+			if (sum == 0 || g_poolUnasked || InterlockedCompareExchange(&g_poolSaid, 0, 0) != 0)
+				return;
+			g_poolUnasked = true;
+			try
+			{
+				ReportFailure(kTag, "The weapon components' pool size is not raised this session: " + std::to_string(sum) + " definitions are loaded, and the game "
+					"has not asked the redirected call at " + DescribeAddress(g_sizeCall) + " for the pool's size - it made the pool before TweaksV started, or "
+					"asks for its size another way, and the pool keeps the game's size: past it the game crashes while it loads, whatever "
+					"WEAPON_COMPONENTS_SIZE says.");
+			}
+			catch (...)
+			{
+			}
+		}
+
 		// Whether the guard refuses the file of entry: the definitions loaded reached the room, or its name was refused before.
 		// A read that does not add up lets the file through and switches the guard off, reported.
 		bool Refuse(const void* entry)
@@ -379,6 +402,7 @@ namespace TweaksV
 					"unchecked, and past " + std::to_string(kPerFile) + " definitions above the room the game crashes while it loads.");
 				return false;
 			}
+			CheckPoolAsked(sum);
 			const bool before = named && Refused(hash);
 			const bool refuse = before || sum >= g_room;
 			const bool diagnostic = IsDiagnosticMode();
@@ -703,6 +727,7 @@ namespace TweaksV
 
 		// 4. one write, all or nothing: the 17 loads to the moved list and the pool's size call to PoolSize
 		uint8_t* const sizeCall = pool.call;
+		g_sizeCall = sizeCall;
 		g_poolSize = static_cast<int32_t>(plan.size + kPerFile);
 		const std::string callAt = DescribeAddress(sizeCall);
 		const std::vector<CallRedirect> redirects = { { sizeCall, reinterpret_cast<const void*>(&PoolSize), "pool size call",

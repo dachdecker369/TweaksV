@@ -175,6 +175,8 @@
 //   wccountnoaccess the store's page - the list and its count - cannot be read while TweaksV starts, readable again after
 //   wcloadnoaccess once TweaksV.log holds the first weapon components summary, the page of the list's 15 leas cannot be read
 //                  until TweaksV's problem is in the log, up to 10 s (for the test build's TWEAKSV_TEST_SUMMARY_MS)
+//   wcearly        the game made the pool before TweaksV started: with wcmount or wcmany it is not made again before the files
+//                  are mounted, which wait up to 3 s for the box of TweaksV's problem, or the line that it is not shown
 // The siren setting IDs (SirenSettings): their 14 sites are always there - the parser registrations of the siren settings
 // and the vehicle variations with their tables and the two ID members' data (type 0x01), the XML reader, the base and a
 // pack's loops and builders with the four lea of the ID table, the dedupe and its loop, the three constructors, the init's
@@ -1437,6 +1439,15 @@ static size_t WeaponComponentsCopySites(unsigned char* to, size_t room)
 static const unsigned char* Rel32Target(const Site& site);
 static bool InImage(const void* p);
 
+// The game makes the pool, as it does before it loads any definition, through what the size call leads to: the lookup, or
+// TweaksV's stub; what it gives
+static int32_t WeaponComponentsMakePool()
+{
+	using Lookup = int32_t (*)(const void* configuration, uint32_t hash, int32_t defaultSize);
+	const auto call = reinterpret_cast<Lookup>(const_cast<unsigned char*>(Rel32Target(g_weaponComponentsSizeCall)));
+	return call(g_weaponComponentsConfiguration, 0xBAE33CCF, g_weaponComponentsGameDefault);
+}
+
 // Where the list's 17 loads lead - the rebuild's, the sort's and the 15 others: to the game's own list, to one list outside
 // the game in committed memory - the moved one - or elsewhere
 struct WeaponComponentsLoads
@@ -1573,10 +1584,8 @@ static void WeaponComponentsReport()
 		wprintf(L"elsewhere | wc loader %ls, files mounted %d | ", g_weaponComponentsLoader[1] == 0xE9 ? L"hooked" : L"as placed", g_weaponComponentsMounted);
 		return;
 	}
-	using Lookup = int32_t (*)(const void* configuration, uint32_t hash, int32_t defaultSize);
-	const auto call = reinterpret_cast<Lookup>(const_cast<unsigned char*>(target));
-	const int32_t first = call(g_weaponComponentsConfiguration, 0xBAE33CCF, g_weaponComponentsGameDefault);
-	const int32_t second = call(g_weaponComponentsConfiguration, 0xBAE33CCF, g_weaponComponentsGameDefault);
+	const int32_t first = WeaponComponentsMakePool();
+	const int32_t second = WeaponComponentsMakePool();
 	wprintf(L"%ls: %d and %d slots, lookups %ld of %ld as called | ", target == lookup ? L"to the lookup" : info.Protect == PAGE_EXECUTE_READ ?
 		L"to a stub, RX" : L"to a stub, NOT RX", first, second, g_weaponComponentsLookupsAsCalled, g_weaponComponentsLookups);
 	wprintf(L"wc loader %ls, files mounted %d, loaded %d, destroyed %d (%d on the heap), list %d, last error kept %d | ", g_weaponComponentsLoader[1] == 0xE9 ?
@@ -5437,6 +5446,8 @@ int wmain(int argc, wchar_t** argv)
 			g_weaponComponentsLoader[1] = 0xC3;
 		WeaponComponentsCopySites(g_weaponComponentsPlacedSites, sizeof(g_weaponComponentsPlacedSites));
 		g_weaponComponentsAtStart = *store;
+		if (HasOption(argc, argv, L"wcearly"))	// ...and the game made the pool before TweaksV started
+			WeaponComponentsMakePool();
 	}
 	DWORD weaponComponentsOld = 0;	// ...and the store's page unreadable while TweaksV starts
 	if (HasOption(argc, argv, L"wccountnoaccess"))
@@ -5723,11 +5734,13 @@ int wmain(int argc, wchar_t** argv)
 	if (HasOption(argc, argv, L"wcputback"))	// the game puts one of the list's loads back
 		WeaponComponentsPutBack();
 	if ((HasOption(argc, argv, L"wcmount") || HasOption(argc, argv, L"wcmany")) && !HasOption(argc, argv, L"wcloaderhooked") &&
-		!HasOption(argc, argv, L"wcloadernotstart") && !HasOption(argc, argv, L"wcloaderret"))	// packs mounted
+		!HasOption(argc, argv, L"wcloadernotstart") && !HasOption(argc, argv, L"wcloaderret"))	// the pool made, packs mounted
 	{
+		if (!HasOption(argc, argv, L"wcearly"))
+			WeaponComponentsMakePool();
 		WeaponComponentsMountPacks(HasOption(argc, argv, L"wcbase"), HasOption(argc, argv, L"wcmany"), HasOption(argc, argv, L"wcbadblob"));
-		if (g_weaponComponentsLoaded < g_weaponComponentsMounted)	// a file refused: up to 3 s for its box, or the line that it is not shown
-			WeaponComponentsAwait("start-up summary", 1, 3000);
+		if (g_weaponComponentsLoaded < g_weaponComponentsMounted || HasOption(argc, argv, L"wcearly"))	// a file refused, or the pool made
+			WeaponComponentsAwait("start-up summary", 1, 3000);	// without the redirect: up to 3 s for the box, or the line that it is not shown
 	}
 	SirenIdsLater();
 	if (HasOption(argc, argv, L"scdraw"))

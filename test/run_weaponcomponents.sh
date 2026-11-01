@@ -16,7 +16,7 @@
 # hooked, its line; with the test build's TWEAKSV_TEST_GUARD_ROOM=1 or a smaller room, the files that come once the room is used
 # up refused - each a line, the first a problem - and their callbacks destroyed; the names refused kept through a base loader's
 # run, 1,024 of them; a blob that does not add up switching it off; W-E-C5 missing and the loader another mod hooked, the guard
-# not made and the rest applied. The weapon infos half logs and reports under the same tag,
+# not made and the rest applied; the pool made before TweaksV started, reported once. The weapon infos half logs and reports under the same tag,
 # so every check matches the weapon components' lines and problems by their wording. Fake LOCALAPPDATA: the real one is
 # never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
@@ -52,7 +52,7 @@ target() { tr -d '\r' < TweaksV.log | sed -n "s/.*${DIAG}$1 at RVA 0x[0-9A-F]* -
 follower() { tr -d '\r' < TweaksV.log | sed -n "s/.*${DIAG}limit variable at RVA \(0x[0-9A-F]*\) lies 3760 bytes after the weapon component list (W-E-C1) -> game size 470\$/\1/p"; }
 # quiet: no problem of the weapon components - neither the part's nor its setting's; untouched: nothing of the part written -
 # none of the 17 loads moved, every other byte and the data as placed, every page its own protection
-quiet() { log_lacks 'PROBLEM: The weapon components limit' && log_lacks 'PROBLEM: TweaksV.ini: \[WEAPON_LIMITS\] WEAPON_COMPONENTS_SIZE' && log_lacks 'PROBLEM: The weapon components. guard' && log_lacks 'PROBLEM: Weapon component files are refused'; }
+quiet() { log_lacks 'PROBLEM: The weapon components limit' && log_lacks 'PROBLEM: TweaksV.ini: \[WEAPON_LIMITS\] WEAPON_COMPONENTS_SIZE' && log_lacks 'PROBLEM: The weapon components. guard' && log_lacks 'PROBLEM: The weapon components. pool size' && log_lacks 'PROBLEM: Weapon component files are refused'; }
 untouched() { has 'wc: loads 0 moved' && has 'other bytes as placed, data as placed' && has 'protect: all restored (RX)' && log_lacks 'weapon component list moved'; }
 # refused REASON: the weapon components' one problem, word for word - its reason after the job's words - and nothing written
 refused() { [ "$(count "${TAG}PROBLEM: The weapon components limit")" -eq 1 ] && log_line "${NOT_RAISED}$1\$" && untouched; }
@@ -212,6 +212,7 @@ check "files 01 to 07 let in while fewer than 470 are loaded, 08 to 11 refused, 
 check "the first refused file's problem, word for word, once" "[ \$(count 'Weapon component files are refused this session') -eq 1 ] && log_line '${GUARD_PROBLEM}08/common/data/weaponcomponents.meta, the first, came once 472 definitions were loaded, the room being 470 - the weapon components of the files refused are missing in the game. Raise WEAPON_COMPONENTS_SIZE in TweaksV.ini (at most 16384); the log names every file refused.\$'"
 check "the part's box for the first file refused (the test build's line in its place)" "log_has 'TEST BUILD: message box not shown (TWEAKSV_TEST_NO_BOXES=1): TweaksV'"
 check "7 files loaded, every callback destroyed once - the refused ones by the guard - the list's count 472; the game's last error kept by each refusal" "has 'files mounted 11, loaded 7, destroyed 11 (0 on the heap), list 472, last error kept 4'"
+check "the game made the pool before the files: its line before the guard's first, no problem of the pool's size" "replaced 470 1494 && [ \$(grep -n 'for the weapon components, 470, is replaced by 1494' TweaksV.log | cut -d: -f1) -lt \$(grep -n -m1 'definitions loaded, the room' TweaksV.log | cut -d: -f1) ] && log_lacks 'PROBLEM: The weapon components. pool size'"
 
 echo "== W28 WEAPON_COMPONENTS_SIZE=480: the room the key gives, the 9th file the first refused"
 fresh_ini; setkey WEAPON_COMPONENTS_SIZE 480; out=$(game full_game.exe wcmount)
@@ -263,6 +264,13 @@ check "the problem, word for word; the rest applied" "log_line '${TAG}PROBLEM: T
 echo "== W37 the loader's head returns at once (C3): MinHook cannot hook it, the guard not made, the rest applied"
 fresh_ini; out=$(game full_game.exe wcloaderret)
 check "the problem, word for word; the rest applied" "log_line '${TAG}PROBLEM: The weapon components. guard is not made this session: the loader at $RVA could not be hooked (details in TweaksV.log).\$' && has '$APPLIED'"
+
+echo "== W38 the game made the pool before TweaksV started (wcearly; test build, ERROR_POPUP=1), 11 files of packs after it: the redirected size call never asked"
+fresh_ini; setkey ERROR_POPUP 1; out=$(ASI=TweaksV_test.asi game full_game.exe wcearly wcmount)
+check "the problem, word for word, once, for the first file's 412 definitions" "[ \$(count 'pool size is not raised this session') -eq 1 ] && log_line '${TAG}PROBLEM: The weapon components. pool size is not raised this session: 412 definitions are loaded, and the game has not asked the redirected call at $RVA for the pool.s size - it made the pool before TweaksV started, or asks for its size another way, and the pool keeps the game.s size: past it the game crashes while it loads, whatever WEAPON_COMPONENTS_SIZE says.\$'"
+check "the part's box (the test build's line in its place)" "log_has 'TEST BUILD: message box not shown (TWEAKSV_TEST_NO_BOXES=1): TweaksV'"
+check "the guard goes on with its room: all 11 let in; none of its other problems" "has 'files mounted 11, loaded 11, destroyed 11 (0 on the heap), list 503' && log_lacks 'PROBLEM: The weapon components. guard' && log_lacks 'PROBLEM: Weapon component files are refused'"
+check "the move and the redirect stand; the lookup asked 3 times with the game's arguments, the early ask and the report's two; the pool's line only at the report's, after the problem" "has '$APPLIED' && has 'size call to a stub, RX: 1494 and 1494 slots, lookups 3 of 3 as called' && replaced 470 1494 && [ \$(grep -n 'pool size is not raised this session' TweaksV.log | cut -d: -f1) -lt \$(grep -n 'for the weapon components, 470, is replaced by 1494' TweaksV.log | cut -d: -f1) ]"
 
 echo
 echo "WEAPON COMPONENTS SCENARIOS: $pass passed, $fail failed"
