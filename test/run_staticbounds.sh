@@ -11,7 +11,10 @@
 # game; the check that the game asks, its clock from the session's start, the first script program placed (the test build's
 # TWEAKSV_TEST_STATICBOUNDS_CHECK): asked in time, never asked - the pool made before TweaksV loaded - asked after the check,
 # the hook made by the part with the Blips part off in TweaksV.ini and the check reporting, no hook and no check with
-# BlipLimitFix.asi installed or with Resource Extensions installed and the Blips part off, no report without a session. In
+# BlipLimitFix.asi installed or with Resource Extensions installed and the Blips part off, no report without a session; a
+# check that cannot be made, reported in the start-up summary's box and the pool raised all the same: each pattern of the
+# script programs' hook missing, with the Blips part on and off, the natives' resolution call another mod redirected, each of
+# the check's events not made (the test build's TWEAKSV_TEST_STATICBOUNDS_NO_EVENT), and with BlipLimitFix.asi only logged. In
 # every run the sites as placed but for the call's rel32, the stub read+execute and every page its own protection. Fake
 # LOCALAPPDATA: the real one is never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
@@ -207,6 +210,52 @@ export TWEAKSV_TEST_STATICBOUNDS_CHECK=2
 fresh_ini; setkey ENABLED 0 BLIPS; touch ResourceExtensions.asi; out=$(ASI=TweaksV_test.asi game full_game.exe sbearly script wait); rm -f ResourceExtensions.asi
 unset TWEAKSV_TEST_STATICBOUNDS_CHECK
 check "the conflict check's line and the part's, word for word; no hook made, no check, nothing reported past its time; the program placed through the game's own function; the call redirected all the same, no problem of the part" "log_line '\[TweaksV\] Conflict check: .*ResourceExtensions.asi is installed; TweaksV.s Blips part is off in TweaksV.ini already.\$' && log_line '$LEFT' && log_lacks 'natives. resolution call' && log_lacks 'static bounds check comes' && log_lacks 'did not ask the redirected call' && has 'through the game function' && redirected 16000 && quiet"
+
+# a check that cannot be made: its problem, word for word but for the reason, once; the start-up summary's box with N problems;
+# no check made; no hook made by the part
+NOT_CHECKED="${TAG}PROBLEM: The check that the game asks for the static bounds pool.s size is not done this session: "
+not_checked() { log_line "${NOT_CHECKED}$1\$" && [ $(count 'size is not done this session: ') -eq 1 ]; }
+boxed() { log_has "Showing the start-up summary ($1 problem(s))." && log_has 'TEST BUILD: message box not shown (TWEAKSV_TEST_NO_BOXES=1): TweaksV could not apply everything:'; }
+unchecked() { log_lacks 'The static bounds check waits' && log_lacks 'did not ask the redirected call'; }
+unhooked() { log_lacks 'natives. resolution call at RVA 0x[0-9A-F]* is redirected' && has 'through the game function'; }
+
+echo "== SB30 TEST_BREAK_PATTERN=Y-E-H1 with the Blips part on (test build, ERROR_POPUP=1, a script program placed): the part joins the hook Blips could not make - its problem beside Blips', in the start-up summary's box, the pool raised all the same"
+fresh_ini; setkey ERROR_POPUP 1; addkey TEST_BREAK_PATTERN Y-E-H1; out=$(ASI=TweaksV_test.asi game full_game.exe script)
+check "the check's problem, word for word, once, beside the Blips part's, with the same reason; the pattern looked for once" "not_checked 'Y-E-H1 was not found.' && log_line '\[Blips\] PROBLEM: blip_controller.s threshold is not raised this session: Y-E-H1 was not found.\$' && [ \$(count 'TEST BUILD: pattern Y-E-H1 is treated as not found (TEST_BREAK_PATTERN).') -eq 1 ]"
+check "both in the start-up summary's box" "boxed 2"
+check "the call redirected, the pool raised; no check made, the program placed through the game's own function" "redirected 16000 && has '$RAISED' && unchecked && unhooked"
+
+echo "== SB31 each of the hook's patterns missing, [BLIPS] ENABLED=0 (test build, ERROR_POPUP=1, a script program placed): the part, the hook's first user, cannot make it - its problem alone, the pool raised all the same"
+for label in Y-E-H1 Y-E-N1 Y-E-I1; do
+	fresh_ini; setkey ERROR_POPUP 1; setkey ENABLED 0 BLIPS; addkey TEST_BREAK_PATTERN $label; out=$(ASI=TweaksV_test.asi game full_game.exe script)
+	check "$label: the scanner's test line once, the problem word for word, once, alone in the start-up summary's box; nothing of the Blips part" "[ \$(count 'TEST BUILD: pattern $label is treated as not found (TEST_BREAK_PATTERN).') -eq 1 ] && not_checked '$label was not found.' && boxed 1 && log_lacks '\[Blips\]'"
+	check "$label: the call redirected, the pool raised; no check made, no hook made, the program placed through the game's own function" "redirected 16000 && has '$RAISED' && unchecked && unhooked"
+done
+
+echo "== SB32 the natives' resolution call another mod redirected, [BLIPS] ENABLED=0 (the Release build): the hook's own reason, the pool raised all the same"
+fresh_ini; setkey ENABLED 0 BLIPS; out=$(game full_game.exe scripthooked)
+check "the problem, word for word, once; nothing of the Blips part" "not_checked 'the natives. resolution call at $RVA is not a call into the game (another mod may have hooked it already).' && log_lacks '\[Blips\]'"
+check "the call redirected, the pool raised; no check made, the other mod's call left where it led" "redirected 16000 && has '$RAISED' && unchecked && has 'script: none placed, call to another mod'"
+
+echo "== SB33 each of the check's events not made (test build, TWEAKSV_TEST_STATICBOUNDS_NO_EVENT, ERROR_POPUP=1, [BLIPS] ENABLED=0, a script program placed): the problem, the pool raised all the same, no hook made"
+for event in asked session; do
+	fresh_ini; setkey ERROR_POPUP 1; setkey ENABLED 0 BLIPS; out=$(TWEAKSV_TEST_STATICBOUNDS_NO_EVENT=$event ASI=TweaksV_test.asi game full_game.exe script)
+	check "$event: the test build's line, word for word, once" "log_line '${TAG}TEST BUILD: the static bounds check.s $event event is not made (TWEAKSV_TEST_STATICBOUNDS_NO_EVENT=$event).\$' && [ \$(count 'event is not made') -eq 1 ]"
+	check "$event: the problem, word for word, once, in the start-up summary's box" "not_checked 'its events could not be made.' && boxed 1"
+	check "$event: the call redirected, the pool raised, said once; no check made, no hook made, the program placed through the game's own function" "redirected 16000 && has '$RAISED' && [ \$(said) -eq 1 ] && unchecked && unhooked"
+done
+
+echo "== SB34 the switch's limits: the Release build, another value, DRY_RUN - no event left out, nothing reported"
+fresh_ini; out=$(TWEAKSV_TEST_STATICBOUNDS_NO_EVENT=asked game full_game.exe)
+check "the Release build ignores it: the check made, no problem" "made '60 seconds' && quiet && log_lacks 'event is not made'"
+fresh_ini; out=$(TWEAKSV_TEST_STATICBOUNDS_NO_EVENT=other ASI=TweaksV_test.asi game full_game.exe)
+check "another value: the check made, no problem" "made '60 seconds' && quiet && log_lacks 'event is not made'"
+fresh_ini; setkey DRY_RUN 1; out=$(TWEAKSV_TEST_STATICBOUNDS_NO_EVENT=session ASI=TweaksV_test.asi game full_game.exe)
+check "DRY_RUN: no event wanted, nothing reported" "quiet && log_lacks 'event is not made' && kept"
+
+echo "== SB35 BlipLimitFix.asi with the asked event not made (test build): no check was to be made, logged - not reported"
+fresh_ini; touch BlipLimitFix.asi; out=$(TWEAKSV_TEST_STATICBOUNDS_NO_EVENT=asked ASI=TweaksV_test.asi game full_game.exe); rm -f BlipLimitFix.asi
+check "the line, word for word, no problem of the part; the pool raised all the same" "log_line '$LEFT' && quiet && redirected 16000 && has '$RAISED'"
 
 echo
 echo "STATIC BOUNDS SCENARIOS: $pass passed, $fail failed"

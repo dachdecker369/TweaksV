@@ -21,8 +21,9 @@
 // programs' hook sees: the Blips part's, which the part joins, or while TweaksV.ini switches Blips off the part's own;
 // the game makes its pools as the session starts - that the game has asked the redirected call, and reports a
 // problem, with the part's box, when it has not: the game made the pool before TweaksV started, or asks for its size
-// another way. While a plugin that does the Blips part's job is installed, whatever TweaksV.ini says, and without the
-// hook, no check is made, logged.
+// another way. While a plugin that does the Blips part's job is installed, whatever TweaksV.ini says, no check is made,
+// logged. A check that cannot be made - its events, the hook or its thread not there - is reported, the redirect staying:
+// nothing else would say when the game does not ask.
 //   DRY_RUN          nothing is redirected, nothing checked; the line says what would be
 //   DIAGNOSTIC_MODE  the lookup and the call at their RVAs, every load of the pool's name without a call after it,
 //                    and when the game asked
@@ -44,6 +45,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <cstring>
 #include <cwchar>
 #include <string>
 #include <vector>
@@ -164,6 +166,31 @@ namespace TweaksV
 			}
 #endif
 			return kCheckSeconds;
+		}
+
+		// One of the check's two events, "asked" or "session", or nullptr - in test builds also while
+		// TWEAKSV_TEST_STATICBOUNDS_NO_EVENT=<its name> in the environment, said once, so that a suite reaches a check that
+		// cannot be made.
+		HANDLE MakeEvent(const char* name)
+		{
+#ifdef TWEAKSV_TEST_BUILD
+			char text[8]{};
+			const DWORD length = GetEnvironmentVariableA("TWEAKSV_TEST_STATICBOUNDS_NO_EVENT", text, 8);
+			if (length > 0 && length < 8 && strcmp(text, name) == 0)
+			{
+				WriteLog(kTag, std::string("TEST BUILD: the static bounds check's ") + name + " event is not made (TWEAKSV_TEST_STATICBOUNDS_NO_EVENT=" + name + ").");
+				return nullptr;
+			}
+#else
+			(void)name;
+#endif
+			return CreateEventW(nullptr, TRUE, FALSE, nullptr);
+		}
+
+		// The check not made, for the start-up summary: the redirect stays, and nothing says whether the game asks it.
+		void CheckNotDone(const std::string& why)
+		{
+			ReportFailure(kTag, "The check that the game asks for the static bounds pool's size is not done this session: " + why);
 		}
 
 		// The script programs' hook calls this for every program the game places, on the game's thread: the first is the
@@ -328,7 +355,7 @@ namespace TweaksV
 		g_call = call;
 		const bool dryRun = IsDryRun();
 		if (!dryRun)
-			g_askedEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+			g_askedEvent = MakeEvent("asked");
 		const std::vector<CallRedirect> redirects = { { call, reinterpret_cast<const void*>(&StaticBoundsPoolSize), "static bounds pool's size call",
 			reinterpret_cast<void**>(&g_lookup) } };
 		if (!RedirectCalls(redirects, {}, kTag))
@@ -348,27 +375,30 @@ namespace TweaksV
 		// hook: the part joins the hook the Blips part has made while Blips is on, and makes it itself, the first part to use
 		// it, while TweaksV.ini switches Blips off. While a plugin that does Blips' job on the same script programs is installed
 		// - BlipLimitFix.asi or Resource Extensions, closed source, as the conflict check found them, whatever TweaksV.ini
-		// says of Blips - the part makes no hook and leaves the script programs to it. A check that cannot be made is logged,
-		// the redirect staying; a thread that cannot start is reported
-		g_sessionEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
-		std::string why;
+		// says of Blips - the part makes no hook and leaves the script programs to it, logged. A check that cannot be made
+		// otherwise - its events, the hook or its thread not there - is reported, the redirect staying
 		if (IsPluginInstalledFor(kBlipsSection))
-			why = "it starts with the session, which TweaksV sees through the script programs' hook, and a plugin that does the Blips part's job "
-				"on the script programs is installed (named above) - TweaksV leaves the script programs to it.";
-		else if (!g_askedEvent || !g_sessionEvent)
-			why = "its events could not be made.";
-		else if (!Scripts::AddUser({ kTag, &SessionStarts, nullptr }, why) && why.empty())
-			why = "the script programs' hook is not there.";
-		if (!why.empty())
 		{
-			WriteLog(kTag, "The static bounds check is not made this session: " + why);
+			WriteLog(kTag, "The static bounds check is not made this session: it starts with the session, which TweaksV sees through the script programs' hook, and a "
+				"plugin that does the Blips part's job on the script programs is installed (named above) - TweaksV leaves the script programs to it.");
+			return;
+		}
+		g_sessionEvent = MakeEvent("session");
+		if (!g_askedEvent || !g_sessionEvent)
+		{
+			CheckNotDone("its events could not be made.");
+			return;
+		}
+		std::string why;
+		if (!Scripts::AddUser({ kTag, &SessionStarts, nullptr }, why))
+		{
+			CheckNotDone(why);
 			return;
 		}
 		g_checkSeconds = CheckSeconds();
 		if (!StartModuleThread(&CheckAsked, "static bounds check"))
 		{
-			ReportFailure(kTag, "The check that the game asks for the static bounds pool's size is not done this session: its thread could not be started "
-				"(details in TweaksV.log).");
+			CheckNotDone("its thread could not be started (details in TweaksV.log).");
 			return;
 		}
 		WriteLog(kTag, "The static bounds check waits for the session's start - the first script program the game places - and then " +
