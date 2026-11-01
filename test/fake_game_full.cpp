@@ -318,6 +318,9 @@
 //   lpwait             waits up to 40 s for the check's last line in TweaksV.log, or its problem that it is not done, then 1.5 s
 //                      for the box of a problem after the start-up summary; reported as "legacy packs: done" or "legacy packs: no
 //                      last line in 40 s"
+//   lpfree             once lpwait has waited, each pack lpmake and lpmany made, and the folder it lies in, opened without sharing,
+//                      which fails while any handle is open on it - the check's on a pack, a walk's on a folder; reported as "lp: all
+//                      N free" or "lp: M of N held"
 // The ray tracing buffer (RayTracing): its three sites are always there, as code the fake runs - the buffer's set-up (T-E-B1),
 // whose call leads to the fake's buffer maker, a function its unwind data names, and whose store sets the buffer object's
 // global; the checks of a frame's ranges, the geometry's (T-E-C1) and the ropes' (T-E-C2), each a function that takes a vertex
@@ -3067,13 +3070,19 @@ static void LpMakeFolders(const wchar_t* path)
 	}
 }
 
-// path in full, \\?\ in front, so that a path below mods\ of 254 bytes and more is written too
-static bool LpWrite(const wchar_t* relative, const LpArchive& archive)
+// path in full, \\?\ in front, so that a path below mods\ of 254 bytes and more is reached too; null when it cannot be read
+static wchar_t* LpInFull(const wchar_t* relative)
 {
 	static wchar_t path[kLpLongPath];
 	memcpy(path, L"\\\\?\\", 4 * sizeof(wchar_t));
 	const DWORD length = GetFullPathNameW(relative, static_cast<DWORD>(kLpLongPath - 4), path + 4, nullptr);
-	if (length == 0 || length >= kLpLongPath - 4)
+	return length == 0 || length >= kLpLongPath - 4 ? nullptr : path;
+}
+
+static bool LpWrite(const wchar_t* relative, const LpArchive& archive)
+{
+	const wchar_t* const path = LpInFull(relative);
+	if (!path)
 		return false;
 	LpMakeFolders(path);
 	const HANDLE file = CreateFileW(path, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
@@ -3089,6 +3098,7 @@ static int g_lpMade = 0;							// the archives lpmake and lpmany wrote
 static HANDLE g_lpLocked = INVALID_HANDLE_VALUE;	// lplock's file
 static HANDLE g_lpBadName = INVALID_HANDLE_VALUE;	// lpbadname's, gone when the fake ends
 static const wchar_t* g_lpWaited = nullptr;			// how lpwait ended
+static int g_lpFree = 0, g_lpHeld = 0;				// what lpfree found: the packs free, each with its folder, and those not
 
 // lpmake, lpmany, lplock and lpbadname, before TweaksV starts.
 static void LpSetup(int argc, wchar_t** argv)
@@ -3162,6 +3172,60 @@ static bool LpFound(const char* bytes, size_t size, const char* text)
 	return false;
 }
 
+// A file or folder opened without sharing, which fails while any handle is open on it, and closed again; a moment's hold of another
+// program's, a virus scanner's, waited out, 2 s at most.
+static bool LpOpensAlone(const wchar_t* path, DWORD flags)
+{
+	const ULONGLONG start = GetTickCount64();
+	for (;;)
+	{
+		const HANDLE file = CreateFileW(path, GENERIC_READ, 0, nullptr, OPEN_EXISTING, flags, nullptr);
+		if (file != INVALID_HANDLE_VALUE)
+		{
+			CloseHandle(file);
+			return true;
+		}
+		if (GetLastError() != ERROR_SHARING_VIOLATION || GetTickCount64() - start >= 2000)
+			return false;
+		Sleep(20);
+	}
+}
+
+static void LpCheckFree(const wchar_t* pack)
+{
+	wchar_t* const path = LpInFull(pack);
+	bool alone = path && LpOpensAlone(path, FILE_ATTRIBUTE_NORMAL);
+	if (alone)
+	{
+		*wcsrchr(path, L'\\') = L'\0';	// the folder it lies in, which a find handle holds
+		alone = LpOpensAlone(path, FILE_FLAG_BACKUP_SEMANTICS);
+	}
+	(alone ? g_lpFree : g_lpHeld)++;
+}
+
+// lpfree: every pack lpmake and lpmany made, once the check is done.
+static void LpCheckAllFree(int argc, wchar_t** argv)
+{
+	for (int i = 2; i < argc; i++)
+	{
+		if (wcscmp(argv[i], L"lpmake") == 0 && i + 2 < argc)
+		{
+			LpCheckFree(argv[i + 2]);
+			i += 2;
+		}
+		else if (wcscmp(argv[i], L"lpmany") == 0 && i + 3 < argc)
+		{
+			for (int n = 1, count = _wtoi(argv[i + 2]); n <= count; n++)
+			{
+				wchar_t path[MAX_PATH];
+				swprintf(path, MAX_PATH, L"%ls/p%05d.rpf", argv[i + 3], n);
+				LpCheckFree(path);
+			}
+			i += 3;
+		}
+	}
+}
+
 static void LpWait(int argc, wchar_t** argv)
 {
 	if (!HasOption(argc, argv, L"lpwait"))
@@ -3197,6 +3261,8 @@ static void LpWait(int argc, wchar_t** argv)
 	if (found)
 		Sleep(1500);
 	g_lpWaited = found ? L"done" : L"no last line in 40 s";
+	if (HasOption(argc, argv, L"lpfree"))
+		LpCheckAllFree(argc, argv);
 }
 
 static void LpReport()
@@ -3205,6 +3271,10 @@ static void LpReport()
 		wprintf(L"lp: %d made | ", g_lpMade);
 	if (g_lpWaited)
 		wprintf(L"legacy packs: %ls | ", g_lpWaited);
+	if (g_lpHeld)
+		wprintf(L"lp: %d of %d held | ", g_lpHeld, g_lpFree + g_lpHeld);
+	else if (g_lpFree)
+		wprintf(L"lp: all %d free | ", g_lpFree);
 	if (g_lpLocked != INVALID_HANDLE_VALUE)
 		CloseHandle(g_lpLocked);
 }

@@ -3,7 +3,7 @@
 # The check for packs made for GTA V Legacy, a job of RageOpenV (SPECIFICATIONS 11.6): the full fake game writes crafted RPF7
 # archives into the mods folder before it loads the real TweaksV.asi (its options lpmake, lpmany and lplock), asks for the time
 # once, as the game does - RageOpenV hooks the file functions and starts the check - and waits for the check's last line
-# (lpwait). Fake LOCALAPPDATA: the real one is never touched.
+# (lpwait), then opens what it made without sharing (lpfree). Fake LOCALAPPDATA: the real one is never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 cd "$B" || exit 1
 cp "$R/x64/Release/TweaksV.asi" .
@@ -59,7 +59,7 @@ check "read and named as made for Legacy, one box" "log_line 'The pack mods.lppl
 echo "== L5 damaged packs, one of each kind: each named as not checked with its reason; nothing read past the damage"
 packs_gone; fresh_ini; args=()
 for k in empty badmagic nocount toomany pastend pastnames noroot badname nestedout nestedself compressed notrpf rootonly; do args+=(lpmake $k mods/damaged/$k.rpf); done
-out=$(game full_game.exe "${args[@]}" lpwait)
+out=$(game full_game.exe "${args[@]}" lpwait lpfree)
 NOT='was not checked for GTA V Legacy versions'
 check "13 archives made; the check's last line come" "has 'lp: 13 made |' && has '$DONE'"
 check "empty, and a zip's first bytes" "log_line 'The pack mods.damaged.empty.rpf $NOT: it is shorter than an archive.s header (0 bytes)\.\$' && log_line 'The pack mods.damaged.badmagic.rpf $NOT: it is not an RPF7 archive (its first bytes are 50 4B 03 04)\.\$'"
@@ -71,13 +71,15 @@ check "a nested archive at its holder's own header, a compressed one, one that i
 check "the root folder alone: read, no line" "log_lacks 'rootonly'"
 check "one problem: the Legacy pack, then the first 10 not checked in the walk's order and the 2 more" "log_line 'PROBLEM: A pack in the mods folder was made for GTA V Legacy, .*: mods.damaged.nestedout.rpf\. Not checked for Legacy versions (TweaksV.log says why): mods.damaged.badmagic.rpf, mods.damaged.badname.rpf, mods.damaged.compressed.rpf, mods.damaged.empty.rpf, mods.damaged.nestedout.rpf, mods.damaged.nestedself.rpf, mods.damaged.nocount.rpf, mods.damaged.noroot.rpf, mods.damaged.notrpf.rpf, mods.damaged.pastend.rpf, and 2 more\.\$' && one_box"
 check "the last line" "log_line 'Packs checked for GTA V Legacy versions: 13 in the mods folder, 1 made for Legacy, 12 not checked\.\$'"
+check "every pack and its folder free once the check is done, opened without sharing: no handle left open on any kind of damage" "has 'lp: all 13 free |'"
 
 echo "== L6 the bounds of a pack: 4,096 archives read, 4,097 not; 64 MB of entry tables and names"
-packs_gone; fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe lpmake manynestedok mods/bounds/manyok.rpf lpmake manynested mods/bounds/many.rpf lpmake bigtables mods/bounds/big.rpf lpwait)
+packs_gone; fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe lpmake manynestedok mods/bounds/manyok.rpf lpmake manynested mods/bounds/many.rpf lpmake bigtables mods/bounds/big.rpf lpwait lpfree)
 check "the pack and 4,095 archives nested in it: read" "log_line 'DIAGNOSTIC: the pack mods.bounds.manyok.rpf: 4096 archives (4095 nested), 12286 entries; 4095 ytd 5\.\$' && log_lacks 'manyok.rpf was not'"
 check "4,096 nested: the pack not checked in full, none of them read" "log_line 'The pack mods.bounds.many.rpf was not checked for GTA V Legacy versions in full: it holds more than 4096 archives\.\$' && log_line 'DIAGNOSTIC: the pack mods.bounds.many.rpf: 1 archive, 4097 entries; no yft, ydr, ydd or ytd\.\$'"
 check "nested archives of 16 MB of entry table: three read, the fourth past 64 MB" "log_line 'The pack mods.bounds.big.rpf was not checked for GTA V Legacy versions in full: its entry tables and names pass 64 MB\.\$' && log_line 'DIAGNOSTIC: the pack mods.bounds.big.rpf: 4 archives (3 nested), 3145734 entries; no yft, ydr, ydd or ytd\.\$'"
 check "the one problem names the two" "log_line 'PROBLEM: 2 packs in the mods folder could not be checked for GTA V Legacy versions (TweaksV.log says why): mods.bounds.big.rpf, mods.bounds.many.rpf\.\$' && one_box"
+check "every pack and its folder free once the check is done: no handle left open past a bound" "has 'lp: all 3 free |'"
 
 echo "== L7 the whole check's bound, 1 GB of entry tables and names: 23 packs of 48 MB - the 22nd read up to the bound, the 23rd not at all"
 packs_gone; fresh_ini; out=$(game full_game.exe lpmany heavy 23 mods/heavy lpwait)
@@ -99,8 +101,9 @@ packs_gone; fresh_ini; out=$(game full_game.exe lpmany empty 20001 mods/many lpw
 check "20000 lines, then the cap line once; the problem and the last line count every pack" "[ \$(count 'was not checked for GTA V Legacy versions: it is shorter than an archive.s header (0 bytes)\.') -eq 20000 ] && [ \$(count '20000 lines of packs not checked written - from now on they are only counted\.') -eq 1 ] && log_line 'PROBLEM: 20001 packs in the mods folder could not be checked for GTA V Legacy versions (TweaksV.log says why): mods.many.p00001.rpf, .*, and 19991 more\.\$' && log_line 'Packs checked for GTA V Legacy versions: 20001 in the mods folder, none made for Legacy, 20001 not checked\.\$'"
 
 echo "== L10 a pack another program holds without sharing: named as not checked, with the Windows error"
-packs_gone; fresh_ini; out=$(game full_game.exe lpmake legacy mods/held/lp.rpf lplock mods/held/lp.rpf lpwait)
+packs_gone; fresh_ini; out=$(game full_game.exe lpmake legacy mods/held/lp.rpf lplock mods/held/lp.rpf lpwait lpfree)
 check "its line and the problem; one box" "log_line 'The pack mods.held.lp.rpf was not checked for GTA V Legacy versions: it could not be opened (Windows error 32, file in use)\.\$' && log_line 'PROBLEM: A pack in the mods folder could not be checked for GTA V Legacy versions (TweaksV.log says why): mods.held.lp.rpf\.\$' && one_box"
+check "the fake's own handle on it shows as held, so 'free' in L5 and L6 means no handle is open" "has 'lp: 1 of 1 held |'"
 
 echo "== L11 names: a pack's path outside ASCII, in UTF-8; a name in a pack with a line feed and a byte outside ASCII; a folder named like an archive; .RPF in capitals"
 packs_gone; fresh_ini; out=$(game full_game.exe lpmake oddname "mods/Ελληνικά/über.rpf" lpmake legacy mods/folder.rpf/inner.rpf lpmake legacy mods/UPPER.RPF lpwait)
