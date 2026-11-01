@@ -23,10 +23,10 @@
 //   DRY_RUN               everything found and checked, nothing written: the lines say what would be raised and
 //                         redirected, and the refusals are not counted
 // Every site is found and checked before the one write: T-E-B1, T-E-C1 and T-E-C2 once each; the buffer maker's call into
-// the game, to a function start by the game's unwind data; the buffer object's global inside the game and still 0 - the
-// buffer not made yet, since a raise of the checks alone would let the game write past it; both checks loading one frame
-// slot and one pair of counters inside the game, which the game's code references in exactly three places - the checks
-// and the frame's reset - and their refusal jumps leading into the game; the three immediates holding one value - the
+// the game, to a function start by the game's unwind data; the buffer object's global inside the game, aligned and still 0 -
+// the buffer not made yet, since a raise of the checks alone would let the game write past it; both checks loading one frame
+// slot and one pair of counters inside the game and aligned, which the game's code references in exactly three places - the
+// checks and the frame's reset - and their refusal jumps leading into the game; the three immediates holding one value - the
 // game's own, raised; another mod's, left as it is; disagreeing, refused. The stubs run on the game's worker threads, so
 // they count with lock instructions into 64-bit counters, add the vertex count in ecx zero-extended, keep every register
 // but rax and the flags, and lie near the game, within reach of the jumps, read+execute, their counters on a read/write
@@ -157,7 +157,7 @@ namespace TweaksV
 			return value;
 		}
 
-		// A value of the game's data that the game's threads may write meanwhile: aligned, so read whole.
+		// A value of the game's data that the game's threads may write meanwhile: aligned - DataOf checks it - so read whole.
 		template <typename T> T Load(const void* at)
 		{
 			return *static_cast<const volatile T*>(at);
@@ -198,13 +198,17 @@ namespace TweaksV
 			return entry ? reinterpret_cast<const uint8_t*>(imageBase + entry->BeginAddress) : nullptr;
 		}
 
-		// True if the count values of T at at lie inside the game and can be read; else why not.
+		// True if the count values of T at at lie inside the game, aligned to their size, so that Load reads each whole, and can be
+		// read; else why not.
 		template <typename T> bool DataOf(const char* what, const uint8_t* at, size_t count, const GamePattern& pattern, std::string& why)
 		{
 			const size_t size = count * sizeof(T);
 			const std::string data = std::string("the ") + what + " at " + DescribeAddress(at) + At(pattern);
+			const char* const verb = count == 1 ? " is" : " are";
 			if (!IsInsideGameImage(at) || !IsInsideGameImage(at + size - 1))
-				why = data + (count == 1 ? " is" : " are") + " not inside the game.";
+				why = data + verb + " not inside the game.";
+			else if (reinterpret_cast<uintptr_t>(at) % sizeof(T) != 0)
+				why = data + verb + " not aligned to " + std::to_string(sizeof(T)) + " bytes.";
 			else if (!IsReadable(at, size))
 				why = data + " cannot be read.";
 			else

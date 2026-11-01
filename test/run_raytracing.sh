@@ -167,6 +167,9 @@ refused rtcountersunread "$GAME_SITES" "the counters at \$(rva hole) (T-E-C2) ca
 refused rtjumpunread "$GAME_SITES" "the ropes. refusal jump at \$(rva edge 4094) cannot be read (T-E-C2)."
 refused rtropeshooked 'rt sites: as placed, count 4194304, checks 4194304 and 4194304, jumps to the game and elsewhere |' "the ropes. refusal jump at \$(rva ropes 87) does not lead into the game (another mod may have hooked it already) (T-E-C2)."
 refused rtnoreset "$GAME_SITES" "the game.s code references the counters at \$(rva counters) in 2 places, not 3 - the two checks and the frame.s reset, as the research found them."
+refused rtobjectodd "$GAME_SITES" "the buffer object.s global at \$(rva object 4) (T-E-B1) is not aligned to 8 bytes."
+refused rtslotodd "$GAME_SITES" "the frame slot at \$(rva slot 2) (T-E-C1) is not aligned to 4 bytes."
+refused rtcountersodd "$GAME_SITES" "the counters at \$(rva counters 2) (T-E-C2) are not aligned to 4 bytes."
 
 echo "== R12 another mod raised the buffer and its checks to 8388608, DYNAMIC_BVH_VERTICES=8388608: left as it is, logged"
 fresh_ini; setkey DYNAMIC_BVH_VERTICES 8388608; out=$(game full_game.exe rtraised)

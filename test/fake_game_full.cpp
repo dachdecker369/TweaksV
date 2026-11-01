@@ -354,6 +354,9 @@
 //                  page, which cannot be read while TweaksV starts
 //   rtropeshooked  the ropes' refusal jump leads outside the game (another mod's hook)
 //   rtnoreset      the frame's reset is no lea of the counters: 2 references to them (a changed game)
+//   rtobjectodd    the set-up's store of the buffer object leads 4 bytes past its global: not aligned to its 8 bytes
+//   rtslotodd      the geometry's check loads its frame slot from 2 bytes past it: not aligned to its 4 bytes
+//   rtcountersodd  the ropes' check loads its counters from 2 bytes past them: not aligned to the 4 bytes of a counter
 #include <windows.h>
 #include <winternl.h>
 #include <cstddef>
@@ -3406,6 +3409,12 @@ static void RtSetUp(int argc, wchar_t** argv)
 		SetRel32(g_rtJumps[1], ImageEnd() + 0xB6000);
 	if (HasOption(argc, argv, L"rtnoreset"))
 		g_rtReset[0] = 0xCC;
+	if (HasOption(argc, argv, L"rtobjectodd"))
+		SetRel32(g_rtObjectRef, reinterpret_cast<const unsigned char*>(g_rtObject) + 4);
+	if (HasOption(argc, argv, L"rtslotodd"))
+		SetRel32(g_rtSlotRefs[0], reinterpret_cast<const unsigned char*>(g_rtSlot) + 2);
+	if (HasOption(argc, argv, L"rtcountersodd"))
+		SetRel32(g_rtCountersRefs[1], reinterpret_cast<const unsigned char*>(g_rtCounters) + 2);
 	if (HasOption(argc, argv, L"rtmade"))
 		*g_rtObject = 0x0000BAD0B1EC7000ull;
 	for (size_t i = 0; i < kRtSites; i++)
