@@ -104,7 +104,7 @@ failing; out=$(TWEAKSV_TEST_GUARD_ROOM=1 TWEAKSV_TEST_SUMMARY_MS=1000 ASI=Tweaks
 check "the switch said once, the game's own room in the place of the part's, which the raise still gives the array" "[ \$(count 'TEST BUILD: the weapon infos guard.s room is the game.s own 160 instead of 1024 (TWEAKSV_TEST_GUARD_ROOM=1).') -eq 1 ] && guarded 160 && log_line '$RAISED'"
 check "8 files to the guard's room, 6 refused, then 3 more - each refused given 0, every last error kept" "field '1024 1024' hooked '160 of 1024' '8 passed 9 refused, 17 of 17 as expected'"
 check "a line per file: 160 the last loaded, then 161 refused 9 times - the 140-character name cut at 127, the byte that is no printable ASCII a ?" "file 160 'dlc_wi08:/common/data/ai/weapons.meta' && file '161 refused (the room, 160, is full)' '$LONG' && file '161 refused (the room, 160, is full)' 'dlc_wi10:/common/data/ai/weap?ons.meta' && [ \$(count '$D weapons.meta file 161 refused (the room, 160, is full): ') -eq 9 ]"
-check "the report once, word for word: the first refused file's name cut at 127, 5 more, the guard's room" "problem 'The weapons.meta file $LONG and 5 more were not loaded: the game.s room for weapons.meta files, 160, is full - raise WEAPON_INFO_FILES in TweaksV.ini above 1024 (at most 16384).'"
+check "the report once, word for word: the first refused file's name cut at 127, 5 more, the guard's room, named as the test build's - no key to raise" "problem 'The weapons.meta file $LONG and 5 more were not loaded: the game.s room for weapons.meta files, 160, is full - the test build.s room (TWEAKSV_TEST_GUARD_ROOM=1).'"
 check "one box of its own after the start-up summary; the 3 later a line, not a second problem: 9 in all" "late && [ \$(count 'PROBLEM: The weapons.meta file') -eq 1 ] && log_line '$W 9 weapons.meta files in all were not loaded this session: the game.s room for weapons.meta files, 160, is full.\$'"
 check "the summaries, word for word: the guard's room full with 6 refused, then with 9, and no third while nothing changes" '[ "$(summaries)" = "$S_SWITCH" ]'
 check "the test build's line said once for each of the half's two threads" "[ \$(count 'TEST BUILD: the weapon infos summary comes every 1000 ms after its first (TWEAKSV_TEST_SUMMARY_MS=1000).') -eq 1 ] && [ \$(count 'TEST BUILD: the weapon infos guard report comes every 1000 ms after its first (TWEAKSV_TEST_SUMMARY_MS=1000).') -eq 1 ]"
@@ -115,7 +115,7 @@ check "no test line, the room 1024: all 14 files loaded" "log_lacks 'TEST BUILD'
 
 echo "== WI6 the 9th file's name runs into memory that cannot be read (test build, TWEAKSV_TEST_GUARD_ROOM=1): kept as such"
 failing; out=$(TWEAKSV_TEST_GUARD_ROOM=1 ASI=TweaksV_test.asi game full_game.exe wifew wiunreadable)
-check "its line and the report, word for word, the name that cannot be read said in its place" "file '161 refused (the room, 160, is full)' '(a name that cannot be read)' && problem 'The weapons.meta file (a name that cannot be read) and 5 more were not loaded: the game.s room for weapons.meta files, 160, is full - raise WEAPON_INFO_FILES in TweaksV.ini above 1024 (at most 16384).'"
+check "its line and the report, word for word, the name that cannot be read said in its place" "file '161 refused (the room, 160, is full)' '(a name that cannot be read)' && problem 'The weapons.meta file (a name that cannot be read) and 5 more were not loaded: the game.s room for weapons.meta files, 160, is full - the test build.s room (TWEAKSV_TEST_GUARD_ROOM=1).'"
 check "the game runs on: 8 passed, 6 refused; one box of its own" "field '1024 1024' hooked '160 of 1024' '8 passed 6 refused, 14 of 14 as expected' && late"
 
 echo "== WI7 DIAGNOSTIC_MODE=1, 872 files and then 20,001 more: the lines per file past their cap"
@@ -237,6 +237,15 @@ check "the line, word for word, not a problem; the guard on, every file through 
 echo "== WI32 DIAGNOSTIC_MODE=1, 872 files, 11 seconds: the room reached, no file refused yet"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe wifill wait)
 check "the summary 10 s in, word for word: the guard's room full, the next file refused" '[ "$(summaries)" = "$S_FULL" ]'
+
+echo "== WI33 WEAPON_INFO_FILES=16384, its maximum, and 20,001 files: the room full, no key to raise"
+fresh_ini; setkey WEAPON_INFO_FILES 16384; out=$(game full_game.exe wiflood)
+check "the report, word for word: the most the key allows, nothing to raise" "problem 'The weapons.meta file dlc_flood16233:/common/data/ai/weapons.meta and 3768 more were not loaded: the game.s room for weapons.meta files, 16384, is full, the most WEAPON_INFO_FILES allows.'"
+check "16,232 files to the room, 3,769 refused, each given 0 with its last error kept" "guarded 16384 && field '16384 16384' hooked '16384 of 16384' '16232 passed 3769 refused, 20001 of 20001 as expected'"
+
+echo "== WI34 the raise refused with the guards' test switch (test build, TWEAKSV_TEST_GUARD_ROOM=1, an array set up before TweaksV): why the room is the game's own is the raise's, not the switch's"
+failing; out=$(TWEAKSV_TEST_GUARD_ROOM=1 ASI=TweaksV_test.asi game full_game.exe wisetup wifew)
+check "the report, word for word: the limit not raised, not the test build's room" "problem 'The weapons.meta file $LONG and 5 more were not loaded: the game.s room for weapons.meta files, 160, is full: its limit was not raised this session (see above).'"
 
 echo
 echo "WEAPON INFOS SCENARIOS: $pass passed, $fail failed"

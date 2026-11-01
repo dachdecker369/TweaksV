@@ -247,8 +247,9 @@ namespace TweaksV
 	// A test build takes gameRoom, the game's own, while the environment variable TWEAKSV_TEST_GUARD_ROOM is 1, so
 	// that a load past the game's own limit reaches the guard while the part's room still keeps the game safe; it
 	// says so once under the guard's tag: "TEST BUILD: the <guard>'s room is the game's own N instead of M
-	// (TWEAKSV_TEST_GUARD_ROOM=1)." Each guard asks once, when it is set up (SPECIFICATIONS 13.1).
-	int GuardRoom(const char* tag, const char* guard, int partRoom, int gameRoom);
+	// (TWEAKSV_TEST_GUARD_ROOM=1)." testRoom tells whether the switch gave the room, for what the guard's problem advises:
+	// raising the key changes nothing then. Each guard asks once, when it is set up (SPECIFICATIONS 13.1).
+	int GuardRoom(const char* tag, const char* guard, int partRoom, int gameRoom, bool& testRoom);
 
 	// The default TweaksV.ini, with CRLF line endings, and a setting's default as it is written there.
 	std::string DefaultIniText();

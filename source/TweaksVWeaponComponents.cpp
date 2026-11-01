@@ -248,6 +248,7 @@ namespace TweaksV
 		Loader g_loader = nullptr;						// the game's loader, through MinHook's trampoline
 		const uint8_t* g_blobs = nullptr;				// the blob array: its pointer, then the count and the capacity, uint16 each
 		uint32_t g_room = 0;							// the definitions loaded at which a file is refused
+		bool g_testRoom = false;						// the test build's switch gave that room (GuardRoom)
 		std::atomic<bool> g_guardOn{ false };
 		std::atomic<uint32_t> g_refused{ 0 };			// the files refused this session
 		char g_firstRefused[kEntryNameSize + 1] = {};	// the first one's name, written before g_refused counts it
@@ -424,15 +425,18 @@ namespace TweaksV
 			}
 		}
 
-		// The first refusal's problem.
+		// The first refusal's problem: what to raise, unless the room is the test build's or the most the key allows, where
+		// raising it changes nothing.
 		void ReportFirstRefusal(const char* file, uint64_t sum)
 		{
 			try
 			{
+				const bool most = g_room >= static_cast<uint32_t>(kWeaponComponentsSize.maxValue);
 				ReportFailure(kTag, std::string("Weapon component files are refused this session: ") + file + ", the first, came once " + std::to_string(sum) +
-					" definitions were loaded, the room being " + std::to_string(g_room) + " - the weapon components of the files refused are missing in "
-					"the game. Raise WEAPON_COMPONENTS_SIZE in TweaksV.ini (at most " + std::to_string(kWeaponComponentsSize.maxValue) + "); the log names "
-					"every file refused.");
+					" definitions were loaded, the room being " + std::to_string(g_room) + (g_testRoom ? ", the test build's (TWEAKSV_TEST_GUARD_ROOM=1)" :
+					most ? ", the most WEAPON_COMPONENTS_SIZE allows" : "") + " - the weapon components of the files refused are missing in the game. " +
+					(g_testRoom || most ? std::string("The log names every file refused.") : "Raise WEAPON_COMPONENTS_SIZE in TweaksV.ini (at most " +
+					std::to_string(kWeaponComponentsSize.maxValue) + "); the log names every file refused."));
 			}
 			catch (...)
 			{
@@ -573,7 +577,7 @@ namespace TweaksV
 					"before and 2 bytes after its count at " + DescribeAddress(count) + " inside the game (" + kLoaderPattern.label + ").");
 				return;
 			}
-			const uint32_t room = static_cast<uint32_t>(GuardRoom(kTag, "weapon component guard", static_cast<int>(plan.size), static_cast<int>(plan.gameSize)));
+			const uint32_t room = static_cast<uint32_t>(GuardRoom(kTag, "weapon component guard", static_cast<int>(plan.size), static_cast<int>(plan.gameSize), g_testRoom));
 			if (IsDryRun())
 			{
 				WriteLog(kTag, "DRY_RUN: would hook the weapon components' loader at " + DescribeAddress(head) + " to refuse the files that come once " +

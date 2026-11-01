@@ -524,8 +524,9 @@ namespace TweaksV
 		void GuardLimit(const Sites& sites, const RaiseResult& raised)
 		{
 			uint8_t* const start = sites.loader - kLoaderStart;
+			bool testRoom = false;
 			const uint32_t room = static_cast<uint32_t>(GuardRoom(kTag, "weapon infos guard", static_cast<int>(raised.room),
-				static_cast<int>(sites.gameRoom)));
+				static_cast<int>(sites.gameRoom), testRoom));
 			if (IsDryRun())
 			{
 				WriteLog(kTag, "DRY_RUN: would hook the weapon info loader at " + DescribeAddress(start) + " so that a weapons.meta file past the room, " +
@@ -544,6 +545,8 @@ namespace TweaksV
 			const uint32_t most = static_cast<uint32_t>(kWeaponInfoFiles.maxValue);
 			if (raised.outcome == Raise::Refused)
 				g_advice = ": its limit was not raised this session (see above).";
+			else if (testRoom)
+				g_advice = " - the test build's room (TWEAKSV_TEST_GUARD_ROOM=1).";
 			else if (raised.room < most)
 				g_advice = " - raise WEAPON_INFO_FILES in TweaksV.ini above " + std::to_string(raised.room) + " (at most " + std::to_string(most) + ").";
 			else

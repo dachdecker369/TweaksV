@@ -179,6 +179,7 @@
 //                  are mounted, which wait up to 3 s for the box of TweaksV's problem, or the line that it is not shown
 //   wcgrown        the count's four references lead 600 entries of 8 bytes past the list: the game's own list has grown to 600
 //   wclarge        they lead 16500 entries past it, inside the fake's image: a size the core takes, past the key's maximum
+//   wcfill         like wcmount, 36 files of packs of 470 definitions each, past a room at the key's maximum
 // The siren setting IDs (SirenSettings): their 14 sites are always there - the parser registrations of the siren settings
 // and the vehicle variations with their tables and the two ID members' data (type 0x01), the XML reader, the base and a
 // pack's loops and builders with the four lea of the ID table, the dedupe and its loop, the three constructors, the init's
@@ -1372,16 +1373,16 @@ static void WeaponComponentsMount(const char* name, int definitions)
 		g_weaponComponentsErrorKept += GetLastError() == 0x5EED ? 1 : 0;
 }
 
-// wcmount, wcbase, wcmany and wcbadblob: the packs' files mounted once TweaksV has started
-static void WeaponComponentsMountPacks(bool base, bool many, bool badBlob)
+// wcmount, wcbase, wcmany, wcfill and wcbadblob: the packs' files mounted once TweaksV has started
+static void WeaponComponentsMountPacks(int argc, wchar_t** argv)
 {
 	static const int definitions[11] = { 9, 8, 9, 8, 9, 8, 9, 8, 9, 8, 6 };
-	if (badBlob)
+	if (HasOption(argc, argv, L"wcbadblob"))
 	{
 		const int32_t past = 500;
 		memcpy(g_weaponComponentsBlobs[0] + 0xEC0, &past, sizeof(past));
 	}
-	if (many)
+	if (HasOption(argc, argv, L"wcmany"))
 	{
 		WeaponComponentsMount("dlcpacks:/weaponpack_big/weaponcomponents.meta", 60);
 		char name[64];
@@ -1393,12 +1394,21 @@ static void WeaponComponentsMountPacks(bool base, bool many, bool badBlob)
 		return;
 	}
 	char name[64];
+	if (HasOption(argc, argv, L"wcfill"))
+	{
+		for (int i = 0; i < 36; i++)
+		{
+			sprintf_s(name, "dlcpacks:/weaponpack%02d/common/data/weaponcomponents.meta", i + 1);
+			WeaponComponentsMount(name, 470);
+		}
+		return;
+	}
 	for (int i = 0; i < 11; i++)
 	{
 		sprintf_s(name, "dlcpacks:/weaponpack%02d/common/data/weaponcomponents.meta", i + 1);
 		WeaponComponentsMount(name, definitions[i]);
 	}
-	if (base)	// the base loader's run: every blob cleared, the list's count left, the files loaded again
+	if (HasOption(argc, argv, L"wcbase"))	// the base loader's run: every blob cleared, the list's count left, the files loaded again
 	{
 		g_weaponComponentsStore->files = 0;
 		g_weaponComponentsPlacedStore = *g_weaponComponentsStore;
@@ -5739,12 +5749,12 @@ int wmain(int argc, wchar_t** argv)
 	}
 	if (HasOption(argc, argv, L"wcputback"))	// the game puts one of the list's loads back
 		WeaponComponentsPutBack();
-	if ((HasOption(argc, argv, L"wcmount") || HasOption(argc, argv, L"wcmany")) && !HasOption(argc, argv, L"wcloaderhooked") &&
+	if ((HasOption(argc, argv, L"wcmount") || HasOption(argc, argv, L"wcmany") || HasOption(argc, argv, L"wcfill")) && !HasOption(argc, argv, L"wcloaderhooked") &&
 		!HasOption(argc, argv, L"wcloadernotstart") && !HasOption(argc, argv, L"wcloaderret"))	// the pool made, packs mounted
 	{
 		if (!HasOption(argc, argv, L"wcearly"))
 			WeaponComponentsMakePool();
-		WeaponComponentsMountPacks(HasOption(argc, argv, L"wcbase"), HasOption(argc, argv, L"wcmany"), HasOption(argc, argv, L"wcbadblob"));
+		WeaponComponentsMountPacks(argc, argv);
 		if (g_weaponComponentsLoaded < g_weaponComponentsMounted || HasOption(argc, argv, L"wcearly"))	// a file refused, or the pool made
 			WeaponComponentsAwait("start-up summary", 1, 3000);	// without the redirect: up to 3 s for the box, or the line that it is not shown
 	}

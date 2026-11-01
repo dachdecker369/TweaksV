@@ -209,14 +209,14 @@ unset TWEAKSV_TEST_GUARD_ROOM
 check "the test build's line once, the guard's room the game's own 470, word for word" "[ \$(count 'TEST BUILD: the weapon component guard.s room is the game.s own 470 instead of 1024 (TWEAKSV_TEST_GUARD_ROOM=1).') -eq 1 ] && log_line '$HOOKED 470 definitions are loaded is refused.\$'"
 check "the loader's head, word for word" "log_line '${DIAG}the weapon components. loader at $RVA (W-E-C5 - 0x13): no unwind data, byte before it 90\$'"
 check "files 01 to 07 let in while fewer than 470 are loaded, 08 to 11 refused, a line each" "[ \$(file 0[1-7] 'let in') -eq 7 ] && [ \$(file '\(08\|09\|10\|11\)' refused) -eq 4 ] && [ \$(count 'definitions loaded, the room') -eq 11 ]"
-check "the first refused file's problem, word for word, once" "[ \$(count 'Weapon component files are refused this session') -eq 1 ] && log_line '${GUARD_PROBLEM}08/common/data/weaponcomponents.meta, the first, came once 472 definitions were loaded, the room being 470 - the weapon components of the files refused are missing in the game. Raise WEAPON_COMPONENTS_SIZE in TweaksV.ini (at most 16384); the log names every file refused.\$'"
+check "the first refused file's problem, word for word, once" "[ \$(count 'Weapon component files are refused this session') -eq 1 ] && log_line '${GUARD_PROBLEM}08/common/data/weaponcomponents.meta, the first, came once 472 definitions were loaded, the room being 470, the test build.s (TWEAKSV_TEST_GUARD_ROOM=1) - the weapon components of the files refused are missing in the game. The log names every file refused.\$'"
 check "the part's box for the first file refused (the test build's line in its place)" "log_has 'TEST BUILD: message box not shown (TWEAKSV_TEST_NO_BOXES=1): TweaksV'"
 check "7 files loaded, every callback destroyed once - the refused ones by the guard - the list's count 472; the game's last error kept by each refusal" "has 'files mounted 11, loaded 7, destroyed 11 (0 on the heap), list 472, last error kept 4'"
 check "the game made the pool before the files: its line before the guard's first, no problem of the pool's size" "replaced 470 1494 && [ \$(grep -n 'for the weapon components, 470, is replaced by 1494' TweaksV.log | cut -d: -f1) -lt \$(grep -n -m1 'definitions loaded, the room' TweaksV.log | cut -d: -f1) ] && log_lacks 'PROBLEM: The weapon components. pool size'"
 
 echo "== W28 WEAPON_COMPONENTS_SIZE=480: the room the key gives, the 9th file the first refused"
 fresh_ini; setkey WEAPON_COMPONENTS_SIZE 480; out=$(game full_game.exe wcmount)
-check "08 let in at 472, 09 to 11 refused, each a line; the problem names 09" "[ \$(file '\(09\|10\|11\)' refused) -eq 3 ] && log_line '${GUARD_PROBLEM}09/common/data/weaponcomponents.meta, the first, came once 480 definitions were loaded, the room being 480 - ' && has 'files mounted 11, loaded 8, destroyed 11 (0 on the heap), list 480'"
+check "08 let in at 472, 09 to 11 refused, each a line; the problem names 09" "[ \$(file '\(09\|10\|11\)' refused) -eq 3 ] && log_line '${GUARD_PROBLEM}09/common/data/weaponcomponents.meta, the first, came once 480 definitions were loaded, the room being 480 - the weapon components of the files refused are missing in the game. Raise WEAPON_COMPONENTS_SIZE in TweaksV.ini (at most 16384); the log names every file refused.\$' && has 'files mounted 11, loaded 8, destroyed 11 (0 on the heap), list 480'"
 check "no line for the files let in without DIAGNOSTIC_MODE" "[ \$(count 'definitions loaded, the room') -eq 3 ]"
 
 echo "== W29 a base loader's run after the packs (test build, TWEAKSV_TEST_GUARD_ROOM=1): the refused names refused again, below the room"
@@ -285,6 +285,11 @@ check "moved at the game's own 600, the pool given 600 and 470 slots; none of th
 echo "== W41 the core at the key's maximum, the game's own 470: 16384 used without a problem, the pool 16854, the moved list's entries exactly"
 fresh_ini; setkey WEAPON_COMPONENTS_SIZE 16384; out=$(game full_game.exe)
 check "raised to 16384, no line on the key, the pool at the list's end and not past it" "log_line '${TAG}The weapon component list moved and its limit raised from 470 to 16384 entries.\$' && log_lacks 'PROBLEM: TweaksV.ini' && replaced 470 16854 && has 'size call to a stub, RX: 16854 and 16854 slots' && has '$APPLIED' && quiet"
+
+echo "== W42 WEAPON_COMPONENTS_SIZE=16384, its maximum, and 36 files of 470 definitions (wcfill): the room used up, no key to raise"
+fresh_ini; setkey WEAPON_COMPONENTS_SIZE 16384; out=$(game full_game.exe wcfill)
+check "the problem, word for word: the most the key allows, nothing to raise" "[ \$(count 'Weapon component files are refused this session') -eq 1 ] && log_line '${GUARD_PROBLEM}35/common/data/weaponcomponents.meta, the first, came once 16392 definitions were loaded, the room being 16384, the most WEAPON_COMPONENTS_SIZE allows - the weapon components of the files refused are missing in the game. The log names every file refused.\$'"
+check "34 files let in up to the room, the 35th and the 36th refused; the last file let in within the pool's 16854" "[ \$(count 'definitions loaded, the room 16384 - refused\.') -eq 2 ] && has 'files mounted 36, loaded 34, destroyed 36 (0 on the heap), list 16392' && replaced 470 16854"
 
 echo
 echo "WEAPON COMPONENTS SCENARIOS: $pass passed, $fail failed"
