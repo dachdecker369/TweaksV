@@ -12,9 +12,8 @@
 //   WEAPON_COMPONENTS_SIZE  the room for definitions, from the game's own 470 up to 16384. The list is moved on
 //                    the relocation core to one of 16854 entries - its 17 leas re-pointed, 6 of them in the game's
 //                    second, protected code - and its count left where it is (the core's follower: the list's size
-//                    is the distance to it); the call that reads the pool's size from the game's configuration -
-//                    W-E-C4, which TweaksVPools finds once a session for this part and StaticBounds - is
-//                    redirected so that the pool gets this many slots and 470 more, also when the configuration
+//                    is the distance to it); the call that reads the pool's size from the game's configuration
+//                    (W-E-C4) is redirected so that the pool gets this many slots and 470 more, also when the configuration
 //                    names more, so that the pool's trap always comes first. The 470 definitions one file may hold
 //                    stay.
 //   DIAGNOSTIC_MODE  every site logged, a line per weaponcomponents.meta the guard sees, and the measurement: 10
@@ -54,7 +53,6 @@
 #include "TweaksVMeasure.h"
 #include "TweaksVPatch.h"
 #include "TweaksVPatterns.h"
-#include "TweaksVPools.h"
 #include "TweaksVRelocation.h"
 #include "TweaksVScanner.h"
 #include "TweaksVSettings.h"
@@ -79,7 +77,7 @@ namespace TweaksV
 		constexpr const GamePattern& kRebuildPattern = Pattern("W-E-C1");	// the rebuild: the count's reset, the files' count, its lea of the list
 		constexpr const GamePattern& kSortPattern = Pattern("W-E-C2");		// the sort: the count, its lea of the list, the entry size
 		constexpr const GamePattern& kUpdatePattern = Pattern("W-E-C3");	// the rebuild's update of the count, before its unbounded store
-		// the pool's size - the configuration, the pool's name and default, the call - is W-E-C4, TweaksVPools' (kPoolSizeCallPattern)
+		constexpr const GamePattern& kPoolSizeCallPattern = Pattern("W-E-C4");	// the pool's size: the configuration, the pool's name and default, the call
 
 		// A rip-relative operand in a match: where its disp32 lies, and where its instruction ends - the address it
 		// leads to is counted from there, past an immediate that may follow the disp32.
@@ -142,7 +140,7 @@ namespace TweaksV
 
 		// The anchors on the core, in this order: the rebuild - its lea of the list, and its reset of the count, the
 		// variable that follows the list, whose distance from it is the list's size; the sort's lea of the list; the
-		// count's update, which the part reads itself. The pool's size call is TweaksVPools', which StaticBounds asks too.
+		// count's update, which the part reads itself. The pool's size call the part finds itself (FindPoolSizeCall).
 		enum : size_t { kRebuild, kSort, kUpdate };
 		constexpr Anchor kAnchors[] = {
 			ReferenceAndLimit(kRebuildPattern, Rel32(kRebuildLoad.field, kRebuildLea, 3),
@@ -210,6 +208,60 @@ namespace TweaksV
 				SetLastError(error);
 			}
 			return g_poolSize;
+		}
+
+		// W-E-C4's sites, counted from its match
+		constexpr size_t kConfigurationAt = 3;		// the disp32 of "mov rcx, [rip+disp32]": the configuration's pointer
+		constexpr size_t kConfigurationEnd = 7;		// where that instruction ends, which its disp32 counts from
+		constexpr size_t kPoolAt = 8;				// the imm32 of "mov edx, imm32": the pool's name
+		constexpr size_t kDefaultAt = 14;			// the imm32 of "mov r8d, imm32": the pool's default size
+		constexpr size_t kCallAt = 18;				// "call rel32": the call of the game's pool size lookup
+		constexpr size_t kCallSize = 5;
+		constexpr uint32_t kPoolName = 0xBAE33CCF;	// the game's hash of the pool's name, "cweaponcomponentinfo"
+		static_assert(PatternByte(kPoolSizeCallPattern, kConfigurationAt - 3) == 0x48 && PatternByte(kPoolSizeCallPattern, kConfigurationAt - 2) == 0x8B &&
+			PatternByte(kPoolSizeCallPattern, kConfigurationAt - 1) == 0x0D && kConfigurationEnd == kConfigurationAt + 4 &&
+			PatternImm32(kPoolSizeCallPattern, kConfigurationAt) == -1, "TweaksV: W-E-C4 holds the configuration's mov rcx, [rip+disp32] at +0, its disp32 read");
+		static_assert(PatternByte(kPoolSizeCallPattern, kPoolAt - 1) == 0xBA && PatternImm32(kPoolSizeCallPattern, kPoolAt) == kPoolName,
+			"TweaksV: W-E-C4 holds the pool's name, mov edx, 0xBAE33CCF, at +7");
+		static_assert(PatternByte(kPoolSizeCallPattern, kDefaultAt - 2) == 0x41 && PatternByte(kPoolSizeCallPattern, kDefaultAt - 1) == 0xB8 &&
+			PatternImm32(kPoolSizeCallPattern, kDefaultAt) == -1, "TweaksV: W-E-C4 holds the pool's default, mov r8d, imm32, at +12, the imm32 read");
+		static_assert(PatternByte(kPoolSizeCallPattern, kCallAt) == 0xE8 && PatternImm32(kPoolSizeCallPattern, kCallAt + 1) == -1,
+			"TweaksV: W-E-C4 holds the lookup's call, call rel32, at +18, its rel32 read");
+
+		// The pool's size call - "mov rcx, [rip+disp32]" of the game's configuration, "mov edx, imm32" of the pool's name,
+		// "mov r8d, imm32" of its default and "call rel32" of the game's pool size lookup, which takes the three and returns
+		// gameconfig.xml's size for the pool, else the default: addresses in the game's code, null where nothing was found.
+		struct PoolSizeCall
+		{
+			uint8_t* call = nullptr;				// the call of the lookup (+18), which the part redirects
+			const uint8_t* target = nullptr;		// where the call led when it was found - null when it cannot be read
+			uint32_t pool = 0;						// the pool's name the call hands the lookup (+8)
+			const uint8_t* defaultSize = nullptr;	// the imm32 of the pool's default size the call hands the lookup (+14)
+			const uint8_t* configuration = nullptr;	// where the game keeps its configuration's pointer, which the call loads (+3)
+		};
+
+		// W-E-C4 found and its call checked as TweaksV checks a call it redirects: a "call rel32" that can be read and leads
+		// into the game, another mod's hook leading outside it. False with the reason for the part's PROBLEM line in why; what
+		// was found is in found all the same, for its DIAGNOSTIC line.
+		bool FindPoolSizeCall(PoolSizeCall& found, std::string& why)
+		{
+			uint8_t* const match = Scanner::FindOnce(kPoolSizeCallPattern, why);
+			if (!match)
+			{
+				why += ".";
+				return false;
+			}
+			// every site lies inside the match, which the scan has read
+			found.call = match + kCallAt;
+			memcpy(&found.pool, match + kPoolAt, sizeof(found.pool));
+			found.defaultSize = match + kDefaultAt;
+			found.configuration = Rel32Target(match + kConfigurationAt);
+			found.target = IsReadable(found.call, kCallSize) ? CallTarget(found.call) : nullptr;
+			if (found.target && IsInsideGameImage(found.target))
+				return true;
+			why = "the weapon components' pool size call at " + DescribeAddress(found.call) + " is not a call into the game (another mod may "
+				"have hooked it already) (" + kPoolSizeCallPattern.label + ").";
+			return false;
 		}
 
 		// ---- the guard (D12): the loader of one weaponcomponents.meta hooked at its head
@@ -742,8 +794,7 @@ namespace TweaksV
 				" (" + kRebuildPattern.label + ")");
 		}
 
-		// 3. the pool's size call (W-E-C4), which TweaksVPools finds once a session for this part and StaticBounds: into the
-		// game - not another mod's hook - and the pool's default a plausible size; the pool's name is pinned by W-E-C4
+		// 3. the pool's size call (W-E-C4): into the game - not another mod's hook - and the pool's default a plausible size; the pool's name is pinned by W-E-C4
 		PoolSizeCall pool;
 		std::string why;
 		const bool lookupFound = FindPoolSizeCall(pool, why);

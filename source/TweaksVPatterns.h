@@ -161,8 +161,7 @@ namespace TweaksV
 
 		// WeaponLimits' weapon components (TweaksVWeaponComponents.cpp): the rebuild of the list of every weapon component
 		// definition - its count's reset, the files' count and its lea of the list (C1) - its sort, with its lea of the list
-		// and the entry size (C2), its update of the count (C3), the pool's size call, with the pool's name and default (C4,
-		// TweaksVPools', which finds the game's pool size lookup through it for this part and StaticBounds),
+		// and the entry size (C2), its update of the count (C3), the pool's size call, with the pool's name and default (C4),
 		// and the loader of one weaponcomponents.meta, 0x13 bytes into it, where the guard hooks its head - the blob's size,
 		// allocated and zeroed, and the blob array's count, capacity and pointer (C5)
 		{ "W-E-C1", "C7 05 ? ? ? ? 00 00 00 00 44 0F B7 05 ? ? ? ? 66 45 85 C0 0F 84 ? ? ? ? 45 31 C9 4C 8D 15 ? ? ? ?" },

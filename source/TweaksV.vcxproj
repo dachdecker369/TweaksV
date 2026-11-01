@@ -142,7 +142,6 @@
     <ClCompile Include="TweaksVPackfileLimit.cpp" />
     <ClCompile Include="TweaksVPatch.cpp" />
     <ClCompile Include="TweaksVPedProps.cpp" />
-    <ClCompile Include="TweaksVPools.cpp" />
     <ClCompile Include="TweaksVRageOpenV.cpp" />
     <ClCompile Include="TweaksVRayTracing.cpp" />
     <ClCompile Include="TweaksVRelocation.cpp" />
@@ -194,7 +193,6 @@
     <ClInclude Include="TweaksVPatch.h" />
     <ClInclude Include="TweaksVPatterns.h" />
     <ClInclude Include="TweaksVPedProps.h" />
-    <ClInclude Include="TweaksVPools.h" />
     <ClInclude Include="TweaksVRageOpenV.h" />
     <ClInclude Include="TweaksVRayTracing.h" />
     <ClInclude Include="TweaksVRelocation.h" />

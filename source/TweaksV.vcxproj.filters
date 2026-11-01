@@ -70,9 +70,6 @@
     <ClCompile Include="TweaksVPedProps.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
-    <ClCompile Include="TweaksVPools.cpp">
-      <Filter>TweaksV</Filter>
-    </ClCompile>
     <ClCompile Include="TweaksVRageOpenV.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
@@ -187,9 +184,6 @@
       <Filter>TweaksV</Filter>
     </ClInclude>
     <ClInclude Include="TweaksVPedProps.h">
-      <Filter>TweaksV</Filter>
-    </ClInclude>
-    <ClInclude Include="TweaksVPools.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
     <ClInclude Include="TweaksVRageOpenV.h">
