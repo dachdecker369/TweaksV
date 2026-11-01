@@ -156,6 +156,17 @@ refused rtextra "$GAME_SITES" "the game.s code references the counters at \$(rva
 refused rtjumphooked 'rt sites: as placed, count 4194304, checks 4194304 and 4194304, jumps to elsewhere and the game |' "the geometry.s refusal jump at \$(rva geometry 90) does not lead into the game (another mod may have hooked it already) (T-E-C1)."
 refused rtmismatch 'rt sites: as placed, count 4194304, checks 4194304 and 8388608, jumps to the game and the game |' "the buffer.s count and its two checks disagree: 4194304 at \$(rva set-up 13) (T-E-B1), 4194304 at \$(rva geometry 86) (T-E-C1) and 8388608 at \$(rva ropes 83) (T-E-C2)."
 refused rtmade "$GAME_SITES" "the game has made the buffer already - its object at \$(rva object) is set (T-E-B1) - and a raise of its checks alone would let the game write past it."
+refused rtnounwind "$GAME_SITES" "the buffer maker.s call at \$(rva set-up 28) leads to \$(rva reset), which is not a function start (no unwind data) (T-E-B1)."
+refused rtobjectout "$GAME_SITES" "the buffer object.s global at 0x[0-9A-F]* (outside the game) (T-E-B1) is not inside the game."
+refused rtobjectunread "$GAME_SITES" "the buffer object.s global at \$(rva hole) (T-E-B1) cannot be read."
+refused rtslotout "$GAME_SITES" "the frame slot at 0x[0-9A-F]* (outside the game) (T-E-C2) is not inside the game."
+refused rtslotunread "$GAME_SITES" "the frame slot at \$(rva hole) (T-E-C1) cannot be read."
+refused rtcountersout "$GAME_SITES" "the counters at 0x[0-9A-F]* (outside the game) (T-E-C1) are not inside the game."
+refused rtcountersend "$GAME_SITES" "the counters at RVA 0x[0-9A-F]* (T-E-C1) are not inside the game."
+refused rtcountersunread "$GAME_SITES" "the counters at \$(rva hole) (T-E-C2) cannot be read."
+refused rtjumpunread "$GAME_SITES" "the ropes. refusal jump at \$(rva edge 4094) cannot be read (T-E-C2)."
+refused rtropeshooked 'rt sites: as placed, count 4194304, checks 4194304 and 4194304, jumps to the game and elsewhere |' "the ropes. refusal jump at \$(rva ropes 87) does not lead into the game (another mod may have hooked it already) (T-E-C2)."
+refused rtnoreset "$GAME_SITES" "the game.s code references the counters at \$(rva counters) in 2 places, not 3 - the two checks and the frame.s reset, as the research found them."
 
 echo "== R12 another mod raised the buffer and its checks to 8388608, DYNAMIC_BVH_VERTICES=8388608: left as it is, logged"
 fresh_ini; setkey DYNAMIC_BVH_VERTICES 8388608; out=$(game full_game.exe rtraised)

@@ -341,6 +341,19 @@
 //   rtcounters     the ropes' check loads the counters 4 bytes further on
 //   rtextra        a fourth lea of the counters (a changed game)
 //   rtjumphooked   the geometry's refusal jump leads outside the game (another mod's hook)
+//   rtnounwind     the set-up's call leads to the frame's reset, in .fakesit, where no unwind data names a function
+//   rtobjectout    the set-up's store of the buffer object leads outside the game
+//   rtobjectunread the set-up's store of the buffer object leads into the hole: a page inside the game, no access while TweaksV starts
+//   rtslotout      the ropes' check loads its frame slot from outside the game
+//   rtslotunread   the geometry's check loads its frame slot from the hole
+//   rtcountersout  the geometry's check loads its counters from outside the game
+//   rtcountersend  the geometry's check loads its counters from the image's last 4 bytes: the first counter inside the game, the
+//                  second past it
+//   rtcountersunread  the ropes' check loads its counters from the hole
+//   rtjumpunread   T-E-C2 lies at the end of a page, the site's own first byte changed, and its refusal jump's rel32 on the next
+//                  page, which cannot be read while TweaksV starts
+//   rtropeshooked  the ropes' refusal jump leads outside the game (another mod's hook)
+//   rtnoreset      the frame's reset is no lea of the counters: 2 references to them (a changed game)
 #include <windows.h>
 #include <winternl.h>
 #include <cstddef>
@@ -884,7 +897,8 @@ static Site g_staticBoundsSites[] = { SITE(g_staticBoundsCall, 0), SITE(g_static
 // "mov r10d, 1", the filler, the slot's counter and the range's end, "cmp" with the capacity (its imm32 at +86 or +83) and "ja
 // rel32" to the refusal (+90 or +87, the rel32 at +92 or +89) - "mov eax, edi", "lock cmpxchg", "jne" back to the counter's load,
 // eax 1; the refusal (+112 or +109): every register but rax into the record, eax 0; the pops, "ret". The frame's reset: "lea
-// rax, [rip+disp32]" of the counters (+3), and a fourth lea, its first byte 48 only with "rtextra". Every site ends in CC.
+// rax, [rip+disp32]" of the counters (+3), and a fourth lea, its first byte 48 only with "rtextra". Every site ends in CC. The edge,
+// two pages: with "rtjumpunread" T-E-C2's 47 bytes end the first, so that its refusal jump's rel32 lies on the second.
 #define RT_PROLOGUE 0x53, 0x55, 0x56, 0x57, 0x41, 0x54, 0x41, 0x55, 0x41, 0x56, 0x41, 0x57, 0x49, 0x89, 0xD7, 0x4D, 0x8B, 0x07, \
 	0x4D, 0x8B, 0x4F, 0x08, 0x4D, 0x8B, 0x5F, 0x10, 0x4D, 0x8B, 0x67, 0x18, 0x4D, 0x8B, 0x6F, 0x20, 0x4D, 0x8B, 0x77, 0x28, 0x49, 0x89, 0x67, 0x30
 #define RT_REFUSAL 0x49, 0x89, 0x5F, 0x38, 0x49, 0x89, 0x4F, 0x40, 0x49, 0x89, 0x57, 0x48, 0x49, 0x89, 0x77, 0x50, 0x49, 0x89, 0x7F, 0x58, \
@@ -909,6 +923,9 @@ volatile unsigned char g_rtRopes[] = { RT_PROLOGUE,
 	RT_REFUSAL };																								// +109: the refusal
 volatile unsigned char g_rtReset[] = { 0x48, 0x8D, 0x05, 0, 0, 0, 0, 0xCC };
 volatile unsigned char g_rtExtra[] = { 0xCC, 0x8D, 0x05, 0, 0, 0, 0, 0xCC };
+constexpr size_t kRtRopesMatch = 47, kRtEdgeMatchAt = 0x1000 - kRtRopesMatch;
+alignas(4096) volatile unsigned char g_rtEdge[0x2000] = { 0xCC };
+static Site g_rtEdgeRefs[] = { SITE(g_rtEdge, kRtEdgeMatchAt + 2), SITE(g_rtEdge, kRtEdgeMatchAt + 11) };	// T-E-C2's slot and counters there
 static Site g_rtCountSite = SITE(g_rtSetUp, 13);		// the buffer's count
 static Site g_rtMakerCall = SITE(g_rtSetUp, 29);		// the rel32 of the maker's call
 static Site g_rtObjectRef = SITE(g_rtSetUp, 36);		// the disp32 of the object's store
@@ -916,7 +933,9 @@ static Site g_rtSlotRefs[] = { SITE(g_rtGeometry, 44), SITE(g_rtRopes, 44) };
 static Site g_rtCountersRefs[] = { SITE(g_rtGeometry, 53), SITE(g_rtRopes, 53), SITE(g_rtReset, 3), SITE(g_rtExtra, 3) };
 static Site g_rtCapacities[] = { SITE(g_rtGeometry, 86), SITE(g_rtRopes, 83) };
 static Site g_rtJumps[] = { SITE(g_rtGeometry, 92), SITE(g_rtRopes, 89) };	// the rel32 of each refusal jump
-static Site g_rtSites[] = { SITE(g_rtSetUp, 0), SITE(g_rtGeometry, 0), SITE(g_rtRopes, 0), SITE(g_rtReset, 0), SITE(g_rtExtra, 0) };
+static Site g_rtSites[] = { SITE(g_rtSetUp, 0), SITE(g_rtGeometry, 0), SITE(g_rtRopes, 0), SITE(g_rtReset, 0), SITE(g_rtExtra, 0),
+	{ g_rtEdge + kRtEdgeMatchAt, 0, kRtRopesMatch } };
+constexpr size_t kRtSites = sizeof(g_rtSites) / sizeof(g_rtSites[0]);
 #pragma data_seg()
 
 // The game's own modkit array (1024 entries of 2 bytes) and packfile array (4500 entries of 8 bytes). The
@@ -3196,6 +3215,8 @@ alignas(8) static uint32_t g_rtCountersStorage[4] = {};
 static uint32_t* volatile g_rtCounters = g_rtCountersStorage;
 static uint64_t g_rtObjectStorage = 0;
 static uint64_t* volatile g_rtObject = &g_rtObjectStorage;
+alignas(4096) static unsigned char g_rtHoleStorage[4096];	// the hole: a page inside the game, no access with an option "...unread"
+static unsigned char* volatile g_rtHole = g_rtHoleStorage;
 struct RtBufferObject
 {
 	unsigned char head[0x08];
@@ -3328,7 +3349,7 @@ static bool RtWaitFor(const char* text, int ms)
 
 // Before TweaksV loads: the set-up's call to the maker and its store to the global, the checks' loads of the slot and the counters
 // and the reset's lea - but where an option asks otherwise; then the sites' bytes as placed.
-static unsigned char g_rtPlaced[5][208];
+static unsigned char g_rtPlaced[kRtSites][208];
 static void RtSetUp(int argc, wchar_t** argv)
 {
 	SetRel32(g_rtMakerCall, reinterpret_cast<const void*>(&RtBufferMaker));
@@ -3357,19 +3378,58 @@ static void RtSetUp(int argc, wchar_t** argv)
 		g_rtExtra[0] = 0x48;
 	if (HasOption(argc, argv, L"rtjumphooked"))
 		SetRel32(g_rtJumps[0], ImageEnd() + 0xA0000);
+	if (HasOption(argc, argv, L"rtnounwind"))
+		SetRel32(g_rtMakerCall, const_cast<const unsigned char*>(g_rtReset));
+	if (HasOption(argc, argv, L"rtobjectout"))
+		SetRel32(g_rtObjectRef, ImageEnd() + 0xB0000);
+	if (HasOption(argc, argv, L"rtobjectunread"))
+		SetRel32(g_rtObjectRef, g_rtHole);
+	if (HasOption(argc, argv, L"rtslotout"))
+		SetRel32(g_rtSlotRefs[1], ImageEnd() + 0xB2000);
+	if (HasOption(argc, argv, L"rtslotunread"))
+		SetRel32(g_rtSlotRefs[0], g_rtHole);
+	if (HasOption(argc, argv, L"rtcountersout"))
+		SetRel32(g_rtCountersRefs[0], ImageEnd() + 0xB4000);
+	if (HasOption(argc, argv, L"rtcountersend"))
+		SetRel32(g_rtCountersRefs[0], ImageEnd() - sizeof(uint32_t));
+	if (HasOption(argc, argv, L"rtcountersunread"))
+		SetRel32(g_rtCountersRefs[1], g_rtHole);
+	if (HasOption(argc, argv, L"rtjumpunread"))
+	{
+		for (size_t i = 0; i < kRtRopesMatch; i++)
+			g_rtEdge[kRtEdgeMatchAt + i] = g_rtRopes[42 + i];
+		g_rtRopes[42] = 0x90;
+		SetRel32(g_rtEdgeRefs[0], g_rtSlot);
+		SetRel32(g_rtEdgeRefs[1], g_rtCounters);
+	}
+	if (HasOption(argc, argv, L"rtropeshooked"))
+		SetRel32(g_rtJumps[1], ImageEnd() + 0xB6000);
+	if (HasOption(argc, argv, L"rtnoreset"))
+		g_rtReset[0] = 0xCC;
 	if (HasOption(argc, argv, L"rtmade"))
 		*g_rtObject = 0x0000BAD0B1EC7000ull;
-	for (size_t i = 0; i < 5; i++)
+	for (size_t i = 0; i < kRtSites; i++)
 		for (size_t at = 0; at < g_rtSites[i].size && at < sizeof(g_rtPlaced[i]); at++)
 			g_rtPlaced[i][at] = g_rtSites[i].bytes[at];
 }
 
+// Once the whole of .fakesit is read+execute, before TweaksV loads: what the options "...unread" take away.
+static void RtTakeAway(int argc, wchar_t** argv)
+{
+	DWORD old = 0;
+	if (HasOption(argc, argv, L"rtobjectunread") || HasOption(argc, argv, L"rtslotunread") || HasOption(argc, argv, L"rtcountersunread"))
+		VirtualProtect(g_rtHole, sizeof(g_rtHoleStorage), PAGE_NOACCESS, &old);
+	if (HasOption(argc, argv, L"rtjumpunread"))
+		VirtualProtect(const_cast<unsigned char*>(g_rtEdge) + 0x1000, 0x1000, PAGE_NOACCESS, &old);
+}
+
 // Once TweaksV has started, as the game's renderer and its frames would: the buffer made through the set-up - unless "rtmade" made it
-// already, or the call leads elsewhere - and the counters as a frame leaves them; then, as asked, the checks and the frames.
+// already, or its call or its store leads elsewhere - and the counters as a frame leaves them; then, as asked, the checks and the frames.
 static wchar_t g_rtChecks[160] = L"";
 static void RtActions(int argc, wchar_t** argv)
 {
-	if (!HasOption(argc, argv, L"rtmade") && Rel32Target(g_rtMakerCall) == reinterpret_cast<const unsigned char*>(&RtBufferMaker))
+	if (!HasOption(argc, argv, L"rtmade") && Rel32Target(g_rtMakerCall) == reinterpret_cast<const unsigned char*>(&RtBufferMaker) &&
+		Rel32Target(g_rtObjectRef) == reinterpret_cast<const unsigned char*>(g_rtObject))
 		reinterpret_cast<void (*)()>(const_cast<unsigned char*>(g_rtSetUp))();
 	uint32_t* const counters = g_rtCounters;
 	counters[1] = kRtFinished;	// the last finished frame, slot 1's
@@ -3429,9 +3489,9 @@ static void RtReport()
 			g_rtMakerCalls, g_rtMakerCalls == 1 ? L"" : L"s", g_rtMakerFlags, g_rtMakerView, g_rtMakerZero, g_rtChecks);
 	else
 		wprintf(L"rt buffer: not made%ls | ", g_rtChecks);
-	const size_t mayWrite[5][2] = { { 13, 0 }, { 86, 92 }, { 83, 89 }, { 0, 0 }, { 0, 0 } };	// the fields TweaksV may write, 4 bytes each
+	const size_t mayWrite[kRtSites][2] = { { 13, 0 }, { 86, 92 }, { 83, 89 } };	// the fields TweaksV may write, 4 bytes each
 	bool placed = true;
-	for (size_t i = 0; i < 5; i++)
+	for (size_t i = 0; i < kRtSites; i++)
 		for (size_t at = 0; at < g_rtSites[i].size && at < sizeof(g_rtPlaced[i]); at++)
 		{
 			const bool field = (mayWrite[i][0] && at - mayWrite[i][0] < 4) || (mayWrite[i][1] && at - mayWrite[i][1] < 4);
@@ -3442,9 +3502,9 @@ static void RtReport()
 		return static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(const_cast<const void*>(p)) - reinterpret_cast<uintptr_t>(ImageBase()));
 	};
 	wprintf(L"rt sites: %ls, count %u, checks %u and %u, jumps to %ls and %ls | rt rvas: set-up 0x%llX, maker 0x%llX, object 0x%llX, geometry 0x%llX, "
-		L"ropes 0x%llX, slot 0x%llX, counters 0x%llX, reset 0x%llX | ", placed ? L"as placed" : L"CHANGED", Imm32(g_rtCountSite), Imm32(g_rtCapacities[0]),
-		Imm32(g_rtCapacities[1]), RtJumpWhere(0), RtJumpWhere(1), rva(g_rtSetUp), rva(reinterpret_cast<const void*>(&RtBufferMaker)), rva(g_rtObject),
-		rva(g_rtGeometry), rva(g_rtRopes), rva(g_rtSlot), rva(g_rtCounters), rva(g_rtReset));
+		L"ropes 0x%llX, slot 0x%llX, counters 0x%llX, reset 0x%llX, hole 0x%llX, edge 0x%llX | ", placed ? L"as placed" : L"CHANGED", Imm32(g_rtCountSite),
+		Imm32(g_rtCapacities[0]), Imm32(g_rtCapacities[1]), RtJumpWhere(0), RtJumpWhere(1), rva(g_rtSetUp), rva(reinterpret_cast<const void*>(&RtBufferMaker)),
+		rva(g_rtObject), rva(g_rtGeometry), rva(g_rtRopes), rva(g_rtSlot), rva(g_rtCounters), rva(g_rtReset), rva(g_rtHole), rva(g_rtEdge));
 }
 
 // The game's two tree searches behind the box streamer's four calls: the first and the third call lead
@@ -5479,6 +5539,7 @@ int wmain(int argc, wchar_t** argv)
 	RovForEachDataSite(TouchData);
 	MakeSitesReadExecute();
 	g_siteProtect = ProtectionOf(g_heapSite);
+	RtTakeAway(argc, argv);
 
 	// the stand-in dstorage.dll, loaded before TweaksV as the game's import is
 	const HMODULE dstorage = HasOption(argc, argv, L"dstorage") ? LoadLibraryW(L"dstorage.dll") : nullptr;

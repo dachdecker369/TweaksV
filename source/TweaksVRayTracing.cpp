@@ -195,13 +195,15 @@ namespace TweaksV
 			return entry ? reinterpret_cast<const uint8_t*>(imageBase + entry->BeginAddress) : nullptr;
 		}
 
-		// True if the size bytes at at lie inside the game and can be read; else why not.
-		bool DataOf(const char* what, const uint8_t* at, size_t size, const GamePattern& pattern, std::string& why)
+		// True if the count values of T at at lie inside the game and can be read; else why not.
+		template <typename T> bool DataOf(const char* what, const uint8_t* at, size_t count, const GamePattern& pattern, std::string& why)
 		{
+			const size_t size = count * sizeof(T);
+			const std::string data = std::string("the ") + what + " at " + DescribeAddress(at) + At(pattern);
 			if (!IsInsideGameImage(at) || !IsInsideGameImage(at + size - 1))
-				why = std::string("the ") + what + " at " + DescribeAddress(at) + At(pattern) + " is not inside the game.";
+				why = data + (count == 1 ? " is" : " are") + " not inside the game.";
 			else if (!IsReadable(at, size))
-				why = std::string("the ") + what + " at " + DescribeAddress(at) + At(pattern) + " cannot be read.";
+				why = data + " cannot be read.";
 			else
 				return true;
 			return false;
@@ -242,7 +244,7 @@ namespace TweaksV
 				WriteLog(kTag, "DIAGNOSTIC: buffer's count at " + DescribeAddress(sites.count) + " holds " + std::to_string(Read<uint32_t>(sites.count)) +
 					", the buffer maker's call at " + DescribeAddress(call) + " -> " + DescribeAddress(maker) + ", a function start (unwind data)" + At(kSetUp));
 			sites.object = Rel32Target(setUp + kObjectAt);
-			if (!DataOf("buffer object's global", sites.object, sizeof(uint64_t), kSetUp, why))
+			if (!DataOf<uint64_t>("buffer object's global", sites.object, 1, kSetUp, why))
 				return false;
 			const uint64_t object = Load<uint64_t>(sites.object);
 			sites.made = object != 0;
@@ -257,7 +259,7 @@ namespace TweaksV
 				uint8_t* const match = matches[i];
 				const uint8_t* const slot = Rel32Target(match + kSlotAt);
 				const uint8_t* const counters = Rel32Target(match + kCountersAt);
-				if (!DataOf("frame slot", slot, sizeof(uint32_t), *check.pattern, why) || !DataOf("counters", counters, 2 * sizeof(uint32_t), *check.pattern, why))
+				if (!DataOf<uint32_t>("frame slot", slot, 1, *check.pattern, why) || !DataOf<uint32_t>("counters", counters, 2, *check.pattern, why))
 					return false;
 				if (i == 0)
 				{
