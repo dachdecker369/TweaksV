@@ -142,7 +142,7 @@ Each fix track works as phase B's coding tracks did ("How the work runs"): each 
 
 **Fix static bounds** (): not started.
 
-**Fix ray tracing** (): not started.
+**Fix ray tracing** (): on a branch of its own from 840af89. Done: F1 at 4fbd1d9 - a scenario for each check of `FindAndCheck` that had none, 11 options of the full fake game, `run_raytracing.sh` 62 of 62 checks alone, NOTES' count 1208; the full `run_all.sh` comes last. Next: F4, then the ray tracing halves of F5 and F6, each its own commit; then the cross-check of the log lines, the four builds from scratch, `run_all.sh` and the final report. Choices: the counters' line says "are not inside the game", since the counters are plural and a scenario now pins it; three scenarios beyond the review's list, each a check with none - a refusal jump that cannot be read, the counters past the image's end, and the unreadable cases - the first needing one line in the fake's `main` right after `MakeSitesReadExecute`. A question waits: whether this track also edits SPECIFICATIONS 14.1's ray tracing paragraph, whose list of options goes stale.
 
 **Fix textures** (): not started.
 
