@@ -222,6 +222,41 @@ Known bugs and open issues in TweaksV.
 - **Status:** open, kept for 2.6.0: the items and `TweaksV.log` say what each finding is.
 - **When it goes:** with a heading per late report in `TweaksVSummary`, each report saying whether a part stopped working or what it found.
 
+### T-LEGACYWALK: a folder only the Legacy check's own walk cannot list is skipped with no word
+
+- **What:** the check's `PackEntry` (`TweaksVLegacyPacks.cpp`) drops every kind of name but a file, so a folder the walk hands on as not listed, or listed only in part, leaves no count, no line and no problem. RageOpenV's report covers a folder its own walk could not list, but the check walks later, on its own thread, by a relative path, for as long as its packs take: a share that drops, or a `SetCurrentDirectory` by the game or another plugin meanwhile, loses folders for the check alone, and a Legacy pack in them goes unnamed. With RageOpenV's report on screen the last line is still wrong: where every pack lies in such a folder it says none is in the mods folder. The suites' L15 and L18 pin only what both walks share.
+- **Status:** accepted for 2.6.0: the trigger is narrow, and a change would mean another build before my boot.
+- **When it goes:** with phase C's round: `PackEntry` counts the folders not listed, the last line says how many, and the check's one problem names them.
+
+### T-COPIES: what review B's F7 left of the helpers, and small tidy-ups
+
+- **What:** F7 moved the helpers the review named into one place, and these remain, none of them changing what a part does:
+  - `In` (`TweaksVWeaponInfos.cpp`) is `At` under another name, about 20 callers.
+  - The twins `Imm32At` (Decals, WeaponComponents), `Load<T>` (RayTracing, TextureBudget) and `FunctionStartOf` (RayTracing, SirenCount).
+  - `Hex32`'s body inline in HeapAdjuster and LegacyPacks; `Holds` twice, word for word (Scripts, SirenCount); `Printable`, the same rule twice (LegacyPacks, Scripts); `HoldsNameLoad` (StaticBounds), which is `PatternByte` and `PatternImm32`; and the unaligned read under seven names in nine files (`Imm32At`, `Imm32`, `ValueAt`, `ReadAt`, `Read`, `Field`, `Get`).
+  - The root's name by hand beside `kModsRoot`: `game + L"\\mods"` in `TweaksVRageOpenV.cpp`, `"mods\\"` in `TweaksVLegacyPacks.cpp`, each meaning what it says.
+  - A local with no reader: `label` in RageOpenV's archive calls.
+  - Includes the moves left unused: `<cstdio>` in RayTracing, SirenIds, StaticBounds, WeaponComponents and WeaponInfos, `<vector>` in `TweaksVPools.cpp`.
+  - SPECIFICATIONS.md 11.13 still says of `W-E-C4` held twice "`W-E-C4 was not found.`, also for two matches of it", where the code and the suite say `the game code holds W-E-C4 2 or more times, not the expected 1.`
+- **Status:** accepted for 2.6.0.
+- **When it goes:** with phase C's round: `In` and the twins replaced by the one copy, the unaligned read one template in `TweaksVPatch`, the rest deleted or corrected.
+
+### T-NAMES: names a walk leaves out count against no limit
+
+- **What:** `WalkModsFolder` counts only the names it hands on, so a folder of names too long or not valid Unicode is walked to its end, on the game's thread for RageOpenV's reading; only the disk bounds it, where the code standard asks for a limit on every count. It was so before the walk was made one, and `TweaksVModsFolder.h` says so.
+- **Status:** accepted for 2.6.0.
+- **When it goes:** with phase C's round: a second bound on names seen, 4 times the entry limit say, ends the walk as `stopped` does.
+
+### T-TESTGAPS: what the suites do not pin of the fix round
+
+- **What:** the code in each case reads right; nothing would fail if it broke:
+  - `TWEAKSV_TEST_MODS_FAIL_LISTING` has no check that the Release build ignores it (L18 runs the test build alone).
+  - The words for a pattern held twice are pinned for two of the older parts' searches alone, `S-E3` and `R-E-K1`; the others have at most their miss pinned, though the words come from one function.
+  - Two readings of the search for stores have no scenario: a real store with a `C4` VEX prefix, and `altImmediate`, `66 C7` and `66 81`.
+  - The fake's "last error kept" fields pin the outcome, not the restore: a good `WriteLog` sets no error, so the weapon components' and the static bounds' pool size functions could lose their `SetLastError` with every check green (review A's F5).
+- **Status:** accepted for 2.6.0.
+- **When it goes:** with phase C's round: a run of the Release build for the switch; a test build's `TEST_TWICE_PATTERN=<label>` beside `TEST_BREAK_PATTERN`, run over the patterns' list; two writers more in TB16's block, `vextractf128 [rip+disp32], ymm0, 1` and `mov word [rip+disp32], imm16`; a test-build line in `WriteLog` that leaves a last error of its own.
+
 ## Bugs Found in the Originals
 
 What the merge found in the five original projects, with the file and line in the originals as they were when merged, and what TweaksV does instead - the list to work from if they are ever reported upstream. Since 2.0.0 TweaksV carries none of the originals' code but RageOpenV's console opener and the pattern parser their plugins carried, so this is history: what the rewrite had to do better. An open issue that carries one of these bugs uses its ID; B-ROV-18 did, until newmods went in 2.0.0. Severity: crash = could crash or close the game, corrupt = could silently corrupt memory or behaviour, robust = fragile or unsafe practice, hygiene = cleanliness; "latent" = only reached in some situations, such as a pattern miss after a game update. Two entries concerned the Legacy code, which TweaksV does not carry.
