@@ -154,7 +154,7 @@ Each fix track works as phase B's coding tracks did ("How the work runs"): each 
 
 **Fix W-E-C5's row** (): not started.
 
-**Fix security scope** (): not started.
+**Fix security scope** (on a branch of its own from 840af89, started on 2026-11-01 at 10:18): review C's C-3 at 72b8f36 - SECURITY.md's scope says four pieces of third-party code, the fourth the StaticBounds part adapted from Nochala's Static Bounds Limit Adjuster, as CREDITS.md and THIRD_PARTY_NOTICES.md name it. Next: the four builds from scratch and `run_all.sh` on this paragraph's commit, then the state commit and my final report. Tests: not run yet on this branch, and the fix changes no check. Choices: none. 
 
 **Fix ped props matches** (): not started.
 
