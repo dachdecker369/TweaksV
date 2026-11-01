@@ -17,7 +17,8 @@
 # summary before the game's start-up has set the budgets, which it sets after it, the update check's line again, and one for
 # each new high alone, the update check's flag unchanged; the budgets' writers found by the scanner's search for stores - the
 # start-up's two alone, the stores beside the budgets and the loads and compares of them not counted, and six writers of
-# six kinds besides them, each named; a pattern
+# six kinds besides them, each named, and in a block of its own (TB50) a writer behind each byte that once hid it from the
+# search - a 0F, a C5, a C4 and an F3 the instruction before ends with - counted, named and refusing the raise; a pattern
 # missing (TEST_BREAK_PATTERN), a site not as expected, a call another mod hooked, an address outside the game, sites that
 # disagree on the counters and a factor's multiplication changed - each logged, no problem, no box, no summary; the plain
 # game; DRY_RUN alike; and in every run nothing written: the fake's sites and data as they were, no call redirected, every
@@ -342,6 +343,18 @@ both_keys; out=$(game full_game.exe tbwritemov wait)
 check "the problem, word for word, the part's only one, in the start-up summary; nothing written" "refused 'the budgets at $(rva counters 0x28) have 1 writer besides the start-up.s stores, the first at $(rva writers 97), which could undo the raise later.'"
 check "the writers' line names it; neither the start-up's check nor the redirect made" "writers_line 'and 1 besides them: $(rva writers 97)' && log_lacks 'are still 0 at TweaksV' && log_lacks 'budgets. stores at RVA 0x[0-9A-F]* is redirected'"
 check "the measurement all the same: the announcement and the summary 10 s in, word for word, of the game's own budgets" "announced && log_line '$SUMMARY1' && first_after_10s"
+
+echo "== TB50 the scanner's readings of the bytes before an operand (T-STORES): a writer of the budgets behind a byte that once hid it - a 0F, a C5, a C4, an F3 the instruction before ends with - each counted"
+fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe tbmisread0f tbmisreadc5 tbmisreadc4 tbmisreadf3)
+check "the line, word for word: mov after and eax, 0Fh; mov of 8 bytes after mov al, 0C5h; movups with a REX.B from 8 bytes before the budgets after mov al, 0C4h; movd after mov al, 0F3h - each by its own first byte; measured all the same, nothing written" "writers_line 'and 4 besides them: $(rva misread 5), $(rva misread 15), $(rva misread 26), $(rva misread 38)' && announced && log_lacks 'PROBLEM' && untouched && has 'the misread block as placed'"
+fresh_ini; setkey VIDEO_MEMORY_BUDGET 6000 RESOURCES; out=$(game full_game.exe tbmisread0f)
+check "the mov behind the 0F alone, VIDEO_MEMORY_BUDGET=6000: the raise refused, the writer named, nothing written" "refused 'the budgets at $(rva counters 0x28) have 1 writer besides the start-up.s stores, the first at $(rva misread 5), which could undo the raise later.' && has 'the misread block as placed'"
+fresh_ini; setkey VIDEO_MEMORY_BUDGET 6000 RESOURCES; out=$(game full_game.exe tbmisreadc5)
+check "the mov of 8 bytes behind the C5 alone: refused, named" "refused 'the budgets at $(rva counters 0x28) have 1 writer besides the start-up.s stores, the first at $(rva misread 15), which could undo the raise later.'"
+fresh_ini; setkey VIDEO_MEMORY_BUDGET 6000 RESOURCES; out=$(game full_game.exe tbmisreadc4)
+check "the movups behind the C4 alone, 16 bytes from 8 before the budgets, which the VEX reading takes for 8: refused, named by its REX" "refused 'the budgets at $(rva counters 0x28) have 1 writer besides the start-up.s stores, the first at $(rva misread 26), which could undo the raise later.'"
+fresh_ini; setkey VIDEO_MEMORY_BUDGET 6000 RESOURCES; out=$(game full_game.exe tbmisreadf3)
+check "the movd behind the F3 alone, which the F3 as its prefix makes movq's load: refused, named by its 66" "refused 'the budgets at $(rva counters 0x28) have 1 writer besides the start-up.s stores, the first at $(rva misread 38), which could undo the raise later.'"
 
 echo
 echo "TEXTURE BUDGET SCENARIOS: $pass passed, $fail failed"

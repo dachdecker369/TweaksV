@@ -327,6 +327,11 @@
 //                  bytes before them, "mov" of their last byte with an imm8, "movups" of budgets 2 and 3, "vmovdqu" of 32 bytes
 //                  from 16 bytes before them, "lock add" of budget 1, "mov" of budget 3 with an imm32; without its option each
 //                  leads to a dummy, while the budgets' neighbours and readers, which are no writers, always lead to them
+//   tbmisread0f, tbmisreadc5, tbmisreadc4, tbmisreadf3
+//                  a writer of the budgets behind a byte that once hid it from the scanner's search for stores (NOTES' T-STORES):
+//                  "mov [rip+disp32], eax" of budget 0 after "and eax, 0Fh", "mov [rip+disp32], rax" of budget 1 after "mov al,
+//                  0C5h", "movups [rip+disp32], xmm0" with a REX.B from 8 bytes before the budgets after "mov al, 0C4h", "movd
+//                  [rip+disp32], xmm0" of budget 3 after "mov al, 0F3h"; without its option each leads to the dummy
 // StaticBounds: the static bounds pool's size call - the game's configuration, "mov edx, 0x2CDFE406" (C-E-H1), "mov r8d, 1000",
 // whose imm32 begins with an E8 that is no call, and the call of the pool size lookup - is always there, leading to the fake's
 // stand-in for the game's lookup, the one the weapon components' pool size call (W-E-C4) leads to, where TweaksV finds it
@@ -879,8 +884,11 @@ static Site g_textureBudgetFlagRef = SITE(g_textureBudgetUpdate, 0x4D);
 static Site g_textureBudgetFactorRefs[] = { SITE(g_textureBudgetUpdate, 0x58), SITE(g_textureBudgetUpdate, 0xA5) };	// the lower, the raise
 // The budgets' neighbours and readers, which the scan for the budgets' writers must not count: "mov [rip+disp32], eax" 4 bytes
 // before them, "mov dword [rip+disp32], imm32" right after them, "vmovdqu [rip+disp32], xmm0" 16 bytes before them, "mov rax",
-// "movups xmm0", "cmp [rip+disp32], rax", "cmp byte [rip+disp32], 0" of their last byte, "movq xmm0" and "vmovups ymm0" reading
-// them and "mov [rip+disp32], rax" right after them; then the writers it must count, each leading to the budgets only with its
+// "movlps xmm0", "cmp [rip+disp32], rax", "cmp byte [rip+disp32], 0" of their last byte, "movdqu xmm0" and "vmovdqu ymm0" reading
+// them and "mov [rip+disp32], rax" right after them - the loads ones no reading of their bytes takes for a store, since the scan
+// reads the bytes before an operand every way an instruction could start among them (a "movups xmm0", 0F 10, or a "vmovups
+// ymm0", C5 FC 10, would read as "adc [rip+disp32], al" behind a 0F or a C5, a "movq xmm0", F3 0F 7E, as "movd" behind an F3);
+// then the writers it must count, each leading to the budgets only with its
 // option, else to a dummy: "mov [rip+disp32], rax" 4 bytes before them (tbwritemov, at +97), "mov byte [rip+disp32], imm8" of
 // their last byte (tbwritebyte, +106), "movups [rip+disp32], xmm1" of budgets 2 and 3 (tbwritesse, +115), "vmovdqu
 // [rip+disp32], ymm0" from 16 bytes before them (tbwriteavx, +124), "lock add [rip+disp32], rax" of budget 1 (tbwritelock,
@@ -891,11 +899,11 @@ volatile unsigned char g_textureBudgetWriters[] = {
 	0x90, 0x90, 0xC7, 0x05, 0, 0, 0, 0, 0x11, 0x11, 0x11, 0x11,
 	0x90, 0x90, 0xC5, 0xFA, 0x7F, 0x05, 0, 0, 0, 0,
 	0x90, 0x90, 0x48, 0x8B, 0x05, 0, 0, 0, 0,
-	0x90, 0x90, 0x0F, 0x10, 0x05, 0, 0, 0, 0,
+	0x90, 0x90, 0x0F, 0x12, 0x05, 0, 0, 0, 0,
 	0x90, 0x90, 0x48, 0x39, 0x05, 0, 0, 0, 0,
 	0x90, 0x90, 0x80, 0x3D, 0, 0, 0, 0, 0x00,
-	0x90, 0x90, 0xF3, 0x0F, 0x7E, 0x05, 0, 0, 0, 0,
-	0x90, 0x90, 0xC5, 0xFC, 0x10, 0x05, 0, 0, 0, 0,
+	0x90, 0x90, 0xF3, 0x0F, 0x6F, 0x05, 0, 0, 0, 0,
+	0x90, 0x90, 0xC5, 0xFE, 0x6F, 0x05, 0, 0, 0, 0,
 	0x90, 0x90, 0x48, 0x89, 0x05, 0, 0, 0, 0,
 	0x90, 0x90, 0x48, 0x89, 0x05, 0, 0, 0, 0,
 	0x90, 0x90, 0xC6, 0x05, 0, 0, 0, 0, 0x22,
@@ -916,6 +924,23 @@ static TextureBudgetOperand g_textureBudgetOperands[] = { { SITE(g_textureBudget
 	{ SITE(g_textureBudgetWriters, 100), -4, 0, L"tbwritemov" }, { SITE(g_textureBudgetWriters, 108), 31, 1, L"tbwritebyte" },
 	{ SITE(g_textureBudgetWriters, 118), 16, 0, L"tbwritesse" }, { SITE(g_textureBudgetWriters, 128), -16, 0, L"tbwriteavx" },
 	{ SITE(g_textureBudgetWriters, 138), 8, 0, L"tbwritelock" }, { SITE(g_textureBudgetWriters, 147), 24, 4, L"tbwriteimm" } };
+// The scanner's readings of the bytes before an operand (NOTES' T-STORES, closed): a writer of the budgets behind each kind of
+// byte that once hid it, each leading to the budgets only with its option, else to the dummy - "and eax, 0Fh" then "mov
+// [rip+disp32], eax" of budget 0 (tbmisread0f, the store at +5: the 0F read as an escape made it no store), "mov al, 0C5h" then
+// "mov [rip+disp32], rax" of budget 1 (tbmisreadc5, +15: the C5 read as a VEX prefix), "mov al, 0C4h" then "movups [rip+disp32],
+// xmm0" from 8 bytes before the budgets with a REX.B, which means nothing with [rip+disp32] but is the one kind of byte after a
+// C4 that reads as a VEX map (tbmisreadc4, +26: the C4 read as a VEX prefix made it a vmovsd of 8 bytes, short of them), and
+// "mov al, 0F3h" then "movd [rip+disp32], xmm0" of budget 3 (tbmisreadf3, +38: the F3 read as a prefix made it movq's load).
+// Two NOPs before each, as above.
+volatile unsigned char g_textureBudgetMisread[] = {
+	0x90, 0x90, 0x83, 0xE0, 0x0F, 0x89, 0x05, 0, 0, 0, 0,
+	0x90, 0x90, 0xB0, 0xC5, 0x48, 0x89, 0x05, 0, 0, 0, 0,
+	0x90, 0x90, 0xB0, 0xC4, 0x41, 0x0F, 0x11, 0x05, 0, 0, 0, 0,
+	0x90, 0x90, 0xB0, 0xF3, 0x66, 0x0F, 0x7E, 0x05, 0, 0, 0, 0,
+	0xCC };
+static TextureBudgetOperand g_textureBudgetMisreadOperands[] = { { SITE(g_textureBudgetMisread, 7), 0, 0, L"tbmisread0f" },
+	{ SITE(g_textureBudgetMisread, 18), 8, 0, L"tbmisreadc5" }, { SITE(g_textureBudgetMisread, 30), -8, 0, L"tbmisreadc4" },
+	{ SITE(g_textureBudgetMisread, 42), 24, 0, L"tbmisreadf3" } };
 
 // StaticBounds: the static bounds pool's size call - "mov rcx, [rip+disp32]" of the game's configuration (+3), "mov edx,
 // 0x2CDFE406" at +7 (C-E-H1), "mov r8d, 1000", whose imm32 begins with an E8 that is no call, the call of the pool size lookup at
@@ -2599,6 +2624,7 @@ alignas(4096) static unsigned char g_textureBudgetTwoPages[2 * 4096];	// where t
 static bool g_textureBudgetHoldRaise = false;
 static unsigned char g_textureBudgetSitesAsPlaced[sizeof(g_textureBudgetStores) + sizeof(g_textureBudgetGetter) +
 	sizeof(g_textureBudgetPlacement) + sizeof(g_textureBudgetUpdate) + sizeof(g_textureBudgetWriters)];
+static unsigned char g_textureBudgetMisreadAsPlaced[sizeof(g_textureBudgetMisread)];	// the readings' block as placed
 // The game's function the call after the budgets' stores leads to: it counts its calls, checks the four arguments the start-up
 // hands it, keeps the budgets as they are when it runs - after TweaksV's raise when the call is redirected - and gives back a
 // result the start-up checks.
@@ -4246,7 +4272,7 @@ static void ForEachSite(void (*fn)(const Site&))
 	fn(g_sirenCountFindBoneSite);
 	for (const Site& site : g_pedPropsSites) fn(site);
 	static Site textureBudgetSites[] = { SITE(g_textureBudgetStores, 0), SITE(g_textureBudgetGetter, 0), SITE(g_textureBudgetPlacement, 0),
-		SITE(g_textureBudgetUpdate, 0), SITE(g_textureBudgetWriters, 0) };
+		SITE(g_textureBudgetUpdate, 0), SITE(g_textureBudgetWriters, 0), SITE(g_textureBudgetMisread, 0) };
 	for (const Site& site : textureBudgetSites) fn(site);
 	for (const Site& site : g_staticBoundsSites) fn(site);
 	for (const Site& site : g_rtSites) fn(site);
@@ -5807,11 +5833,17 @@ int wmain(int argc, wchar_t** argv)
 		for (const TextureBudgetOperand& operand : g_textureBudgetOperands)
 			SetRel32(operand.site, !operand.option || HasOption(argc, argv, operand.option) ?
 				reinterpret_cast<const void*>(counters + 0x28 + operand.from - operand.immediate) : reinterpret_cast<const void*>(g_textureBudgetDummy));
+		// the readings' block alike: each of its writers at the budgets only with its option
+		for (const TextureBudgetOperand& operand : g_textureBudgetMisreadOperands)
+			SetRel32(operand.site, HasOption(argc, argv, operand.option) ?
+				reinterpret_cast<const void*>(counters + 0x28 + operand.from - operand.immediate) : reinterpret_cast<const void*>(g_textureBudgetDummy));
 		if (HasOption(argc, argv, L"tbearly"))		// the game's start-up before TweaksV's DllMain: its stores and the call after them
 			TextureBudgetStartUp();
 		g_textureBudgetDataAsSet = data;
 		int asPlaced = 0;
 		TextureBudgetSites(g_textureBudgetSitesAsPlaced, false, asPlaced);
+		for (size_t i = 0; i < sizeof(g_textureBudgetMisread); i++)
+			g_textureBudgetMisreadAsPlaced[i] = g_textureBudgetMisread[i];
 		if (HasOption(argc, argv, L"tbunreadable"))	// the data's page cannot be read while TweaksV starts
 		{
 			DWORD old = 0;
@@ -6044,6 +6076,10 @@ int wmain(int argc, wchar_t** argv)
 		// and where each site and datum lies, for the suite to compare with the log's lines
 		int asPlaced = 0;
 		TextureBudgetSites(g_textureBudgetSitesAsPlaced, true, asPlaced);
+		bool misreadAsPlaced = true;
+		for (size_t i = 0; i < sizeof(g_textureBudgetMisread); i++)
+			if (g_textureBudgetMisreadAsPlaced[i] != g_textureBudgetMisread[i])
+				misreadAsPlaced = false;
 		const TextureBudgetData& data = *g_textureBudgetData;
 		TextureBudgetData is = data, set = g_textureBudgetDataAsSet;
 		memset(is.counters.budgets, 0, sizeof(is.counters.budgets));
@@ -6052,17 +6088,18 @@ int wmain(int argc, wchar_t** argv)
 		const auto rva = [](const volatile void* p) {
 			return static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(const_cast<const void*>(p)) - reinterpret_cast<uintptr_t>(ImageBase()));
 		};
-		wprintf(L"texture budget: sites as placed %d of 5, the call to %ls, data %ls, its page %ls, budgets %llu, %llu, %llu and %llu MB%ls; %ls; ", asPlaced,
+		wprintf(L"texture budget: sites as placed %d of 5, the call to %ls, data %ls, its page %ls, budgets %llu, %llu, %llu and %llu MB%ls; %ls; the misread block %ls; ", asPlaced,
 			TextureBudgetCallLeads(Rel32Target(g_textureBudgetCall)), memcmp(&is, &set, sizeof(is)) == 0 ? L"as set" : L"CHANGED",
 			ProtectionOf(&data) == PAGE_READWRITE ? L"RW" : L"not RW", static_cast<unsigned long long>(data.counters.budgets[0] >> 20),
 			static_cast<unsigned long long>(data.counters.budgets[1] >> 20), static_cast<unsigned long long>(data.counters.budgets[2] >> 20),
-			static_cast<unsigned long long>(data.counters.budgets[3] >> 20), g_textureBudgetLater, g_textureBudgetStartUp);
+			static_cast<unsigned long long>(data.counters.budgets[3] >> 20), g_textureBudgetLater, g_textureBudgetStartUp,
+			misreadAsPlaced ? L"as placed" : L"CHANGED");
 		wprintf(L"stores RVA 0x%llX, getter RVA 0x%llX, placement RVA 0x%llX, "
-			L"update RVA 0x%llX, writers RVA 0x%llX, next step RVA 0x%llX, counters RVA 0x%llX, index RVA 0x%llX, flag RVA 0x%llX, switch RVA 0x%llX, "
+			L"update RVA 0x%llX, writers RVA 0x%llX, next step RVA 0x%llX, counters RVA 0x%llX, index RVA 0x%llX, flag RVA 0x%llX, switch RVA 0x%llX, misread RVA 0x%llX, "
 			L"index page RVA 0x%llX | ",
 			rva(g_textureBudgetStores), rva(g_textureBudgetGetter),
 			rva(g_textureBudgetPlacement), rva(g_textureBudgetUpdate), rva(g_textureBudgetWriters), rva(reinterpret_cast<const void*>(&TextureBudgetNextStep)),
-			rva(&data.counters), rva(&data.index), rva(&data.flag), rva(&data.updateCheck), rva(g_textureBudgetIndexPage));
+			rva(&data.counters), rva(&data.index), rva(&data.flag), rva(&data.updateCheck), rva(g_textureBudgetMisread), rva(g_textureBudgetIndexPage));
 	}
 	StaticBoundsReport();
 	LpReport();
