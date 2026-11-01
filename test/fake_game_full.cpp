@@ -180,6 +180,14 @@
 //   wcgrown        the count's four references lead 600 entries of 8 bytes past the list: the game's own list has grown to 600
 //   wclarge        they lead 16500 entries past it, inside the fake's image: a size the core takes, past the key's maximum
 //   wcfill         like wcmount, 36 files of packs of 470 definitions each, past a room at the key's maximum
+//   wcheap         with wcmount: each file's callable on the heap, not inline in its callback, so that destroying it asks for dl true
+//   wcvtableout    with wcmount: each callback's vtable on the heap, outside the image
+//   wcdestroyout   with wcmount: each callback's vtable in the image, its destroy outside it, a stub that only returns
+//   wcbadtype      with wcmount: each file's entry of the data file type 0x4E, not 0x4F
+//   wcbadcount     with wcmount: the blob array's capacity 10, below the 23 blobs it counts, when the files are mounted
+//   wcnopointers   with wcmount: the blob array's pointer leads to a page that cannot be read, when the files are mounted
+//   wcnoblob       with wcmount: the 6th of the blob array's pointers leads to a page that cannot be read, when the files are mounted
+//   wcnoarray      with wcmount: the store's page cannot be read until the first file has reached the loader's first call
 // The siren setting IDs (SirenSettings): their 14 sites are always there - the parser registrations of the siren settings
 // and the vehicle variations with their tables and the two ID members' data (type 0x01), the XML reader, the base and a
 // pack's loops and builders with the four lea of the ID table, the dedupe and its loop, the three constructors, the init's
@@ -1313,15 +1321,25 @@ struct WeaponComponentsCallback { const void* const* vtable; unsigned char rest[
 static_assert(offsetof(WeaponComponentsCallback, callable) == 0x38, "the callable's pointer at +0x38");
 static int g_weaponComponentsMounted = 0, g_weaponComponentsLoaded = 0, g_weaponComponentsDestroyed = 0, g_weaponComponentsHeapDestroys = 0;
 static int g_weaponComponentsErrorKept = 0;	// the files let in that reached the loader, and the refused ones that came back, with the game's last error as it left it
-static void WeaponComponentsDestroy(void*, bool heap)
+static int g_weaponComponentsCallablesLeft = 0;		// the callbacks that came back with their callable's pointer still there
+static bool g_weaponComponentsStoreLocked = false;	// wcnoarray: the store's page cannot be read until the loader's first call
+static void WeaponComponentsDestroy(void* callable, bool heap)
 {
 	g_weaponComponentsDestroyed++;
 	g_weaponComponentsHeapDestroys += heap ? 1 : 0;
+	if (heap)
+		free(callable);
 }
 static const void* const g_weaponComponentsCallbackVtable[5] = { nullptr, nullptr, nullptr, nullptr, reinterpret_cast<const void*>(&WeaponComponentsDestroy) };
 static void* WeaponComponentsAllocate(size_t size)
 {
 	g_weaponComponentsErrorKept += GetLastError() == 0x5EED ? 1 : 0;	// the loader's first call: a file let in, its last error as the mounter left it
+	if (g_weaponComponentsStoreLocked)	// what the game's loader goes on to read
+	{
+		DWORD old = 0;
+		VirtualProtect(const_cast<WeaponComponentsStore*>(g_weaponComponentsStore), sizeof(g_weaponComponentsStorePage), PAGE_READWRITE, &old);
+		g_weaponComponentsStoreLocked = false;
+	}
 	return malloc(size);
 }
 static void* WeaponComponentsZero(void* p, int value, size_t size)
@@ -1354,8 +1372,11 @@ static void WeaponComponentsLoadFile(void* entry, void* callback, unsigned char*
 }
 
 // A file mounted as the game's mounter does: its entry - the name, type 0x4F, its definitions - and a callback passed by value,
-// its callable stored inline, through the loader's head; the entries kept for the session
+// its callable stored inline, through the loader's head, as the options ask; the entries kept for the session
 static WeaponComponentsEntry g_weaponComponentsEntries[1200];
+static int32_t g_weaponComponentsEntryType = 0x4F;
+static bool g_weaponComponentsCallableOnHeap = false;
+static const void* const* g_weaponComponentsVtable = g_weaponComponentsCallbackVtable;
 static void WeaponComponentsMount(const char* name, int definitions)
 {
 	if (g_weaponComponentsMounted >= 1200)
@@ -1363,28 +1384,89 @@ static void WeaponComponentsMount(const char* name, int definitions)
 	WeaponComponentsEntry& entry = g_weaponComponentsEntries[g_weaponComponentsMounted++];
 	memset(&entry, 0, sizeof(entry));
 	strncpy_s(entry.name, name, _TRUNCATE);
-	entry.type = 0x4F;
+	entry.type = g_weaponComponentsEntryType;
 	entry.index = g_weaponComponentsMounted;
 	entry.definitions = definitions;
 	WeaponComponentsCallback callback{};
-	callback.vtable = g_weaponComponentsCallbackVtable;
+	callback.vtable = g_weaponComponentsVtable;
 	callback.callable = &callback;
+	if (g_weaponComponentsCallableOnHeap)
+	{
+		const auto callable = static_cast<const void* const**>(malloc(sizeof(void*)));
+		if (!callable)
+			return;
+		*callable = g_weaponComponentsVtable;
+		callback.callable = callable;
+	}
 	const int loaded = g_weaponComponentsLoaded;
 	SetLastError(0x5EED);	// the game's last error, which a refused file must find as it left it
 	reinterpret_cast<uint64_t (*)(void*, void*)>(const_cast<unsigned char*>(g_weaponComponentsLoader + 1))(&entry, &callback);
 	if (g_weaponComponentsLoaded == loaded)
 		g_weaponComponentsErrorKept += GetLastError() == 0x5EED ? 1 : 0;
+	g_weaponComponentsCallablesLeft += callback.callable ? 1 : 0;
 }
 
-// wcmount, wcbase, wcmany, wcfill and wcbadblob: the packs' files mounted once TweaksV has started
-static void WeaponComponentsMountPacks(int argc, wchar_t** argv)
+// wcbadblob, wcbadcount, wcnopointers, wcnoblob and wcnoarray: the blobs as the options damage them, once TweaksV has started
+static void WeaponComponentsDamageBlobs(int argc, wchar_t** argv)
 {
-	static const int definitions[11] = { 9, 8, 9, 8, 9, 8, 9, 8, 9, 8, 6 };
+	WeaponComponentsStore* const store = g_weaponComponentsStore;
 	if (HasOption(argc, argv, L"wcbadblob"))
 	{
 		const int32_t past = 500;
 		memcpy(g_weaponComponentsBlobs[0] + 0xEC0, &past, sizeof(past));
 	}
+	if (HasOption(argc, argv, L"wcbadcount"))
+		store->capacity = 10;
+	if (HasOption(argc, argv, L"wcnopointers"))
+		store->blobs = reinterpret_cast<uint64_t>(VirtualAlloc(nullptr, 4096, MEM_COMMIT | MEM_RESERVE, PAGE_NOACCESS));
+	if (HasOption(argc, argv, L"wcnoblob"))	// in the copy TweaksV reads alone: the fake's own body goes on with its array
+	{
+		static unsigned char* asRead[256];
+		memcpy(asRead, g_weaponComponentsBlobs, sizeof(asRead));
+		asRead[5] = static_cast<unsigned char*>(VirtualAlloc(nullptr, 4096, MEM_COMMIT | MEM_RESERVE, PAGE_NOACCESS));
+		store->blobs = reinterpret_cast<uint64_t>(asRead);
+	}
+	if (HasOption(argc, argv, L"wcnoarray"))
+	{
+		DWORD old = 0;
+		g_weaponComponentsStoreLocked = VirtualProtect(store, sizeof(g_weaponComponentsStorePage), PAGE_NOACCESS, &old) != 0;
+	}
+}
+
+// wcheap, wcvtableout, wcdestroyout and wcbadtype: what the mounter hands the loader, as the options ask
+static void WeaponComponentsMounterAsAsked(int argc, wchar_t** argv)
+{
+	g_weaponComponentsCallableOnHeap = HasOption(argc, argv, L"wcheap");
+	if (HasOption(argc, argv, L"wcbadtype"))
+		g_weaponComponentsEntryType = 0x4E;
+	if (HasOption(argc, argv, L"wcvtableout"))
+	{
+		const auto outside = static_cast<const void**>(malloc(sizeof(g_weaponComponentsCallbackVtable)));
+		if (outside)
+		{
+			memcpy(outside, g_weaponComponentsCallbackVtable, sizeof(g_weaponComponentsCallbackVtable));
+			g_weaponComponentsVtable = outside;
+		}
+	}
+	if (HasOption(argc, argv, L"wcdestroyout"))
+	{
+		static const void* inImage[5];
+		const auto stub = static_cast<unsigned char*>(VirtualAlloc(nullptr, 4096, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE));
+		if (stub)
+		{
+			stub[0] = 0xC3;
+			inImage[4] = stub;
+			g_weaponComponentsVtable = inImage;
+		}
+	}
+}
+
+// wcmount, wcbase, wcmany and wcfill: the packs' files mounted once TweaksV has started
+static void WeaponComponentsMountPacks(int argc, wchar_t** argv)
+{
+	static const int definitions[11] = { 9, 8, 9, 8, 9, 8, 9, 8, 9, 8, 6 };
+	WeaponComponentsDamageBlobs(argc, argv);
+	WeaponComponentsMounterAsAsked(argc, argv);
 	if (HasOption(argc, argv, L"wcmany"))
 	{
 		WeaponComponentsMount("dlcpacks:/weaponpack_big/weaponcomponents.meta", 60);
@@ -1609,9 +1691,9 @@ static void WeaponComponentsReport()
 	wprintf(L"%ls: %d and %d slots, lookups %ld of %ld as called, last error %ls | ", target == lookup ? L"to the lookup" : info.Protect == PAGE_EXECUTE_READ ?
 		L"to a stub, RX" : L"to a stub, NOT RX", first, second, g_weaponComponentsLookupsAsCalled, g_weaponComponentsLookups,
 		g_weaponComponentsPoolErrorsKept == g_weaponComponentsPoolsMade ? L"kept" : L"LOST");
-	wprintf(L"wc loader %ls, files mounted %d, loaded %d, destroyed %d (%d on the heap), list %d, last error kept %d | ", g_weaponComponentsLoader[1] == 0xE9 ?
+	wprintf(L"wc loader %ls, files mounted %d, loaded %d, destroyed %d (%d on the heap), list %d, last error kept %d, callables left %d | ", g_weaponComponentsLoader[1] == 0xE9 ?
 		L"hooked" : L"as placed", g_weaponComponentsMounted, g_weaponComponentsLoaded, g_weaponComponentsDestroyed, g_weaponComponentsHeapDestroys,
-		g_weaponComponentsStore->count, g_weaponComponentsErrorKept);
+		g_weaponComponentsStore->count, g_weaponComponentsErrorKept, g_weaponComponentsCallablesLeft);
 }
 
 // The siren setting IDs: the game's data their sites lead to, at the game's sizes and offsets (TweaksV's PATTERNS.md,

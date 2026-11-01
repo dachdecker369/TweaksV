@@ -14,8 +14,9 @@
 # outside the game, too far for a plausible size, the pool's default 0 and the size call another mod hooked - each a
 # problem word for word with nothing written; the plain game; and the guard on the loader of a weaponcomponents.meta - by default
 # hooked, its line; with the test build's TWEAKSV_TEST_GUARD_ROOM=1 or a smaller room, the files that come once the room is used
-# up refused - each a line, the first a problem - and their callbacks destroyed; the names refused kept through a base loader's
-# run, 1,024 of them; a blob that does not add up switching it off; W-E-C5 missing and the loader another mod hooked, the guard
+# up refused - each a line, the first a problem - and their callbacks destroyed, a callable on the heap too, none through a vtable or a
+# destroy outside the game; an entry of another type, refused by the count alone; the names refused kept through a base loader's
+# run, 1,024 of them; a blob that does not add up, each read of the blobs that fails, switching it off; W-E-C5 missing and the loader another mod hooked, the guard
 # not made and the rest applied; the pool made before TweaksV started, reported once. The weapon infos half logs and reports under the same tag,
 # so every check matches the weapon components' lines and problems by their wording. Fake LOCALAPPDATA: the real one is
 # never touched.
@@ -57,6 +58,8 @@ quiet() { log_lacks 'PROBLEM: The weapon components limit' && log_lacks 'PROBLEM
 untouched() { has 'wc: loads 0 moved' && has 'other bytes as placed, data as placed' && has 'protect: all restored (RX)' && log_lacks 'weapon component list moved'; }
 # refused REASON: the weapon components' one problem, word for word - its reason after the job's words - and nothing written
 refused() { [ "$(count "${TAG}PROBLEM: The weapon components limit")" -eq 1 ] && log_line "${NOT_RAISED}$1\$" && untouched; }
+# guard_off WHY: the guard's one problem, word for word, naming the first of wcmount's files; all 11 let in, the game's last error kept
+guard_off() { [ "$(count 'guard is off this session')" -eq 1 ] && log_line "${TAG}PROBLEM: The weapon components. guard is off this session: $1 - dlcpacks:/weaponpack01/common/data/weaponcomponents.meta and the files after it go to the game unchecked, and past 470 definitions above the room the game crashes while it loads.\$" && has 'files mounted 11, loaded 11, destroyed 11 (0 on the heap)' && has 'last error kept 11' && log_lacks 'definitions loaded, the room'; }
 
 echo "== W1 the defaults: the list moved, the pool's size call redirected, nothing else written"
 fresh_ini; out=$(game full_game.exe); echo "      $out"
@@ -212,7 +215,7 @@ check "the loader's head, word for word" "log_line '${DIAG}the weapon components
 check "files 01 to 07 let in while fewer than 470 are loaded, 08 to 11 refused, a line each" "[ \$(file 0[1-7] 'let in') -eq 7 ] && [ \$(file '\(08\|09\|10\|11\)' refused) -eq 4 ] && [ \$(count 'definitions loaded, the room') -eq 11 ]"
 check "the first refused file's problem, word for word, once" "[ \$(count 'Weapon component files are refused this session') -eq 1 ] && log_line '${GUARD_PROBLEM}08/common/data/weaponcomponents.meta, the first, came once 472 definitions were loaded, the room being 470, the test build.s (TWEAKSV_TEST_GUARD_ROOM=1) - the weapon components of the files refused are missing in the game. The log names every file refused.\$'"
 check "the part's box for the first file refused (the test build's line in its place)" "log_has 'TEST BUILD: message box not shown (TWEAKSV_TEST_NO_BOXES=1): TweaksV'"
-check "7 files loaded, every callback destroyed once - the refused ones by the guard - the list's count 472; the game's last error kept for all 11, at the loader's entry for those let in, past the guard's lines" "has 'files mounted 11, loaded 7, destroyed 11 (0 on the heap), list 472, last error kept 11'"
+check "7 files loaded, every callback destroyed once - the refused ones by the guard - the list's count 472; the game's last error kept for all 11, at the loader's entry for those let in, past the guard's lines" "has 'files mounted 11, loaded 7, destroyed 11 (0 on the heap), list 472, last error kept 11, callables left 0'"
 check "the game made the pool before the files: its line before the guard's first, no problem of the pool's size" "replaced 470 1494 && [ \$(grep -n 'for the weapon components, 470, is replaced by 1494' TweaksV.log | cut -d: -f1) -lt \$(grep -n -m1 'definitions loaded, the room' TweaksV.log | cut -d: -f1) ] && log_lacks 'PROBLEM: The weapon components. pool size'"
 
 echo "== W28 WEAPON_COMPONENTS_SIZE=480: the room the key gives, the 9th file the first refused"
@@ -291,6 +294,44 @@ echo "== W42 WEAPON_COMPONENTS_SIZE=16384, its maximum, and 36 files of 470 defi
 fresh_ini; setkey WEAPON_COMPONENTS_SIZE 16384; out=$(game full_game.exe wcfill)
 check "the problem, word for word: the most the key allows, nothing to raise" "[ \$(count 'Weapon component files are refused this session') -eq 1 ] && log_line '${GUARD_PROBLEM}35/common/data/weaponcomponents.meta, the first, came once 16392 definitions were loaded, the room being 16384, the most WEAPON_COMPONENTS_SIZE allows - the weapon components of the files refused are missing in the game. The log names every file refused.\$'"
 check "34 files let in up to the room, the 35th and the 36th refused; the last file let in within the pool's 16854" "[ \$(count 'definitions loaded, the room 16384 - refused\.') -eq 2 ] && has 'files mounted 36, loaded 34, destroyed 36 (0 on the heap), list 16392' && replaced 470 16854"
+
+echo "== W43 each callable on the heap, not inline in its callback (wcheap; test build, TWEAKSV_TEST_GUARD_ROOM=1): the guard destroys a refused file's with dl true, as the game's loader does"
+export TWEAKSV_TEST_GUARD_ROOM=1
+fresh_ini; out=$(ASI=TweaksV_test.asi game full_game.exe wcmount wcheap)
+check "7 let in, 4 refused, all 11 destroyed on the heap - the 4 by the guard - and no callable left" "has 'files mounted 11, loaded 7, destroyed 11 (11 on the heap), list 472, last error kept 11, callables left 0'"
+
+echo "== W44 each callback's vtable outside the game (wcvtableout; test build, TWEAKSV_TEST_GUARD_ROOM=1): the guard leaves a refused file's callback as it is"
+fresh_ini; out=$(ASI=TweaksV_test.asi game full_game.exe wcmount wcvtableout)
+check "the 7 let in destroyed by the game's loader, the 4 refused not - nothing called through it, their callables left; the refusals stand" "has 'files mounted 11, loaded 7, destroyed 7 (0 on the heap), list 472, last error kept 11, callables left 4' && [ \$(file '\(08\|09\|10\|11\)' refused) -eq 4 ]"
+
+echo "== W45 the vtable in the game, its destroy outside it (wcdestroyout; test build, TWEAKSV_TEST_GUARD_ROOM=1): the guard leaves a refused file's callback as it is"
+fresh_ini; out=$(ASI=TweaksV_test.asi game full_game.exe wcmount wcdestroyout)
+check "nothing counted as destroyed, the 4 refused files' callables left; the refusals stand" "has 'files mounted 11, loaded 7, destroyed 0 (0 on the heap), list 472, last error kept 11, callables left 4' && [ \$(file '\(08\|09\|10\|11\)' refused) -eq 4 ]"
+
+echo "== W46 the entries' type not 0x4F (wcbadtype; test build, TWEAKSV_TEST_GUARD_ROOM=1, DIAGNOSTIC_MODE=1), a base loader's run after the packs: no name read, refused by the count alone"
+UNNAMED='a weaponcomponents.meta whose name cannot be read'
+fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(ASI=TweaksV_test.asi game full_game.exe wcmount wcbase wcbadtype wait)
+unset TWEAKSV_TEST_GUARD_ROOM
+check "the 4 past the room refused, each line word for word; the 18 let in with theirs, no line of a name" "[ \$(count \"\${TAG}Weapon components file \$UNNAMED: [0-9]* definitions loaded, the room 470 - refused\.\\\$\") -eq 4 ] && [ \$(count \"\${DIAG}weapon components file \$UNNAMED: [0-9]* definitions loaded, the room 470 - let in\.\\\$\") -eq 18 ] && log_lacks 'dlcpacks:/weaponpack'"
+check "the problem, word for word, once" "[ \$(count 'Weapon component files are refused this session') -eq 1 ] && log_line \"\${TAG}PROBLEM: Weapon component files are refused this session: \$UNNAMED, the first, came once 472 definitions were loaded, the room being 470, the test build.s (TWEAKSV_TEST_GUARD_ROOM=1) - the weapon components of the files refused are missing in the game. The log names every file refused.\\\$\""
+check "no name kept: in the base loader's run the 4 go in below the room, not refused as before" "log_lacks 'refused, as before' && has 'files mounted 22, loaded 18, destroyed 22 (0 on the heap), list 91, last error kept 22, callables left 0'"
+check "the summary, word for word: the first not named" "summary 91 11 ', this one 1024) - 4 files refused, the first not named.'"
+
+echo "== W47 the blob array's count past its capacity (wcbadcount): the guard off, the files let through"
+fresh_ini; out=$(game full_game.exe wcmount wcbadcount)
+check "the problem, word for word, once; all 11 let in" "guard_off 'the blob array holds 23 blobs, past its capacity of 10'"
+
+echo "== W48 the blob array's pointers cannot be read (wcnopointers): the guard off, the files let through"
+fresh_ini; out=$(game full_game.exe wcmount wcnopointers)
+check "the problem, word for word, once; all 11 let in" "guard_off 'the blob array.s pointers at 0x[0-9A-F]* (outside the game) cannot be read'"
+
+echo "== W49 the 6th blob cannot be read (wcnoblob): the guard off, the files let through"
+fresh_ini; out=$(game full_game.exe wcmount wcnoblob)
+check "the problem, word for word, once; all 11 let in" "guard_off 'blob 5 at 0x[0-9A-F]* (outside the game) cannot be read'"
+
+echo "== W50 the blob array itself cannot be read when the first file comes (wcnoarray): the guard off, the files let through"
+fresh_ini; out=$(game full_game.exe wcmount wcnoarray)
+check "the problem, word for word, once; all 11 let in" "guard_off 'the blob array at $RVA cannot be read'"
 
 echo
 echo "WEAPON COMPONENTS SCENARIOS: $pass passed, $fail failed"
