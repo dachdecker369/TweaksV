@@ -474,12 +474,15 @@ namespace TweaksV
 			uint32_t buffersNumber = 0, texturesNumber = 0, most = 0;
 			uint64_t budgets[kBudgetCount] = {};
 			bool raised = false;										// the raise has run: gameBudgets holds the budgets the game had
+			bool raiseNotEnded = false;									// its flag still up after kRaiseWaitMs: no summary from this reading
 			uint64_t gameBudgets[kBudgetCount] = {};
 			int32_t index = 0;
 			uint8_t flag = 0;
 			bool updateCheckReadable = false;
 			uint32_t updateCheck[kSwitchSize / sizeof(uint32_t)] = {};	// the switch and its three factors, as they lie
 		};
+
+		constexpr ULONGLONG kRaiseWaitMs = 1000;	// how long a reading waits for the raise's writes before it says they did not end
 
 		Reading ReadCounters()
 		{
@@ -502,8 +505,9 @@ namespace TweaksV
 			// the raise's record before the budgets, so that a reading never pairs the budgets the game had with budgets read
 			// before the raise; a raise that comes while they are read is taken with them, the budgets read again - and again
 			// while its flag is up, so that a half-raised set never passes as the game's own: its writes are a few instructions,
-			// made once
-			do
+			// made once, so a flag still up after kRaiseWaitMs says they did not end, and such a reading is not used
+			const ULONGLONG started = GetTickCount64();
+			for (;;)
 			{
 				reading.raised = g_raised.load(std::memory_order_acquire);
 				for (size_t i = 0; i < kBudgetCount; i++)
@@ -512,7 +516,15 @@ namespace TweaksV
 					reading.budgets[i] = Load<uint64_t>(g_counters + kBudgets + i * sizeof(uint64_t));
 				}
 				std::atomic_thread_fence(std::memory_order_acquire);	// the budgets read before the flags
-			} while (g_raising.load(std::memory_order_acquire) || (!reading.raised && g_raised.load(std::memory_order_acquire)));
+				if (!g_raising.load(std::memory_order_acquire) && (reading.raised || !g_raised.load(std::memory_order_acquire)))
+					break;
+				if (GetTickCount64() - started >= kRaiseWaitMs)
+				{
+					reading.raiseNotEnded = true;
+					break;
+				}
+				YieldProcessor();
+			}
 			reading.index = Load<int32_t>(g_index);
 			reading.flag = Load<uint8_t>(g_flag);
 			return reading;
@@ -540,11 +552,13 @@ namespace TweaksV
 		}
 
 		// The measurement's state, kept by its thread alone: the reading of the last summary, TweaksV's own highs of
-		// every reading, how many readings had something new to say, and the update check as its line last gave it.
+		// every reading, how many readings had something new to say, whether a raise that did not end has been said, and the
+		// update check as its line last gave it.
 		Reading g_logged;
 		uint64_t g_mostBytes = 0, g_mostObjects = 0;
 		uint64_t g_loggedMostMb = 0, g_loggedMostObjects = 0;
 		uint64_t g_news = 0;
+		bool g_raiseNotEndedSaid = false;
 		bool g_updateCheckShown = false;
 		Reading g_updateCheckLine;
 
@@ -555,10 +569,18 @@ namespace TweaksV
 
 		// Changes with every reading that has something new to say: the first; a new high - of the bytes in MB, of
 		// the objects, of the game's own mark in MB; the update check's flag raised or lowered, its switch or a factor
-		// changed; another index, budget or most; the raise run since; the counters readable or not.
+		// changed; another index, budget or most; the raise run since; the counters readable or not. A reading that met a raise
+		// that did not end changes nothing: it is said once, and no summary comes of it.
 		uint64_t BudgetNumbers()
 		{
 			const Reading now = ReadCounters();
+			if (now.raiseNotEnded)
+			{
+				if (!g_raiseNotEndedSaid)
+					WriteLog(kTag, "DIAGNOSTIC: texture budget: the raise of the budgets has not ended after 1 second: no summary comes until it has.");
+				g_raiseNotEndedSaid = true;
+				return g_news;
+			}
 			if (now.readable)
 			{
 				g_mostBytes = std::max(g_mostBytes, Bytes(now));
@@ -605,8 +627,10 @@ namespace TweaksV
 				Factor(now.updateCheck[kWindowsFactor / sizeof(uint32_t)]) + " of the video memory Windows gives the game to start evicting too.");
 		}
 
-		void LogBudget(uint64_t)
+		void LogBudget(uint64_t news)
 		{
+			if (news == 0)	// the measurement's first turn, its reading not used: the first summary comes with the first that is
+				return;
 			LogUpdateCheck(g_logged);
 			const Reading& now = g_logged;
 			if (!now.readable)

@@ -307,9 +307,10 @@ check "the problem, word for word, the part's only one, in the start-up summary;
 both_keys; out=$(game full_game.exe tbindexunreadable)
 check "with DIAGNOSTIC_MODE=1 the same problem, the measurement announced all the same; the most and the budgets not read, no redirect" "refused 'the index at $(rva 'index page') (Q-E-T3) cannot be read.' && announced && log_lacks 'are still 0 at TweaksV' && log_lacks 'budgets. stores at RVA 0x[0-9A-F]* is redirected'"
 
-echo "== TB37c the test build, TWEAKSV_TEST_SUMMARY_MS=500: the raise held half done past the time of the first summary, VIDEO_MEMORY_BUDGET=6000 and DIAGNOSTIC_MODE=1: the reading made again until the raise is done, a half-raised set never passing as the game's own"
+echo "== TB37c the test build, TWEAKSV_TEST_SUMMARY_MS=500: the raise held half done past the time of the first summary, VIDEO_MEMORY_BUDGET=6000 and DIAGNOSTIC_MODE=1: each reading made again for a second, then given up with one line - no summary while the raise is held, a half-raised set never passing as the game's own"
 both_keys; out=$(TWEAKSV_TEST_SUMMARY_MS=500 ASI=TweaksV_test.asi game full_game.exe tbhalfraise)
-check "the fake held the raise at its write of budget 2 for 12 s, a reading due within them, whenever the start-up came: no summary meanwhile" "has 'the raise held half done, 0 summaries meanwhile'"
+check "the fake held the raise at its write of budget 2 for 12 s, readings due within them, whenever the start-up came: no summary meanwhile" "has 'the raise held half done, 0 summaries meanwhile'"
+check "the readings given up after a second: one line, word for word, however many there were" "log_line '\[Resources\] DIAGNOSTIC: texture budget: the raise of the budgets has not ended after 1 second: no summary comes until it has.\$' && [ \$(count 'the raise of the budgets has not ended') -eq 1 ]"
 check "the summary once the raise is done, word for word: the game's own four and the four raised" "log_line '$SUMMARY_RAISED'"
 check "the half-raised set in no line" "log_lacks '6000, 6000, 3000 and 3000'"
 check "the raise's line, the budgets raised before the game's function ran, nothing else written, no problem" "log_has 'are raised to 6000 MB where they are below it: 6000, 6000, 6000 and 6000 MB now' && startup 'a TweaksV stub' '6000, 6000, 6000 and 6000' && report_is 'a TweaksV stub' '6000, 6000, 6000 and 6000' && log_lacks 'PROBLEM'"
