@@ -148,7 +148,7 @@ Each fix track works as phase B's coding tracks did ("How the work runs"): each 
 
 **Fix mods folder walk** (): not started.
 
-**Fix refusing flag** (): not started.
+**Fix refusing flag** (): started on 2026-11-01, on a branch of its own from 840af89. Review A's F7 done at ea3e6ae: `g_refusing` in `source\TweaksVWeaponInfos.cpp` is a `std::atomic<bool>`, as its twin `g_guardOn` is, read through `.load()` in the guard's hook and in the measurement's line; its one write, `g_refusing = true;` at line 570, stays as it stood, as `g_guardOn = true;` does. A type's change has no scenario of its own, so no check is added and NOTES' count stays; no document names the flag's type. Next: the four builds from scratch and `run_all.sh`, not run yet, then the last state. One choice: the declaration's comment now says the flag is set last, with the hook live already, since the heading above it says "Set by InitWeaponInfos before the hook can run" and that line is the weapons track's. 
 
 **Fix WeaponLimits entry** (): not started.
 
