@@ -201,7 +201,7 @@ Known bugs and open issues in TweaksV.
 
 - **What:** the start-up summary is shown from a thread of its own, because a message box must not block `DllMain` or the game's thread that first asks for the time. When Windows cannot start that thread, the log says so (`The start-up summary thread could not be started (Windows error N).`) and no box comes for the rest of the session: the problems of the start-up and every later one stand only in `TweaksV.log`.
 - **Status:** accepted as rare: Windows refuses a new thread only in an exceptional state, and the log says what happened.
-- **When it goes:** with the next change to the start-up summary (`TweaksVSummary`): the thread is tried again with the next problem reported, as a new thread is started for the next problem after a box that could not be built.
+- **When it goes:** with phase C's round, T-LATEBOX's change to the start-up summary (`TweaksVSummary`): the thread is tried again with the next problem reported, as a new thread is started for the next problem after a box that could not be built.
 
 ### T-FREEZE: RageOpenV's start-up writes without freezing the other threads
 
@@ -213,7 +213,7 @@ Known bugs and open issues in TweaksV.
 
 - **What:** a problem reported after the start-up summary is shown comes in a box of its own under the heading "TweaksV: a part stopped working after the start-up:", which ends "The game continues without the affected parts." - also for findings that are not a part failing: a pack made for GTA V Legacy that RageOpenV's check names (it reads the packs for a while, so in the game its box comes after the summary) and a file a guard of WeaponLimits refuses. Each item says what happened; the heading and the last line do not fit it.
 - **Status:** open, kept for 2.6.0: the items and `TweaksV.log` say what each finding is.
-- **When it goes:** with a heading per late report in `TweaksVSummary`, each report saying whether a part stopped working or what it found.
+- **When it goes:** with phase C's round: a heading per late report in `TweaksVSummary`, each report saying whether a part stopped working or what it found.
 
 ### T-LEGACYWALK: a folder only the Legacy check's own walk cannot list is skipped with no word
 
