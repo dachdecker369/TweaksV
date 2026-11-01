@@ -335,7 +335,8 @@ namespace TweaksV
 			return false;
 		}
 
-		// A refused file's name kept for the session, 1024 at most - past them, refusals by the count alone, said once.
+		// A refused file's name kept for the session, 1024 at most - past them, refusals by the count alone, said once;
+		// a line that cannot be made changes nothing.
 		void Remember(uint64_t hash)
 		{
 			if (g_nameCount < kMaxNames)
@@ -343,8 +344,14 @@ namespace TweaksV
 			else if (!g_namesFull)
 			{
 				g_namesFull = true;
-				WriteLog(kTag, "The weapon components' guard keeps " + std::to_string(kMaxNames) + " refused names at most: from now on a file is refused "
-					"by the definitions loaded alone.");
+				try
+				{
+					WriteLog(kTag, "The weapon components' guard keeps " + std::to_string(kMaxNames) + " refused names at most: from now on a file is refused "
+						"by the definitions loaded alone.");
+				}
+				catch (...)
+				{
+				}
 			}
 		}
 
@@ -385,8 +392,57 @@ namespace TweaksV
 			}
 		}
 
+		// A read that does not add up: the guard off for the session, then said.
+		void GuardOff(const char* file, const std::string& why)
+		{
+			g_guardOn = false;
+			try
+			{
+				ReportFailure(kTag, "The weapon components' guard is off this session: " + why + " - " + file + " and the files after it go to the game "
+					"unchecked, and past " + std::to_string(kPerFile) + " definitions above the room the game crashes while it loads.");
+			}
+			catch (...)
+			{
+			}
+		}
+
+		// The guard's line for a file, capped: every refusal, with DIAGNOSTIC_MODE every file let in too.
+		void LogFile(const char* file, uint64_t sum, bool refuse, bool before)
+		{
+			try
+			{
+				if ((!refuse && !IsDiagnosticMode()) || g_lines > kMaxLinesPerKind)
+					return;
+				if (g_lines++ == kMaxLinesPerKind)
+					WriteLog(kTag, std::to_string(kMaxLinesPerKind) + " lines of weapon components files written - from now on they are only counted.");
+				else
+					WriteLog(kTag, std::string(refuse ? "Weapon components file " : "DIAGNOSTIC: weapon components file ") + file + ": " + std::to_string(sum) +
+						" definitions loaded, the room " + std::to_string(g_room) + " - " + (before ? "refused, as before." : refuse ? "refused." : "let in."));
+			}
+			catch (...)
+			{
+			}
+		}
+
+		// The first refusal's problem.
+		void ReportFirstRefusal(const char* file, uint64_t sum)
+		{
+			try
+			{
+				ReportFailure(kTag, std::string("Weapon component files are refused this session: ") + file + ", the first, came once " + std::to_string(sum) +
+					" definitions were loaded, the room being " + std::to_string(g_room) + " - the weapon components of the files refused are missing in "
+					"the game. Raise WEAPON_COMPONENTS_SIZE in TweaksV.ini (at most " + std::to_string(kWeaponComponentsSize.maxValue) + "); the log names "
+					"every file refused.");
+			}
+			catch (...)
+			{
+			}
+		}
+
 		// Whether the guard refuses the file of entry: the definitions loaded reached the room, or its name was refused before.
-		// A read that does not add up lets the file through and switches the guard off, reported.
+		// A read that does not add up lets the file through and switches the guard off, reported. What is said of a file has a
+		// try of its own: a line or a problem that cannot be made changes no decision, so that a name kept as refused is always
+		// a file refused, and the bookkeeping is done whatever they throw.
 		bool Refuse(const void* entry)
 		{
 			char name[kEntryNameSize + 1] = {};
@@ -395,25 +451,23 @@ namespace TweaksV
 			const char* const file = named ? name : "a weaponcomponents.meta whose name cannot be read";	// no string made per file
 			uint64_t sum = 0;
 			std::string why;
-			if (!LoadedDefinitions(sum, why))
+			bool added = false;
+			try
 			{
-				g_guardOn = false;
-				ReportFailure(kTag, "The weapon components' guard is off this session: " + why + " - " + file + " and the files after it go to the game "
-					"unchecked, and past " + std::to_string(kPerFile) + " definitions above the room the game crashes while it loads.");
+				added = LoadedDefinitions(sum, why);
+			}
+			catch (...)	// the words for a read that did not add up could not be made
+			{
+			}
+			if (!added)
+			{
+				GuardOff(file, why);
 				return false;
 			}
 			CheckPoolAsked(sum);
 			const bool before = named && Refused(hash);
 			const bool refuse = before || sum >= g_room;
-			const bool diagnostic = IsDiagnosticMode();
-			if ((refuse || diagnostic) && g_lines <= kMaxLinesPerKind)
-			{
-				if (g_lines++ == kMaxLinesPerKind)
-					WriteLog(kTag, std::to_string(kMaxLinesPerKind) + " lines of weapon components files written - from now on they are only counted.");
-				else
-					WriteLog(kTag, std::string(refuse ? "Weapon components file " : "DIAGNOSTIC: weapon components file ") + file + ": " + std::to_string(sum) +
-						" definitions loaded, the room " + std::to_string(g_room) + " - " + (before ? "refused, as before." : refuse ? "refused." : "let in."));
-			}
+			LogFile(file, sum, refuse, before);
 			if (!refuse)
 				return false;
 			if (named && !before)
@@ -421,10 +475,7 @@ namespace TweaksV
 			if (g_refused.load() == 0)
 			{
 				memcpy(g_firstRefused, name, sizeof(g_firstRefused));
-				ReportFailure(kTag, std::string("Weapon component files are refused this session: ") + file + ", the first, came once " + std::to_string(sum) +
-					" definitions were loaded, the room being " + std::to_string(g_room) + " - the weapon components of the files refused are missing in "
-					"the game. Raise WEAPON_COMPONENTS_SIZE in TweaksV.ini (at most " + std::to_string(kWeaponComponentsSize.maxValue) + "); the log names "
-					"every file refused.");
+				ReportFirstRefusal(file, sum);
 			}
 			g_refused++;
 			return true;
