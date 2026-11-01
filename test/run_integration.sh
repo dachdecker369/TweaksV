@@ -410,5 +410,24 @@ fresh_ini; setkey ENABLED 0 BLIPS; setkey ENABLED 0 STATICBOUNDS; addkey TEST_DU
 check "the release build ignores TEST_DUMP_SCRIPT: nothing hooked or saved, no TEST BUILD line, no problem" "has 'script: 1 placed on thread' && has 'through the game function' && [ \$(scripts) = 0 ] && log_lacks 'TEST BUILD' && log_lacks 'PROBLEM'"
 rm -rf $d; rm -f script_placed_*.bin
 
+echo "== I18 a half of WeaponLimits throws in place of starting (the test build's TWEAKSV_TEST_WEAPON_HALF_THROWS): only that half ends"
+# half_run N: a run of the test build, with ERROR_POPUP=1, in which half N throws. half_ended N NAME: the switch's line and that
+# half's problem, word for word and once, the run's only problem, in the start-up summary, and nothing that says the part is skipped.
+# parts_after: the parts after WeaponLimits started all the same, every page its own protection.
+half_run() { fresh_ini; setkey ERROR_POPUP 1; out=$(TWEAKSV_TEST_WEAPON_HALF_THROWS=$1 ASI=TweaksV_test.asi game full_game.exe); }
+half_ended() { [ "$(count "\[WeaponLimits\] TEST BUILD: the $2. half throws in place of starting (TWEAKSV_TEST_WEAPON_HALF_THROWS=$1).")" -eq 1 ] && log_line "\[WeaponLimits\] PROBLEM: The $2. half is not done this session: an unexpected exception ended it.\$" && [ "$(count PROBLEM)" -eq 1 ] && log_has 'Showing the start-up summary (1 problem(s)).' && log_has 'TEST BUILD: message box not shown (TWEAKSV_TEST_NO_BOXES=1): TweaksV could not apply everything:' && log_lacks 'this part is skipped'; }
+parts_after() { has 'pedprops: sites widened' && has 'size call to a stub (RX), pool sizes 16000 and 16000' && has 'protect: all restored (RX)'; }
+
+half_run 1
+check "the first half, the weapon infos': said once, its problem word for word, the only one, in the start-up summary; nothing says the part is skipped" "half_ended 1 'weapon infos'"
+check "that half did nothing, the immediates and the loader as laid; the weapon components' half started all the same - its list moved, its pool's size call redirected, its loader hooked - and the parts after it" "has 'weapon infos: limits 160 160, loader as laid, the rest as laid, array 152 of 160,' && log_lacks 'The weapon info blob limit' && has 'wc: loads 17 moved 0 game 0 other, moved list RW' && has 'size call to a stub, RX: 1494 and 1494 slots' && has 'wc loader hooked' && log_has 'The weapon component list moved and its limit raised from 470 to 1024 entries.' && parts_after"
+
+half_run 2
+check "the second half, the weapon components': said once, its problem word for word, the only one, in the start-up summary; nothing says the part is skipped" "half_ended 2 'weapon components'"
+check "the weapon infos' half done, the immediates raised and the loader hooked; that half did nothing, its list and its pool's size call the game's and its loader as placed; the parts after it started" "has 'weapon infos: limits 1024 1024, loader hooked, the rest as laid, array 152 of 1024,' && log_has 'The weapon info blob limit is raised from 160 to 1024 weapons.meta files.' && log_has 'The weapon info blob limit is guarded:' && has 'wc: loads 0 moved 17 game 0 other' && has 'size call to the lookup: 470 and 470 slots' && has 'wc loader as placed' && log_lacks 'weapon component list moved' && parts_after"
+
+fresh_ini; out=$(TWEAKSV_TEST_WEAPON_HALF_THROWS=1 game full_game.exe)
+check "the release build ignores TWEAKSV_TEST_WEAPON_HALF_THROWS: both halves started, no TEST BUILD line, no problem" "has 'weapon infos: limits 1024 1024, loader hooked' && has 'wc: loads 17 moved 0 game 0 other' && parts_after && log_lacks 'TEST BUILD' && log_lacks 'PROBLEM'"
+
 echo
 echo "INTEGRATION SCENARIOS: $pass passed, $fail failed"

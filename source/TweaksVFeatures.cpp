@@ -73,8 +73,49 @@ namespace TweaksV
 				[] { InitDirectStorage(); return false; } },
 			{ &kBlipsSection, { L"BlipLimitFix.asi" }, { &kResourceExtensions },
 				[] { InitBlips(); return false; } },
+			// WeaponLimits is two modules, each done on its own (SPECIFICATIONS 11.10): each start has its own try, so that an
+			// exception ends only that half, which the problem names, and the other still starts.
 			{ &kWeaponLimitsSection, {}, {},
-				[] { InitWeaponInfos(); InitWeaponComponents(); return false; } },
+				[] {
+#ifdef TWEAKSV_TEST_BUILD
+					// test builds only: TWEAKSV_TEST_WEAPON_HALF_THROWS=1 or 2 in the environment makes that half throw in place of
+					// starting, so that a suite sees its problem and the other half start
+					wchar_t throwing[4]{};
+					if (GetEnvironmentVariableW(L"TWEAKSV_TEST_WEAPON_HALF_THROWS", throwing, 4) != 1)
+						throwing[0] = L'\0';
+#endif
+					try
+					{
+#ifdef TWEAKSV_TEST_BUILD
+						if (throwing[0] == L'1')
+						{
+							WriteLog(kWeaponLimitsSection.feature, "TEST BUILD: the weapon infos' half throws in place of starting (TWEAKSV_TEST_WEAPON_HALF_THROWS=1).");
+							throw 1;
+						}
+#endif
+						InitWeaponInfos();
+					}
+					catch (...)
+					{
+						ReportFailure(kWeaponLimitsSection.feature, "The weapon infos' half is not done this session: an unexpected exception ended it.");
+					}
+					try
+					{
+#ifdef TWEAKSV_TEST_BUILD
+						if (throwing[0] == L'2')
+						{
+							WriteLog(kWeaponLimitsSection.feature, "TEST BUILD: the weapon components' half throws in place of starting (TWEAKSV_TEST_WEAPON_HALF_THROWS=2).");
+							throw 2;
+						}
+#endif
+						InitWeaponComponents();
+					}
+					catch (...)
+					{
+						ReportFailure(kWeaponLimitsSection.feature, "The weapon components' half is not done this session: an unexpected exception ended it.");
+					}
+					return false;
+				} },
 			{ &kPedPropsSection, {}, {},
 				[] { InitPedProps(); return false; } },
 			{ &kResourcesSection, {}, {},
