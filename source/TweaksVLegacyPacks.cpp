@@ -540,7 +540,7 @@ namespace TweaksV
 						std::to_string(check.notOpenPacks) + " of them not OPEN)" : std::string());
 			}
 			if (check.walkStopped)
-				line += " - the walk stopped at " + std::to_string(kMaxModsEntries) + " files and folders, where RageOpenV's list stops";
+				line += " - the walk stopped at " + std::to_string(ModsEntryLimit()) + " files and folders, where RageOpenV's list stops";
 			WriteLog(kTag, line + ".");
 		}
 

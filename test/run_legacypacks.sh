@@ -166,6 +166,21 @@ check "no zero within 256 bytes: the name refused, nothing of it counted" "log_l
 check "a name of 255 bytes at offset 65,535, its zero at 65,790 inside the 65,792 bytes read: the pack named by it" "log_line 'The pack mods.names.farname.rpf was made for GTA V Legacy: 1 yft 162 - the first x*\.yft\.\$'"
 check "a nested archive whose size runs past its holder's end: refused, as one that starts past it" "log_line 'The pack mods.names.nestedlong.rpf was not checked for GTA V Legacy versions in full: its nested archive long.rpf lies outside the archive that holds it\.\$'"
 check "the one problem and the last line" "log_line 'PROBLEM: A pack in the mods folder was made for GTA V Legacy, .*: mods.names.farname.rpf\. Not checked for Legacy versions (TweaksV.log says why): mods.names.longname.rpf, mods.names.nestedlong.rpf\.\$' && one_box && log_line 'Packs checked for GTA V Legacy versions: 3 in the mods folder, 1 made for Legacy, 2 not checked\.\$'"
+
+echo "== L17 the walk's limit, lowered by the test build's TWEAKSV_TEST_MODS_ENTRIES: RageOpenV's list and the check stop at the same name"
+# alate, stop and test listed in that order, test read first - its file - then stop: a name past 254 bytes, left out and not
+# counted, then the packs. 7 names end at p00003.rpf, in the middle of stop's names, and alate is never read.
+past=$(printf 'a%.0s' $(seq 1 246))	# stop\ and these and .rpf: 255 bytes
+packs_gone; fresh_ini; out=$(TWEAKSV_TEST_MODS_ENTRIES=7 ASI=TweaksV_test.asi game full_game.exe lpmake legacy mods/alate/in.rpf lpmake legacy "mods/stop/$past.rpf" lpmany legacy 5 mods/stop rovask stop/p00003.rpf rovask stop/p00004.rpf rovask alate/in.rpf lpwait)
+check "the archives made; the test build's line once, for both walks; the check's last line come" "has 'lp: 7 made |' && has '$DONE' && [ \$(count 'TEST BUILD: the walk of the mods folder stops at 7 files and folders instead of 200000 (TWEAKSV_TEST_MODS_ENTRIES=7)\.') -eq 1 ]"
+check "RageOpenV's list: 7 names, its problem says where it stopped; the name past 254 bytes left out, not counted" "log_has 'The mods folder has 7 files and folders\.' && log_has 'PROBLEM: Only part of the mods folder is used this session: the list stopped at 7 files and folders\.' && log_has 'Names in the mods folder left out of the list: 1 whose path is longer than 254 bytes\.'"
+check "the check: the packs before the stop read, its last line says where it stopped" "log_line 'Packs checked for GTA V Legacy versions: 3 in the mods folder, 3 made for Legacy - the walk stopped at 7 files and folders, where RageOpenV.s list stops\.\$' && [ \$(count 'PROBLEM') -eq 2 ]"
+check "the same name: p00003.rpf served and named, p00004.rpf neither" "has 'ask 1 served 8/8 passed 0/8' && log_has 'The pack mods.stop.p00003.rpf was made for GTA V Legacy' && has 'ask 2 served 0/8 passed 8/8' && log_lacks 'p00004'"
+check "the folder the walk did not come to: its file not served, its pack not read" "has 'ask 3 served 0/8 passed 8/8' && log_lacks 'mods.alate.in\.rpf'"
+fresh_ini; out=$(TWEAKSV_TEST_MODS_ENTRIES=0 ASI=TweaksV_test.asi game full_game.exe lpwait)
+check "a value outside 1..200000 is not taken: no line, nothing stopped" "has '$DONE' && log_lacks 'TEST BUILD: the walk' && log_lacks 'the walk stopped' && log_line 'Packs checked for GTA V Legacy versions: 6 in the mods folder, 6 made for Legacy\.\$'"
+fresh_ini; out=$(TWEAKSV_TEST_MODS_ENTRIES=7 game full_game.exe lpwait)
+check "the Release build leaves the limit as it is: no line, nothing stopped" "has '$DONE' && log_lacks 'TEST BUILD' && log_lacks 'the list stopped' && log_line 'Packs checked for GTA V Legacy versions: 6 in the mods folder, 6 made for Legacy\.\$'"
 packs_gone
 
 echo

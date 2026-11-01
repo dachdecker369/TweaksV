@@ -467,7 +467,7 @@ namespace TweaksV
 				WriteLog(kTag, LeftOutLine(read));
 			const auto partly = [](const std::string& why) { ReportFailure(kTag, "Only part of the mods folder is used this session: " + why); };
 			if (read.full)
-				partly("the list stopped at " + std::to_string(kMaxModsEntries) + " files and folders.");
+				partly("the list stopped at " + std::to_string(ModsEntryLimit()) + " files and folders.");
 			if (read.tooDeep)
 				partly(Folders(read.tooDeep) + " deeper than " + std::to_string(kMaxModsDepth) + " levels " + (read.tooDeep == 1 ? "was" : "were") +
 					" skipped.");

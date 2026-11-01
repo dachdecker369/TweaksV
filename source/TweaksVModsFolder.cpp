@@ -4,9 +4,14 @@
 #include "TweaksVModsFolder.h"
 
 #include <cstring>
+#include <cwchar>
 #include <string>
 #include <utility>
 #include <vector>
+
+#ifdef TWEAKSV_TEST_BUILD
+#include "TweaksVLog.h"
+#endif
 
 namespace TweaksV
 {
@@ -95,11 +100,38 @@ namespace TweaksV
 		return length > 0;
 	}
 
+	size_t ModsEntryLimit()
+	{
+#ifdef TWEAKSV_TEST_BUILD
+		static const size_t limit = []
+		{
+			wchar_t text[8]{};
+			const DWORD length = GetEnvironmentVariableW(L"TWEAKSV_TEST_MODS_ENTRIES", text, 8);
+			if (length > 0 && length < 8)
+			{
+				wchar_t* end = nullptr;
+				const long entries = wcstol(text, &end, 10);
+				if (end && *end == L'\0' && entries >= 1 && entries <= static_cast<long>(kMaxModsEntries))
+				{
+					WriteLog("RageOpenV", "TEST BUILD: the walk of the mods folder stops at " + std::to_string(entries) + " files and folders instead of " +
+						std::to_string(kMaxModsEntries) + " (TWEAKSV_TEST_MODS_ENTRIES=" + std::to_string(entries) + ").");
+					return static_cast<size_t>(entries);
+				}
+			}
+			return kMaxModsEntries;
+		}();
+		return limit;
+#else
+		return kMaxModsEntries;
+#endif
+	}
+
 	ModsWalk WalkModsFolder(const wchar_t* root, const ModsVisitor& visitor)
 	{
 		struct Folder { std::wstring path; std::string below; size_t depth; };
 		std::vector<Folder> todo{ { root, std::string(), 1 } };
 		const auto leftOut = [&visitor](ModsEntryKind kind) { visitor.entry(visitor.context, { kind }); };
+		const size_t limit = ModsEntryLimit();
 		ModsWalk walk;
 		size_t entries = 0;
 		std::wstring path;	// the name's, kept from name to name
@@ -154,7 +186,7 @@ namespace TweaksV
 						leftOut(ModsEntryKind::NotUnicode);
 						continue;
 					}
-					if (++entries > kMaxModsEntries)
+					if (++entries > limit)
 					{
 						walk.stopped = true;
 						break;

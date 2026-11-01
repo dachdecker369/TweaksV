@@ -20,8 +20,13 @@ namespace TweaksV
 	// read kMaxPathText bytes of that - a longer path would be cut short.
 	constexpr size_t kMaxModsPath = kMaxPathText - kModsPrefixSize;
 	constexpr size_t kMaxFolded = 3 * kMaxModsPath;	// what the fold can make of kMaxModsPath bytes: 3 bytes of UTF-8 per UTF-16 unit
-	constexpr size_t kMaxModsEntries = 200000;		// files and folders a walk hands on at most
+	constexpr size_t kMaxModsEntries = 200000;		// files and folders a walk hands on at most (ModsEntryLimit)
 	constexpr size_t kMaxModsDepth = 32;			// folders deep, the mods folder the first
+
+	// The files and folders a walk hands on at most: kMaxModsEntries - in test builds TWEAKSV_TEST_MODS_ENTRIES=<n> in the
+	// environment (1..kMaxModsEntries) instead, read once and said once, so that a suite reaches the stop with a handful of
+	// files (SPECIFICATIONS 13.1).
+	size_t ModsEntryLimit();
 
 	// ---- the spelling of a path in the list
 
@@ -76,16 +81,16 @@ namespace TweaksV
 	struct ModsWalk
 	{
 		DWORD rootError = ERROR_SUCCESS;	// why the folder walked could not be listed: nothing was handed on
-		bool stopped = false;				// the walk stopped at its limit of files and folders
+		bool stopped = false;				// the walk stopped at ModsEntryLimit() files and folders
 	};
 
 	// Walks root, kModsRoot unless a test asks otherwise, on the calling thread: a folder's names in the order Windows lists
 	// them, then the folders it holds, each folder listed pushed and the last pushed read next, so that every walk of one
 	// folder comes to its names in one order. A name that is not valid Unicode, whose path below root is longer than
 	// kMaxModsPath bytes or that the fold refuses is left out, not counted: the game cannot ask for it. Every other name
-	// counts, one spelled like an earlier name too, and the first past kMaxModsEntries ends the walk, not handed on. A folder
-	// at depth kMaxModsDepth is handed on, but what it holds is not read; a folder that cannot be listed is handed on again
-	// as such and the walk goes on - only root ends it, in rootError; a folder that holds nothing, not even "."
+	// counts, one spelled like an earlier name too, and the first past ModsEntryLimit() ends the walk, not handed on. A
+	// folder at depth kMaxModsDepth is handed on, but what it holds is not read; a folder that cannot be listed is handed on
+	// again as such and the walk goes on - only root ends it, in rootError; a folder that holds nothing, not even "."
 	// (ERROR_FILE_NOT_FOUND: a drive's root behind a junction), is empty.
 	ModsWalk WalkModsFolder(const wchar_t* root, const ModsVisitor& visitor);
 }
