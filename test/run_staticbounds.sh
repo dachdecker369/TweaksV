@@ -12,11 +12,13 @@
 # TWEAKSV_TEST_STATICBOUNDS_CHECK): asked in time, never asked - the pool made before TweaksV loaded - asked after the check,
 # the hook made by the part with the Blips part off in TweaksV.ini and the check reporting, no hook and no check with
 # BlipLimitFix.asi installed or with Resource Extensions installed and the Blips part off, no report without a session; a
-# check that cannot be made, reported in the start-up summary's box and the pool raised all the same: each pattern of the
-# script programs' hook missing, with the Blips part on and off, the natives' resolution call another mod redirected, each of
-# the check's events not made (the test build's TWEAKSV_TEST_STATICBOUNDS_NO_EVENT), and with BlipLimitFix.asi only logged. In
-# every run the sites as placed but for the call's rel32, the stub read+execute and every page its own protection. Fake
-# LOCALAPPDATA: the real one is never touched.
+# check that cannot be made, the problem word for word, once, the call redirected and the pool raised all the same, no check
+# and no hook made: Y-E-H1 missing with the Blips part on, the part's problem beside Blips' in the start-up summary's box,
+# each of the hook's three patterns missing with the Blips part off, the part's problem alone in the box, the natives'
+# resolution call another mod redirected, each of the two events not made (the test build's
+# TWEAKSV_TEST_STATICBOUNDS_NO_EVENT), in the box, which the Release build, another value and DRY_RUN leave alone, and beside
+# BlipLimitFix.asi only the line, no problem. In every run the sites as placed but for the call's rel32, the stub read+execute
+# and every page its own protection. Fake LOCALAPPDATA: the real one is never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 cd "$B" || exit 1
 cp "$R/x64/Release/TweaksV.asi" TweaksV.asi
@@ -250,7 +252,7 @@ fresh_ini; out=$(TWEAKSV_TEST_STATICBOUNDS_NO_EVENT=asked game full_game.exe)
 check "the Release build ignores it: the check made, no problem" "made '60 seconds' && quiet && log_lacks 'event is not made'"
 fresh_ini; out=$(TWEAKSV_TEST_STATICBOUNDS_NO_EVENT=other ASI=TweaksV_test.asi game full_game.exe)
 check "another value: the check made, no problem" "made '60 seconds' && quiet && log_lacks 'event is not made'"
-fresh_ini; setkey DRY_RUN 1; out=$(TWEAKSV_TEST_STATICBOUNDS_NO_EVENT=session ASI=TweaksV_test.asi game full_game.exe)
+fresh_ini; setkey DRY_RUN 1; out=$(TWEAKSV_TEST_STATICBOUNDS_NO_EVENT=asked ASI=TweaksV_test.asi game full_game.exe)
 check "DRY_RUN: no event wanted, nothing reported" "quiet && log_lacks 'event is not made' && kept"
 
 echo "== SB35 BlipLimitFix.asi with the asked event not made (test build): no check was to be made, logged - not reported"
