@@ -14,7 +14,7 @@ namespace TweaksV
 {
 	struct GamePattern
 	{
-		const char* label;	// as in PATTERNS.md: H- Heap, M- Modkit, P- Packfile, B- BoxStreamer, D- Decals, R- RageOpenV, S- StraightToStoryMode, Y- the script programs, L- Blips, W- WeaponLimits, I- SirenSettings, A- PedProps, Q- Resources, C- StaticBounds, T- RayTracing
+		const char* label;	// as in PATTERNS.md: H- Heap, M- Modkit, P- Packfile, B- BoxStreamer, D- Decals, R- RageOpenV, S- StraightToStoryMode, Y- the script programs, L- Blips, W- WeaponLimits, I- SirenSettings, A- PedProps, Q- Resources, T- RayTracing
 		const char* text;	// the bytes in hex, one space apart; ? matches any byte
 	};
 
@@ -150,8 +150,8 @@ namespace TweaksV
 		{ "L-E-P2", "48 89 3B 39 35 ? ? ? ? 7F 09 8D 46 01 89 05" },
 
 		// The parts of the parts' coding round, one group per limit, looked for as SPECIFICATIONS 4.2 says: WeaponLimits (W),
-		// SirenSettings (I), whose two limits are measured first (SPECIFICATIONS 11.15), PedProps (A), Resources (Q),
-		// StaticBounds (C) and RayTracing (T)
+		// SirenSettings (I), whose two limits are measured first (SPECIFICATIONS 11.15), PedProps (A), Resources (Q)
+		// and RayTracing (T)
 		// WeaponLimits, the weapon infos (TweaksVWeaponInfos.cpp), looked for on every boot the part is on: the game's
 		// initializer of the weapon info blob array - the number of blobs allocated, the call that allocates them, the
 		// block's store and the capacity's (I1), the two immediates the part raises - and the loader's head - the count
@@ -229,11 +229,6 @@ namespace TweaksV
 		{ "Q-E-T3", "48 63 05 ? ? ? ? 48 8B 44 C1 28 C3" },
 		{ "Q-E-T4", "8B 05 ? ? ? ? 8B 0D ? ? ? ? 01 C1 3B 0D ? ? ? ? 73 ? 48 8B 05 ? ? ? ? 48 8B 35" },
 		{ "Q-E-T5", "83 3D ? ? ? ? 00 0F 84 ? ? ? ? 48 8D 0D ? ? ? ? 48 8B 3D ? ? ? ? 48 8B 35 ? ? ? ? E8" },
-
-		// StaticBounds (TweaksVStaticBounds.cpp), the pattern of Nochala's Static Bounds Limit Adjuster: a load of the static
-		// bounds pool's name, the call of its size within the 64 bytes after it (H1) - the pool size lookup that call leads to
-		// is where the weapon components' pool size call, W-E-C4, leads (TweaksVPools)
-		{ "C-E-H1", "BA 06 E4 DF 2C" },
 
 		// RayTracing (TweaksVRayTracing.cpp): the set-up of the ray tracing buffer of moving geometry - its count, its stride, the
 		// call of the buffer maker and the store of the buffer object (B1) - and the two checks of a frame's ranges against its

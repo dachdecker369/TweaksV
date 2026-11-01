@@ -33,13 +33,12 @@ namespace TweaksV
 	inline constexpr SettingsSection kWeaponLimitsSection{ "WEAPON_LIMITS", "WeaponLimits" };
 	inline constexpr SettingsSection kPedPropsSection{ "PEDPROPS", "PedProps" };
 	inline constexpr SettingsSection kResourcesSection{ "RESOURCES", "Resources" };
-	inline constexpr SettingsSection kStaticBoundsSection{ "STATICBOUNDS", "StaticBounds" };
 	inline constexpr SettingsSection kRayTracingSection{ "RAYTRACING", "RayTracing" };
 
 	// The sections in file order; every one but the first is a part of TweaksV with an ENABLED key.
 	inline constexpr const SettingsSection* kSections[] = { &kTweaksVSection, &kHeapSection, &kModkitSection,
 		&kPackfileSection, &kBoxStreamerSection, &kDecalsSection, &kRageOpenVSection, &kStoryModeSection, &kDirectStorageSection,
-		&kBlipsSection, &kWeaponLimitsSection, &kPedPropsSection, &kResourcesSection, &kStaticBoundsSection, &kRayTracingSection };
+		&kBlipsSection, &kWeaponLimitsSection, &kPedPropsSection, &kResourcesSection, &kRayTracingSection };
 
 	// The layout of TweaksV.ini this build writes and reads: VERSION, the last key of [TWEAKSV]. A file
 	// without VERSION has the layout of TweaksV 1.x and is replaced (TweaksVIni.h); a file with a higher
@@ -47,7 +46,7 @@ namespace TweaksV
 	// static_assert on IniKeyCount below), and when a key changes its meaning or moves. An older file is
 	// carried forward: from kIniFirstLayout on, it gets the keys it lacks and then the current number
 	// written back (TweaksVIni.h). Layout 2 came with TweaksV 2.0.0, layout 3 with the Blips part, layout 4
-	// with the WeaponLimits, PedProps, Resources, StaticBounds and RayTracing parts.
+	// with the WeaponLimits, PedProps, Resources and RayTracing parts.
 	inline constexpr int kIniLayoutVersion = 4;
 	inline constexpr int kIniFirstLayout = 2;		// the first layout with VERSION, the oldest one carried forward
 
@@ -136,15 +135,12 @@ namespace TweaksV
 		Switch(kResourcesSection, "ENABLED", true),
 		Number(kResourcesSection, "VIDEO_MEMORY_BUDGET", 0, 0, 16384, "Video memory for streamed textures in MB, 0 = the game's own - Maximum 16384"),
 
-		Switch(kStaticBoundsSection, "ENABLED", true),
-		Number(kStaticBoundsSection, "STATICBOUNDS_SIZE", 16000, 1, 100000, "Number of static collision bounds - Maximum 100000"),
-
 		Switch(kRayTracingSection, "ENABLED", true),
 		Number(kRayTracingSection, "DYNAMIC_BVH_VERTICES", 0, 0, 26843545,
 			"Ray tracing buffer for moving objects in vertices, 0 = the game's own - Maximum 26843545"),
 	};
 
-	// The keys the default TweaksV.ini holds: layout 4 has 40.
+	// The keys the default TweaksV.ini holds: layout 4 has 38.
 	consteval size_t IniKeyCount()
 	{
 		size_t keys = 0;
@@ -153,7 +149,7 @@ namespace TweaksV
 				keys++;
 		return keys;
 	}
-	static_assert(IniKeyCount() == 40, "TweaksV: layout 4 of TweaksV.ini has 40 keys - a new key means a new layout");
+	static_assert(IniKeyCount() == 38, "TweaksV: layout 4 of TweaksV.ini has 38 keys - a new key means a new layout");
 
 	// The column at which a key's comment starts in the default file, the same for every key.
 	inline constexpr size_t kIniCommentColumn = 28;
@@ -218,7 +214,6 @@ namespace TweaksV
 	inline constexpr const Setting& kWeaponInfoFiles = FindSetting(kWeaponLimitsSection, "WEAPON_INFO_FILES");
 	inline constexpr const Setting& kWeaponComponentsSize = FindSetting(kWeaponLimitsSection, "WEAPON_COMPONENTS_SIZE");
 	inline constexpr const Setting& kVideoMemoryBudget = FindSetting(kResourcesSection, "VIDEO_MEMORY_BUDGET");
-	inline constexpr const Setting& kStaticBoundsSize = FindSetting(kStaticBoundsSection, "STATICBOUNDS_SIZE");
 	inline constexpr const Setting& kDynamicBvhVertices = FindSetting(kRayTracingSection, "DYNAMIC_BVH_VERTICES");
 
 	// Reads every setting once, after CreateOrUpdateIni() has chosen TweaksV.ini. A value that is not

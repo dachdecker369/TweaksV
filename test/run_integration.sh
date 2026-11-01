@@ -39,7 +39,7 @@ re_item() { tr -d '\r' < TweaksV.log | grep -c -- "PROBLEM: .*TestRun.ResourceEx
 # features_say [PART...]: the log header's Features: line says off for each PART and on for every other part
 features_say() {
 	local want="Features:" part sep=" "
-	for part in HeapAdjuster ModkitLimit PackfileLimit BoxStreamer Decals RageOpenV StraightToStoryMode DirectStorage Blips WeaponLimits PedProps Resources StaticBounds RayTracing; do
+	for part in HeapAdjuster ModkitLimit PackfileLimit BoxStreamer Decals RageOpenV StraightToStoryMode DirectStorage Blips WeaponLimits PedProps Resources RayTracing; do
 		if [[ " $* " == *" $part "* ]]; then want+="$sep$part off"; else want+="$sep$part on"; fi
 		sep=", "
 	done
@@ -55,7 +55,7 @@ after_header() {
 }
 
 echo "== I1 each old plugin on its own: only its part is skipped, and the log header says so"
-for old in HeapAdjuster.asi ZHeapAdjuster.asi ModkitLimitAdjusterEnhanced.asi PackfileLimitAdjusterEnhanced.asi DecalPatch.asi RageOpenV.asi OpenRPF.asi OpenIV.asi StraightToStoryMode.asi DirectStorageFix.asi StaticBoundLimitAdjuster.asi StaticBoundsLimitAdjuster.asi; do
+for old in HeapAdjuster.asi ZHeapAdjuster.asi ModkitLimitAdjusterEnhanced.asi PackfileLimitAdjusterEnhanced.asi DecalPatch.asi RageOpenV.asi OpenRPF.asi OpenIV.asi StraightToStoryMode.asi DirectStorageFix.asi; do
 	fresh_ini; touch "$old"; out=$(game full_game.exe); rm -f "$old"
 	case "$old" in
 		*HeapAdjuster.asi) off=HeapAdjuster; ok="has '$GAME_HEAP' && has '$MODKIT_ON' && has '$PACK_ON' && has '$BOX_ON' && has '$DECAL_ON' && has '$ROV_ON' && has '$STORY_ON'" ;;
@@ -65,7 +65,6 @@ for old in HeapAdjuster.asi ZHeapAdjuster.asi ModkitLimitAdjusterEnhanced.asi Pa
 		RageOpenV.asi|OpenRPF.asi|OpenIV.asi) off=RageOpenV; ok="has '$ALL_ON_HEAP' && has '$MODKIT_ON' && has '$PACK_ON' && has '$ROV_OFF' && has '$STORY_ON'" ;;
 		StraightToStoryMode.asi) off=StraightToStoryMode; ok="has '$ALL_ON_HEAP' && has '$MODKIT_ON' && has '$PACK_ON' && has '$ROV_ON' && has '$STORY_OFF'" ;;
 		DirectStorageFix.asi) off=DirectStorage; ok="has '$ALL_ON_HEAP' && has '$MODKIT_ON' && has '$PACK_ON' && has '$ROV_ON' && has '$STORY_ON' && log_lacks '\[DirectStorage\]'" ;;
-		StaticBound*) off=StaticBounds; ok="has '$ALL_ON_HEAP' && has '$MODKIT_ON' && has '$PACK_ON' && has '$BOX_ON' && has '$DECAL_ON' && has '$ROV_ON' && has '$STORY_ON' && log_lacks '\[StaticBounds\]'" ;;
 	esac
 	check "$old: its part skipped, the rest applied, reported once in the summary" "$ok && log_has 'Old plugin found: .*$old' && summary_once"
 	check "$old: the header's Features: line says off for ${off// /, } and on for the rest, the check's line stands after the header" "features_say $off && after_header 'Old plugin found'"
@@ -149,8 +148,6 @@ breaktest "A-E-G3 (a ped props narrowing): the ped props' sites as placed, the r
 fresh_ini; setkey VIDEO_MEMORY_BUDGET 6000 RESOURCES; addkey TEST_BREAK_PATTERN Q-E-T4; out=$(ASI=TweaksV_test.asi game full_game.exe)
 check "Q-E-T4 (the texture budget's placement check), VIDEO_MEMORY_BUDGET=6000: the budgets as the game set them, the rest applied" \
 	"has 'the call to the next step' && has 'budgets 1500, 1500, 3000 and 3000 MB' && has '$ALL_ON_HEAP' && has '$MODKIT_ON' && has '$PACK_ON' && has '$ROV_ON' && has '$STORY_ON' && log_has 'TEST BUILD - not for release' && grep -qi -- 'TEST BUILD: pattern Q-E-T4 is treated as not found' TweaksV.log && grep -qi -- 'Q-E-T4 was not found[ .]' TweaksV.log && summary_once && has 'protect: all restored'"
-breaktest "C-E-H1 (the static bounds pool's name): its size call left to the game's lookup, the rest applied" "C-E-H1" \
-	"has 'static bounds: sites as placed, size call to the lookup, pool sizes 12000 and 12000' && has '$ALL_ON_HEAP' && has '$MODKIT_ON' && has '$PACK_ON' && has '$ROV_ON' && has '$STORY_ON' && log_has 'PROBLEM: The static bounds pool.s size is not raised this session: C-E-H1 was not found.'"
 fresh_ini; setkey DYNAMIC_BVH_VERTICES 8388608; addkey TEST_BREAK_PATTERN T-E-C1; out=$(ASI=TweaksV_test.asi game full_game.exe)
 check "T-E-C1 (a check of the ray tracing buffer, with DYNAMIC_BVH_VERTICES=8388608): the buffer untouched, the rest applied" "has 'rt sites: as placed, count 4194304, checks 4194304 and 4194304, jumps to the game and the game' && has '$ALL_ON_HEAP' && has '$MODKIT_ON' && has '$PACK_ON' && has '$ROV_ON' && has '$STORY_ON' && log_has 'TEST BUILD - not for release' && grep -qi -- 'TEST BUILD: pattern T-E-C1 is treated as not found' TweaksV.log && grep -qi -- 'T-E-C1 was not found[ .]' TweaksV.log && summary_once && has 'protect: all restored'"
 breaktest "a label in small letters works too" "h-e1" \
@@ -316,9 +313,8 @@ rm -rf $d
 # places blip_controller - and with some options other_script or blip_imposter - through the call at the hook
 # site, on a thread of its own, and writes what it placed to script_placed_<n>.bin, n counting blip_controller's
 # placements, which the copies must hold byte for byte after their header. The Blips part, which changes
-# blip_controller each time it is placed, is off in these runs ([BLIPS] ENABLED=0), and so is the StaticBounds part,
-# which would make the hook itself then ([STATICBOUNDS] ENABLED=0), so that they test the switch alone: the switch next
-# to the part is the blips suite's scenario.
+# blip_controller each time it is placed, is off in these runs ([BLIPS] ENABLED=0), so that they test the switch alone:
+# the switch next to the part is the blips suite's scenario.
 echo "== I17 TEST_DUMP_SCRIPT in a test build: the script program saved in %LOCALAPPDATA%\\TweaksV each time the game places it"
 d=appdata/TweaksV
 BLIP_HASH=$((0x80CFE974))
@@ -349,9 +345,9 @@ header_ok() {
 # blocks_ok FILE N: after its header, the copy holds byte for byte what the fake game placed the N-th time
 blocks_ok() { tail -c +177 "$1" | cmp -s - "script_placed_$2.bin"; }
 # scripts: how many copies of a script program there are; script_run [OPTION...]: the fake game with the test build,
-# the Blips and StaticBounds parts off
+# the Blips part off
 scripts() { ls $d 2> /dev/null | grep -c '^Script-'; }
-script_run() { rm -rf $d; rm -f script_placed_*.bin; setkey ENABLED 0 BLIPS; setkey ENABLED 0 STATICBOUNDS; out=$(ASI=TweaksV_test.asi game full_game.exe "$@"); script_report; }
+script_run() { rm -rf $d; rm -f script_placed_*.bin; setkey ENABLED 0 BLIPS; out=$(ASI=TweaksV_test.asi game full_game.exe "$@"); script_report; }
 saved_line() {	# saved_line N PLACED NATIVES UNREADABLE: the log's line for the N-th copy, word for word but the folder
 	log_line "\[TweaksV\] TEST BUILD: Script-blip_controller-$1.bin saved in .*TweaksV: blip_controller placed the $(ordinal $1) time, as the game's $(ordinal $2) script program, on thread $thread - code 16675 bytes in 2 pages, 3 natives, $3, strings 496 bytes; $4.\$"
 }
@@ -401,12 +397,12 @@ fresh_ini; setkey DRY_RUN 1; addkey TEST_DUMP_SCRIPT blip_controller; script_run
 check "DRY_RUN: the call found and checked, its would line, nothing redirected or saved, no problem" "log_has 'DRY_RUN: would redirect the natives. resolution call at RVA 0x[0-9A-F]*.' && log_has 'TEST BUILD: TEST_DUMP_SCRIPT=blip_controller: DRY_RUN - the call is not redirected, so no script program is saved.' && has 'through the game function' && [ \$(scripts) = 0 ] && log_lacks 'PROBLEM'"
 
 mkdir -p $d; echo "not a copy" > victim.txt
-fresh_ini; setkey ERROR_POPUP 1; setkey ENABLED 0 BLIPS; setkey ENABLED 0 STATICBOUNDS; addkey TEST_DUMP_SCRIPT blip_controller; rm -f script_placed_*.bin; ln victim.txt $f
+fresh_ini; setkey ERROR_POPUP 1; setkey ENABLED 0 BLIPS; addkey TEST_DUMP_SCRIPT blip_controller; rm -f script_placed_*.bin; ln victim.txt $f
 out=$(ASI=TweaksV_test.asi game full_game.exe script)
 check "Script-blip_controller-1.bin a hard link to another file: that file left alone; a problem, shown in a box of its own after the start-up summary" "[ \"\$(cat victim.txt)\" = 'not a copy' ] && log_has 'PROBLEM: TEST_DUMP_SCRIPT: Script-blip_controller-1.bin was not saved: it is a hard link' && log_has 'TEST BUILD: message box not shown (TWEAKSV_TEST_NO_BOXES=1): TweaksV: a part stopped working after the start-up:'"
 rm -f victim.txt
 
-fresh_ini; setkey ENABLED 0 BLIPS; setkey ENABLED 0 STATICBOUNDS; addkey TEST_DUMP_SCRIPT blip_controller; rm -rf $d; rm -f script_placed_*.bin; out=$(game full_game.exe script)
+fresh_ini; setkey ENABLED 0 BLIPS; addkey TEST_DUMP_SCRIPT blip_controller; rm -rf $d; rm -f script_placed_*.bin; out=$(game full_game.exe script)
 check "the release build ignores TEST_DUMP_SCRIPT: nothing hooked or saved, no TEST BUILD line, no problem" "has 'script: 1 placed on thread' && has 'through the game function' && [ \$(scripts) = 0 ] && log_lacks 'TEST BUILD' && log_lacks 'PROBLEM'"
 rm -rf $d; rm -f script_placed_*.bin
 
@@ -416,7 +412,7 @@ echo "== I18 a half of WeaponLimits throws in place of starting (the test build'
 # parts_after: the parts after WeaponLimits started all the same, every page its own protection.
 half_run() { fresh_ini; setkey ERROR_POPUP 1; out=$(TWEAKSV_TEST_WEAPON_HALF_THROWS=$1 ASI=TweaksV_test.asi game full_game.exe); }
 half_ended() { [ "$(count "\[WeaponLimits\] TEST BUILD: the $2. half throws in place of starting (TWEAKSV_TEST_WEAPON_HALF_THROWS=$1).")" -eq 1 ] && log_line "\[WeaponLimits\] PROBLEM: The $2. half is not done this session: an unexpected exception ended it.\$" && [ "$(count PROBLEM)" -eq 1 ] && log_has 'Showing the start-up summary (1 problem(s)).' && log_has 'TEST BUILD: message box not shown (TWEAKSV_TEST_NO_BOXES=1): TweaksV could not apply everything:' && log_lacks 'this part is skipped'; }
-parts_after() { has 'pedprops: sites widened' && has 'size call to a stub (RX), pool sizes 16000 and 16000' && has 'protect: all restored (RX)'; }
+parts_after() { has 'pedprops: sites widened' && has 'protect: all restored (RX)'; }
 
 half_run 1
 check "the first half, the weapon infos': said once, its problem word for word, the only one, in the start-up summary; nothing says the part is skipped" "half_ended 1 'weapon infos'"

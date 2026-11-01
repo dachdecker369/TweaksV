@@ -71,8 +71,8 @@ check "the status lines word for word, the pool's line once for its two calls" "
 check "the guard: the loader hooked at its head, its line word for word" "has 'wc loader hooked, files mounted 0' && log_line '$HOOKED 1024 definitions are loaded is refused.\$'"
 check "every page back to its own protection, no line of DIAGNOSTIC_MODE, no problem" "has 'protect: all restored (RX)' && log_lacks '${TAG}DIAGNOSTIC' && quiet"
 
-echo "== W2 [WEAPON_LIMITS] ENABLED=0, with DIAGNOSTIC_MODE=1 and [STATICBOUNDS] ENABLED=0, which looks for W-E-C4 too: nothing looked for, nothing written"
-fresh_ini; setkey ENABLED 0 WEAPON_LIMITS; setkey ENABLED 0 STATICBOUNDS; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe)
+echo "== W2 [WEAPON_LIMITS] ENABLED=0, with DIAGNOSTIC_MODE=1: nothing looked for, nothing written"
+fresh_ini; setkey ENABLED 0 WEAPON_LIMITS; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe)
 check "the part off in the header, none of its patterns looked for, no line of the weapon components" "log_has 'WeaponLimits off' && log_lacks 'W-E-C' && log_lacks -i 'weapon component'"
 check "the game as it was - the loads, the bytes, the data, the size call to the game's lookup - every page its own protection, no problem" "has '$GAME' && has 'protect: all restored (RX)' && quiet"
 
@@ -335,10 +335,9 @@ echo "== W50 the blob array itself cannot be read when the first file comes (wcn
 fresh_ini; out=$(game full_game.exe wcmount wcnoarray)
 check "the problem, word for word, once; all 11 let in" "guard_off 'the blob array at $RVA cannot be read'"
 
-echo "== W51 W-E-C4 twice in the game's code (wcpooltwice; DIAGNOSTIC_MODE=1): named as twice, not as missing, by both parts that ask for it - looked for once"
+echo "== W51 W-E-C4 twice in the game's code (wcpooltwice; DIAGNOSTIC_MODE=1): named as twice, not as missing"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe wcpooltwice)
 check "the problem, word for word; nothing written, the size call to the game's lookup" "refused 'the game code holds W-E-C4 2 or more times, not the expected 1.' && has '$GAME' && log_lacks 'W-E-C4 was not found'"
-check "StaticBounds' problem, word for word, the same reason; the scanner's line once" "log_line '\[StaticBounds\] PROBLEM: The static bounds pool.s size is not raised this session: the game code holds W-E-C4 2 or more times, not the expected 1.\$' && [ \$(count 'Pattern W-E-C4 found: .* 2 matches,') -eq 1 ]"
 
 echo "== W52 W-E-C5 twice in the game's code (wcloadertwice): the guard not made, named as twice, the rest applied"
 fresh_ini; out=$(game full_game.exe wcloadertwice)

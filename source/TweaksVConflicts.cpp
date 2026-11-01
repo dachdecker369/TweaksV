@@ -5,9 +5,7 @@
 
 #include <windows.h>
 
-#include <cstddef>
 #include <cstdint>
-#include <iterator>
 #include <string>
 #include <utility>
 
@@ -20,21 +18,6 @@
 
 namespace TweaksV
 {
-	namespace
-	{
-		// Per section of kSections, whether CheckForConflicts found a plugin that does that part's job, whatever
-		// TweaksV.ini says of the part - written by the check, in DllMain before the parts start, and read by them
-		// afterwards, on the same thread.
-		bool g_pluginFound[std::size(kSections)] = {};
-
-		void NotePluginFound(const SettingsSection& section)
-		{
-			for (size_t i = 0; i < std::size(kSections); i++)
-				if (kSections[i] == &section)
-					g_pluginFound[i] = true;
-		}
-	}
-
 	void CheckForConflicts()
 	{
 		int found = 0;
@@ -51,7 +34,6 @@ namespace TweaksV
 						continue;
 
 					++found;
-					NotePluginFound(*feature.section);
 					DisableFeatureForSession(*feature.section);
 					ReportFailure("TweaksV", "Old plugin found: " + ToUtf8(path) + ". TweaksV's " + feature.section->feature +
 						" part is switched off for this session so nothing is patched twice. "
@@ -67,7 +49,6 @@ namespace TweaksV
 						continue;
 
 					++found;
-					NotePluginFound(*feature.section);	// whatever TweaksV.ini says of the part
 					// a part TweaksV.ini switches off gets a line, not a problem - the file's own switch, not
 					// IsFeatureOn: an old plugin found before may have switched the part off already, and
 					// this one is still said, so the result does not depend on the order of the finds
@@ -88,14 +69,6 @@ namespace TweaksV
 
 		if (found == 0)
 			WriteLog("TweaksV", "Conflict check: none of the plugins that do the job of one of TweaksV's parts were found.");
-	}
-
-	bool IsPluginInstalledFor(const SettingsSection& section)
-	{
-		for (size_t i = 0; i < std::size(kSections); i++)
-			if (kSections[i] == &section)
-				return g_pluginFound[i];
-		return false;
 	}
 
 	bool IsInsideGameImage(const void* p)

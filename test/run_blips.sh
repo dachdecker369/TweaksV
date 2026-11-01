@@ -112,8 +112,8 @@ echo "== L19 BlipLimitFix.asi in the game folder: the part off, the old plugin's
 fresh_ini; touch BlipLimitFix.asi; out=$(game full_game.exe script); rm -f BlipLimitFix.asi
 check "reported as the old plugin, the part off in the header, nothing of it" "log_has 'PROBLEM: Old plugin found: .*BlipLimitFix.asi. TweaksV.s Blips part is switched off for this session so nothing is patched twice. Delete the old file - TweaksV replaces it.' && log_has 'Features: .*, Blips off' && log_lacks '\[Blips\]' && has 'through the game function' && guard_after '$GAME'"
 
-echo "== L20 [BLIPS] ENABLED=0, DIAGNOSTIC_MODE=1 - and [STATICBOUNDS] ENABLED=0, which would make the script programs' hook itself: nothing, not even its patterns"
-fresh_ini; setkey ENABLED 0 BLIPS; setkey ENABLED 0 STATICBOUNDS; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe script)
+echo "== L20 [BLIPS] ENABLED=0, DIAGNOSTIC_MODE=1: nothing, not even its patterns"
+fresh_ini; setkey ENABLED 0 BLIPS; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe script)
 check "the part off in the header; no line of it, no pattern of its own or of the hook looked for; nothing written" "log_has 'Features: .*, Blips off' && log_lacks '\[Blips\]' && log_lacks 'Y-E-H1' && log_lacks 'L-E-P1' && has 'through the game function' && guard_after '$GAME' && log_lacks 'PROBLEM'"
 
 echo "== L21 DRY_RUN=1: the call found and checked, its would line; nothing redirected or written"

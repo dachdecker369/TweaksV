@@ -345,7 +345,7 @@ namespace TweaksV
 		}
 
 		// Definitions loaded, so the pool exists, while the game has never asked the redirected call: it made the pool without
-		// the redirect, what the static bounds' check says of its pool. One problem, once, whatever becomes of the file - the
+		// the redirect. One problem, once, whatever becomes of the file - the
 		// guard goes on.
 		void CheckPoolAsked(uint64_t sum)
 		{

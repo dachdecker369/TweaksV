@@ -29,7 +29,6 @@ SUITES=(
 	weaponcomponents
 	pedprops
 	texturebudget
-	staticbounds
 	raytracing
 	sirenids
 	sirencount

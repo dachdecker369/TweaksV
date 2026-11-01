@@ -21,7 +21,6 @@
 #include "TweaksVRayTracing.h"
 #include "TweaksVSirenCount.h"
 #include "TweaksVSirenIds.h"
-#include "TweaksVStaticBounds.h"
 #include "TweaksVStraightToStoryMode.h"
 #include "TweaksVSummary.h"
 #include "TweaksVTextureBudget.h"
@@ -46,12 +45,10 @@ namespace TweaksV
 
 		// The five original plugins in the order an ASI loader loaded their .asi files (alphabetical),
 		// TweaksV's own box streamer and decal definitions parts among the limit adjusters, then its
-		// DirectStorage part, its Blips part and the five parts of the parts' coding round. ZHeapAdjuster.asi
+		// DirectStorage part, its Blips part and the four parts of the parts' coding round. ZHeapAdjuster.asi
 		// is the rename the HeapAdjuster author recommends; OpenRPF.asi and OpenIV.asi do RageOpenV's job,
 		// alloc8or's DirectStorageFix.asi that of the DirectStorage part, rootBrz's BlipLimitFix.asi that of
-		// the Blips part, Nochala's Static Bounds Limit Adjuster - StaticBoundLimitAdjuster.asi on its page,
-		// StaticBoundsLimitAdjuster.asi in its repository - that of the StaticBounds part, and the
-		// closed-source DecalPatch.asi that of both the box streamer and the decal definitions parts, so it
+		// the Blips part, and the closed-source DecalPatch.asi that of both the box streamer and the decal definitions parts, so it
 		// switches both off. WeaponLimits is two modules, each started in turn.
 		constexpr Feature kFeatures[] = {
 			{ &kHeapSection, { L"HeapAdjuster.asi", L"ZHeapAdjuster.asi" }, { &kResourceExtensions },
@@ -120,8 +117,6 @@ namespace TweaksV
 				[] { InitPedProps(); return false; } },
 			{ &kResourcesSection, {}, {},
 				[] { InitTextureBudget(); return false; } },
-			{ &kStaticBoundsSection, { L"StaticBoundLimitAdjuster.asi", L"StaticBoundsLimitAdjuster.asi" }, {},
-				[] { InitStaticBounds(); return false; } },
 			{ &kRayTracingSection, {}, { &kResourceExtensions },
 				[] { InitRayTracing(); return false; } },
 		};

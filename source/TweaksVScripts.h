@@ -10,10 +10,8 @@
 // This module owns the one redirect of that call, for every part of TweaksV that works on a script program:
 // the call goes through a call stub to TweaksV, which hands the program to the module's users before and
 // after the game resolves its natives. Its users: the test builds' TEST_DUMP_SCRIPT (TweaksVDump.h), which
-// saves a program, the Blips part (TweaksVBlips.h), which raises blip_controller's threshold, and the
-// StaticBounds part (TweaksVStaticBounds.h), whose check starts with the first program the game places and
-// which makes the hook as the first part to use it while TweaksV.ini switches Blips off and no plugin that
-// does Blips' job is installed. The facts are in PATTERNS.md, "Script programs".
+// saves a program, and the Blips part (TweaksVBlips.h), which raises blip_controller's threshold. The facts
+// are in PATTERNS.md, "Script programs".
 #pragma once
 
 #include <cstddef>
