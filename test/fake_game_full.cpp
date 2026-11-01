@@ -1243,8 +1243,8 @@ static bool WeaponInfosCopyIntoCarrier(size_t at)
 // The game's weapon component list, 470 entries of 8 bytes - a definition's pointer each - with its count, an int32, right
 // after it, then the array of the files' blobs and their count, a uint16, as the game lays them out; what the game's
 // configuration pointer leads to; and the game's pool size lookup behind the pool's size call, which gives a pool the size
-// the configuration names for it or - as the game's own configuration does for this pool - the default, and counts its
-// calls and those with the arguments the game's call hands it. The lookup is one function for every pool, as the game's is:
+// the configuration names for it or - as the game's own configuration does for this pool - the default, counts its calls and
+// those with the arguments the game's call hands it, and leaves a last error of its own. The lookup is one function for every pool, as the game's is:
 // the static bounds pool's size call leads to it too, and every pool but this one goes on to the static bounds' side of it
 // (StaticBoundsLookup), so that each part's report counts its own calls. The harness keeps what it placed, the store and
 // the sites' bytes - all but the rel32 of the list's 17 loads and of the size call, which the part writes - and the store as
@@ -1264,6 +1264,7 @@ static int32_t g_weaponComponentsGameDefault = 470;		// the pool's default at it
 static int32_t g_weaponComponentsConfigured = -1;		// the pool's size the configuration names: none, as the game's own
 static volatile LONG g_weaponComponentsLookups = 0;		// the lookup's calls, and those with the arguments the game's call hands it
 static volatile LONG g_weaponComponentsLookupsAsCalled = 0;
+constexpr DWORD kWeaponComponentsLookupError = 0x5B5;	// the lookup's last error, which the call must hand back
 static int32_t StaticBoundsLookup(const void* configuration, uint32_t pool, int32_t defaultSize);	// StaticBounds' side, below
 static int32_t PoolSizeLookup(const void* configuration, uint32_t hash, int32_t defaultSize)
 {
@@ -1272,6 +1273,7 @@ static int32_t PoolSizeLookup(const void* configuration, uint32_t hash, int32_t 
 	InterlockedIncrement(&g_weaponComponentsLookups);
 	if (configuration == g_weaponComponentsConfiguration && hash == 0xBAE33CCF && defaultSize == g_weaponComponentsGameDefault)
 		InterlockedIncrement(&g_weaponComponentsLookupsAsCalled);
+	SetLastError(kWeaponComponentsLookupError);
 	return configuration && hash == 0xBAE33CCF && g_weaponComponentsConfigured >= 0 ? g_weaponComponentsConfigured : defaultSize;
 }
 
@@ -1310,7 +1312,7 @@ static_assert(sizeof(WeaponComponentsEntry) == 0xA8 && offsetof(WeaponComponents
 struct WeaponComponentsCallback { const void* const* vtable; unsigned char rest[0x30]; void* callable; };
 static_assert(offsetof(WeaponComponentsCallback, callable) == 0x38, "the callable's pointer at +0x38");
 static int g_weaponComponentsMounted = 0, g_weaponComponentsLoaded = 0, g_weaponComponentsDestroyed = 0, g_weaponComponentsHeapDestroys = 0;
-static int g_weaponComponentsErrorKept = 0;	// the refused files after which the game's last error was as it left it
+static int g_weaponComponentsErrorKept = 0;	// the files let in that reached the loader, and the refused ones that came back, with the game's last error as it left it
 static void WeaponComponentsDestroy(void*, bool heap)
 {
 	g_weaponComponentsDestroyed++;
@@ -1319,6 +1321,7 @@ static void WeaponComponentsDestroy(void*, bool heap)
 static const void* const g_weaponComponentsCallbackVtable[5] = { nullptr, nullptr, nullptr, nullptr, reinterpret_cast<const void*>(&WeaponComponentsDestroy) };
 static void* WeaponComponentsAllocate(size_t size)
 {
+	g_weaponComponentsErrorKept += GetLastError() == 0x5EED ? 1 : 0;	// the loader's first call: a file let in, its last error as the mounter left it
 	return malloc(size);
 }
 static void* WeaponComponentsZero(void* p, int value, size_t size)
@@ -1452,12 +1455,17 @@ static const unsigned char* Rel32Target(const Site& site);
 static bool InImage(const void* p);
 
 // The game makes the pool, as it does before it loads any definition, through what the size call leads to: the lookup, or
-// TweaksV's stub; what it gives
+// TweaksV's stub, another last error set before the call and the lookup's expected after it; what it gives
+static int g_weaponComponentsPoolsMade = 0, g_weaponComponentsPoolErrorsKept = 0;
 static int32_t WeaponComponentsMakePool()
 {
 	using Lookup = int32_t (*)(const void* configuration, uint32_t hash, int32_t defaultSize);
 	const auto call = reinterpret_cast<Lookup>(const_cast<unsigned char*>(Rel32Target(g_weaponComponentsSizeCall)));
-	return call(g_weaponComponentsConfiguration, 0xBAE33CCF, g_weaponComponentsGameDefault);
+	SetLastError(0x1234);
+	const int32_t slots = call(g_weaponComponentsConfiguration, 0xBAE33CCF, g_weaponComponentsGameDefault);
+	g_weaponComponentsPoolErrorsKept += GetLastError() == kWeaponComponentsLookupError ? 1 : 0;
+	g_weaponComponentsPoolsMade++;
+	return slots;
 }
 
 // Where the list's 17 loads lead - the rebuild's, the sort's and the 15 others: to the game's own list, to one list outside
@@ -1598,8 +1606,9 @@ static void WeaponComponentsReport()
 	}
 	const int32_t first = WeaponComponentsMakePool();
 	const int32_t second = WeaponComponentsMakePool();
-	wprintf(L"%ls: %d and %d slots, lookups %ld of %ld as called | ", target == lookup ? L"to the lookup" : info.Protect == PAGE_EXECUTE_READ ?
-		L"to a stub, RX" : L"to a stub, NOT RX", first, second, g_weaponComponentsLookupsAsCalled, g_weaponComponentsLookups);
+	wprintf(L"%ls: %d and %d slots, lookups %ld of %ld as called, last error %ls | ", target == lookup ? L"to the lookup" : info.Protect == PAGE_EXECUTE_READ ?
+		L"to a stub, RX" : L"to a stub, NOT RX", first, second, g_weaponComponentsLookupsAsCalled, g_weaponComponentsLookups,
+		g_weaponComponentsPoolErrorsKept == g_weaponComponentsPoolsMade ? L"kept" : L"LOST");
 	wprintf(L"wc loader %ls, files mounted %d, loaded %d, destroyed %d (%d on the heap), list %d, last error kept %d | ", g_weaponComponentsLoader[1] == 0xE9 ?
 		L"hooked" : L"as placed", g_weaponComponentsMounted, g_weaponComponentsLoaded, g_weaponComponentsDestroyed, g_weaponComponentsHeapDestroys,
 		g_weaponComponentsStore->count, g_weaponComponentsErrorKept);
