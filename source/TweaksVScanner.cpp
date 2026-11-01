@@ -656,45 +656,58 @@ namespace TweaksV
 				}
 			}
 
-			// The instruction whose ModRM lies at modrm, read from the bytes before it - none before begin - as the processor
-			// reads it if it starts there: a VEX prefix first, then the escapes 0F 38, 0F 3A and 0F, then a one-byte opcode.
-			// Its first byte goes to start.
-			StoreShape StoreAt(const uint8_t* modrm, const uint8_t* begin, const uint8_t*& start)
+			// The prefixes read again with the nearest F3 or F2 before opcode - and so the bytes before it - taken for the
+			// instruction before: for a prefix that makes a store a load. Called only while prefixes holds one of them.
+			Prefixes WithoutRep(const uint8_t* opcode, const Prefixes& prefixes)
+			{
+				const uint8_t* at = opcode - 1;
+				while (at > prefixes.start && *at != 0xF3 && *at != 0xF2)
+					at--;
+				return ReadPrefixes(opcode, at + 1);
+			}
+
+			// The instruction whose ModRM lies at modrm, read from the bytes before it - none before begin - every way the
+			// processor could read them if an instruction started among them, since any of them may end the instruction before
+			// instead: as one with a VEX prefix (C4 with a map of 1 to 3, or C5), then with the escapes 0F 38, 0F 3A and 0F, then
+			// with a one-byte opcode, each with the prefixes before it; a reading whose F3 or F2 makes a store a load (movq's,
+			// crc32's) once more without that prefix and the bytes before it. The first byte of the instruction under the first
+			// reading that counts says is a store of the range, or nullptr when none is.
+			template <typename Counts>
+			const uint8_t* StoreStart(const uint8_t* modrm, const uint8_t* begin, Counts&& counts)
 			{
 				const auto before = [modrm, begin](ptrdiff_t back) { return modrm - back >= begin ? static_cast<int>(modrm[-back]) : -1; };
 				const uint8_t opcode = modrm[-1];
 				const int reg = (modrm[0] >> 3) & 7;
-				if (before(4) == 0xC4 && before(3) >= 0 && (before(3) & 0x1F) >= 1 && (before(3) & 0x1F) <= 3 && before(2) >= 0)
-				{
-					start = modrm - 4;	// C4, R X B and the map, W vvvv L pp
-					return VexStore(before(3) & 0x1F, opcode, before(2) & 3, (before(2) & 4) != 0, (before(2) & 0x80) != 0);
-				}
-				if (before(3) == 0xC5 && before(2) >= 0)
-				{
-					start = modrm - 3;	// C5, R vvvv L pp
-					return VexStore(1, opcode, before(2) & 3, (before(2) & 4) != 0, false);
-				}
+				if (before(4) == 0xC4 && before(3) >= 0 && (before(3) & 0x1F) >= 1 && (before(3) & 0x1F) <= 3 && before(2) >= 0 &&
+					counts(VexStore(before(3) & 0x1F, opcode, before(2) & 3, (before(2) & 4) != 0, (before(2) & 0x80) != 0)))
+					return modrm - 4;	// C4, R X B and the map, W vvvv L pp
+				if (before(3) == 0xC5 && before(2) >= 0 && counts(VexStore(1, opcode, before(2) & 3, (before(2) & 4) != 0, false)))
+					return modrm - 3;	// C5, R vvvv L pp
 				if (before(3) == 0x0F && (before(2) == 0x38 || before(2) == 0x3A))
-				{
-					const Prefixes prefixes = ReadPrefixes(modrm - 3, begin);
-					start = prefixes.start;
-					return ThreeByteStore(static_cast<uint8_t>(before(2)), opcode, prefixes);
-				}
+					for (Prefixes prefixes = ReadPrefixes(modrm - 3, begin);; prefixes = WithoutRep(modrm - 3, prefixes))
+					{
+						if (counts(ThreeByteStore(static_cast<uint8_t>(before(2)), opcode, prefixes)))
+							return prefixes.start;
+						if (!prefixes.repz && !prefixes.repnz)
+							break;
+					}
 				if (before(2) == 0x0F)
-				{
-					const Prefixes prefixes = ReadPrefixes(modrm - 2, begin);
-					start = prefixes.start;
-					return TwoByteStore(opcode, reg, prefixes);
-				}
+					for (Prefixes prefixes = ReadPrefixes(modrm - 2, begin);; prefixes = WithoutRep(modrm - 2, prefixes))
+					{
+						if (counts(TwoByteStore(opcode, reg, prefixes)))
+							return prefixes.start;
+						if (!prefixes.repz && !prefixes.repnz)
+							break;
+					}
 				const Prefixes prefixes = ReadPrefixes(modrm - 1, begin);
-				start = prefixes.start;
-				return OneByteStore(opcode, reg, prefixes);
+				return counts(OneByteStore(opcode, reg, prefixes)) ? prefixes.start : nullptr;
 			}
 		}
 
 		// Every ModRM of mod 00 and r/m 101 is found the way FindRipRelative finds its loads, 16 positions at a time, and its
 		// disp32 checked to lead near the range - within the 4 bytes of an immediate and the 32 of a store before it - before
-		// the bytes in front of it are read as an instruction; one that writes a byte of the range is counted.
+		// the bytes in front of it are read every way an instruction could start among them; one that writes a byte of the
+		// range under any reading is counted, given by that reading's first byte.
 		std::vector<uint8_t*> FindRipRelativeStores(const void* target, size_t size, size_t limit)
 		{
 			constexpr size_t kOperand = 5;			// the ModRM and the disp32
@@ -714,9 +727,11 @@ namespace TweaksV
 				const intptr_t operand = reinterpret_cast<intptr_t>(modrm + kOperand) + disp;
 				if (operand >= end || operand + kReach <= first)
 					return;
-				const uint8_t* start = nullptr;
-				const StoreShape shape = StoreAt(modrm, begin, start);
-				if (shape.width && (writes(operand, shape.immediate, shape.width) || (shape.altImmediate && writes(operand, shape.altImmediate, shape.width))))
+				const uint8_t* const start = StoreStart(modrm, begin, [&writes, operand](const StoreShape& shape)
+				{
+					return shape.width && (writes(operand, shape.immediate, shape.width) || (shape.altImmediate && writes(operand, shape.altImmediate, shape.width)));
+				});
+				if (start)
 					found.push_back(const_cast<uint8_t*>(start));
 			};
 			const __m128i modrmBits = _mm_set1_epi8(static_cast<char>(0xC7));

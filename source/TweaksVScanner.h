@@ -45,9 +45,11 @@ namespace TweaksV
 		// to any of the size bytes from target, in address order, at most limit of them, each given by its first byte, its
 		// prefixes counted: a mov of 1 to 8 bytes from a register or an immediate; a read-modify-write of the integer unit -
 		// add, or, adc, sbb, and, sub, xor, inc, dec, not, neg, the shifts and rotations, xchg, xadd, cmpxchg, setcc, bts,
-		// btr, btc, pop; and an SSE or AVX move or extract of 1 to 32 bytes. For data the game writes once that a part
-		// changes after it: a writer the research did not find would undo the change later (the texture budget's check that
-		// the start-up's two stores are the budgets' only writers). Nothing is logged.
+		// btr, btc, pop; and an SSE or AVX move or extract of 1 to 32 bytes. The bytes before an operand are read every way
+		// an instruction could start among them - any of them may end the instruction before - and the operand counts when
+		// one reading is such a store: one counted by mistake is safe where a missed writer is not. For data the game writes
+		// once that a part changes after it: a writer the research did not find would undo the change later (the texture
+		// budget's check that the start-up's two stores are the budgets' only writers). Nothing is logged.
 		std::vector<uint8_t*> FindRipRelativeStores(const void* target, size_t size, size_t limit);
 	}
 }
