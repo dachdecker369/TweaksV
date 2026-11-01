@@ -319,6 +319,9 @@
 //   tbindexodd     the getter's index leads 1 byte past it
 //   tbcountersodd  the placement's load of the buffers' bytes, the start of the counters, leads 4 bytes past them, on 4 bytes, not 8
 //   tbswitchodd    the update check's switch leads 2 bytes past it
+//   tbt1twice, tbt2twice, tbt3twice, tbt4twice, tbt5twice
+//                  the game holds Q-E-T1, Q-E-T2, Q-E-T3, Q-E-T4 or Q-E-T5 twice: a copy of the site's bytes in the update check's
+//                  NOPs at +0x60
 //   tbwritemov, tbwritebyte, tbwritesse, tbwriteavx, tbwritelock, tbwriteimm
 //                  a writer of the budgets besides the start-up's two stores, each of another kind: "mov" of 8 bytes from 4
 //                  bytes before them, "mov" of their last byte with an imm8, "movups" of budgets 2 and 3, "vmovdqu" of 32 bytes
@@ -5790,6 +5793,13 @@ int wmain(int argc, wchar_t** argv)
 			SetRel32(g_textureBudgetLoads[3].site, counters + 4);
 		if (HasOption(argc, argv, L"tbswitchodd"))	// its disp32 a byte short of what it leads to, as above
 			SetRel32(g_textureBudgetSwitchRef, reinterpret_cast<const unsigned char*>(&data.updateCheck.on) + 1);
+		// a pattern the game holds twice: as many of the site's bytes as the pattern has, copied
+		const struct { const wchar_t* option; const volatile unsigned char* site; size_t size; } twins[] = { { L"tbt1twice", g_textureBudgetStores, 21 },
+			{ L"tbt2twice", g_textureBudgetStores + 34, 41 }, { L"tbt3twice", g_textureBudgetGetter, 13 }, { L"tbt4twice", g_textureBudgetPlacement, 32 },
+			{ L"tbt5twice", g_textureBudgetUpdate, 35 } };
+		for (const auto& twin : twins)
+			if (HasOption(argc, argv, twin.option))
+				memcpy(update + 0x60, const_cast<const unsigned char*>(twin.site), twin.size);
 		// the budgets' neighbours and readers where they lie; a writer at the budgets only with its option, else at the dummy
 		for (const TextureBudgetOperand& operand : g_textureBudgetOperands)
 			SetRel32(operand.site, !operand.option || HasOption(argc, argv, operand.option) ?

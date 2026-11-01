@@ -6,7 +6,7 @@
 # the game's function runs; none lowered, a gameconfig.xml's larger budgets kept; none below 1500 left as they are; 1000
 # raised to 1500 and reported; an index outside 0 to 3 named; the part off, DRY_RUN, each check failing on its own - those of
 # the sites also with DIAGNOSTIC_MODE=1, the measurement's line beside the problem, an address not aligned to the size of its
-# reads among them - a writer besides the start-up's, also with
+# reads and a pattern the game holds twice among them - a writer besides the start-up's, also with
 # DIAGNOSTIC_MODE=1, named and measured all the same, the game's start-up before TweaksV started, its data or its index alone
 # unreadable while TweaksV starts, the plain game and Windows' dynamic code policy - each reported word for word, nothing
 # written; and
@@ -325,6 +325,16 @@ both_keys; out=$(game full_game.exe tbcountersodd)
 check "the counters on 4 bytes, not 8" "refused_both 'the counters at $(rva counters 4) (Q-E-T4) are not aligned to 8 bytes.'"
 both_keys; out=$(game full_game.exe tbswitchodd)
 check "the update check's switch and factors at an odd address: the raise all the same, the measurement's reason, word for word, no announcement, no problem" "redirected 6000 && log_line '${NOT_MEASURED}the update check.s switch and factors at $(rva switch 2) (Q-E-T5) are not aligned to 4 bytes.\$' && log_lacks 'texture budget.s counters at' && log_lacks 'PROBLEM'"
+
+echo "== TB37e a pattern the game holds twice, each on its own, VIDEO_MEMORY_BUDGET=6000 and DIAGNOSTIC_MODE=1: named so, never as not found, nothing written"
+for n in 1 2 3 4; do
+	both_keys; out=$(game full_game.exe tbt${n}twice)
+	check "Q-E-T$n twice: the problem and the measurement's line, word for word; the scanner's lines give both matches" "refused_both 'the game code holds Q-E-T$n 2 or more times, not the expected 1.' && log_lacks 'Q-E-T$n was not found' && log_has 'Pattern Q-E-T$n found: .* 2 matches,' && log_has 'Q-E-T$n match 2 of 2 at RVA'"
+done
+both_keys; out=$(game full_game.exe tbt5twice)
+check "Q-E-T5 twice: the raise all the same, the measurement's reason, word for word, no announcement, no problem" "redirected 6000 && log_line '${NOT_MEASURED}the game code holds Q-E-T5 2 or more times, not the expected 1.\$' && log_lacks 'Q-E-T5 was not found' && log_lacks 'texture budget.s counters at' && log_lacks 'PROBLEM'"
+fresh_ini; setkey VIDEO_MEMORY_BUDGET 6000 RESOURCES; out=$(game full_game.exe tbt2twice)
+check "Q-E-T2 twice without DIAGNOSTIC_MODE: the problem, word for word, the part's only one, in the start-up summary, nothing written" "refused 'the game code holds Q-E-T2 2 or more times, not the expected 1.' && log_lacks 'Q-E-T2 was not found'"
 
 echo "== TB38 a writer besides the start-up's stores, VIDEO_MEMORY_BUDGET=6000 and DIAGNOSTIC_MODE=1: the raise refused, the writer named, the budget measured"
 both_keys; out=$(game full_game.exe tbwritemov wait)

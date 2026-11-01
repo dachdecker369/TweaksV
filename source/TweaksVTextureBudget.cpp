@@ -12,10 +12,10 @@
 // (SPECIFICATIONS 11.12):
 //   0                the default: the game's own budgets - nothing is looked for, but with DIAGNOSTIC_MODE=1
 //   1 to 1499        raised to 1500, the lowest budget the game's own file gives, and reported
-//   1500 to 16384    once Q-E-T1 to Q-E-T4 are found and every site checked - the start-up's stores of the most and the four
-//                    budgets and the call after them (T1, T2), the budget's getter with the index (T3), the placement's check
-//                    of the counters (T4), every address inside the game and aligned, the sites agreeing on the counters - the
-//                    scanner's search for stores has found the start-up's two the budgets' only writers, the most and the
+//   1500 to 16384    once Q-E-T1 to Q-E-T4 are found once each and every site checked - the start-up's stores of the most and
+//                    the four budgets and the call after them (T1, T2), the budget's getter with the index (T3), the placement's
+//                    check of the counters (T4), every address inside the game and aligned, the sites agreeing on the counters -
+//                    the scanner's search for stores has found the start-up's two the budgets' only writers, the most and the
 //                    budgets are still 0, the start-up still to come, and the index can be read, the call after the stores
 //                    is redirected through a call stub to a function that raises the budgets the game has just written, logs
 //                    the four it found and the index in use, and calls the game's function; nothing else is written
@@ -224,7 +224,8 @@ namespace TweaksV
 
 		// ---- the checks: the raise's and the measurement's
 
-		// The patterns' matches: Q-E-T1 to Q-E-T4 for the raise and the measurement, Q-E-T5 for the measurement alone.
+		// The patterns' matches: Q-E-T1 to Q-E-T4 for the raise and the measurement, Q-E-T5 for the measurement alone, with why
+		// the first of the four and why Q-E-T5 have none.
 		struct Matches
 		{
 			uint8_t* storeMost = nullptr;
@@ -232,18 +233,41 @@ namespace TweaksV
 			uint8_t* getter = nullptr;
 			uint8_t* placement = nullptr;
 			uint8_t* update = nullptr;
+			std::string sitesWhy;
+			std::string updateWhy;
 		};
+
+		// "2 or more times, not the expected 1" for a search that stopped at its limit - Times of the ped props, without its
+		// point: the reasons here take theirs from NotRaised and NotMeasured.
+		std::string Times(size_t found, size_t expected)
+		{
+			return std::to_string(found) + (found > expected ? " or more" : "") + (found == 1 ? " time" : " times") + ", not the expected " +
+				std::to_string(expected);
+		}
+
+		// A pattern's one match, by a search that goes on to a second, so that a match more shows; nullptr with the reason in why
+		// when it has not exactly one, the first such pattern's kept.
+		uint8_t* FindOnce(const GamePattern& pattern, std::string& why)
+		{
+			const std::vector<uint8_t*> matches = Scanner::FindAll(pattern, 2);
+			if (matches.size() == 1)
+				return matches[0];
+			if (why.empty())
+				why = matches.empty() ? std::string(pattern.label) + " was not found" : std::string("the game code holds ") + pattern.label + " " +
+					Times(matches.size(), 1);
+			return nullptr;
+		}
 
 		// Every pattern the jobs need, looked for before anything is checked, so that the scanner names each one missing.
 		Matches FindPatterns(bool measure)
 		{
 			Matches found;
-			found.storeMost = Scanner::Find(kStoreMost);
-			found.storeBudgets = Scanner::Find(kStoreBudgets);
-			found.getter = Scanner::Find(kGetter);
-			found.placement = Scanner::Find(kPlacement);
+			found.storeMost = FindOnce(kStoreMost, found.sitesWhy);
+			found.storeBudgets = FindOnce(kStoreBudgets, found.sitesWhy);
+			found.getter = FindOnce(kGetter, found.sitesWhy);
+			found.placement = FindOnce(kPlacement, found.sitesWhy);
 			if (measure)
-				found.update = Scanner::Find(kUpdate);
+				found.update = FindOnce(kUpdate, found.updateWhy);
 			return found;
 		}
 
@@ -281,8 +305,8 @@ namespace TweaksV
 			const uint8_t* const storeBudgets = found.storeBudgets;
 			const uint8_t* const getter = found.getter;
 			const uint8_t* const placement = found.placement;
-			if (!storeMost || !storeBudgets || !getter || !placement)
-				return fail(std::string((!storeMost ? kStoreMost : !storeBudgets ? kStoreBudgets : !getter ? kGetter : kPlacement).label) + " was not found");
+			if (!found.sitesWhy.empty())
+				return fail(found.sitesWhy);
 
 			// The start-up's stores: the most, then budgets 0 and 1 past Q-E-T1, then budgets 2 and 3 right after them
 			const uint8_t* const most = Rel32Target(storeMost + kMostStoreAt + 2);
@@ -384,15 +408,16 @@ namespace TweaksV
 		// Q-E-T5, the measurement's own: the update check's switch, the counters, the getter's call; past the match its flag
 		// and its factors - each checked and logged as above, after CheckSites. False at the first that is not as expected,
 		// with the reason in why.
-		bool CheckUpdateCheck(const uint8_t* update, std::string& why)
+		bool CheckUpdateCheck(const Matches& found, std::string& why)
 		{
 			const auto fail = [&why](const std::string& reason)
 			{
 				why = reason;
 				return false;
 			};
-			if (!update)
-				return fail(std::string(kUpdate.label) + " was not found");
+			if (!found.updateWhy.empty())
+				return fail(found.updateWhy);
+			const uint8_t* const update = found.update;
 			const uint8_t* const counters = g_counters;
 			const uint8_t* const getter = g_getter;
 			const uint8_t* const switchAt = Rel32Target(update + kSwitchAt) + 1;	// the disp32 ends a byte before the instruction
@@ -619,12 +644,12 @@ namespace TweaksV
 
 		// The measurement (DIAGNOSTIC_MODE), after CheckSites: its own site, the update check, checked, then its thread
 		// started. An aid: what stops it is logged, not reported, and an exception ends it alone.
-		void StartBudgetMeasurement(const uint8_t* update)
+		void StartBudgetMeasurement(const Matches& found)
 		{
 			try
 			{
 				std::string why;
-				if (!CheckUpdateCheck(update, why))
+				if (!CheckUpdateCheck(found, why))
 				{
 					NotMeasured(why);
 					return;
@@ -780,6 +805,6 @@ namespace TweaksV
 
 		// the measurement, with DIAGNOSTIC_MODE, the budget at 0 too
 		if (measure)
-			StartBudgetMeasurement(found.update);
+			StartBudgetMeasurement(found);
 	}
 }
