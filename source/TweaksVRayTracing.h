@@ -2,7 +2,7 @@
 // TweaksV - the RayTracing part: the game's ray tracing buffer of moving geometry - the one vertex buffer its GPU
 // animation skins every moving object into each frame, before the ray tracing refits them - raised to
 // DYNAMIC_BVH_VERTICES, so that a scene of many high-poly vehicles and peds keeps their ray traced shadows, reflections
-// and occlusion (SPECIFICATIONS 11.14).
+// and occlusion (SPECIFICATIONS 11.13).
 #pragma once
 
 namespace TweaksV

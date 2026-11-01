@@ -150,7 +150,7 @@ namespace TweaksV
 		{ "L-E-P2", "48 89 3B 39 35 ? ? ? ? 7F 09 8D 46 01 89 05" },
 
 		// The parts of the parts' coding round, one group per limit, looked for as SPECIFICATIONS 4.2 says: WeaponLimits (W),
-		// SirenSettings (I), whose two limits are measured first (SPECIFICATIONS 11.15), PedProps (A), Resources (Q)
+		// SirenSettings (I), whose two limits are measured first (SPECIFICATIONS 11.14), PedProps (A), Resources (Q)
 		// and RayTracing (T)
 		// WeaponLimits, the weapon infos (TweaksVWeaponInfos.cpp), looked for on every boot the part is on: the game's
 		// initializer of the weapon info blob array - the number of blobs allocated, the call that allocates them, the

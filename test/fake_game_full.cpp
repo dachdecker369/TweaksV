@@ -97,8 +97,8 @@
 //   blipbadbyte    the byte 0xA0, no instruction, at 0x200
 // The blip pool's two sites are always there, the pool with 162 slots in use below its high-water mark, 170, and
 // two beyond it.
-// The parts of the parts' coding round (TweaksV's SPECIFICATIONS.md 11.10 to 11.14), RageOpenV's check for packs made for
-// GTA V Legacy (11.6) and the limits measured first (11.15), one block each: its options, and what is always there.
+// The parts of the parts' coding round (TweaksV's SPECIFICATIONS.md 11.10 to 11.13), RageOpenV's check for packs made for
+// GTA V Legacy (11.6) and the limits measured first (11.14), one block each: its options, and what is always there.
 // The weapon infos (WeaponLimits): the game's initializer of the weapon info blob array - its lea of the array, then
 // W-E-I1: "mov edx, 160", the call to the allocation, the block's store, "mov word [capacity], 160" -, the allocation's
 // first bytes, and the loader, a NOP before its start and W-E-I2 0x18 bytes into it, are always there - the loader real

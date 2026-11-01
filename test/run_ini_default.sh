@@ -47,7 +47,7 @@ check "the log names all 4 re-added keys" '[ "$(grep -c "added the missing key" 
 echo "== a file with VERSION alone: every other key is added back"
 printf '[TWEAKSV]\r\nVERSION=4\r\n' > TweaksV.ini
 out=$(game full_game.exe); echo "      ${out:0:160}"
-check "39 keys added, the defaults used, nothing renamed" '[ $(grep -c "added the missing key" TweaksV.log) -eq 39 ] && grep -q "heap: 2000 MB" harness.out && log_lacks "TweaksV.old.ini" && [ ! -e TweaksV.old.ini ]'
+check "37 keys added, the defaults used, nothing renamed" '[ $(grep -c "added the missing key" TweaksV.log) -eq 37 ] && grep -q "heap: 2000 MB" harness.out && log_lacks "TweaksV.old.ini" && [ ! -e TweaksV.old.ini ]'
 
 echo "== crafted values: each one is reported for the start-up summary, its default or nearest limit used"
 cp expected.ini TweaksV.ini; setkey ERROR_POPUP 0

@@ -132,7 +132,7 @@ namespace TweaksV
 		}
 		static_assert(InSectionOrder(), "TweaksV: kFeatures must be in the order of kSections");
 
-		// A limit of a part to come, measured before its part writes anything (SPECIFICATIONS 11.15): with
+		// A limit of a part to come, measured before its part writes anything (SPECIFICATIONS 11.14): with
 		// DIAGNOSTIC_MODE=1 its module finds and checks the sites of the limit and measures it.
 		struct MeasuredFirst
 		{
@@ -140,7 +140,7 @@ namespace TweaksV
 			void (*start)();		// the module's Measure<Limit>()
 		};
 
-		// The parts measured first, one entry per limit in the order of SPECIFICATIONS 11.15. A limit leaves the
+		// The parts measured first, one entry per limit in the order of SPECIFICATIONS 11.14. A limit leaves the
 		// table when its part is built, or when it is not, so the table may be empty.
 		constexpr std::initializer_list<MeasuredFirst> kMeasuredFirst = {
 			{ "SirenSettings", MeasureSirenIds },
