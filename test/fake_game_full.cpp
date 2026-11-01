@@ -192,6 +192,10 @@
 //   wcnoarray      with wcmount: the store's page cannot be read until the first file has reached the loader's first call
 //   wcpooltwice    W-E-C4's bytes a second time in .fakesit: the game holds the pattern twice
 //   wcloadertwice  W-E-C5's bytes a second time in .fakesit
+//   wcempty        no blobs and no definitions while TweaksV starts; with wcmount the first file is mounted before the pool is
+//                  made, the rest after it
+//   wcloadercount  W-E-C5's read of the blobs' count leads elsewhere, not to the count W-E-C1 reads
+//   wcloadercapacity W-E-C5's read of the blob array's capacity leads elsewhere, not 2 bytes after its count
 // The siren setting IDs (SirenSettings): their 14 sites are always there - the parser registrations of the siren settings
 // and the vehicle variations with their tables and the two ID members' data (type 0x01), the XML reader, the base and a
 // pack's loops and builders with the four lea of the ID table, the dedupe and its loop, the three constructors, the init's
@@ -1468,6 +1472,7 @@ static void WeaponComponentsMounterAsAsked(int argc, wchar_t** argv)
 }
 
 // wcmount, wcbase, wcmany and wcfill: the packs' files mounted once TweaksV has started
+static int32_t WeaponComponentsMakePool();
 static void WeaponComponentsMountPacks(int argc, wchar_t** argv)
 {
 	static const int definitions[11] = { 9, 8, 9, 8, 9, 8, 9, 8, 9, 8, 6 };
@@ -1498,6 +1503,8 @@ static void WeaponComponentsMountPacks(int argc, wchar_t** argv)
 	{
 		sprintf_s(name, "dlcpacks:/weaponpack%02d/common/data/weaponcomponents.meta", i + 1);
 		WeaponComponentsMount(name, definitions[i]);
+		if (i == 0 && HasOption(argc, argv, L"wcempty"))	// the first file came before the pool
+			WeaponComponentsMakePool();
 	}
 	if (HasOption(argc, argv, L"wcbase"))	// the base loader's run: every blob cleared, the list's count left, the files loaded again
 	{
@@ -5513,6 +5520,8 @@ int wmain(int argc, wchar_t** argv)
 		g_weaponComponentsStore->count = 556;
 		g_weaponComponentsPlacedStore = *g_weaponComponentsStore;
 	}
+	if (HasOption(argc, argv, L"wcempty"))	// ...or none yet
+		WeaponComponentsLoad(0, 0);
 	if (HasOption(argc, argv, L"wcconfig"))		// ...the configuration naming the pool's size
 		g_weaponComponentsConfigured = 600;
 	if (HasOption(argc, argv, L"wcconfigbig"))
@@ -5563,6 +5572,10 @@ int wmain(int argc, wchar_t** argv)
 		WeaponComponentsPoint(g_weaponComponentsLoader, 65, 69, &store->capacity);
 		WeaponComponentsPoint(g_weaponComponentsLoader, 82, 86, &store->blobs);
 		WeaponComponentsPoint(g_weaponComponentsLoader, 96, 100, reinterpret_cast<const void*>(&WeaponComponentsLoadFile));
+		if (HasOption(argc, argv, L"wcloadercount"))	// ...its read of the blobs' count elsewhere
+			WeaponComponentsPoint(g_weaponComponentsLoader, 58, 62, &store->unused);
+		if (HasOption(argc, argv, L"wcloadercapacity"))	// ...or of the capacity
+			WeaponComponentsPoint(g_weaponComponentsLoader, 65, 69, &store->unused);
 		if (HasOption(argc, argv, L"wcloaderhooked"))
 			g_weaponComponentsLoader[1] = 0xE9;
 		if (HasOption(argc, argv, L"wcloadernotstart"))
@@ -5861,7 +5874,7 @@ int wmain(int argc, wchar_t** argv)
 	if ((HasOption(argc, argv, L"wcmount") || HasOption(argc, argv, L"wcmany") || HasOption(argc, argv, L"wcfill")) && !HasOption(argc, argv, L"wcloaderhooked") &&
 		!HasOption(argc, argv, L"wcloadernotstart") && !HasOption(argc, argv, L"wcloaderret"))	// the pool made, packs mounted
 	{
-		if (!HasOption(argc, argv, L"wcearly"))
+		if (!HasOption(argc, argv, L"wcearly") && !HasOption(argc, argv, L"wcempty"))
 			WeaponComponentsMakePool();
 		WeaponComponentsMountPacks(argc, argv);
 		if (g_weaponComponentsLoaded < g_weaponComponentsMounted || HasOption(argc, argv, L"wcearly"))	// a file refused, or the pool made

@@ -559,8 +559,10 @@ namespace TweaksV
 			const uint32_t most = static_cast<uint32_t>(kWeaponInfoFiles.maxValue);
 			if (raised.outcome == Raise::Refused)
 				g_advice = ": its limit was not raised this session (see above).";
+#ifdef TWEAKSV_TEST_BUILD
 			else if (testRoom)
 				g_advice = " - the test build's room (TWEAKSV_TEST_GUARD_ROOM=1).";
+#endif
 			else if (raised.room < most)
 				g_advice = " - raise WEAPON_INFO_FILES in TweaksV.ini above " + std::to_string(raised.room) + " (at most " + std::to_string(most) + ").";
 			else

@@ -440,9 +440,13 @@ namespace TweaksV
 			try
 			{
 				const bool most = g_room >= static_cast<uint32_t>(kWeaponComponentsSize.maxValue);
+				const char* room = most ? ", the most WEAPON_COMPONENTS_SIZE allows" : "";
+#ifdef TWEAKSV_TEST_BUILD
+				if (g_testRoom)
+					room = ", the test build's (TWEAKSV_TEST_GUARD_ROOM=1)";
+#endif
 				ReportFailure(kTag, std::string("Weapon component files are refused this session: ") + file + ", the first, came once " + std::to_string(sum) +
-					" definitions were loaded, the room being " + std::to_string(g_room) + (g_testRoom ? ", the test build's (TWEAKSV_TEST_GUARD_ROOM=1)" :
-					most ? ", the most WEAPON_COMPONENTS_SIZE allows" : "") + " - the weapon components of the files refused are missing in the game. " +
+					" definitions were loaded, the room being " + std::to_string(g_room) + room + " - the weapon components of the files refused are missing in the game. " +
 					(g_testRoom || most ? std::string("The log names every file refused.") : "Raise WEAPON_COMPONENTS_SIZE in TweaksV.ini (at most " +
 					std::to_string(kWeaponComponentsSize.maxValue) + "); the log names every file refused."));
 			}

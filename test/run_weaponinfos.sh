@@ -112,6 +112,7 @@ check "the test build's line said once for each of the half's two threads" "[ \$
 echo "== WI5 TWEAKSV_TEST_GUARD_ROOM=1 with the release build: not read - the part's room"
 fresh_ini; out=$(TWEAKSV_TEST_GUARD_ROOM=1 game full_game.exe wifew)
 check "no test line, the room 1024: all 14 files loaded" "log_lacks 'TEST BUILD' && guarded 1024 && field '1024 1024' hooked '166 of 1024' '14 passed 0 refused, 14 of 14 as expected'"
+check "the release build's file names neither the switch nor the test build's room, in either half; the test build's names both" "! grep -a -q 'TWEAKSV_TEST_GUARD_ROOM' TweaksV.asi && ! grep -a -q 'the test build' TweaksV.asi && grep -a -q 'the test build.s room (TWEAKSV_TEST_GUARD_ROOM=1)' TweaksV_test.asi && grep -a -q 'the test build.s (TWEAKSV_TEST_GUARD_ROOM=1)' TweaksV_test.asi"
 
 echo "== WI6 the 9th file's name runs into memory that cannot be read (test build, TWEAKSV_TEST_GUARD_ROOM=1): kept as such"
 failing; out=$(TWEAKSV_TEST_GUARD_ROOM=1 ASI=TweaksV_test.asi game full_game.exe wifew wiunreadable)
