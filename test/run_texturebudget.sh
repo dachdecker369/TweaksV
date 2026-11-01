@@ -5,7 +5,8 @@
 # read+execute, and nothing else written - the call's four arguments and its result as they came, the budgets raised before
 # the game's function runs; none lowered, a gameconfig.xml's larger budgets kept; none below 1500 left as they are; 1000
 # raised to 1500 and reported; an index outside 0 to 3 named; the part off, DRY_RUN, each check failing on its own - those of
-# the sites also with DIAGNOSTIC_MODE=1, the measurement's line beside the problem - a writer besides the start-up's, also with
+# the sites also with DIAGNOSTIC_MODE=1, the measurement's line beside the problem, an address not aligned to the size of its
+# reads among them - a writer besides the start-up's, also with
 # DIAGNOSTIC_MODE=1, named and measured all the same, the game's start-up before TweaksV started, its data or its index alone
 # unreadable while TweaksV starts, the plain game and Windows' dynamic code policy - each reported word for word, nothing
 # written; and
@@ -312,6 +313,18 @@ check "the fake held the raise at its write of budget 2 for 12 s, the first summ
 check "the first summary once the raise is done, word for word: the game's own four and the four raised" "log_line '$SUMMARY_RAISED' && [ \$(summaries) -eq 1 ]"
 check "the half-raised set in no line" "log_lacks '6000, 6000, 3000 and 3000'"
 check "the raise's line, the budgets raised before the game's function ran, nothing else written, no problem" "log_has 'are raised to 6000 MB where they are below it: 6000, 6000, 6000 and 6000 MB now' && startup 'a TweaksV stub' '6000, 6000, 6000 and 6000' && report_is 'a TweaksV stub' '6000, 6000, 6000 and 6000' && log_lacks 'PROBLEM'"
+
+echo "== TB37d an address inside the game, not aligned to the size of its reads, each on its own, VIDEO_MEMORY_BUDGET=6000 and DIAGNOSTIC_MODE=1: the problem and the measurement's line, word for word, nothing written"
+both_keys; out=$(game full_game.exe tbmostodd)
+check "the most objects at an odd address" "refused_both 'the most objects at $(rva counters 0x21) (Q-E-T1) are not aligned to 4 bytes.'"
+both_keys; out=$(game full_game.exe tbbudgetsodd)
+check "the budgets on 4 bytes, not 8" "refused_both 'the budgets at $(rva counters 0x2C) (Q-E-T1) are not aligned to 8 bytes.'"
+both_keys; out=$(game full_game.exe tbindexodd)
+check "the index at an odd address" "refused_both 'the index at $(rva index 1) (Q-E-T3) is not aligned to 4 bytes.'"
+both_keys; out=$(game full_game.exe tbcountersodd)
+check "the counters on 4 bytes, not 8" "refused_both 'the counters at $(rva counters 4) (Q-E-T4) are not aligned to 8 bytes.'"
+both_keys; out=$(game full_game.exe tbswitchodd)
+check "the update check's switch and factors at an odd address: the raise all the same, the measurement's reason, word for word, no announcement, no problem" "redirected 6000 && log_line '${NOT_MEASURED}the update check.s switch and factors at $(rva switch 2) (Q-E-T5) are not aligned to 4 bytes.\$' && log_lacks 'texture budget.s counters at' && log_lacks 'PROBLEM'"
 
 echo "== TB38 a writer besides the start-up's stores, VIDEO_MEMORY_BUDGET=6000 and DIAGNOSTIC_MODE=1: the raise refused, the writer named, the budget measured"
 both_keys; out=$(game full_game.exe tbwritemov wait)

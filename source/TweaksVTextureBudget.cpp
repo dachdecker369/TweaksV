@@ -14,7 +14,7 @@
 //   1 to 1499        raised to 1500, the lowest budget the game's own file gives, and reported
 //   1500 to 16384    once Q-E-T1 to Q-E-T4 are found and every site checked - the start-up's stores of the most and the four
 //                    budgets and the call after them (T1, T2), the budget's getter with the index (T3), the placement's check
-//                    of the counters (T4), every address inside the game and the sites agreeing on the counters - the
+//                    of the counters (T4), every address inside the game and aligned, the sites agreeing on the counters - the
 //                    scanner's search for stores has found the start-up's two the budgets' only writers, the most and the
 //                    budgets are still 0, the start-up still to come, and the index can be read, the call after the stores
 //                    is redirected through a call stub to a function that raises the budgets the game has just written, logs
@@ -201,10 +201,15 @@ namespace TweaksV
 			return value;
 		}
 
-		// True if the size bytes from p all lie inside the game.
-		bool Inside(const uint8_t* p, size_t size)
+		// What keeps the size bytes from p from being data of the game that is read unit bytes at a time, each read whole: "not
+		// inside the game", or "not aligned to 8 bytes", where a read could straddle a cache line and tear; "" when nothing does.
+		std::string Misplaced(const uint8_t* p, size_t size, size_t unit)
 		{
-			return IsInsideGameImage(p) && IsInsideGameImage(p + size - 1);
+			if (!IsInsideGameImage(p) || !IsInsideGameImage(p + size - 1))
+				return "not inside the game";
+			if (reinterpret_cast<uintptr_t>(p) % unit != 0)
+				return "not aligned to " + std::to_string(unit) + " bytes";
+			return {};
 		}
 
 		// Where "mulss xmm, [rip+disp32]" at p leads - F3, maybe a REX, 0F 59, a ModRM of mod 00 and r/m 101, the
@@ -262,9 +267,9 @@ namespace TweaksV
 		}
 
 		// Q-E-T1 to Q-E-T4, the sites the raise and the measurement share: each checked as the research found it - every
-		// address inside the game, the sites agreeing on the counters - and logged with DIAGNOSTIC_MODE, the budgets' writers
-		// among them. False at the first that is not as expected, with the reason in why; a writer besides the start-up's
-		// stores is not one of them: it refuses the raise alone, which it could undo.
+		// address inside the game and aligned to the size of its reads, the sites agreeing on the counters - and logged with
+		// DIAGNOSTIC_MODE, the budgets' writers among them. False at the first that is not as expected, with the reason in why;
+		// a writer besides the start-up's stores is not one of them: it refuses the raise alone, which it could undo.
 		bool CheckSites(const Matches& found, std::string& why)
 		{
 			const auto fail = [&why](const std::string& reason)
@@ -281,8 +286,8 @@ namespace TweaksV
 
 			// The start-up's stores: the most, then budgets 0 and 1 past Q-E-T1, then budgets 2 and 3 right after them
 			const uint8_t* const most = Rel32Target(storeMost + kMostStoreAt + 2);
-			if (!Inside(most, sizeof(uint32_t)))
-				return fail("the most objects at " + DescribeAddress(most) + At(kStoreMost) + " are not inside the game");
+			if (const std::string wrong = Misplaced(most, sizeof(uint32_t), sizeof(uint32_t)); !wrong.empty())
+				return fail("the most objects at " + DescribeAddress(most) + At(kStoreMost) + " are " + wrong);
 			LogSite("store of the most objects at " + DescribeAddress(storeMost + kMostStoreAt) + " -> " + DescribeAddress(most) +
 				", from the configuration's +" + Hex(Imm32(storeMost + kMostOffsetAt)) + At(kStoreMost));
 			const uint8_t* const shift = storeMost + kShiftAt;
@@ -292,8 +297,8 @@ namespace TweaksV
 				return fail("the code after " + std::string(kStoreMost.label) + " at " + DescribeAddress(shift) + " is not the store of budgets 0 and 1: " +
 					HexBytes(shift, kStoreBudgetsAt - kShiftAt));
 			const uint8_t* const budgets = Rel32Target(storeMost + kBudgets01StoreAt + 4);
-			if (!Inside(budgets, kBudgetCount * sizeof(uint64_t)))
-				return fail("the budgets at " + DescribeAddress(budgets) + At(kStoreMost) + " are not inside the game");
+			if (const std::string wrong = Misplaced(budgets, kBudgetCount * sizeof(uint64_t), sizeof(uint64_t)); !wrong.empty())
+				return fail("the budgets at " + DescribeAddress(budgets) + At(kStoreMost) + " are " + wrong);
 			LogSite("store of budgets 0 and 1 at " + DescribeAddress(storeMost + kBudgets01StoreAt) + " -> " + DescribeAddress(budgets) +
 				", from the configuration's +" + Hex(Imm32(storeMost + kBudgets01OffsetAt)) + " in MB" + At(kStoreMost));
 			if (storeBudgets != storeMost + kStoreBudgetsAt)
@@ -340,15 +345,15 @@ namespace TweaksV
 
 			// The getter: the index
 			const uint8_t* const index = Rel32Target(getter + kIndexAt);
-			if (!Inside(index, sizeof(int32_t)))
-				return fail("the index at " + DescribeAddress(index) + At(kGetter) + " is not inside the game");
+			if (const std::string wrong = Misplaced(index, sizeof(int32_t), sizeof(int32_t)); !wrong.empty())
+				return fail("the index at " + DescribeAddress(index) + At(kGetter) + " is " + wrong);
 			LogSite("budget getter at " + DescribeAddress(getter) + ": the index at " + DescribeAddress(index) + ", the budgets at +" + Hex(kBudgets) +
 				" of the counters" + At(kGetter));
 
 			// The placement's check: every load a field of the counters, the most and the budgets those the start-up writes
 			const uint8_t* const counters = Rel32Target(placement + kPlacementCountersAt);
-			if (!Inside(counters, kCountersSize))
-				return fail("the counters at " + DescribeAddress(counters) + At(kPlacement) + " are not inside the game");
+			if (const std::string wrong = Misplaced(counters, kCountersSize, sizeof(uint64_t)); !wrong.empty())
+				return fail("the counters at " + DescribeAddress(counters) + At(kPlacement) + " are " + wrong);
 			if (!IsReadable(placement + kPlacementPastAt, sizeof(int32_t)))
 				return fail("the load of the textures' bytes after " + std::string(kPlacement.label) + " at " + DescribeAddress(placement + kPlacementPastAt) +
 					" cannot be read");
@@ -391,8 +396,8 @@ namespace TweaksV
 			const uint8_t* const counters = g_counters;
 			const uint8_t* const getter = g_getter;
 			const uint8_t* const switchAt = Rel32Target(update + kSwitchAt) + 1;	// the disp32 ends a byte before the instruction
-			if (!Inside(switchAt, kSwitchSize))
-				return fail("the update check's switch and factors at " + DescribeAddress(switchAt) + At(kUpdate) + " are not inside the game");
+			if (const std::string wrong = Misplaced(switchAt, kSwitchSize, sizeof(uint32_t)); !wrong.empty())
+				return fail("the update check's switch and factors at " + DescribeAddress(switchAt) + At(kUpdate) + " are " + wrong);
 			if (Rel32Target(update + kUpdateCountersAt) != counters || Rel32Target(update + kUpdateBuffersAt) != counters + kBuffersBytes ||
 				Rel32Target(update + kUpdateTexturesAt) != counters + kTexturesBytes)
 				return fail("the update check at " + DescribeAddress(update) + " does not read the counters at " + DescribeAddress(counters) + At(kUpdate));
@@ -410,8 +415,8 @@ namespace TweaksV
 				return fail("the update check's code at " + DescribeAddress(compare) + " is not the compare of its flag: " + HexBytes(compare, kFlagSize) +
 					At(kUpdate));
 			const uint8_t* const flag = Rel32Target(compare + 2) + 1;	// an imm8 follows the disp32 here too
-			if (!Inside(flag, 1))
-				return fail("the update check's flag at " + DescribeAddress(flag) + At(kUpdate) + " is not inside the game");
+			if (const std::string wrong = Misplaced(flag, 1, 1); !wrong.empty())
+				return fail("the update check's flag at " + DescribeAddress(flag) + At(kUpdate) + " is " + wrong);
 			const uint8_t* const lower = update + kLowerAt;
 			const uint8_t* const raise = update + kRaiseAt;
 			if (MulssTarget(lower) != switchAt + kLowerFactor)
@@ -431,6 +436,7 @@ namespace TweaksV
 
 		// ---- the measurement (DIAGNOSTIC_MODE): the counters, read as they are
 
+		// A value of the game's data that the game's threads may write meanwhile: aligned, as the checks hold it, so read whole.
 		template <typename T> T Load(const uint8_t* at)
 		{
 			return *reinterpret_cast<const volatile T*>(at);

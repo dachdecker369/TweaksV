@@ -314,6 +314,11 @@
 //                  its call: TweaksV's raise stops at its write of budget 2, half done, and a handler of the fake holds it there
 //                  past the time of TweaksV's first summary, 10 seconds in, then says how many summaries the log holds and lets
 //                  it go on; then the fake waits for the first summary, 10 seconds at most
+//   tbmostodd      the start-up's store of the most objects leads 1 byte past them
+//   tbbudgetsodd   its store of budgets 0 and 1 leads 4 bytes past them, on 4 bytes, not 8
+//   tbindexodd     the getter's index leads 1 byte past it
+//   tbcountersodd  the placement's load of the buffers' bytes, the start of the counters, leads 4 bytes past them, on 4 bytes, not 8
+//   tbswitchodd    the update check's switch leads 2 bytes past it
 //   tbwritemov, tbwritebyte, tbwritesse, tbwriteavx, tbwritelock, tbwriteimm
 //                  a writer of the budgets besides the start-up's two stores, each of another kind: "mov" of 8 bytes from 4
 //                  bytes before them, "mov" of their last byte with an imm8, "movups" of budgets 2 and 3, "vmovdqu" of 32 bytes
@@ -5775,6 +5780,16 @@ int wmain(int argc, wchar_t** argv)
 		}
 		if (HasOption(argc, argv, L"tbindexunreadable"))	// the index on a page of its own, taken away below
 			SetRel32(g_textureBudgetIndexRef, g_textureBudgetIndexPage);
+		if (HasOption(argc, argv, L"tbmostodd"))	// the addresses inside the game, not aligned to the size of their reads
+			SetRel32(g_textureBudgetMostRef, counters + 0x21);
+		if (HasOption(argc, argv, L"tbbudgetsodd"))
+			SetRel32(g_textureBudgetBudgetRefs[0], counters + 0x2C);
+		if (HasOption(argc, argv, L"tbindexodd"))
+			SetRel32(g_textureBudgetIndexRef, reinterpret_cast<const unsigned char*>(&data.index) + 1);
+		if (HasOption(argc, argv, L"tbcountersodd"))
+			SetRel32(g_textureBudgetLoads[3].site, counters + 4);
+		if (HasOption(argc, argv, L"tbswitchodd"))	// its disp32 a byte short of what it leads to, as above
+			SetRel32(g_textureBudgetSwitchRef, reinterpret_cast<const unsigned char*>(&data.updateCheck.on) + 1);
 		// the budgets' neighbours and readers where they lie; a writer at the budgets only with its option, else at the dummy
 		for (const TextureBudgetOperand& operand : g_textureBudgetOperands)
 			SetRel32(operand.site, !operand.option || HasOption(argc, argv, operand.option) ?
