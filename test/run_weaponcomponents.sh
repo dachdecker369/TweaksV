@@ -5,16 +5,17 @@
 # other leas: by default the list moved - its 17 loads to a list of 16854 entries that holds the game's own entries, the
 # count left where it is - and the pool's size call redirected to a read+execute stub that gives the pool the room and
 # 470, the game's lookup called with the game's arguments, its line once, every other byte as placed and every page its
-# own protection; the part off; DRY_RUN; WEAPON_COMPONENTS_SIZE raised and past its range; the game's configuration naming
+# own protection; the part off; DRY_RUN; WEAPON_COMPONENTS_SIZE raised, at its maximum, past its range and below a game's own
+# list of 600, the core's line naming the key's range; the game's configuration naming
 # the pool's size, below the list's and above it; DIAGNOSTIC_MODE with every site, write and status line word for word, the
 # measurement announced and its summary 10 seconds in, again once a pack's file loads, past the game's own 470, the list
 # full, the list overflowed, the game's own list in use with DRY_RUN; a load the game puts back, reported once with its
 # box; each check failing on its own - TEST_BREAK_PATTERN, the list another mod moved, a lea fewer, one more, one with
 # another prefix, the count's references disagreeing, the count not a whole number of entries after the list, before it,
-# outside the game, too far for a plausible size, the pool's default 0, W-E-C4 twice and the size call another mod hooked - each a
+# outside the game, too far for a plausible size, the pool's default 0, W-E-C4 twice, a game's own list past the key's maximum and the size call another mod hooked - each a
 # problem word for word with nothing written; the plain game; and the guard on the loader of a weaponcomponents.meta - by default
 # hooked, its line; with the test build's TWEAKSV_TEST_GUARD_ROOM=1 or a smaller room, the files that come once the room is used
-# up refused - each a line, the first a problem - and their callbacks destroyed, a callable on the heap too, none through a vtable or a
+# up refused - each a line, the first a problem, its advice by the room: what to raise, the test build's room, the key's maximum - and their callbacks destroyed, a callable on the heap too, none through a vtable or a
 # destroy outside the game; an entry of another type, refused by the count alone; the names refused kept through a base loader's
 # run, 1,024 of them; a blob that does not add up, each read of the blobs that fails, switching it off; W-E-C5 missing and the loader another mod hooked, the guard
 # not made and the rest applied, W-E-C5 twice too; the pool made before TweaksV started, reported once. The weapon infos half logs and reports under the same tag,

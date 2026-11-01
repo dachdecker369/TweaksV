@@ -7,7 +7,7 @@
 # every site's line at its place, both immediates written in one go and the loader hooked, a line per file, the summary
 # 10 seconds in; the defaults with the raise's line and the guard's alone; the room full - the files past it refused, the
 # game's loader not called for them, reported once in a box of its own and later ones in a line; the guards' test switch
-# of a test build, which gives the guard the game's own room; a name that cannot be read; the lines per file past their
+# of a test build, which gives the guard the game's own room, the report naming it, and the report at the key's maximum; a name that cannot be read; the lines per file past their
 # cap; DRY_RUN, with the would lines and nothing written or hooked; packs mounted while the game runs; an array set up
 # before TweaksV starts, immediates another mod raised before TweaksV or an array another mod gave less room after it;
 # Windows' dynamic code policy; the part off; a pattern missing, a pattern the game holds twice, each site not as expected and
