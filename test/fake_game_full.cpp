@@ -177,6 +177,8 @@
 //                  until TweaksV's problem is in the log, up to 10 s (for the test build's TWEAKSV_TEST_SUMMARY_MS)
 //   wcearly        the game made the pool before TweaksV started: with wcmount or wcmany it is not made again before the files
 //                  are mounted, which wait up to 3 s for the box of TweaksV's problem, or the line that it is not shown
+//   wcgrown        the count's four references lead 600 entries of 8 bytes past the list: the game's own list has grown to 600
+//   wclarge        they lead 16500 entries past it, inside the fake's image: a size the core takes, past the key's maximum
 // The siren setting IDs (SirenSettings): their 14 sites are always there - the parser registrations of the siren settings
 // and the vehicle variations with their tables and the two ID members' data (type 0x01), the XML reader, the base and a
 // pack's loops and builders with the four lea of the ID table, the dedupe and its loop, the three constructors, the init's
@@ -5399,7 +5401,7 @@ int wmain(int argc, wchar_t** argv)
 	{
 		WeaponComponentsStore* const store = g_weaponComponentsStore;
 		const void* const list = HasOption(argc, argv, L"wcmoved") ? static_cast<const void*>(ImageEnd() + 0x70000) : store->list;	// ...unless another mod moved it
-		// ...and the count where the game has it - or 4 bytes past it, 8 bytes before the list, outside the game, 20000 entries on
+		// ...and the count where the game has it - or 4 bytes past it, 8 bytes before the list, outside the game, 20000, 600 or 16500 entries on
 		const unsigned char* count = reinterpret_cast<unsigned char*>(&store->count) + (HasOption(argc, argv, L"wcgap") ? 4 : 0);
 		if (HasOption(argc, argv, L"wcbefore"))
 			count = reinterpret_cast<unsigned char*>(store->list) - 8;
@@ -5407,6 +5409,10 @@ int wmain(int argc, wchar_t** argv)
 			count = ImageEnd() + 0x72000;
 		if (HasOption(argc, argv, L"wcfar"))
 			count = reinterpret_cast<unsigned char*>(store->list) + 20000 * 8;
+		if (HasOption(argc, argv, L"wcgrown"))
+			count = reinterpret_cast<unsigned char*>(store->list) + 600 * 8;
+		if (HasOption(argc, argv, L"wclarge"))
+			count = reinterpret_cast<unsigned char*>(store->list) + 16500 * 8;
 		if (HasOption(argc, argv, L"wcdefault"))	// ...or the pool's default 0
 		{
 			SetImm32(g_weaponComponentsDefault, 0);

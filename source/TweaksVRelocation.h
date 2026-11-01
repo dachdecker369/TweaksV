@@ -135,7 +135,7 @@ namespace TweaksV
 		const char* sizeName;				// "modkit list size": "The game's own <sizeName>, N, is not plausible."
 		const char* job;					// "The modkit limit is not changed": the start of every failure line
 		size_t entrySize;					// bytes per entry
-		uint32_t maxEntries;				// the new array's size, and the setting's maximum
+		uint32_t maxEntries;				// the new array's size, the setting's maximum or more
 		const Setting* setting;				// the size asked for
 		std::span<const Anchor> anchors;
 		size_t scannedReferences;			// 0: the anchors' references are the ones moved; else exactly this many "lea r64,
@@ -161,7 +161,7 @@ namespace TweaksV
 	{
 		const uint8_t* array = nullptr;					// the game's own array
 		uint32_t gameSize = 0;							// its number of entries
-		uint32_t size = 0;								// the number to use: the setting, clamped to gameSize..maxEntries
+		uint32_t size = 0;								// the number to use: the setting, not below gameSize; a gameSize past the setting's maximum stands
 		std::vector<std::vector<uint8_t*>> matches;		// per anchor, its matches - for the sites a part reads itself
 		std::vector<uint8_t*> references;				// the rel32 fields that are moved
 		std::vector<FoundLimit> limits;
@@ -174,7 +174,7 @@ namespace TweaksV
 	// points at one array inside the game, every limit is the expected instruction and decodes to the
 	// same plausible size - a follower lies inside the game, a whole number of entries after the array -
 	// the scanned loads are exactly as many as expected, and with expectedReferences the anchors'
-	// references are every one the game has. Clamps the setting to the game's own size..maxEntries,
+	// references are every one the game has. Clamps the setting to the game's own size..its maximum,
 	// reported when it lay outside. False, reported, if the part must leave the game as it is.
 	bool FindRelocation(const RelocationSpec& spec, RelocationPlan& plan);
 

@@ -287,17 +287,20 @@ namespace TweaksV
 			}
 		}
 
-		// 3. the size to use: the game's own size..maxEntries - smaller would shrink the array; a value
-		// outside is reported, so that the start-up summary names the size really used
+		// 3. the size to use: the game's own size up to the setting's maximum, which the new array may pass (the weapon
+		// component list's holds one file more) - smaller would shrink the array; a value outside is reported, so that the
+		// start-up summary names the size really used. A game's own size past the setting's maximum is all there is to use:
+		// the part decides whether its array has room for it
 		const uint32_t requested = static_cast<uint32_t>(GetNumber(*spec.setting));
+		const uint32_t most = std::max(plan.gameSize, std::min(spec.maxEntries, static_cast<uint32_t>(spec.setting->maxValue)));
 		uint32_t size = requested;
 		if (size < plan.gameSize)
 			size = plan.gameSize;
-		if (size > spec.maxEntries)
-			size = spec.maxEntries;
+		if (size > most)
+			size = most;
 		if (size != requested)
 			ReportFailure(spec.tag, std::string("TweaksV.ini: ") + spec.setting->key + "=" + std::to_string(requested) + " is outside " +
-				std::to_string(plan.gameSize) + ".." + std::to_string(spec.maxEntries) + " - using " + std::to_string(size) + ".");
+				std::to_string(plan.gameSize) + ".." + std::to_string(most) + " - using " + std::to_string(size) + ".");
 		plan.size = size;
 		return true;
 	}

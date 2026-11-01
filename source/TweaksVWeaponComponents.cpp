@@ -660,6 +660,14 @@ namespace TweaksV
 		RelocationPlan plan;
 		if (!FindRelocation(kSpec, plan))
 			return;
+		// the pool gets the room and one file more: never past the list, whatever size the core takes from the game - the
+		// setting's maximum leaves that file's room, a game's own list past that maximum does not
+		if (plan.size + kPerFile > kMaxEntries)
+		{
+			RelocationFailed(kSpec, "the game's own weapon component list holds " + std::to_string(plan.gameSize) + " entries: a room of " + std::to_string(plan.size) +
+				" and the " + std::to_string(kPerFile) + " of the last file let in would pass the moved list's " + std::to_string(kMaxEntries) + ".");
+			return;
+		}
 		const bool diagnostic = IsDiagnosticMode();
 		const uint8_t* const rebuild = plan.matches[kRebuild][0];
 		const uint8_t* const sort = plan.matches[kSort][0];

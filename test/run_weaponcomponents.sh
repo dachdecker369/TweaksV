@@ -272,5 +272,19 @@ check "the part's box (the test build's line in its place)" "log_has 'TEST BUILD
 check "the guard goes on with its room: all 11 let in; none of its other problems" "has 'files mounted 11, loaded 11, destroyed 11 (0 on the heap), list 503' && log_lacks 'PROBLEM: The weapon components. guard' && log_lacks 'PROBLEM: Weapon component files are refused'"
 check "the move and the redirect stand; the lookup asked 3 times with the game's arguments, the early ask and the report's two; the pool's line only at the report's, after the problem" "has '$APPLIED' && has 'size call to a stub, RX: 1494 and 1494 slots, lookups 3 of 3 as called' && replaced 470 1494 && [ \$(grep -n 'pool size is not raised this session' TweaksV.log | cut -d: -f1) -lt \$(grep -n 'for the weapon components, 470, is replaced by 1494' TweaksV.log | cut -d: -f1) ]"
 
+echo "== W39 the game's own list of 16500 entries (wclarge), past the key's maximum, a size the core takes: the room and one file would pass the moved list"
+fresh_ini; out=$(game full_game.exe wclarge)
+check "the part's problem, word for word; nothing written" "refused 'the game.s own weapon component list holds 16500 entries: a room of 16500 and the 470 of the last file let in would pass the moved list.s 16854.' && has '$GAME'"
+check "the core's line on the key, word for word: the one size there is, not the moved list's 16854 as the key's range" "log_line '${TAG}PROBLEM: TweaksV.ini: WEAPON_COMPONENTS_SIZE=1024 is outside 16500..16500 - using 16500.\$'"
+
+echo "== W40 the game's own list of 600 entries (wcgrown), WEAPON_COMPONENTS_SIZE=500 below it: the key's range ends at the key's maximum"
+fresh_ini; setkey WEAPON_COMPONENTS_SIZE 500; out=$(game full_game.exe wcgrown)
+check "the core's line, word for word, once: 600..16384, not the moved list's 16854" "log_line '${TAG}PROBLEM: TweaksV.ini: WEAPON_COMPONENTS_SIZE=500 is outside 600..16384 - using 600.\$' && [ \$(count 'PROBLEM: TweaksV.ini') -eq 1 ]"
+check "moved at the game's own 600, the pool given 600 and 470 slots; none of the part's problems" "log_line '${TAG}The weapon component list moved and its limit raised from 600 to 600 entries.\$' && log_line '${TAG}The pool size call at $RVA is redirected: the weapon components. pool gets 1070 slots, the room of 600 and 470 for the last file let in.\$' && has 'wc: loads 17 moved 0 game 0 other' && has 'size call to a stub, RX: 1070 and 1070 slots' && log_lacks 'PROBLEM: The weapon components'"
+
+echo "== W41 the core at the key's maximum, the game's own 470: 16384 used without a problem, the pool 16854, the moved list's entries exactly"
+fresh_ini; setkey WEAPON_COMPONENTS_SIZE 16384; out=$(game full_game.exe)
+check "raised to 16384, no line on the key, the pool at the list's end and not past it" "log_line '${TAG}The weapon component list moved and its limit raised from 470 to 16384 entries.\$' && log_lacks 'PROBLEM: TweaksV.ini' && replaced 470 16854 && has 'size call to a stub, RX: 16854 and 16854 slots' && has '$APPLIED' && quiet"
+
 echo
 echo "WEAPON COMPONENTS SCENARIOS: $pass passed, $fail failed"
