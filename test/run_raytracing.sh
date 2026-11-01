@@ -3,7 +3,7 @@
 # The RayTracing part (TweaksVRayTracing): the ray tracing buffer of moving geometry and its two checks raised together in the
 # full fake game, whose three sites are code it runs - nothing looked for with DYNAMIC_BVH_VERTICES=0 and DIAGNOSTIC_MODE off, the
 # part off, the raise and nothing else, the cap, a value below the game's own, DRY_RUN; each check failing on its own, with the
-# part's problem and nothing written, another mod's raise left as it is, each pattern missing, the plain game; with
+# part's problem and nothing written, another mod's raise left as it is, each pattern missing or twice, the plain game; with
 # DIAGNOSTIC_MODE every site logged and the measurement - the refusal jumps through counting stubs while two threads of the fake
 # run the checks at once, every register the refusals find as the checks left it and the counts exact, the frames sampled and
 # summed up 10 seconds in, again when the most taken grows and after a frame's flip; DRY_RUN alike, Windows' dynamic code
@@ -170,6 +170,9 @@ refused rtnoreset "$GAME_SITES" "the game.s code references the counters at \$(r
 refused rtobjectodd "$GAME_SITES" "the buffer object.s global at \$(rva object 4) (T-E-B1) is not aligned to 8 bytes."
 refused rtslotodd "$GAME_SITES" "the frame slot at \$(rva slot 2) (T-E-C1) is not aligned to 4 bytes."
 refused rtcountersodd "$GAME_SITES" "the counters at \$(rva counters 2) (T-E-C2) are not aligned to 4 bytes."
+refused rtsetuptwice "$GAME_SITES" "the game code holds T-E-B1 2 or more times, not the expected 1."
+refused rtgeometrytwice "$GAME_SITES" "the game code holds T-E-C1 2 or more times, not the expected 1."
+refused rtropestwice "$GAME_SITES" "the game code holds T-E-C2 2 or more times, not the expected 1."
 
 echo "== R12 another mod raised the buffer and its checks to 8388608, DYNAMIC_BVH_VERTICES=8388608: left as it is, logged"
 fresh_ini; setkey DYNAMIC_BVH_VERTICES 8388608; out=$(game full_game.exe rtraised)
@@ -200,6 +203,10 @@ echo "== R17 the buffer made already, DIAGNOSTIC_MODE=1: the sites logged, the f
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe rtmade)
 check "the buffer object's line, the stubs' line and the announcement, word for word" "rt_line \"DIAGNOSTIC: buffer object.s store at $(rva set-up 33) -> $(rva object), which holds 0xBAD0B1EC7000: the buffer is made already (T-E-B1)\" && rt_line 'DIAGNOSTIC: the ray tracing buffer.s refusals are not counted: the game has made the buffer already - its threads may run the checks while their jumps are rewritten.' && rt_line '$MEASURED'"
 check "no jump rewritten or redirected, no problem; the sites as placed" "log_lacks 'refusal jump at RVA 0x[0-9A-F]*: 0F 87' && log_lacks 'redirected to counting stubs' && log_lacks 'PROBLEM' && has '$GAME_SITES' && has 'protect: all restored (RX)'"
+
+echo "== R18 a pattern twice with the key at 0 and DIAGNOSTIC_MODE=1: the scanner's line and both matches, logged, not reported - no measurement, nothing written"
+fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe rtsetuptwice)
+check "the measurement's line, word for word, the scanner's two matches; no problem, no redirect, no announcement" "rt_line \"${NOT_MEASURED}the game code holds T-E-B1 2 or more times, not the expected 1.\" && log_has 'Pattern T-E-B1 found: .*, 2 matches, bytes:' && log_has '  T-E-B1 match 2 of 2 at RVA 0x' && log_lacks 'PROBLEM' && log_lacks 'redirected to counting stubs' && log_lacks '\[RayTracing\] .*is measured' && has '$GAME_SITES'"
 
 echo
 echo "RAY TRACING SCENARIOS: $pass passed, $fail failed"

@@ -216,18 +216,33 @@ namespace TweaksV
 			return false;
 		}
 
+		// "1 time, not the expected 2." - "3 or more times, not ..." for a search that stopped at its limit
+		std::string Times(size_t found, size_t expected)
+		{
+			return std::to_string(found) + (found > expected ? " or more" : "") + (found == 1 ? " time" : " times") + ", not the expected " +
+				std::to_string(expected) + ".";
+		}
+
+		// The one match of a pattern, or nullptr, and why if nothing else has said why yet.
+		uint8_t* FindOnce(const GamePattern& pattern, std::string& why)
+		{
+			const std::vector<uint8_t*> found = Scanner::FindAll(pattern, 2);	// a second match shows
+			if (found.size() == 1)
+				return found[0];
+			if (why.empty())
+				why = found.empty() ? std::string(pattern.label) + " was not found." : "the game code holds " + std::string(pattern.label) + " " + Times(found.size(), 1);
+			return nullptr;
+		}
+
 		// T-E-B1, T-E-C1 and T-E-C2 found and every site checked - with DIAGNOSTIC_MODE each logged; false at the first that is
 		// not as the research found it, and why.
 		bool FindAndCheck(Sites& sites, std::string& why)
 		{
 			const bool diagnostic = IsDiagnosticMode();
-			uint8_t* const setUp = Scanner::Find(kSetUp);	// all three looked for, so that the log names each one missing
-			uint8_t* const matches[2] = { Scanner::Find(*kChecks[0].pattern), Scanner::Find(*kChecks[1].pattern) };
+			uint8_t* const setUp = FindOnce(kSetUp, why);	// all three looked for, so that the log names each one missing
+			uint8_t* const matches[2] = { FindOnce(*kChecks[0].pattern, why), FindOnce(*kChecks[1].pattern, why) };
 			if (!setUp || !matches[0] || !matches[1])
-			{
-				why = std::string((!setUp ? kSetUp : !matches[0] ? *kChecks[0].pattern : *kChecks[1].pattern).label) + " was not found.";
 				return false;
-			}
 
 			// T-E-B1: the count; the buffer maker's call into the game, to a function start by the game's unwind data; the
 			// buffer object's global inside the game - 0 until the game makes the buffer

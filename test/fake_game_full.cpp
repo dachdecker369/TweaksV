@@ -357,6 +357,8 @@
 //   rtobjectodd    the set-up's store of the buffer object leads 4 bytes past its global: not aligned to its 8 bytes
 //   rtslotodd      the geometry's check loads its frame slot from 2 bytes past it: not aligned to its 4 bytes
 //   rtcountersodd  the ropes' check loads its counters from 2 bytes past them: not aligned to the 4 bytes of a counter
+//   rtsetuptwice, rtgeometrytwice, rtropestwice
+//                  T-E-B1, T-E-C1 or T-E-C2 a second time: its site's match copied to the twin, a site that holds nothing else
 #include <windows.h>
 #include <winternl.h>
 #include <cstddef>
@@ -901,7 +903,8 @@ static Site g_staticBoundsSites[] = { SITE(g_staticBoundsCall, 0), SITE(g_static
 // rel32" to the refusal (+90 or +87, the rel32 at +92 or +89) - "mov eax, edi", "lock cmpxchg", "jne" back to the counter's load,
 // eax 1; the refusal (+112 or +109): every register but rax into the record, eax 0; the pops, "ret". The frame's reset: "lea
 // rax, [rip+disp32]" of the counters (+3), and a fourth lea, its first byte 48 only with "rtextra". Every site ends in CC. The edge,
-// two pages: with "rtjumpunread" T-E-C2's 47 bytes end the first, so that its refusal jump's rel32 lies on the second.
+// two pages: with "rtjumpunread" T-E-C2's 47 bytes end the first, so that its refusal jump's rel32 lies on the second. The twin:
+// CC, but with an option "...twice" a second match of a pattern.
 #define RT_PROLOGUE 0x53, 0x55, 0x56, 0x57, 0x41, 0x54, 0x41, 0x55, 0x41, 0x56, 0x41, 0x57, 0x49, 0x89, 0xD7, 0x4D, 0x8B, 0x07, \
 	0x4D, 0x8B, 0x4F, 0x08, 0x4D, 0x8B, 0x5F, 0x10, 0x4D, 0x8B, 0x67, 0x18, 0x4D, 0x8B, 0x6F, 0x20, 0x4D, 0x8B, 0x77, 0x28, 0x49, 0x89, 0x67, 0x30
 #define RT_REFUSAL 0x49, 0x89, 0x5F, 0x38, 0x49, 0x89, 0x4F, 0x40, 0x49, 0x89, 0x57, 0x48, 0x49, 0x89, 0x77, 0x50, 0x49, 0x89, 0x7F, 0x58, \
@@ -929,6 +932,7 @@ volatile unsigned char g_rtExtra[] = { 0xCC, 0x8D, 0x05, 0, 0, 0, 0, 0xCC };
 constexpr size_t kRtRopesMatch = 47, kRtEdgeMatchAt = 0x1000 - kRtRopesMatch;
 alignas(4096) volatile unsigned char g_rtEdge[0x2000] = { 0xCC };
 static Site g_rtEdgeRefs[] = { SITE(g_rtEdge, kRtEdgeMatchAt + 2), SITE(g_rtEdge, kRtEdgeMatchAt + 11) };	// T-E-C2's slot and counters there
+volatile unsigned char g_rtTwin[64] = { 0xCC };
 static Site g_rtCountSite = SITE(g_rtSetUp, 13);		// the buffer's count
 static Site g_rtMakerCall = SITE(g_rtSetUp, 29);		// the rel32 of the maker's call
 static Site g_rtObjectRef = SITE(g_rtSetUp, 36);		// the disp32 of the object's store
@@ -937,7 +941,7 @@ static Site g_rtCountersRefs[] = { SITE(g_rtGeometry, 53), SITE(g_rtRopes, 53), 
 static Site g_rtCapacities[] = { SITE(g_rtGeometry, 86), SITE(g_rtRopes, 83) };
 static Site g_rtJumps[] = { SITE(g_rtGeometry, 92), SITE(g_rtRopes, 89) };	// the rel32 of each refusal jump
 static Site g_rtSites[] = { SITE(g_rtSetUp, 0), SITE(g_rtGeometry, 0), SITE(g_rtRopes, 0), SITE(g_rtReset, 0), SITE(g_rtExtra, 0),
-	{ g_rtEdge + kRtEdgeMatchAt, 0, kRtRopesMatch } };
+	{ g_rtEdge + kRtEdgeMatchAt, 0, kRtRopesMatch }, SITE(g_rtTwin, 0) };
 constexpr size_t kRtSites = sizeof(g_rtSites) / sizeof(g_rtSites[0]);
 #pragma data_seg()
 
@@ -3415,6 +3419,17 @@ static void RtSetUp(int argc, wchar_t** argv)
 		SetRel32(g_rtSlotRefs[0], reinterpret_cast<const unsigned char*>(g_rtSlot) + 2);
 	if (HasOption(argc, argv, L"rtcountersodd"))
 		SetRel32(g_rtCountersRefs[1], reinterpret_cast<const unsigned char*>(g_rtCounters) + 2);
+	const auto twin = [](const volatile unsigned char* match, size_t size)
+	{
+		for (size_t i = 0; i < size; i++)
+			g_rtTwin[i] = match[i];
+	};
+	if (HasOption(argc, argv, L"rtsetuptwice"))
+		twin(g_rtSetUp + 4, 36);
+	if (HasOption(argc, argv, L"rtgeometrytwice"))
+		twin(g_rtGeometry + 42, 50);
+	if (HasOption(argc, argv, L"rtropestwice"))
+		twin(g_rtRopes + 42, kRtRopesMatch);
 	if (HasOption(argc, argv, L"rtmade"))
 		*g_rtObject = 0x0000BAD0B1EC7000ull;
 	for (size_t i = 0; i < kRtSites; i++)
