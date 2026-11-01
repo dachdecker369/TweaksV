@@ -669,7 +669,7 @@ namespace TweaksV
 			// The instruction whose ModRM lies at modrm, read from the bytes before it - none before begin - every way the
 			// processor could read them if an instruction started among them, since any of them may end the instruction before
 			// instead: as one with a VEX prefix (C4 with a map of 1 to 3, or C5), then with the escapes 0F 38, 0F 3A and 0F, then
-			// with a one-byte opcode, each with the prefixes before it; a reading whose F3 or F2 makes a store a load (movq's,
+			// with a one-byte opcode, the last two each with the prefixes before it; a reading whose F3 or F2 makes a store a load (movq's,
 			// crc32's) once more without that prefix and the bytes before it. The first byte of the instruction under the first
 			// reading that counts says is a store of the range, or nullptr when none is.
 			template <typename Counts>

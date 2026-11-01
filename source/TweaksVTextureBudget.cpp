@@ -800,11 +800,12 @@ namespace TweaksV
 			return;
 		}
 
-		// the raise, refused while the budgets have a writer besides the start-up's stores - it could undo the raise later - and
+		// the raise, refused while the budgets have a possible writer besides the start-up's stores - it could undo the raise
+		// later, and the search counts a load whose bytes read as a store too (SPECIFICATIONS 8) - and
 		// once the start-up has stored them before TweaksV started: the call the raise redirects is made already
 		if (raise && g_otherWriters != 0)
 		{
-			NotRaised("the budgets at " + DescribeAddress(g_budgets) + " have " + std::to_string(g_otherWriters) + (g_otherWriters == 1 ? " writer" : " writers") +
+			NotRaised("the budgets at " + DescribeAddress(g_budgets) + " have " + std::to_string(g_otherWriters) + (g_otherWriters == 1 ? " possible writer" : " possible writers") +
 				" besides the start-up's stores, the first at " + DescribeAddress(g_firstOtherWriter) + ", which could undo the raise later");
 			raise = false;
 		}

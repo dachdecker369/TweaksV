@@ -18,7 +18,8 @@
 # each new high alone, the update check's flag unchanged; the budgets' writers found by the scanner's search for stores - the
 # start-up's two alone, the stores beside the budgets and the loads and compares of them not counted, and six writers of
 # six kinds besides them, each named, and in a block of its own (TB50) a writer behind each byte that once hid it from the
-# search - a 0F, a C5, a C4 and an F3 the instruction before ends with - counted, named and refusing the raise; a pattern
+# search - a 0F, a C5, a C4, an F3, a 0F 38 and an F2 the instruction before ends with - counted, named and refusing the
+# raise, and a load whose bytes read as a store counted too, a possible writer; a pattern
 # missing (TEST_BREAK_PATTERN), a site not as expected, a call another mod hooked, an address outside the game, sites that
 # disagree on the counters and a factor's multiplication changed - each logged, no problem, no box, no summary; the plain
 # game; DRY_RUN alike; and in every run nothing written: the fake's sites and data as they were, no call redirected, every
@@ -251,7 +252,7 @@ check "the index outside the game" "refused 'the index at 0x[0-9A-F]* (outside t
 fresh_ini; setkey VIDEO_MEMORY_BUDGET 6000 RESOURCES; out=$(game full_game.exe tbmost)
 check "the placement's check loading the most 4 bytes past it" "refused 'the placement.s check loads the most objects from $(rva counters 0x24), not from +0x20 of the counters at $(rva counters) (Q-E-T4).'"
 fresh_ini; setkey VIDEO_MEMORY_BUDGET 6000 RESOURCES; out=$(game full_game.exe tbwritemov)
-check "a writer of the budgets besides the start-up's stores" "refused 'the budgets at $(rva counters 0x28) have 1 writer besides the start-up.s stores, the first at $(rva writers 97), which could undo the raise later.'"
+check "a writer of the budgets besides the start-up's stores" "refused 'the budgets at $(rva counters 0x28) have 1 possible writer besides the start-up.s stores, the first at $(rva writers 97), which could undo the raise later.'"
 
 echo "== TB30 the update check's raise factor not multiplied, VIDEO_MEMORY_BUDGET=6000 and DIAGNOSTIC_MODE=1: the raise all the same, no measurement"
 fresh_ini; setkey VIDEO_MEMORY_BUDGET 6000 RESOURCES; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe tbfactor)
@@ -340,21 +341,27 @@ check "Q-E-T2 twice without DIAGNOSTIC_MODE: the problem, word for word, the par
 
 echo "== TB38 a writer besides the start-up's stores, VIDEO_MEMORY_BUDGET=6000 and DIAGNOSTIC_MODE=1: the raise refused, the writer named, the budget measured"
 both_keys; out=$(game full_game.exe tbwritemov wait)
-check "the problem, word for word, the part's only one, in the start-up summary; nothing written" "refused 'the budgets at $(rva counters 0x28) have 1 writer besides the start-up.s stores, the first at $(rva writers 97), which could undo the raise later.'"
+check "the problem, word for word, the part's only one, in the start-up summary; nothing written" "refused 'the budgets at $(rva counters 0x28) have 1 possible writer besides the start-up.s stores, the first at $(rva writers 97), which could undo the raise later.'"
 check "the writers' line names it; neither the start-up's check nor the redirect made" "writers_line 'and 1 besides them: $(rva writers 97)' && log_lacks 'are still 0 at TweaksV' && log_lacks 'budgets. stores at RVA 0x[0-9A-F]* is redirected'"
 check "the measurement all the same: the announcement and the summary 10 s in, word for word, of the game's own budgets" "announced && log_line '$SUMMARY1' && first_after_10s"
 
-echo "== TB50 the scanner's readings of the bytes before an operand (T-STORES): a writer of the budgets behind a byte that once hid it - a 0F, a C5, a C4, an F3 the instruction before ends with - each counted"
-fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe tbmisread0f tbmisreadc5 tbmisreadc4 tbmisreadf3)
-check "the line, word for word: mov after and eax, 0Fh; mov of 8 bytes after mov al, 0C5h; movups with a REX.B from 8 bytes before the budgets after mov al, 0C4h; movd after mov al, 0F3h - each by its own first byte; measured all the same, nothing written" "writers_line 'and 4 besides them: $(rva misread 5), $(rva misread 15), $(rva misread 26), $(rva misread 38)' && announced && log_lacks 'PROBLEM' && untouched && has 'the misread block as placed'"
+echo "== TB50 the scanner's readings of the bytes before an operand (SPECIFICATIONS 8): a writer of the budgets behind a byte that once hid it - a 0F, a C5, a C4, an F3, a 0F 38, an F2 the instruction before ends with - each counted, and a load whose bytes read as a store counted too"
+fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe tbmisread0f tbmisreadc5 tbmisreadc4 tbmisreadf3 tbmisread38 tbmisreadf2)
+check "the line, word for word: mov after and eax, 0Fh; mov of 8 bytes after mov al, 0C5h; movups with a REX.B from 8 bytes before the budgets after mov al, 0C4h; movd after mov al, 0F3h; mov after mov eax, 380F0000h; movbe after mov al, 0F2h - each by its own first byte; measured all the same, nothing written" "writers_line 'and 6 besides them: $(rva misread 5), $(rva misread 15), $(rva misread 26), $(rva misread 38), $(rva misread 53), $(rva misread 63)' && announced && log_lacks 'PROBLEM' && untouched && has 'the misread block as placed'"
 fresh_ini; setkey VIDEO_MEMORY_BUDGET 6000 RESOURCES; out=$(game full_game.exe tbmisread0f)
-check "the mov behind the 0F alone, VIDEO_MEMORY_BUDGET=6000: the raise refused, the writer named, nothing written" "refused 'the budgets at $(rva counters 0x28) have 1 writer besides the start-up.s stores, the first at $(rva misread 5), which could undo the raise later.' && has 'the misread block as placed'"
+check "the mov behind the 0F alone, VIDEO_MEMORY_BUDGET=6000: the raise refused, the writer named, nothing written" "refused 'the budgets at $(rva counters 0x28) have 1 possible writer besides the start-up.s stores, the first at $(rva misread 5), which could undo the raise later.' && has 'the misread block as placed'"
 fresh_ini; setkey VIDEO_MEMORY_BUDGET 6000 RESOURCES; out=$(game full_game.exe tbmisreadc5)
-check "the mov of 8 bytes behind the C5 alone: refused, named" "refused 'the budgets at $(rva counters 0x28) have 1 writer besides the start-up.s stores, the first at $(rva misread 15), which could undo the raise later.'"
+check "the mov of 8 bytes behind the C5 alone: refused, named" "refused 'the budgets at $(rva counters 0x28) have 1 possible writer besides the start-up.s stores, the first at $(rva misread 15), which could undo the raise later.'"
 fresh_ini; setkey VIDEO_MEMORY_BUDGET 6000 RESOURCES; out=$(game full_game.exe tbmisreadc4)
-check "the movups behind the C4 alone, 16 bytes from 8 before the budgets, which the VEX reading takes for 8: refused, named by its REX" "refused 'the budgets at $(rva counters 0x28) have 1 writer besides the start-up.s stores, the first at $(rva misread 26), which could undo the raise later.'"
+check "the movups behind the C4 alone, 16 bytes from 8 before the budgets, which the VEX reading takes for 8: refused, named by its REX" "refused 'the budgets at $(rva counters 0x28) have 1 possible writer besides the start-up.s stores, the first at $(rva misread 26), which could undo the raise later.'"
 fresh_ini; setkey VIDEO_MEMORY_BUDGET 6000 RESOURCES; out=$(game full_game.exe tbmisreadf3)
-check "the movd behind the F3 alone, which the F3 as its prefix makes movq's load: refused, named by its 66" "refused 'the budgets at $(rva counters 0x28) have 1 writer besides the start-up.s stores, the first at $(rva misread 38), which could undo the raise later.'"
+check "the movd behind the F3 alone, which the F3 as its prefix makes movq's load: refused, named by its 66" "refused 'the budgets at $(rva counters 0x28) have 1 possible writer besides the start-up.s stores, the first at $(rva misread 38), which could undo the raise later.'"
+fresh_ini; setkey VIDEO_MEMORY_BUDGET 6000 RESOURCES; out=$(game full_game.exe tbmisread38)
+check "the mov behind a 0F 38 alone, which the three-byte reading takes for no store: refused, named by its 89" "refused 'the budgets at $(rva counters 0x28) have 1 possible writer besides the start-up.s stores, the first at $(rva misread 53), which could undo the raise later.'"
+fresh_ini; setkey VIDEO_MEMORY_BUDGET 6000 RESOURCES; out=$(game full_game.exe tbmisreadf2)
+check "the movbe behind an F2 alone, which the F2 as its prefix makes crc32's load: refused, named by its 0F" "refused 'the budgets at $(rva counters 0x28) have 1 possible writer besides the start-up.s stores, the first at $(rva misread 63), which could undo the raise later.'"
+fresh_ini; setkey VIDEO_MEMORY_BUDGET 6000 RESOURCES; out=$(game full_game.exe tbmisreadload)
+check "a load whose bytes read as a store, movups of budget 0, its 10 read as adc: counted all the same, a possible writer named by its 10 - safe, where a missed writer is not" "refused 'the budgets at $(rva counters 0x28) have 1 possible writer besides the start-up.s stores, the first at $(rva misread 74), which could undo the raise later.'"
 
 echo
 echo "TEXTURE BUDGET SCENARIOS: $pass passed, $fail failed"
