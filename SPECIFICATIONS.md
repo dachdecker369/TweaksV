@@ -7,7 +7,7 @@ The design of TweaksV as it is built: every module of the source, what it does, 
 | [README.md](README.md) | the player's view: what each part does, every key of `TweaksV.ini`, building, testing, other mods |
 | SPECIFICATIONS.md, this file | the design: the files, the tables, the start-up, the formats, the shared code, the mechanism of every part, the rules, the tests, how to extend it |
 | [PATTERNS.md](PATTERNS.md) | the game facts: every byte pattern, what the match holds, where it matched on the current build, how the sites are encoded |
-| [NOTES.md](NOTES.md) | what each part does with the checks it makes, the measurements, the open issues, the bugs found in the projects the parts derive from |
+| [NOTES.md](NOTES.md) | what each part does with the checks it makes, the measurements, the open issues |
 
 Credits and derivations are in [CREDITS.md](CREDITS.md), the notices in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). [SECURITY.md](SECURITY.md) says how to report a security problem and what it covers; [ROADMAP.md](ROADMAP.md) holds what I plan next and [PLAN.md](PLAN.md) the phases of a change while one is under way, a placeholder while none is. "I" in these files is the author, dachdecker369. TweaksV is GPL-3.0-only.
 
