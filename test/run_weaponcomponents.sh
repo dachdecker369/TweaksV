@@ -11,13 +11,13 @@
 # full, the list overflowed, the game's own list in use with DRY_RUN; a load the game puts back, reported once with its
 # box; each check failing on its own - TEST_BREAK_PATTERN, the list another mod moved, a lea fewer, one more, one with
 # another prefix, the count's references disagreeing, the count not a whole number of entries after the list, before it,
-# outside the game, too far for a plausible size, the pool's default 0 and the size call another mod hooked - each a
+# outside the game, too far for a plausible size, the pool's default 0, W-E-C4 twice and the size call another mod hooked - each a
 # problem word for word with nothing written; the plain game; and the guard on the loader of a weaponcomponents.meta - by default
 # hooked, its line; with the test build's TWEAKSV_TEST_GUARD_ROOM=1 or a smaller room, the files that come once the room is used
 # up refused - each a line, the first a problem - and their callbacks destroyed, a callable on the heap too, none through a vtable or a
 # destroy outside the game; an entry of another type, refused by the count alone; the names refused kept through a base loader's
 # run, 1,024 of them; a blob that does not add up, each read of the blobs that fails, switching it off; W-E-C5 missing and the loader another mod hooked, the guard
-# not made and the rest applied; the pool made before TweaksV started, reported once. The weapon infos half logs and reports under the same tag,
+# not made and the rest applied, W-E-C5 twice too; the pool made before TweaksV started, reported once. The weapon infos half logs and reports under the same tag,
 # so every check matches the weapon components' lines and problems by their wording. Fake LOCALAPPDATA: the real one is
 # never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
@@ -332,6 +332,15 @@ check "the problem, word for word, once; all 11 let in" "guard_off 'blob 5 at 0x
 echo "== W50 the blob array itself cannot be read when the first file comes (wcnoarray): the guard off, the files let through"
 fresh_ini; out=$(game full_game.exe wcmount wcnoarray)
 check "the problem, word for word, once; all 11 let in" "guard_off 'the blob array at $RVA cannot be read'"
+
+echo "== W51 W-E-C4 twice in the game's code (wcpooltwice; DIAGNOSTIC_MODE=1): named as twice, not as missing, by both parts that ask for it - looked for once"
+fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe wcpooltwice)
+check "the problem, word for word; nothing written, the size call to the game's lookup" "refused 'the game code holds W-E-C4 2 or more times, not the expected 1.' && has '$GAME' && log_lacks 'W-E-C4 was not found'"
+check "StaticBounds' problem, word for word, the same reason; the scanner's line once" "log_line '\[StaticBounds\] PROBLEM: The static bounds pool.s size is not raised this session: the game code holds W-E-C4 2 or more times, not the expected 1.\$' && [ \$(count 'Pattern W-E-C4 found: .* 2 matches,') -eq 1 ]"
+
+echo "== W52 W-E-C5 twice in the game's code (wcloadertwice): the guard not made, named as twice, the rest applied"
+fresh_ini; out=$(game full_game.exe wcloadertwice)
+check "the problem, word for word; the rest applied, the loader as placed" "log_line '${TAG}PROBLEM: The weapon components. guard is not made this session: the game code holds W-E-C5 2 or more times, not the expected 1.\$' && log_lacks 'W-E-C5 was not found' && has '$APPLIED' && log_line '$REDIRECTED' && has 'wc loader as placed'"
 
 echo
 echo "WEAPON COMPONENTS SCENARIOS: $pass passed, $fail failed"

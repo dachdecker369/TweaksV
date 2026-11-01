@@ -34,8 +34,9 @@ namespace TweaksV
 	// checks a call it redirects or takes a target from: a "call rel32" that can be read and leads into the game, another
 	// mod's hook leading outside it. The outcome is kept for the session, so that every part that asks gets the same,
 	// whichever of them is on, and the lookup as the game had it, before a part redirected the call. From DllMain only.
-	// False when the lookup is not known, with reason for the part's own PROBLEM line - "W-E-C4 was not found." or "the
-	// weapon components' pool size call at RVA ... is not a call into the game (another mod may have hooked it already)
-	// (W-E-C4)."; what was found is in found all the same, for the part's DIAGNOSTIC line.
+	// False when the lookup is not known, with reason for the part's own PROBLEM line - "W-E-C4 was not found.", "the game code
+	// holds W-E-C4 2 or more times, not the expected 1." or "the weapon components' pool size call at RVA ... is not a call into
+	// the game (another mod may have hooked it already) (W-E-C4)."; what was found is in found all the same, for the part's
+	// DIAGNOSTIC line.
 	bool FindPoolSizeCall(PoolSizeCall& found, std::string& reason);
 }

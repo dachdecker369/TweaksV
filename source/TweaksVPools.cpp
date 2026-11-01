@@ -14,6 +14,7 @@
 
 #include <cstddef>
 #include <cstring>
+#include <vector>
 
 #include "TweaksVConflicts.h"
 #include "TweaksVPatch.h"
@@ -61,6 +62,13 @@ namespace TweaksV
 		State g_state = State::NotTried;
 		PoolSizeCall g_found;
 		std::string g_reason;	// why the lookup is not known
+
+		// "2 or more times, not the expected 1." - for a pattern a search asked for 2 matches of, so that a match more shows
+		std::string Times(size_t found, size_t expected)
+		{
+			return std::to_string(found) + (found > expected ? " or more" : "") + (found == 1 ? " time" : " times") + ", not the expected " +
+				std::to_string(expected) + ".";
+		}
 	}
 
 	bool FindPoolSizeCall(PoolSizeCall& found, std::string& reason)
@@ -70,11 +78,15 @@ namespace TweaksV
 			// the outcome is kept only once it is whole: an exception on the way leaves the next part to try again
 			PoolSizeCall call;
 			std::string why;
-			uint8_t* const match = Scanner::Find(kPoolSizeCallPattern);
-			if (!match)
-				why = std::string(kPoolSizeCallPattern.label) + " was not found.";
+			const std::vector<uint8_t*> matches = Scanner::FindAll(kPoolSizeCallPattern, 2);	// a match more shows
+			if (matches.size() != 1)
+			{
+				const std::string label = kPoolSizeCallPattern.label;
+				why = matches.empty() ? label + " was not found." : "the game code holds " + label + " " + Times(matches.size(), 1);
+			}
 			else
 			{
+				uint8_t* const match = matches[0];
 				// every site lies inside the match, which the scan has read
 				call.call = match + kCallAt;
 				memcpy(&call.pool, match + kPoolAt, sizeof(call.pool));

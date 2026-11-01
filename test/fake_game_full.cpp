@@ -139,6 +139,8 @@
 //   wisize         the loader's blob size is 0x100, the allocation's element size 0xF8
 //   winotstart     the byte before the loader's start is 48, so that it is no function start
 //   wiextra        a third reference to the array, a second store of a block
+//   wiinittwice    W-E-I1's bytes a second time in .fakesit: the game holds the pattern twice
+//   wiloadertwice  W-E-I2's bytes a second time in .fakesit
 // The weapon components' sites are always there (the WeaponLimits part): the rebuild of the list of every weapon
 // component definition, its sort and its update of the count, the pool's size call to a stand-in for the game's size
 // lookup, and the list's 15 other leas, 17 in all; the list of 470 entries with its count right after it, 412
@@ -188,6 +190,8 @@
 //   wcnopointers   with wcmount: the blob array's pointer leads to a page that cannot be read, when the files are mounted
 //   wcnoblob       with wcmount: the 6th of the blob array's pointers leads to a page that cannot be read, when the files are mounted
 //   wcnoarray      with wcmount: the store's page cannot be read until the first file has reached the loader's first call
+//   wcpooltwice    W-E-C4's bytes a second time in .fakesit: the game holds the pattern twice
+//   wcloadertwice  W-E-C5's bytes a second time in .fakesit
 // The siren setting IDs (SirenSettings): their 14 sites are always there - the parser registrations of the siren settings
 // and the vehicle variations with their tables and the two ID members' data (type 0x01), the XML reader, the base and a
 // pack's loops and builders with the four lea of the ID table, the dedupe and its loop, the three constructors, the init's
@@ -716,6 +720,8 @@ static Site g_weaponComponentsSites[] = { SITE(g_weaponComponentsRebuild, 0), SI
 	SITE(g_weaponComponentsPool, 0), SITE(g_weaponComponentsLeaExtra, 0), SITE(g_weaponComponentsLoader, 0) };
 static Site g_weaponComponentsSizeCall = SITE(g_weaponComponentsPool, 19);
 static Site g_weaponComponentsDefault = SITE(g_weaponComponentsPool, 14);
+// a pattern of the WeaponLimits part a second time, copied here by "wiinittwice", "wiloadertwice", "wcpooltwice" or "wcloadertwice"
+volatile unsigned char g_weaponLimitsSecondMatch[128] = { 0xCC };
 
 // The siren setting IDs: each array one match of its pattern with the bytes the module checks at their offsets, from
 // I-E-P1 to I-E-M1 (the constructors' C2 and C3 from 15 bytes before their match), and a fifth lea of the ID table that is
@@ -5463,6 +5469,18 @@ int wmain(int argc, wchar_t** argv)
 		}
 		if (HasOption(argc, argv, L"winotstart"))	// no padding before the loader's start
 			g_weaponInfosLoader[0] = 0x48;
+		const auto copyMatch = [](const volatile unsigned char* bytes, size_t size) {
+			for (size_t i = 0; i < size && i < sizeof(g_weaponLimitsSecondMatch); i++)
+				g_weaponLimitsSecondMatch[i] = bytes[i];
+		};
+		if (HasOption(argc, argv, L"wiinittwice"))		// the game holds a pattern twice
+			copyMatch(g_weaponInfosInit, sizeof(g_weaponInfosInit));
+		if (HasOption(argc, argv, L"wiloadertwice"))
+			copyMatch(g_weaponInfosLoader + 25, sizeof(g_weaponInfosLoader) - 25);
+		if (HasOption(argc, argv, L"wcpooltwice"))
+			copyMatch(g_weaponComponentsPool, sizeof(g_weaponComponentsPool));
+		if (HasOption(argc, argv, L"wcloadertwice"))
+			copyMatch(g_weaponComponentsLoader + 1 + 0x13, 66);
 		if (HasOption(argc, argv, L"wiextra"))		// a second store of a block into the array
 			g_weaponInfosExtra[0] = 0x48;
 		if (HasOption(argc, argv, L"wisetup"))		// the initializer ran before TweaksV

@@ -10,8 +10,8 @@
 # of a test build, which gives the guard the game's own room; a name that cannot be read; the lines per file past their
 # cap; DRY_RUN, with the would lines and nothing written or hooked; packs mounted while the game runs; an array set up
 # before TweaksV starts, immediates another mod raised before TweaksV or an array another mod gave less room after it;
-# Windows' dynamic code policy; the part off; a pattern missing, each site not as expected and an address outside the
-# game, each a problem of the start-up summary with nothing written; the plain game. And in every run nothing written but
+# Windows' dynamic code policy; the part off; a pattern missing, a pattern the game holds twice, each site not as expected and
+# an address outside the game, each a problem of the start-up summary with nothing written; the plain game. And in every run nothing written but
 # the two immediates and the loader's first bytes, every page its own protection. Fake LOCALAPPDATA: the real one is
 # never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
@@ -246,6 +246,15 @@ check "16,232 files to the room, 3,769 refused, each given 0 with its last error
 echo "== WI34 the raise refused with the guards' test switch (test build, TWEAKSV_TEST_GUARD_ROOM=1, an array set up before TweaksV): why the room is the game's own is the raise's, not the switch's"
 failing; out=$(TWEAKSV_TEST_GUARD_ROOM=1 ASI=TweaksV_test.asi game full_game.exe wisetup wifew)
 check "the report, word for word: the limit not raised, not the test build's room" "problem 'The weapons.meta file $LONG and 5 more were not loaded: the game.s room for weapons.meta files, 160, is full: its limit was not raised this session (see above).'"
+
+echo "== WI35 W-E-I1 twice in the game's code (wiinittwice; test build, ERROR_POPUP=1): both jobs undone, named as twice, not as missing"
+failing; run_test wiinittwice
+check "the problem, word for word, in the start-up summary; nothing written, nothing measured" "undone 'the game code holds W-E-I1 2 or more times, not the expected 1.' '160 160' '152 of 160' && log_lacks 'W-E-I1 was not found'"
+check "the scanner's line for the matches; W-E-I2 looked for all the same" "log_has 'Pattern W-E-I1 found: .* 2 matches,' && log_has 'Pattern W-E-I2 found: .* 1 match,'"
+
+echo "== WI36 W-E-I2 twice in the game's code (wiloadertwice; test build, ERROR_POPUP=1)"
+failing; run_test wiloadertwice
+check "the problem, word for word, in the start-up summary; nothing written, nothing measured" "undone 'the game code holds W-E-I2 2 or more times, not the expected 1.' '160 160' '152 of 160' && log_lacks 'W-E-I2 was not found' && log_has 'Pattern W-E-I1 found: .* 1 match,'"
 
 echo
 echo "WEAPON INFOS SCENARIOS: $pass passed, $fail failed"

@@ -127,6 +127,13 @@ namespace TweaksV
 			return text;
 		}
 
+		// "2 or more times, not the expected 1." - for a pattern a search asked for 2 matches of, so that a match more shows
+		std::string Times(size_t found, size_t expected)
+		{
+			return std::to_string(found) + (found > expected ? " or more" : "") + (found == 1 ? " time" : " times") + ", not the expected " +
+				std::to_string(expected) + ".";
+		}
+
 		// " (W-E-I1)" - the pattern a line's site lies in
 		std::string In(const GamePattern& pattern)
 		{
@@ -155,11 +162,18 @@ namespace TweaksV
 		// Finds and checks every site both jobs need; the reason for the first that is not as expected, or "".
 		std::string FindSites(Sites& sites)
 		{
-			// 1. the two patterns, both looked for, so that the log names each one missing
-			sites.init = Scanner::Find(kInitPattern);
-			sites.loader = Scanner::Find(kLoaderPattern);
-			if (!sites.init || !sites.loader)
-				return std::string(sites.init ? kLoaderPattern.label : kInitPattern.label) + " was not found.";
+			// 1. the two patterns, both looked for, so that the log names each one missing, and each asked for a match more,
+			// so that one the game holds twice is said to be
+			const std::vector<uint8_t*> inits = Scanner::FindAll(kInitPattern, 2);
+			const std::vector<uint8_t*> loaders = Scanner::FindAll(kLoaderPattern, 2);
+			if (inits.size() != 1 || loaders.size() != 1)
+			{
+				const std::string label = inits.size() != 1 ? kInitPattern.label : kLoaderPattern.label;
+				const size_t found = inits.size() != 1 ? inits.size() : loaders.size();
+				return found == 0 ? label + " was not found." : "the game code holds " + label + " " + Times(found, 1);
+			}
+			sites.init = inits[0];
+			sites.loader = loaders[0];
 			const uint8_t* const init = sites.init;
 			const uint8_t* const loader = sites.loader;
 

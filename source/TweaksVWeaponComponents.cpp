@@ -192,6 +192,13 @@ namespace TweaksV
 			return value;
 		}
 
+		// "2 or more times, not the expected 1." - for a pattern a search asked for 2 matches of, so that a match more shows
+		std::string Times(size_t found, size_t expected)
+		{
+			return std::to_string(found) + (found > expected ? " or more" : "") + (found == 1 ? " time" : " times") + ", not the expected " +
+				std::to_string(expected) + ".";
+		}
+
 		// True if the size bytes at p lie inside the game and can be read.
 		bool InsideGame(const void* p, size_t size)
 		{
@@ -521,12 +528,14 @@ namespace TweaksV
 		void MakeGuard(const RelocationPlan& plan, const uint8_t* files)
 		{
 			const bool diagnostic = IsDiagnosticMode();
-			uint8_t* const match = Scanner::Find(kLoaderPattern);
-			if (!match)
+			const std::vector<uint8_t*> matches = Scanner::FindAll(kLoaderPattern, 2);	// a match more shows
+			if (matches.size() != 1)
 			{
-				GuardNotMade(std::string(kLoaderPattern.label) + " was not found.");
+				const std::string label = kLoaderPattern.label;
+				GuardNotMade(matches.empty() ? label + " was not found." : "the game code holds " + label + " " + Times(matches.size(), 1));
 				return;
 			}
+			uint8_t* const match = matches[0];
 			// the head a function start: where the game's unwind data covers the match, the function it names must begin at the
 			// head, so that a shorter prologue after a game update cannot put the hook into the padding between functions; the
 			// byte before the head counts only for code without unwind data (TweaksV's fake game)
