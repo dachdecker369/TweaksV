@@ -45,7 +45,7 @@ RAISE='\[Resources\] The texture budgets of gameconfig.xml (MaxStreamingMemory_0
 SUMMARY_RAISED='\[Resources\] DIAGNOSTIC: texture budget: 2845 MB of the 6000 MB budget for the texture quality.s index 2 (MaxStreamingMemory_0..3_Base: 1500, 1500, 3000 and 3000 MB, raised to 6000, 6000, 6000 and 6000 MB by VIDEO_MEMORY_BUDGET) - textures 2456 MB, buffers 389 MB; 23456 of the 98304 objects allowed (MaxStreamingResources) - 22222 textures, 1234 buffers; the most so far 2900 MB by the game.s own mark, 2845 MB and 23456 objects at TweaksV.s readings; the update check.s flag is down.$'
 
 # rva NAME [PLUS]: "RVA 0x..." of what the fake's report places at NAME (stores, getter, placement, update, next step,
-# counters, index, flag, switch), plus PLUS
+# counters, index, flag, switch, index page), plus PLUS
 rva() {
 	local at
 	at=$(sed -nE "s/.*[ ,;]$1 RVA (0x[0-9A-F]+)[ ,].*/\1/p" <<< "$out" | head -n 1)
@@ -307,10 +307,10 @@ check "the problem, word for word, the part's only one, in the start-up summary;
 both_keys; out=$(game full_game.exe tbindexunreadable)
 check "with DIAGNOSTIC_MODE=1 the same problem, the measurement announced all the same; the most and the budgets not read, no redirect" "refused 'the index at $(rva 'index page') (Q-E-T3) cannot be read.' && announced && log_lacks 'are still 0 at TweaksV' && log_lacks 'budgets. stores at RVA 0x[0-9A-F]* is redirected'"
 
-echo "== TB37c the raise held half done past the time of the first summary, VIDEO_MEMORY_BUDGET=6000 and DIAGNOSTIC_MODE=1: the reading made again until the raise is done, a half-raised set never passing as the game's own"
-both_keys; out=$(game full_game.exe tbhalfraise)
-check "the fake held the raise at its write of budget 2 for 12 s, the first summary due 10 s in: none in the log by then" "has 'the raise held half done, 0 summaries by then'"
-check "the first summary once the raise is done, word for word: the game's own four and the four raised" "log_line '$SUMMARY_RAISED' && [ \$(summaries) -eq 1 ]"
+echo "== TB37c the test build, TWEAKSV_TEST_SUMMARY_MS=500: the raise held half done past the time of the first summary, VIDEO_MEMORY_BUDGET=6000 and DIAGNOSTIC_MODE=1: the reading made again until the raise is done, a half-raised set never passing as the game's own"
+both_keys; out=$(TWEAKSV_TEST_SUMMARY_MS=500 ASI=TweaksV_test.asi game full_game.exe tbhalfraise)
+check "the fake held the raise at its write of budget 2 for 12 s, a reading due within them, whenever the start-up came: no summary meanwhile" "has 'the raise held half done, 0 summaries meanwhile'"
+check "the summary once the raise is done, word for word: the game's own four and the four raised" "log_line '$SUMMARY_RAISED'"
 check "the half-raised set in no line" "log_lacks '6000, 6000, 3000 and 3000'"
 check "the raise's line, the budgets raised before the game's function ran, nothing else written, no problem" "log_has 'are raised to 6000 MB where they are below it: 6000, 6000, 6000 and 6000 MB now' && startup 'a TweaksV stub' '6000, 6000, 6000 and 6000' && report_is 'a TweaksV stub' '6000, 6000, 6000 and 6000' && log_lacks 'PROBLEM'"
 

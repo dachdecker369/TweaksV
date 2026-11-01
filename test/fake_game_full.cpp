@@ -312,8 +312,8 @@
 //   tbindexunreadable  the getter's index lies on a page of its own, which cannot be read while TweaksV starts
 //   tbhalfraise    the data lie over two pages, budgets 2 and 3 first on the second, which is read-only when the start-up makes
 //                  its call: TweaksV's raise stops at its write of budget 2, half done, and a handler of the fake holds it there
-//                  past the time of TweaksV's first summary, 10 seconds in, then says how many summaries the log holds and lets
-//                  it go on; then the fake waits for the first summary, 10 seconds at most
+//                  for 12 seconds, past the time of TweaksV's first summary, 10 seconds in, then says how many summaries came
+//                  meanwhile and lets it go on; then the fake waits for the next summary, 10 seconds at most
 //   tbmostodd      the start-up's store of the most objects leads 1 byte past them
 //   tbbudgetsodd   its store of budgets 0 and 1 leads 4 bytes past them, on 4 bytes, not 8
 //   tbindexodd     the getter's index leads 1 byte past it
@@ -2777,8 +2777,10 @@ static void TextureBudgetLater(TextureBudgetChange change)
 		change == TextureBudgetChange::High ? L", highs raised one at a time after the first summary" : L", set after the first summary");
 }
 
-// tbhalfraise: a write to the second page, the raise's of budget 2, is held 12 seconds, past TweaksV's first summary, 10 seconds in;
-// then the report gets how many summaries the log holds by then and the write goes on. Any other fault is not this handler's.
+// tbhalfraise: a write to the second page, the raise's of budget 2, is held 12 seconds, past TweaksV's first summary, 10 seconds in,
+// and with TWEAKSV_TEST_SUMMARY_MS=500 past a reading whenever the start-up came; then the report gets how many summaries came
+// meanwhile and the write goes on. Any other fault is not this handler's.
+static int g_textureBudgetSummariesAtHold = 0;
 static LONG CALLBACK TextureBudgetHoldRaise(EXCEPTION_POINTERS* pointers)
 {
 	const EXCEPTION_RECORD& record = *pointers->ExceptionRecord;
@@ -2786,9 +2788,10 @@ static LONG CALLBACK TextureBudgetHoldRaise(EXCEPTION_POINTERS* pointers)
 	if (record.ExceptionCode != EXCEPTION_ACCESS_VIOLATION || record.NumberParameters < 2 || record.ExceptionInformation[0] != 1 ||
 		record.ExceptionInformation[1] < second || record.ExceptionInformation[1] >= second + 4096)
 		return EXCEPTION_CONTINUE_SEARCH;
+	g_textureBudgetSummariesAtHold = TextureBudgetSummaries();
 	Sleep(12000);
-	swprintf(g_textureBudgetLater, sizeof(g_textureBudgetLater) / sizeof(g_textureBudgetLater[0]), L", the raise held half done, %d summaries by then",
-		TextureBudgetSummaries());
+	swprintf(g_textureBudgetLater, sizeof(g_textureBudgetLater) / sizeof(g_textureBudgetLater[0]), L", the raise held half done, %d summaries meanwhile",
+		TextureBudgetSummaries() - g_textureBudgetSummariesAtHold);
 	DWORD old = 0;
 	VirtualProtect(g_textureBudgetTwoPages + 4096, 4096, PAGE_READWRITE, &old);
 	return EXCEPTION_CONTINUE_EXECUTION;
@@ -5972,7 +5975,7 @@ int wmain(int argc, wchar_t** argv)
 	if (!HasOption(argc, argv, L"tblate") && !HasOption(argc, argv, L"tbearly"))
 		TextureBudgetStartUp();
 	if (g_textureBudgetHoldRaise)
-		TextureBudgetWaitFor(1, 10000);
+		TextureBudgetWaitFor(g_textureBudgetSummariesAtHold + 1, 10000);
 	if (HasOption(argc, argv, L"tbgrow"))
 		TextureBudgetLater(TextureBudgetChange::Grow);
 	else if (HasOption(argc, argv, L"tbhigh"))
