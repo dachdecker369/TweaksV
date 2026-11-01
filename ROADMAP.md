@@ -21,3 +21,10 @@ The original: [Static Bounds Limit Adjuster](https://www.gta5-mods.com/scripts/s
 I built the part for 2.6.0 on the wrong path and took it out before the tag (PLAN.md, D15; the part and its suite stand in the git history up to 66cd684). It redirected the size lookup's call found after a load of the pool's name, `BA 06 E4 DF 2C` - and my first proof boot of 2.6.0, on 2026-11-01, found that load nowhere in the running game. That call is only the original's fallback. Its way on Enhanced is two inline hooks made at its DLL attach (`PrepareEnhancedBootstrap` in its `CrashDiagnostics.cpp`, with their two patterns): one on the named pool's set-up, which notes the pool named `StaticBounds` with a stride of 16, one on the pool's allocator, which raises that pool's capacity at +0x18 to the key's value before the allocation and then takes both hooks off.
 
 Phase C takes the part up anew through those two hooks, on the shared code. To settle when it is planned: whether both patterns match once in the running game; whether the game still makes the pool after TweaksV's `DllMain` - it makes its pools as the session starts; what the raise does with a larger `gameconfig.xml` value; and, by the never-silent rule, what says so on screen when a hook cannot be made or the pool is made without it. Its place in the order: phase C, beside SirenSettings.
+
+## Phase C: the population's limits and the lighting capacity
+
+Ideas from the page of [Resource Extensions [Enhanced]](https://www.gta5-mods.com/scripts/resource-extensions) 2.4 by Koukol, read on 2026-11-01: closed source and its redistribution forbidden, so the page's words alone, its plugin never read. Each needs a research pass in the dump, and a measurement before any raise.
+
+- One pass on the population's limits: the vehicle model budget (its key `VehicleModelBudget`), the ped model budget (its "fewer repeated ped models"), the ped pool (256 to 768 on that page, 128 kept for missions) and the render queues of streamed peds and vehicles. Nothing is researched yet.
+- The lighting capacity, a question of SirenSettings' research pass: many siren lights are where a load may reach it.
