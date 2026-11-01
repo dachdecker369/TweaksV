@@ -108,7 +108,7 @@ check "header: HeapAdjuster off; no HeapAdjuster lines, no problem" "log_has 'Fe
 echo "== S16 S-E3 matches twice (a second copy of the landing page's site): not used, the landing page left alone, the others skipped"
 fresh_ini; out=$(game full_game.exe twos3); echo "      $out"
 check "the landing page left alone, the splash and legal screens skipped" "[[ \"\$out\" == *\"$ORIG_LANDING\"* && \"\$out\" == *\"$NEW_SPLASH\"* && \"\$out\" == *\"$NEW_LEGAL\"* ]]"
-check "the scanner says why; the problem names the pattern" "log_has 'Scanner\] Pattern S-E3 matches 2 or more times - not used (the site must be unique).' && log_has 'PROBLEM: The landing page is not skipped this session: S-E3 was not found.'"
+check "the scanner says why; the problem names the pattern" "log_has 'Scanner\] Pattern S-E3 matches 2 or more times - not used (the site must be unique).' && log_has 'PROBLEM: The landing page is not skipped this session: the game code holds S-E3 2 or more times, not the expected 1.'"
 
 echo "== S17 HEAP_SIZE=100, below the game's own 648 MB: raised to it and reported, so the start-up summary names the size used"
 fresh_ini; setkey HEAP_SIZE 100; out=$(game full_game.exe); echo "      $out"

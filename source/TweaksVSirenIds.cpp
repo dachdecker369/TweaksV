@@ -604,16 +604,12 @@ namespace TweaksV
 	void MeasureSirenIds()
 	{
 		// every pattern is looked for, so that the log names each one missing; the line names the first
-		const char* missing = nullptr;
+		std::string notFound;
 		for (size_t i = 0; i < kMatchCount; i++)
+			g_matches[i] = Scanner::FindOnce(*kLimitPatterns[i], notFound);
+		if (!notFound.empty())
 		{
-			g_matches[i] = Scanner::Find(*kLimitPatterns[i]);
-			if (!g_matches[i] && !missing)
-				missing = kLimitPatterns[i]->label;
-		}
-		if (missing)
-		{
-			WriteLog(kTag, std::string("DIAGNOSTIC: the siren settings are not measured: ") + missing + " was not found.");
+			WriteLog(kTag, "DIAGNOSTIC: the siren settings are not measured: " + notFound + ".");
 			return;
 		}
 		// every site in the order of the patterns; the first that is not as the findings have it ends the checks

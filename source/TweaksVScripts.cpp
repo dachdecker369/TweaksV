@@ -118,14 +118,13 @@ namespace TweaksV
 			bool MakeHook(const char* tag)
 			{
 				// every pattern is looked for, so that the log names each one missing
-				uint8_t* const hook = Scanner::Find(kHookPattern);
-				uint8_t* const nativeLoop = Scanner::Find(kNativeLoopPattern);
-				uint8_t* const interpreter = Scanner::Find(kInterpreterPattern);
-				const char* const missing = !hook ? kHookPattern.label : !nativeLoop ? kNativeLoopPattern.label :
-					!interpreter ? kInterpreterPattern.label : nullptr;
-				if (missing)
+				std::string notFound;
+				uint8_t* const hook = Scanner::FindOnce(kHookPattern, notFound);
+				uint8_t* const nativeLoop = Scanner::FindOnce(kNativeLoopPattern, notFound);
+				uint8_t* const interpreter = Scanner::FindOnce(kInterpreterPattern, notFound);
+				if (!hook || !nativeLoop || !interpreter)
 				{
-					g_reason = std::string(missing) + " was not found.";
+					g_reason = notFound + ".";
 					return false;
 				}
 

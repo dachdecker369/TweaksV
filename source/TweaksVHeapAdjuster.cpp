@@ -48,10 +48,11 @@ namespace TweaksV
 	void InitHeapAdjuster()
 	{
 		// 1. the site: the imm32 of "mov edx, imm32" (BA imm32), one byte into the match
-		uint8_t* const match = Scanner::Find(Pattern("H-E1"));
+		std::string notFound;
+		uint8_t* const match = Scanner::FindOnce(Pattern("H-E1"), notFound);
 		if (!match)
 		{
-			Fail("H-E1 was not found.");
+			Fail(notFound + ".");
 			return;
 		}
 		uint8_t* const site = match + 1;

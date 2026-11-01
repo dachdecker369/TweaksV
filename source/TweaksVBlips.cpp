@@ -894,11 +894,12 @@ namespace TweaksV
 		// it from starting is logged, not reported - an aid (NOTES.md, T-DIAG).
 		void StartPoolMeasurement()
 		{
-			const uint8_t* const lea = Scanner::Find(kPoolPattern);	// both looked for, so that the log names each one missing
-			const uint8_t* const cmp = Scanner::Find(kMarkPattern);
+			std::string notFound;
+			const uint8_t* const lea = Scanner::FindOnce(kPoolPattern, notFound);	// both looked for, so that the log names each one missing
+			const uint8_t* const cmp = Scanner::FindOnce(kMarkPattern, notFound);
 			if (!lea || !cmp)
 			{
-				WriteLog(kTag, std::string("DIAGNOSTIC: the blip pool is not measured: ") + (lea ? kMarkPattern.label : kPoolPattern.label) + " was not found.");
+				WriteLog(kTag, "DIAGNOSTIC: the blip pool is not measured: " + notFound + ".");
 				return;
 			}
 			const uint8_t* const pool = Rel32Target(lea + kPoolLeaAt + 3);

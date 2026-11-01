@@ -437,15 +437,14 @@ namespace TweaksV
 	void MeasureSirenCount()
 	{
 		// 1. the four sites, each looked for, so that the log names every one missing
-		uint8_t* const call = Scanner::Find(kCallPattern);
-		const uint8_t* const boneRead = Scanner::Find(kBoneReadPattern);
-		const uint8_t* const glassRead = Scanner::Find(kGlassReadPattern);
-		const uint8_t* const findBone = Scanner::Find(kFindBonePattern);
-		const GamePattern* const missing = !call ? &kCallPattern : !boneRead ? &kBoneReadPattern : !glassRead ? &kGlassReadPattern :
-			!findBone ? &kFindBonePattern : nullptr;
-		if (missing)
+		std::string notFound;
+		uint8_t* const call = Scanner::FindOnce(kCallPattern, notFound);
+		const uint8_t* const boneRead = Scanner::FindOnce(kBoneReadPattern, notFound);
+		const uint8_t* const glassRead = Scanner::FindOnce(kGlassReadPattern, notFound);
+		const uint8_t* const findBone = Scanner::FindOnce(kFindBonePattern, notFound);
+		if (!call || !boneRead || !glassRead || !findBone)
 		{
-			NotMeasured(std::string(missing->label) + " was not found.");
+			NotMeasured(notFound + ".");
 			return;
 		}
 

@@ -347,12 +347,6 @@ namespace TweaksV
 #endif
 		}
 
-		uint8_t* Find(const GamePattern& gamePattern)
-		{
-			std::string why;
-			return FindOnce(gamePattern, why);
-		}
-
 		uint8_t* FindOnce(const GamePattern& gamePattern, std::string& why)
 		{
 			const std::vector<uint8_t*> found = FindAll(gamePattern, 2);
@@ -373,7 +367,7 @@ namespace TweaksV
 				(found == 1 ? " time" : " times") + ", not the expected " + std::to_string(expected);
 		}
 
-		// The search behind Find, carried on from each match until limit matches are found.
+		// The search behind FindOnce, carried on from each match until limit matches are found.
 		std::vector<uint8_t*> FindAll(const GamePattern& gamePattern, size_t limit)
 		{
 			std::vector<uint8_t*> found;
@@ -410,7 +404,7 @@ namespace TweaksV
 		namespace
 		{
 			// Every "<REX.W> <opcode> <ModRM mod 00 r/m 101> disp32" whose displacement leads to target, the
-			// opcode one of the two given, looked for the way Find looks for a pattern: the opcode and the
+			// opcode one of the two given, looked for the way FindAll looks for a pattern: the opcode and the
 			// ModRM at 16 positions at a time, the prefix and the displacement only where both match.
 			std::vector<uint8_t*> FindRipRelative(const void* target, size_t limit, uint8_t opcodeA, uint8_t opcodeB)
 			{

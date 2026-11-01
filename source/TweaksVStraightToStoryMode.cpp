@@ -89,10 +89,11 @@ namespace TweaksV
 				WriteLog(kTag, "SKIP_SPLASH_SCREEN=0 - the splash screen is not skipped.");
 				return;
 			}
-			uint8_t* const match = Scanner::Find(Pattern("S-E1"));
+			std::string notFound;
+			uint8_t* const match = Scanner::FindOnce(Pattern("S-E1"), notFound);
 			if (!match)
 			{
-				Fail(kScreen, "S-E1 was not found.");
+				Fail(kScreen, notFound + ".");
 				return;
 			}
 			uint8_t* const site = JumpSite(kScreen, match, 0x0D);
@@ -135,10 +136,11 @@ namespace TweaksV
 				WriteLog(kTag, "SKIP_LEGAL_SCREEN=0 - the legal screen is not skipped.");
 				return;
 			}
-			uint8_t* const match = Scanner::Find(Pattern("S-E2"));
+			std::string notFound;
+			uint8_t* const match = Scanner::FindOnce(Pattern("S-E2"), notFound);
 			if (!match)
 			{
-				Fail(kScreen, "S-E2 was not found.");
+				Fail(kScreen, notFound + ".");
 				return;
 			}
 			uint8_t* const site = JumpSite(kScreen, match, 0x0F);
@@ -167,10 +169,11 @@ namespace TweaksV
 				WriteLog(kTag, "SKIP_LANDING_PAGE=0 - the landing page is not skipped.");
 				return;
 			}
-			uint8_t* const match = Scanner::Find(Pattern("S-E3"));
+			std::string notFound;
+			uint8_t* const match = Scanner::FindOnce(Pattern("S-E3"), notFound);
 			if (!match)
 			{
-				Fail(kScreen, "S-E3 was not found.");
+				Fail(kScreen, notFound + ".");
 				return;
 			}
 			uint8_t* const function = const_cast<uint8_t*>(CallTarget(match));	// the call the pattern starts with

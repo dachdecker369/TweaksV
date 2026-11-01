@@ -18,11 +18,8 @@ namespace TweaksV
 	{
 		// The one match of a pattern in GTA5_Enhanced.exe's code, or nullptr: a miss is logged with the
 		// pattern's label, and so is a pattern that matches twice or more, which is not used - the site it
-		// is meant for must be unique.
-		uint8_t* Find(const GamePattern& pattern);
-
-		// Find, for a part that looks for all its patterns and refuses its job with the first reason: nullptr, with
-		// NotAsOften's words in why when why is still empty, unless the pattern matches exactly once.
+		// is meant for must be unique. why gets the reason in NotAsOften's words unless it holds one already, so
+		// that a part looks for all its patterns, the log naming each one missing, and refuses its job with the first.
 		uint8_t* FindOnce(const GamePattern& pattern, std::string& why);
 
 		// Why a search found a pattern other than as often as it must: "A-E-T1 was not found", "the game code holds A-E-T1 2 or
@@ -31,8 +28,8 @@ namespace TweaksV
 		std::string NotAsOften(const GamePattern& pattern, size_t found, size_t expected);
 
 		// Every match of a pattern, in address order, at most limit of them (a site the game must have
-		// exactly n times is asked for n + 1 - the decals part's "add decal" check). A miss is logged like
-		// Find's; DIAGNOSTIC_MODE logs the matches as it does for Find.
+		// exactly n times is asked for n + 1 - the decals part's "add decal" check). A miss is logged as
+		// FindOnce's; DIAGNOSTIC_MODE logs the matches.
 		std::vector<uint8_t*> FindAll(const GamePattern& pattern, size_t limit);
 
 		// Every "lea r64, [rip+disp32]" (a REX.W prefix, opcode 8D, ModRM mod 00 r/m 101: 7 bytes) in the

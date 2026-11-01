@@ -412,10 +412,11 @@ namespace TweaksV
 					const FileFunction& function = functions[device][i];
 					const char* const name = kFunctionNames[device][i];
 					const std::string label = function.pattern->label;
-					uint8_t* const match = Scanner::Find(*function.pattern);
+					std::string notFound;
+					uint8_t* const match = Scanner::FindOnce(*function.pattern, notFound);
 					if (!match)
 					{
-						fail(label + " was not found (" + name + ").");
+						fail(notFound + " (" + name + ").");
 						return;
 					}
 					uint8_t* const start = match + function.start;
@@ -643,10 +644,11 @@ namespace TweaksV
 			{
 				const ArchiveCall& call = kCalls[i];
 				const std::string label = call.pattern->label;
-				uint8_t* const match = Scanner::Find(*call.pattern);
+				std::string notFound;
+				uint8_t* const match = Scanner::FindOnce(*call.pattern, notFound);
 				if (!match)
 				{
-					fail(label + " was not found (the " + call.name + ").");
+					fail(notFound + " (the " + call.name + ").");
 					return;
 				}
 				uint8_t* const site = match + call.offset;
@@ -694,10 +696,11 @@ namespace TweaksV
 				return;
 			}
 			const auto fail = [](const std::string& why) { ReportFailure(kTag, "The RPF cache check is not skipped this session: " + why); };
-			uint8_t* const call = Scanner::Find(Pattern("R-E-K1"));
+			std::string notFound;
+			uint8_t* const call = Scanner::FindOnce(Pattern("R-E-K1"), notFound);
 			if (!call)
 			{
-				fail("R-E-K1 was not found.");
+				fail(notFound + ".");
 				return;
 			}
 			const uint8_t* const function = CallTarget(call);
@@ -742,10 +745,11 @@ namespace TweaksV
 				return;
 			constexpr size_t kCallOffset = 16;
 			constexpr size_t kCallSizeIndirect = 6;	// "call [rip+disp32]": FF 15 disp32
-			uint8_t* const match = Scanner::Find(Pattern("R-E-C1"));
+			std::string notFound;
+			uint8_t* const match = Scanner::FindOnce(Pattern("R-E-C1"), notFound);
 			if (!match)
 			{
-				WriteLog(kTag, "Console: R-E-C1 was not found - the game may hide the console.");
+				WriteLog(kTag, "Console: " + notFound + " - the game may hide the console.");
 				return;
 			}
 			uint8_t* const call = match + kCallOffset;

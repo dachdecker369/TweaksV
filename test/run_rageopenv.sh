@@ -229,7 +229,7 @@ check "20,007 that cannot be opened: 20000 lines, then the cap line once; report
 echo "== R18 R-E-K1 matches twice (a second copy of the cache check's call site): not used, the cache check left on, the rest on"
 fresh_ini; out=$(game full_game.exe tworovk1)
 check "the cache check left on; the file and OPEN hooks on" "has 'rpf: 48 89 5C |' && has '$FILES_OK' && has '$OPEN_OK'"
-check "the scanner says why; the problem names the pattern" "log_has 'Scanner\] Pattern R-E-K1 matches 2 or more times - not used (the site must be unique).' && log_has 'PROBLEM: The RPF cache check is not skipped this session: R-E-K1 was not found.'"
+check "the scanner says why; the problem names the pattern" "log_has 'Scanner\] Pattern R-E-K1 matches 2 or more times - not used (the site must be unique).' && log_has 'PROBLEM: The RPF cache check is not skipped this session: the game code holds R-E-K1 2 or more times, not the expected 1.'"
 
 echo "== R19 the game never asks for the time: 30 seconds in, RageOpenV says so, shows the start-up summary and switches its hook off"
 fresh_ini; out=$(game full_game.exe rovnotime); echo "      $out"
