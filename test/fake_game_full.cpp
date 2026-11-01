@@ -310,6 +310,10 @@
 //   tbmoststore    the start-up stores the most objects 4 bytes past where the placement's check reads them
 //   tbbudgetsoff   both stores of the budgets lead 16 bytes past them, the counters' +0x38
 //   tbindexunreadable  the getter's index lies on a page of its own, which cannot be read while TweaksV starts
+//   tbhalfraise    the data lie over two pages, budgets 2 and 3 first on the second, which is read-only when the start-up makes
+//                  its call: TweaksV's raise stops at its write of budget 2, half done, and a handler of the fake holds it there
+//                  past the time of TweaksV's first summary, 10 seconds in, then says how many summaries the log holds and lets
+//                  it go on; then the fake waits for the first summary, 10 seconds at most
 //   tbwritemov, tbwritebyte, tbwritesse, tbwriteavx, tbwritelock, tbwriteimm
 //                  a writer of the budgets besides the start-up's two stores, each of another kind: "mov" of 8 bytes from 4
 //                  bytes before them, "mov" of their last byte with an imm8, "movups" of budgets 2 and 3, "vmovdqu" of 32 bytes
@@ -2583,6 +2587,8 @@ static TextureBudgetData* volatile g_textureBudgetData = &g_textureBudgetPage.da
 static TextureBudgetData g_textureBudgetDataAsSet;
 static uint64_t g_textureBudgetDummy[8];	// where the writers of the budgets lead without their options
 alignas(4096) static unsigned char g_textureBudgetIndexPage[4096];	// where the getter's index lies with "tbindexunreadable"
+alignas(4096) static unsigned char g_textureBudgetTwoPages[2 * 4096];	// where the data lie with "tbhalfraise"
+static bool g_textureBudgetHoldRaise = false;
 static unsigned char g_textureBudgetSitesAsPlaced[sizeof(g_textureBudgetStores) + sizeof(g_textureBudgetGetter) +
 	sizeof(g_textureBudgetPlacement) + sizeof(g_textureBudgetUpdate) + sizeof(g_textureBudgetWriters)];
 // The game's function the call after the budgets' stores leads to: it counts its calls, checks the four arguments the start-up
@@ -2644,6 +2650,11 @@ static void TextureBudgetStartUp()
 	}
 	using NextStep = uint64_t (*)(uint64_t, uint64_t, uint64_t, uint64_t);
 	const auto next = reinterpret_cast<NextStep>(const_cast<unsigned char*>(target));
+	if (g_textureBudgetHoldRaise)	// a write of budget 2 or 3 now stops in TextureBudgetHoldRaise, below
+	{
+		DWORD old = 0;
+		VirtualProtect(g_textureBudgetTwoPages + 4096, 4096, PAGE_READONLY, &old);
+	}
 	const uint64_t result = next(kTextureBudgetArguments[0], kTextureBudgetArguments[1], kTextureBudgetArguments[2], kTextureBudgetArguments[3]);
 	const int calls = g_textureBudgetNextSteps;
 	swprintf(g_textureBudgetStartUp, size, L"start-up: through %ls, the next step called %d time%ls, its arguments %ls, its result %ls, the budgets then "
@@ -2756,6 +2767,23 @@ static void TextureBudgetLater(TextureBudgetChange change)
 	TextureBudgetWaitFor(change == TextureBudgetChange::High ? 4 : 2, 10000);
 	swprintf(g_textureBudgetLater, size, change == TextureBudgetChange::Grow ? L", grown after the first summary" :
 		change == TextureBudgetChange::High ? L", highs raised one at a time after the first summary" : L", set after the first summary");
+}
+
+// tbhalfraise: a write to the second page, the raise's of budget 2, is held 12 seconds, past TweaksV's first summary, 10 seconds in;
+// then the report gets how many summaries the log holds by then and the write goes on. Any other fault is not this handler's.
+static LONG CALLBACK TextureBudgetHoldRaise(EXCEPTION_POINTERS* pointers)
+{
+	const EXCEPTION_RECORD& record = *pointers->ExceptionRecord;
+	const auto second = reinterpret_cast<ULONG_PTR>(g_textureBudgetTwoPages + 4096);
+	if (record.ExceptionCode != EXCEPTION_ACCESS_VIOLATION || record.NumberParameters < 2 || record.ExceptionInformation[0] != 1 ||
+		record.ExceptionInformation[1] < second || record.ExceptionInformation[1] >= second + 4096)
+		return EXCEPTION_CONTINUE_SEARCH;
+	Sleep(12000);
+	swprintf(g_textureBudgetLater, sizeof(g_textureBudgetLater) / sizeof(g_textureBudgetLater[0]), L", the raise held half done, %d summaries by then",
+		TextureBudgetSummaries());
+	DWORD old = 0;
+	VirtualProtect(g_textureBudgetTwoPages + 4096, 4096, PAGE_READWRITE, &old);
+	return EXCEPTION_CONTINUE_EXECUTION;
 }
 
 // StaticBounds: what the size call's "mov rcx" loads, the game's configuration; the static bounds' side of the game's pool size
@@ -5675,6 +5703,12 @@ int wmain(int argc, wchar_t** argv)
 	// them - and every site leading to them as the game's do, but where an option asks otherwise; with "tbearly" the start-up
 	// made before TweaksV loads, and with "tbunreadable" the data's page taken away until TweaksV has started
 	{
+		g_textureBudgetHoldRaise = HasOption(argc, argv, L"tbhalfraise");
+		if (g_textureBudgetHoldRaise)	// the data over two pages, budgets 2 and 3 first on the second
+		{
+			g_textureBudgetData = reinterpret_cast<TextureBudgetData*>(g_textureBudgetTwoPages + 4096 - offsetof(TextureBudgetData, counters.budgets[2]));
+			AddVectoredExceptionHandler(1, &TextureBudgetHoldRaise);
+		}
 		TextureBudgetData& data = *g_textureBudgetData;
 		if (!HasOption(argc, argv, L"tblate"))
 			TextureBudgetSetAsTheGame(data);
@@ -5912,6 +5946,8 @@ int wmain(int argc, wchar_t** argv)
 	}
 	if (!HasOption(argc, argv, L"tblate") && !HasOption(argc, argv, L"tbearly"))
 		TextureBudgetStartUp();
+	if (g_textureBudgetHoldRaise)
+		TextureBudgetWaitFor(1, 10000);
 	if (HasOption(argc, argv, L"tbgrow"))
 		TextureBudgetLater(TextureBudgetChange::Grow);
 	else if (HasOption(argc, argv, L"tbhigh"))

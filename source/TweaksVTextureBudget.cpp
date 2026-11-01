@@ -172,11 +172,13 @@ namespace TweaksV
 		const uint8_t* g_firstOtherWriter = nullptr;
 
 		// The raise: the budget in bytes and the game's function behind the call, both set before the call is redirected,
-		// and the budgets the game had set, kept by the raise for the measurement's summary and published by g_raised.
+		// and the budgets the game had set, kept by the raise for the measurement's summary and published by g_raised;
+		// g_raising is up around the raise's writes, so that a reading among them is made again.
 		using NextStep = uint64_t (*)(uint64_t, uint64_t, uint64_t, uint64_t);
 		uint64_t g_raiseTo = 0;
 		NextStep g_nextStep = nullptr;
 		std::atomic<uint64_t> g_gameBudgets[kBudgetCount] = {};
+		std::atomic<bool> g_raising{ false };
 		std::atomic<bool> g_raised{ false };
 
 		std::string Hex(uint64_t value)
@@ -467,8 +469,9 @@ namespace TweaksV
 			reading.highest = Load<uint64_t>(g_counters + kHighest);
 			reading.most = Load<uint32_t>(g_counters + kMost);
 			// the raise's record before the budgets, so that a reading never pairs the budgets the game had with budgets read
-			// before the raise; a raise that comes while they are read is taken with them, the budgets read again - once at
-			// most, since the record is made once
+			// before the raise; a raise that comes while they are read is taken with them, the budgets read again - and again
+			// while its flag is up, so that a half-raised set never passes as the game's own: its writes are a few instructions,
+			// made once
 			do
 			{
 				reading.raised = g_raised.load(std::memory_order_acquire);
@@ -477,7 +480,8 @@ namespace TweaksV
 					reading.gameBudgets[i] = reading.raised ? g_gameBudgets[i].load(std::memory_order_relaxed) : 0;
 					reading.budgets[i] = Load<uint64_t>(g_counters + kBudgets + i * sizeof(uint64_t));
 				}
-			} while (!reading.raised && g_raised.load(std::memory_order_acquire));
+				std::atomic_thread_fence(std::memory_order_acquire);	// the budgets read before the flags
+			} while (g_raising.load(std::memory_order_acquire) || (!reading.raised && g_raised.load(std::memory_order_acquire)));
 			reading.index = Load<int32_t>(g_index);
 			reading.flag = Load<uint8_t>(g_flag);
 			return reading;
@@ -677,18 +681,23 @@ namespace TweaksV
 			bool raised = false;
 			for (size_t i = 0; i < kBudgetCount; i++)
 			{
-				volatile uint64_t& budget = *reinterpret_cast<volatile uint64_t*>(g_budgets + i * sizeof(uint64_t));
-				had[i] = budget;
+				had[i] = Load<uint64_t>(g_budgets + i * sizeof(uint64_t));
 				now[i] = had[i];
 				if (had[i] < g_raiseTo)
 				{
-					budget = g_raiseTo;
 					now[i] = g_raiseTo;
 					raised = true;
 				}
 				g_gameBudgets[i].store(had[i], std::memory_order_relaxed);
 			}
+			// the record kept and the flag up before the first write, the flag down after the record is published (ReadCounters)
+			g_raising.store(true, std::memory_order_relaxed);
+			std::atomic_thread_fence(std::memory_order_release);
+			for (size_t i = 0; i < kBudgetCount; i++)
+				if (now[i] != had[i])
+					*reinterpret_cast<volatile uint64_t*>(g_budgets + i * sizeof(uint64_t)) = now[i];
 			g_raised.store(true, std::memory_order_release);
+			g_raising.store(false, std::memory_order_release);
 			const int32_t index = Load<int32_t>(g_index);
 			try
 			{
