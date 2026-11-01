@@ -343,7 +343,7 @@ namespace TweaksV
 		const uint8_t* g_allocated = nullptr;		// the imm32 of "mov edx": the blobs the initializer allocates
 		uint32_t g_room = 0;						// the room the guard keeps the count below
 		uint32_t g_gameRoom = 0;					// the game's own, for the lines per file
-		bool g_refusing = false;					// the guard refuses: its report's thread runs
+		std::atomic<bool> g_refusing{ false };		// the guard refuses: its report's thread runs. Set last, with the hook live already
 		std::string g_advice;						// what the report says to do, by the raise's outcome
 		HANDLE g_refusedEvent = nullptr;			// set at the first refusal: the report's clock
 
@@ -435,7 +435,7 @@ namespace TweaksV
 		{
 			const uint32_t count = *g_count;
 			const uint32_t room = Room();
-			const bool refuse = g_refusing && count >= room;
+			const bool refuse = g_refusing.load() && count >= room;
 			if (refuse || g_diagnostic)
 			{
 				const DWORD lastError = GetLastError();
@@ -605,15 +605,15 @@ namespace TweaksV
 				std::to_string(g_gameRoom) + (capacity == 0 ? std::string(", and the array is not set up yet") : ", this one " + std::to_string(capacity)) + ")";
 			if (count > g_gameRoom && count <= capacity)
 				line += " - the game's own array would have overflowed by " + std::to_string(count - g_gameRoom) + " of them";
-			const uint32_t room = g_refusing ? Room() : 0;	// the guard's, as the hook takes it
+			const uint32_t room = g_refusing.load() ? Room() : 0;	// the guard's, as the hook takes it
 			if (count > capacity)
 				line += " - past its end: the game's memory is already damaged";
-			else if (g_refusing && refused > 0)
+			else if (g_refusing.load() && refused > 0)
 				line += " - the guard's room, " + std::to_string(room) + ", is full: " + std::to_string(refused) + (refused == 1 ? " file was" : " files were") +
 					" refused";
-			else if (g_refusing && count >= room && capacity != 0)
+			else if (g_refusing.load() && count >= room && capacity != 0)
 				line += " - the guard's room, " + std::to_string(room) + ", is full: the next file is refused";
-			else if (!g_refusing && count == capacity && capacity != 0)
+			else if (!g_refusing.load() && count == capacity && capacity != 0)
 				line += " - it is full: the next file would be written past its end";
 			WriteLog(kTag, line + ".");
 		}
