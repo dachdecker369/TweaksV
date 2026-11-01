@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// TweaksV - the RPF7 facts and the mods folder's limits that RageOpenV and its check for packs made for GTA V Legacy
-// share (PATTERNS.md, "RageOpenV"): each number both rely on in one place, so that the two never disagree.
+// TweaksV - the RPF7 facts that RageOpenV and its check for packs made for GTA V Legacy share (PATTERNS.md, "RageOpenV"):
+// each number both rely on in one place, so that the two never disagree.
 #pragma once
 
 #include <cstddef>
@@ -30,15 +30,4 @@ namespace TweaksV::Rpf
 	constexpr uint32_t kFolderType = 0x7FFFFF00;
 	constexpr uint32_t kResourceBit = 0x80000000;
 	constexpr uint64_t kBlockSize = 512;			// a binary's offset counts these, from the start of its archive
-
-	// ---- the mods folder's list, which RageOpenV reads and its check walks alike
-
-	constexpr size_t kMaxPathText = 259;			// bytes of a game path the game's file functions read (MAX_PATH less the terminator)
-	constexpr char kModsPrefix[] = "mods/";
-	constexpr size_t kModsPrefixSize = sizeof(kModsPrefix) - 1;
-	// A path of the list, and a request redirected, at most: a hook hands the game "mods/" and the path, and its functions
-	// read kMaxPathText bytes of that - a longer path would be cut short.
-	constexpr size_t kMaxModsPath = kMaxPathText - kModsPrefixSize;
-	constexpr size_t kMaxModsEntries = 200000;		// files and folders the list holds at most
-	constexpr size_t kMaxModsDepth = 32;			// folders deep, the mods folder the first
 }

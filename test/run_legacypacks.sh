@@ -137,7 +137,9 @@ packs_gone; fresh_ini; setkey ERROR_POPUP 1; out=$(ASI=TweaksV_test.asi game ful
 check "one problem, one box" "[ \$(count 'PROBLEM') -eq 1 ] && log_has 'PROBLEM: A pack in the mods folder was made for GTA V Legacy, .*: mods.lp.rpf\. Not checked for Legacy versions (TweaksV.log says why): mods.lpempty.rpf\.' && [ \$(count 'TEST BUILD: message box not shown (TWEAKSV_TEST_NO_BOXES=1): ') -eq 1 ] && [ \$(grep -c -E 'Showing (the start-up summary|a problem after the start-up summary) \(1 problem\(s\)\)\.' TweaksV.log) -eq 1 ]"
 
 echo "== L15 the walk's limits, as RageOpenV's list has them: a path below mods\ of 254 bytes read, one of 255 not; a folder that cannot be listed skipped, the rest read; a name with an unpaired surrogate left out"
-a254=$(printf 'a%.0s' $(seq 1 245)); b255=$(printf 'b%.0s' $(seq 1 246))	# test\ and these and .rpf: 254 and 255 bytes
+# test\ and these and .rpf: 254 and 255 bytes - the first in letters of 3 bytes in UTF-8 and one unit in UTF-16, since 254 of
+# ASCII pass MAX_PATH wherever the folder lies, and the check reads only what the game can open (L15b)
+a254=aa$(printf '\xe2\x82\xac%.0s' $(seq 1 81)); b255=$(printf 'b%.0s' $(seq 1 246))
 packs_gone; fresh_ini; out=$(game full_game.exe lpmake legacy "mods/test/$a254.rpf" lpmake legacy "mods/test/$b255.rpf" lpwait)
 check "254 bytes: listed, read and named; 255: left out of the list and not read" "has 'lp: 2 made |' && log_has \"The pack mods.test.$a254.rpf was made for GTA V Legacy\" && log_has 'Names in the mods folder left out of the list: 1 whose path is longer than 254 bytes.' && log_lacks 'bbbbbbbbbb' && log_line 'Packs checked for GTA V Legacy versions: 1 in the mods folder, 1 made for Legacy\.\$'"
 packs_gone; fresh_ini; out=$(game full_game.exe lpmake legacy mods/locked/in.rpf lpmake legacy mods/open/in.rpf lpwait)
@@ -150,6 +152,13 @@ if has 'lp: bad name NOT made'; then
 else
 	check "a pack whose name is not valid UTF-16: left out of the list and not read; the name gone with the fake" "has 'lp: bad name made |' && log_has 'Names in the mods folder left out of the list: 1 whose name is not valid Unicode' && log_line 'Packs checked for GTA V Legacy versions: none in the mods folder\.\$' && [ -z \"\$(ls -A mods | grep -v '^test\$')\" ]"
 fi
+
+echo "== L15b past MAX_PATH the check reaches what the game reaches, by the same paths: a folder Windows will not list, a pack it will not open"
+# test\ and these and .rpf: 254 bytes, past MAX_PATH wherever the folder lies; a name of a folder that takes its path past it there too
+a254=$(printf 'a%.0s' $(seq 1 245)); far=$(printf 'f%.0s' $(seq 1 240))
+packs_gone; fresh_ini; out=$(game full_game.exe lpmake legacy "mods/test/$a254.rpf" lpmake legacy "mods/$far/in.rpf" lpwait)
+check "the folder: RageOpenV logs and reports it, by the Windows error; the check skips it, so its pack is not read" "has 'lp: 2 made |' && has '$DONE' && log_has 'The folder mods.$far could not be read (Windows error [0-9]*.*) - its files are not used\.' && log_has 'PROBLEM: Only part of the mods folder is used this session: 1 folder could not be read (Windows error' && log_lacks 'in\.rpf'"
+check "the pack, listed by both: not opened as the game's file functions would not open it, named as not checked; no verdict on a pack the game cannot read" "log_line 'The pack mods.test.$a254.rpf was not checked for GTA V Legacy versions: it could not be opened (Windows error [0-9]*.*)\.\$' && log_lacks 'was made for GTA V Legacy' && log_line 'PROBLEM: A pack in the mods folder could not be checked for GTA V Legacy versions (TweaksV.log says why): mods.test.$a254.rpf\.\$' && log_line 'Packs checked for GTA V Legacy versions: 1 in the mods folder, none made for Legacy, 1 not checked\.\$'"
 
 echo "== L16 the names of a pack within their bounds: a name with no zero within 256 bytes, a name of 255 bytes at the last offset in names of 70,000 bytes, a nested archive whose size runs past its holder"
 packs_gone; fresh_ini; out=$(game full_game.exe lpmake longname mods/names/longname.rpf lpmake farname mods/names/farname.rpf lpmake nestedlong mods/names/nestedlong.rpf lpwait)

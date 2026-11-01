@@ -8,8 +8,7 @@
 namespace TweaksV
 {
 	// Starts the check on a thread of its own, once. Called by RageOpenV's start-up on the game's thread, once the
-	// mods folder's file functions are hooked: it only takes the mods folder's full path - in the current directory,
-	// where the hooks serve it from - and starts the thread, so the game never waits for the check. A check that
-	// cannot start is reported. Never throws.
+	// mods folder's file functions are hooked, so the game never waits for the check. A check that cannot start is
+	// reported. Never throws.
 	void StartLegacyPacksCheck();
 }

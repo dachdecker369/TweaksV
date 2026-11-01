@@ -6,11 +6,11 @@
 // pack works (my second measurement test of 2.5.0, PLAN.md D17). RageOpenV starts the check once its file functions
 // serve the mods folder; a thread of its own then reads, once, and writes nothing but the log:
 //   the packs      every .rpf file in the mods folder - in the current directory, where the hooks serve it from -
-//                  walked as RageOpenV's list reads the folder: 32 levels deep and 200,000 files and folders at most,
-//                  a name that is not valid Unicode, or whose path below mods\ is longer than 254 bytes in UTF-8,
-//                  left out, since the game is never served such a file; a folder that cannot be listed is skipped,
-//                  as RageOpenV skips it, but the mods folder itself, which RageOpenV has just listed, is a problem: the
-//                  check is not done
+//                  by the one walk RageOpenV's list is read by (TweaksVModsFolder.h), so the two list the same files
+//                  the same way and stop at the same name; a folder that cannot be listed is skipped, as RageOpenV
+//                  skips it, but the mods folder itself, which RageOpenV has just listed, is a problem: the check is
+//                  not done. A pack is opened by the path the walk gives it, as the game's file functions open it,
+//                  so Windows refuses the check what it refuses the game: a pack is never read past the game's reach
 //   the tables     a pack's header of 16 bytes - the magic RPF7, the entry count, the names' length, the encryption
 //                  - then its entry table and the names behind it, read through a handle that shares reading, writing
 //                  and deleting, so that the game opens the pack as if the check were not there; an archive whose
@@ -46,7 +46,6 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
-#include <cwchar>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -54,6 +53,7 @@
 
 #include "TweaksVLog.h"
 #include "TweaksVMeasure.h"
+#include "TweaksVModsFolder.h"
 #include "TweaksVPatch.h"
 #include "TweaksVRpf.h"
 #include "TweaksVSettings.h"
@@ -63,7 +63,7 @@ namespace TweaksV
 {
 	namespace
 	{
-		using namespace Rpf;	// the RPF7 facts and the mods folder's limits, which RageOpenV shares
+		using namespace Rpf;	// the RPF7 facts, which RageOpenV shares
 
 		constexpr const char* kTag = "RageOpenV";
 
@@ -81,7 +81,7 @@ namespace TweaksV
 		constexpr std::array<Kind, 4> kKinds = { { { ".yft", 162 }, { ".ydr", 165 }, { ".ydd", 165 }, { ".ytd", 13 } } };
 		constexpr size_t kVersions = 256;				// a version is two nibbles
 
-		// ---- the bounds (the walk's - files and folders, depth, a path's bytes - are those of RageOpenV's list, TweaksVRpf.h)
+		// ---- the bounds (the walk's - files and folders, depth, a path's bytes - are in TweaksVModsFolder.h)
 
 		constexpr size_t kMaxNesting = 8;						// levels of archives nested in a pack
 		constexpr size_t kMaxArchives = 4096;					// per pack, its own included
@@ -108,12 +108,6 @@ namespace TweaksV
 		{
 			HANDLE handle;
 			~FileHandle() { if (handle != INVALID_HANDLE_VALUE) CloseHandle(handle); }
-		};
-
-		struct FindHandle
-		{
-			HANDLE handle;
-			~FindHandle() { if (handle != INVALID_HANDLE_VALUE) FindClose(handle); }
 		};
 
 		// Reads exactly size bytes at offset: ERROR_SUCCESS, else the Windows error - ERROR_HANDLE_EOF when the file
@@ -243,11 +237,11 @@ namespace TweaksV
 			uint64_t notOpenPacks = 0;		// among them, those not OPEN
 			uint64_t archives = 0;
 			uint64_t tableBytes = 0;
-			bool walkStopped = false;		// at kMaxModsEntries, where RageOpenV's list stops
+			bool walkStopped = false;		// at the walk's limit, where RageOpenV's list stops
 			bool limitReached = false;		// at kMaxTableBytes: every pack from there on is not checked
-			DWORD rootError = ERROR_SUCCESS;	// why the mods folder itself could not be listed: the check is not done
 			std::vector<std::string> legacyNamed;		// the first kMaxNamed of each, for the problem
 			std::vector<std::string> notCheckedNamed;
+			std::vector<std::pair<std::wstring, std::string>> folderPacks;	// the .rpf files of the folder being listed: the path, the name for the lines
 			LineKind legacyLines{ "packs made for GTA V Legacy", false };
 			LineKind notCheckedLines{ "packs not checked", false };
 			LineKind packLines{ "packs read", true };
@@ -473,72 +467,24 @@ namespace TweaksV
 			Conclude(check, name, pack);
 		}
 
-		// The mods folder, walked as RageOpenV's list reads it (ReadModsFolder), every .rpf file checked: the folders in
-		// its order - each folder listed is pushed, the last pushed is read next - so that at the list's 200,000 files and
-		// folders the check stops at the same name; a folder's packs in the order Windows lists them.
-		void Walk(Check& check, const std::wstring& root)
+		// A name of the walk: a file named .rpf, in any case, is a pack, read once its folder's find handle is closed. Its
+		// name for the lines is its path from the current directory, with Windows' separator.
+		void PackEntry(void* context, const ModsEntry& entry)
 		{
-			struct Folder
-			{
-				std::wstring path;
-				std::string below;	// its path below mods\, in UTF-8
-				size_t depth;
-			};
-			std::vector<Folder> todo{ { root, std::string(), 1 } };
-			size_t entries = 0;
-			while (!todo.empty() && !check.walkStopped)
-			{
-				const Folder folder = std::move(todo.back());
-				todo.pop_back();
-				std::vector<Folder> folders;
-				std::vector<std::pair<std::wstring, std::string>> packs;	// its .rpf files: the path, the name for the lines
-				{
-					WIN32_FIND_DATAW found{};
-					const FindHandle find{ FindFirstFileExW((folder.path + L"\\*").c_str(), FindExInfoBasic, &found, FindExSearchNameMatch, nullptr,
-						FIND_FIRST_EX_LARGE_FETCH) };
-					if (find.handle == INVALID_HANDLE_VALUE)
-					{
-						const DWORD error = GetLastError();
-						// a folder that holds nothing, not even "." (a drive's root behind a junction), is empty, as for RageOpenV;
-						// one that cannot be listed RageOpenV reports, and serves nothing of - but the mods folder itself it has
-						// just listed, so the check cannot say it found nothing
-						if (folder.below.empty() && error != ERROR_FILE_NOT_FOUND)
-						{
-							check.rootError = error;
-							return;
-						}
-						continue;
-					}
-					do
-					{
-						if (wcscmp(found.cFileName, L".") == 0 || wcscmp(found.cFileName, L"..") == 0)
-							continue;
-						char name[kMaxModsPath + 1];
-						if (WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, found.cFileName, -1, name, sizeof(name), nullptr, nullptr) <= 1)
-							continue;	// not valid Unicode, or too long: never served
-						std::string below = folder.below.empty() ? std::string(name) : folder.below + "\\" + name;
-						if (below.size() > kMaxModsPath)
-							continue;
-						if (++entries > kMaxModsEntries)
-						{
-							check.walkStopped = true;
-							break;
-						}
-						std::wstring path = folder.path + L"\\" + found.cFileName;
-						if ((found.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0)
-						{
-							if (folder.depth < kMaxModsDepth)
-								folders.push_back({ std::move(path), std::move(below), folder.depth + 1 });
-						}
-						else if (const size_t length = wcslen(found.cFileName); length >= 4 && _wcsicmp(found.cFileName + length - 4, L".rpf") == 0)
-							packs.emplace_back(std::move(path), "mods\\" + below);
-					} while (FindNextFileW(find.handle, &found));
-				}
-				for (const auto& [path, name] : packs)
-					CheckPack(check, path, name);
-				for (Folder& next : folders)
-					todo.push_back(std::move(next));
-			}
+			if (entry.kind != ModsEntryKind::File || !HasExtension(entry.below, ".rpf"))
+				return;
+			std::string name = "mods\\" + std::string(entry.below);
+			std::replace(name.begin(), name.end(), '/', '\\');
+			static_cast<Check*>(context)->folderPacks.emplace_back(entry.path, std::move(name));
+		}
+
+		// A folder's packs in the order Windows lists them, every find handle closed.
+		void CheckFolderPacks(void* context)
+		{
+			Check& check = *static_cast<Check*>(context);
+			for (const auto& [path, name] : check.folderPacks)
+				CheckPack(check, path, name);
+			check.folderPacks.clear();
 		}
 
 		// "a, b, and 7 more"
@@ -598,7 +544,7 @@ namespace TweaksV
 			WriteLog(kTag, line + ".");
 		}
 
-		std::wstring g_root;		// the mods folder's full path, \\?\ in front - set before the thread starts, never changed
+		std::wstring g_root;		// what the check walks: kModsRoot, unless a test build asks otherwise - set before the thread starts, never changed
 		std::atomic<bool> g_started{ false };
 
 		DWORD WINAPI CheckThread(LPVOID module)
@@ -610,10 +556,11 @@ namespace TweaksV
 					Check check;
 					check.diagnostic = IsDiagnosticMode();
 					const ULONGLONG started = GetTickCount64();
-					Walk(check, g_root);
-					if (check.rootError != ERROR_SUCCESS)
+					const ModsWalk walk = WalkModsFolder(g_root.c_str(), { &check, &PackEntry, &CheckFolderPacks });
+					check.walkStopped = walk.stopped;
+					if (walk.rootError != ERROR_SUCCESS)	// RageOpenV has just listed it, so the check cannot say it found nothing
 						ReportFailure(kTag, "The check for packs made for GTA V Legacy is not done this session: the mods folder could not be read (" +
-							DescribeError(check.rootError) + ").");
+							DescribeError(walk.rootError) + ").");
 					else
 						Report(check, started);
 				}
@@ -639,7 +586,7 @@ namespace TweaksV
 		};
 		try
 		{
-			std::wstring folder = L"mods";
+			g_root = kModsRoot;
 #ifdef TWEAKSV_TEST_BUILD
 			// test builds only: TWEAKSV_TEST_LEGACY_FOLDER=<folder> in the environment has the check read that folder in place of
 			// the mods folder, so that a suite reaches a folder the check cannot list - RageOpenV's own reading of the mods folder
@@ -648,23 +595,11 @@ namespace TweaksV
 			const DWORD otherLength = GetEnvironmentVariableW(L"TWEAKSV_TEST_LEGACY_FOLDER", other, MAX_PATH);
 			if (otherLength > 0 && otherLength < MAX_PATH)
 			{
-				folder.assign(other, otherLength);
-				WriteLog(kTag, "TEST BUILD: the check for packs made for GTA V Legacy reads " + ToUtf8(folder) + " in place of the mods folder "
+				g_root.assign(other, otherLength);
+				WriteLog(kTag, "TEST BUILD: the check for packs made for GTA V Legacy reads " + ToUtf8(g_root) + " in place of the mods folder "
 					"(TWEAKSV_TEST_LEGACY_FOLDER).");
 			}
 #endif
-			const DWORD size = GetFullPathNameW(folder.c_str(), 0, nullptr, nullptr);
-			std::wstring full(size, L'\0');
-			const DWORD length = size > 0 ? GetFullPathNameW(folder.c_str(), size, full.data(), nullptr) : 0;
-			if (length == 0 || length >= size)
-			{
-				const DWORD error = GetLastError();
-				fail("the mods folder's full path could not be read (" + DescribeError(error) + ").");
-				return;
-			}
-			full.resize(length);
-			// the \\?\ form, so that a path longer than MAX_PATH opens too
-			g_root = full.starts_with(L"\\\\?\\") ? full : full.starts_with(L"\\\\") ? L"\\\\?\\UNC\\" + full.substr(2) : L"\\\\?\\" + full;
 			if (!StartModuleThread(CheckThread, "Legacy packs check"))
 				fail("its thread could not be started (details in TweaksV.log).");
 		}

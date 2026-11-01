@@ -17,8 +17,9 @@
 //                         that failure, as the game's function would for any file it cannot open,
 //                         logged and reported once. Without a mods folder, or an empty one, nothing is
 //                         hooked. Once they are hooked, the folder's packs are checked for GTA V Legacy
-//                         on a thread of their own (TweaksVLegacyPacks.h), with the RPF7 facts and the
-//                         folder's limits this file shares with that check (TweaksVRpf.h).
+//                         on a thread of their own (TweaksVLegacyPacks.h), by the one walk of the folder
+//                         (TweaksVModsFolder.h) and the RPF7 facts (TweaksVRpf.h) this file shares with
+//                         that check.
 //   OPEN_RPF              five calls of the archive code (R-E-E1..E5: FindEncryption, DecryptHeader,
 //                         DecryptHeader2 twice, ParseHeader) are redirected through call stubs, so that
 //                         an archive whose header says OPEN is read without decryption. The encryption
@@ -61,6 +62,7 @@
 #include "TweaksVLegacyPacks.h"
 #include "TweaksVLog.h"
 #include "TweaksVMeasure.h"
+#include "TweaksVModsFolder.h"
 #include "TweaksVPatch.h"
 #include "TweaksVPatterns.h"
 #include "TweaksVRpf.h"
@@ -81,7 +83,7 @@ namespace TweaksV
 		template <typename F> const void* Code(F* function) { return reinterpret_cast<const void*>(function); }
 		template <typename F> void** Original(F*& variable) { return reinterpret_cast<void**>(&variable); }
 
-		using namespace Rpf;	// the RPF7 facts and the mods folder's limits, which the check for Legacy packs shares
+		using namespace Rpf;	// the RPF7 facts, which the check for Legacy packs shares
 
 		// ---- the diagnostic lines: each kind capped (kMaxLinesPerKind), then only counted; a summary every minute
 
@@ -184,9 +186,8 @@ namespace TweaksV
 		// The first summary 10 seconds in, then one a minute while the numbers change.
 		constexpr Measurement kMeasurement = { "RageOpenV summary", kFirstSummaryMs, &Events, &LogSummary };
 
-		// ---- the mods folder: its list, read once, and the eight file functions (its limits in TweaksVRpf.h)
+		// ---- the mods folder: its list, read once, and the eight file functions (its walk and limits in TweaksVModsFolder.h)
 
-		constexpr size_t kMaxFolded = 3 * kMaxModsPath;	// what the fold can make of kMaxModsPath bytes: 3 bytes of UTF-8 per UTF-16 unit
 		constexpr size_t kDevices = 2;				// the game's two file devices, each with the four functions
 		constexpr size_t kFunctionsPerDevice = 4;
 
@@ -204,90 +205,6 @@ namespace TweaksV
 		using ModsList = std::unordered_set<std::string, PathHash, std::equal_to<>>;
 		ModsList* g_modsList = nullptr;
 
-		// Half of a character outside the Basic Multilingual Plane - or a half alone, which is not valid UTF-16.
-		bool IsSurrogate(wchar_t unit)
-		{
-			return IS_HIGH_SURROGATE(unit) || IS_LOW_SURROGATE(unit);
-		}
-
-		// ListSpelling for a path with a byte outside ASCII, through UTF-16 on the stack, the letters
-		// upcased by LCMapStringEx's file-system casing (no LCMAP_LINGUISTIC_CASING). False if the path is
-		// longer than kMaxModsPath bytes or not valid UTF-8 - the game's function would read such bytes as
-		// replacement characters, so the path names no file of the mods folder. Windows' file systems upcase
-		// a name unit by unit, by a table of the Basic Multilingual Plane, so a character outside it - a
-		// surrogate pair - keeps its case: only the runs between surrogates are upcased.
-		bool FoldOutsideAscii(const char* path, size_t size, char (&out)[kMaxFolded + 1], size_t& length)
-		{
-			length = 0;
-			wchar_t wide[kMaxModsPath];
-			const int units = size <= kMaxModsPath
-				? MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path, static_cast<int>(size), wide, static_cast<int>(kMaxModsPath)) : 0;
-			if (units <= 0)
-				return false;
-			int kept = 0;
-			for (int i = 0; i < units; i++)
-			{
-				const wchar_t c = wide[i] == L'\\' ? L'/' : wide[i];
-				if (c == L'/' && kept > 0 && wide[kept - 1] == L'/')
-					continue;
-				wide[kept++] = c;
-			}
-			wchar_t upper[kMaxModsPath];
-			for (int start = 0; start < kept;)
-			{
-				int end = start;
-				while (end < kept && !IsSurrogate(wide[end]))
-					end++;
-				if (end == start)
-				{
-					upper[start] = wide[start];
-					start++;
-					continue;
-				}
-				const int run = end - start;
-				if (LCMapStringEx(LOCALE_NAME_INVARIANT, LCMAP_UPPERCASE, wide + start, run, upper + start, run, nullptr, nullptr, 0) != run)
-					return false;
-				start = end;
-			}
-			const int bytes = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, upper, kept, out, static_cast<int>(kMaxFolded), nullptr, nullptr);
-			if (bytes <= 0)
-				return false;
-			length = static_cast<size_t>(bytes);
-			out[length] = '\0';
-			return true;
-		}
-
-		// The list's spelling of a game path, as Windows compares file names: '/' between the names, a
-		// doubled '/' inside collapsed, the letters in Windows' file-system upper case - on the bytes for a
-		// path of ASCII alone, through UTF-16 for any other (FoldOutsideAscii). Upper case, not lower: the
-		// file systems compare upcased names, and the two differ - the Kelvin sign and k share a lower case,
-		// not an upper case. False for an empty path; one longer than kMaxModsPath bytes, which the game's
-		// function would read cut short behind "mods/" - checked before the fold, since an upper case can take
-		// more bytes than its letter, so a longer request can fold to a listed name; one that is not valid
-		// UTF-8; and one that is not relative - it starts with a separator or a drive ("C:"): only a relative
-		// path names a file of the game folder.
-		bool ListSpelling(const char* path, char (&out)[kMaxFolded + 1], size_t& length)
-		{
-			length = 0;
-			if (path[0] == '\\' || path[0] == '/' || (path[0] != '\0' && path[1] == ':'))
-				return false;
-			for (size_t i = 0; path[i]; i++)
-			{
-				if (i == kMaxModsPath)
-					return false;
-				if (static_cast<unsigned char>(path[i]) >= 0x80)
-					return FoldOutsideAscii(path, i + strnlen(path + i, kMaxModsPath + 1 - i), out, length);
-				char c = path[i] == '\\' ? '/' : path[i];
-				if (c == '/' && length > 0 && out[length - 1] == '/')
-					continue;
-				if (c >= 'a' && c <= 'z')
-					c = static_cast<char>(c - 'a' + 'A');
-				out[length++] = c;
-			}
-			out[length] = '\0';
-			return length > 0;
-		}
-
 		// What reading the mods folder found: the entries in the list; the names left out, the two reasons
 		// apart; the folders not read - at the depth limit, or that could not be listed, the first one's
 		// Windows error kept; and whether the folder itself could not be listed, or the list filled up.
@@ -303,86 +220,53 @@ namespace TweaksV
 			bool full = false;					// the list stopped at kMaxModsEntries
 		};
 
+		// A name of the walk: a file or folder goes into the list as the lookups spell it, a name left out and a folder
+		// that cannot be listed are counted.
+		void ListEntry(void* context, const ModsEntry& entry)
+		{
+			ModsFolderRead& read = *static_cast<ModsFolderRead*>(context);
+			switch (entry.kind)
+			{
+			case ModsEntryKind::NotUnicode:
+				read.notUnicode++;
+				return;
+			case ModsEntryKind::TooLong:
+				read.tooLong++;
+				return;
+			case ModsEntryKind::FolderNotListed:
+				if (read.unreadable++ == 0)
+					read.firstError = entry.error;
+				if (read.unreadable <= kMaxLinesPerKind)
+					WriteLog(kTag, "The folder " + ToUtf8(entry.path) + " could not be read (" + DescribeError(entry.error) + ") - its files are not used.");
+				return;
+			case ModsEntryKind::FolderTooDeep:
+				read.tooDeep++;	// listed; what it holds is not read
+				break;
+			case ModsEntryKind::File:
+			case ModsEntryKind::Folder:
+				break;
+			}
+			g_modsList->insert(std::string(entry.spelling));
+		}
+
 		// Reads the mods folder - in the current directory, where the game's own file functions resolve
-		// "mods/..." too - into g_modsList, every name in UTF-8, as the game asks for its files on every
-		// Windows. A name that is not valid Unicode - an unpaired surrogate, which UTF-8 cannot spell - or
-		// whose path is longer than the limit is left out and counted: the game could not ask for it. A
-		// folder at the depth limit, and one that cannot be listed, is counted and the reading goes on; only
-		// the entry limit ends it.
+		// "mods/..." too - into g_modsList, by the walk its check for Legacy packs goes by too, every name in
+		// UTF-8, as the game asks for its files on every Windows. A name that is not valid Unicode - an unpaired
+		// surrogate, which UTF-8 cannot spell - or whose path is longer than the limit is left out and counted:
+		// the game could not ask for it. A folder at the depth limit, and one that cannot be listed, is counted
+		// and the reading goes on; only the entry limit ends it.
 		ModsFolderRead ReadModsFolder()
 		{
-			struct Folder { std::wstring path; std::string relative; size_t depth; };
-			std::vector<Folder> todo{ { L"mods", std::string(), 1 } };
 			ModsFolderRead read;
 			if (!g_modsList)
 				g_modsList = new ModsList();
-			while (!todo.empty() && !read.full)
+			const ModsWalk walk = WalkModsFolder(kModsRoot, { &read, &ListEntry, nullptr });
+			if (walk.rootError != ERROR_SUCCESS)
 			{
-				const Folder folder = std::move(todo.back());
-				todo.pop_back();
-				WIN32_FIND_DATAW found{};
-				const HANDLE find = FindFirstFileExW((folder.path + L"\\*").c_str(), FindExInfoBasic, &found, FindExSearchNameMatch,
-					nullptr, FIND_FIRST_EX_LARGE_FETCH);
-				if (find == INVALID_HANDLE_VALUE)
-				{
-					const DWORD error = GetLastError();
-					if (error == ERROR_FILE_NOT_FOUND)	// nothing in it, not even "." - a drive's root behind a junction
-						continue;
-					if (folder.relative.empty())
-					{
-						read.rootUnreadable = true;
-						read.firstError = error;
-						break;
-					}
-					if (read.unreadable++ == 0)
-						read.firstError = error;
-					if (read.unreadable <= kMaxLinesPerKind)
-						WriteLog(kTag, "The folder " + ToUtf8(folder.path) + " could not be read (" + DescribeError(error) + ") - its files are not used.");
-					continue;
-				}
-				do
-				{
-					if (wcscmp(found.cFileName, L".") == 0 || wcscmp(found.cFileName, L"..") == 0)
-						continue;
-					char name[kMaxModsPath + 1];
-					const int size = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, found.cFileName, -1, name, sizeof(name), nullptr, nullptr);
-					if (size <= 1)
-					{
-						if (size == 0 && GetLastError() == ERROR_INSUFFICIENT_BUFFER)
-							read.tooLong++;
-						else
-							read.notUnicode++;
-						continue;
-					}
-					std::string relative = folder.relative.empty() ? std::string(name) : folder.relative + "/" + name;
-					if (relative.size() > kMaxModsPath)
-					{
-						read.tooLong++;
-						continue;
-					}
-					// the lookups' fold: it refuses none of these paths - relative, valid UTF-8 and short enough - but one it
-					// refused would be counted, never left out unsaid
-					char spelling[kMaxFolded + 1];
-					size_t length = 0;
-					if (!ListSpelling(relative.c_str(), spelling, length))
-					{
-						read.notUnicode++;
-						continue;
-					}
-					if (g_modsList->size() >= kMaxModsEntries)
-					{
-						read.full = true;
-						break;
-					}
-					const bool isFolder = (found.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
-					if (isFolder && folder.depth >= kMaxModsDepth)
-						read.tooDeep++;	// listed; what it holds is not read
-					else if (isFolder)
-						todo.push_back({ folder.path + L"\\" + found.cFileName, std::move(relative), folder.depth + 1 });
-					g_modsList->insert(std::string(spelling, length));
-				} while (FindNextFileW(find, &found));
-				FindClose(find);
+				read.rootUnreadable = true;
+				read.firstError = walk.rootError;
 			}
+			read.full = walk.stopped;
 			read.entries = g_modsList->size();
 			return read;
 		}
