@@ -100,8 +100,9 @@ namespace TweaksV
 			"TweaksV: T-E-B1 holds the count's mov at +8, the stride 20, the maker's call at +24 and the object's store ending the match");
 
 		// T-E-C1 and T-E-C2, the two checks: "mov e?x, [rip+disp32]", the frame slot (its disp32 at +2); "lea r64, [rip+disp32]",
-		// the counters, a dword per slot (+8, its disp32 at +11); "mov r10d, 1"; then the slot's counter plus the vertex count in
-		// ecx, "cmp e?x, imm32" against the capacity and "ja rel32" to the refusal, its rel32 right past the match.
+		// the counters, a dword per slot (+8, its disp32 at +11); "mov r10d, 1"; then "lea e?x, [rdi+rcx]", the slot's counter plus
+		// the vertex count in ecx, on which the stubs' mov eax, ecx rests; "cmp e?x, imm32" of that sum against the capacity and
+		// "ja rel32" to the refusal, its rel32 right past the match.
 		struct Check
 		{
 			const GamePattern* pattern;
@@ -116,15 +117,17 @@ namespace TweaksV
 			for (const Check& check : kChecks)
 			{
 				const GamePattern& pattern = *check.pattern;
+				const size_t sumAt = check.capacityAt - 5;	// the lea of the sum: 8D, its ModRM with a SIB (mod 00, r/m 100), the SIB naming rcx
 				if (!PatternHolds(pattern, 0, { 0x8B }) || (PatternByte(pattern, 1) & 0xC7) != 0x05 || !PatternHolds(pattern, kCountersLeaAt, { 0x48, 0x8D }) ||
 					(PatternByte(pattern, kCountersLeaAt + 2) & 0xC7) != 0x05 || !PatternHolds(pattern, 15, { 0x41, 0xBA, 0x01, 0x00, 0x00, 0x00 }) ||
-					!PatternHolds(pattern, check.capacityAt - 2, { 0x81 }) || !PatternHolds(pattern, check.jumpAt, { 0x0F, 0x87 }) ||
-					PatternSize(pattern) != check.jumpAt + 2)
+					!PatternHolds(pattern, sumAt, { 0x8D }) || (PatternByte(pattern, sumAt + 1) & 0xC7) != 0x04 || !PatternHolds(pattern, sumAt + 2, { 0x0F }) ||
+					!PatternHolds(pattern, check.capacityAt - 2, { 0x81, 0xF8 | ((PatternByte(pattern, sumAt + 1) >> 3) & 7) }) ||
+					!PatternHolds(pattern, check.jumpAt, { 0x0F, 0x87 }) || PatternSize(pattern) != check.jumpAt + 2)
 					return false;
 			}
 			return true;
 		}
-		static_assert(ChecksAsPinned(), "TweaksV: T-E-C1 and T-E-C2 hold the slot's load, the counters' lea, the cmp and the ja, its rel32 past the match");
+		static_assert(ChecksAsPinned(), "TweaksV: T-E-C1 and T-E-C2 hold the slot's load, the counters' lea, the lea adding ecx, the cmp of that sum and the ja, its rel32 past the match");
 
 		constexpr uint32_t kGameVertices = 0x400000;	// the game's own: 4,194,304 vertices, 80 MB (1.0.1158.16)
 		constexpr uint32_t kMaxVertices = 26843545;		// the cap: a raw view of the buffer within 2^27 32-bit elements
