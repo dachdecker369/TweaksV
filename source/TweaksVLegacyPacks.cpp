@@ -7,10 +7,11 @@
 // serve the mods folder; a thread of its own then reads, once, and writes nothing but the log:
 //   the packs      every .rpf file in the mods folder - in the current directory, where the hooks serve it from -
 //                  by the one walk RageOpenV's list is read by (TweaksVModsFolder.h), so the two list the same files
-//                  the same way and stop at the same name; a folder that cannot be listed is skipped, as RageOpenV
-//                  skips it, but the mods folder itself, which RageOpenV has just listed, is a problem: the check is
-//                  not done. A pack is opened by the path the walk gives it, as the game's file functions open it,
-//                  so Windows refuses the check what it refuses the game: a pack is never read past the game's reach
+//                  the same way and stop at the same name; a folder that cannot be listed, or not to its end, is
+//                  skipped, as RageOpenV skips it, but the mods folder itself, which RageOpenV has just listed, is a
+//                  problem when none of its names can be handed on: the check is not done. A pack is opened by the
+//                  path the walk gives it, as the game's file functions open it, so Windows refuses the check what
+//                  it refuses the game: a pack is never read past the game's reach
 //   the tables     a pack's header of 16 bytes - the magic RPF7, the entry count, the names' length, the encryption
 //                  - then its entry table and the names behind it, read through a handle that shares reading, writing
 //                  and deleting, so that the game opens the pack as if the check were not there; an archive whose

@@ -53,7 +53,7 @@ namespace TweaksV
 		File,				// a file of the list
 		Folder,				// a folder of the list, which the walk goes on to list
 		FolderTooDeep,		// a folder of the list at kMaxModsDepth: what it holds is not read
-		FolderNotListed,	// a folder handed on as Folder before, which could not be listed: error says why
+		FolderNotListed,	// a folder that could not be listed, or not to its end (partly): error says why
 		NotUnicode,			// a name left out: not valid Unicode (an unpaired surrogate), which UTF-8 cannot spell, or one the fold refuses
 		TooLong,			// a name left out: its path would be longer than kMaxModsPath bytes
 	};
@@ -66,11 +66,13 @@ namespace TweaksV
 		std::string_view below;			// its path below the folder walked, in UTF-8, '/' between the names: update/update.rpf
 		std::string_view spelling;		// that path as the lookups spell it (ListSpelling) - empty for a folder not listed
 		DWORD error = ERROR_SUCCESS;	// why a folder could not be listed
+		bool partly = false;			// its listing failed half-way: the names before that were handed on
 	};
 
 	// Who a walk reports to: entry for every name, while its folder's find handle is open, and folderClosed, which may be
-	// null, once a folder's names have all been handed on and the handle is closed. Either may throw, which ends the walk,
-	// every handle closed.
+	// null, once that handle is closed: after all of the folder's names, or those that came before the walk stopped in it or
+	// its listing failed half-way, and never for a folder that could not be listed at all. Either may throw, which ends the
+	// walk, every handle closed.
 	struct ModsVisitor
 	{
 		void* context;
@@ -91,6 +93,8 @@ namespace TweaksV
 	// counts, one spelled like an earlier name too, and the first past ModsEntryLimit() ends the walk, not handed on. A
 	// folder at depth kMaxModsDepth is handed on, but what it holds is not read; a folder that cannot be listed is handed on
 	// again as such and the walk goes on - only root ends it, in rootError; a folder that holds nothing, not even "."
-	// (ERROR_FILE_NOT_FOUND: a drive's root behind a junction), is empty.
+	// (ERROR_FILE_NOT_FOUND: a drive's root behind a junction), is empty. A listing that fails half-way, with any error but
+	// ERROR_NO_MORE_FILES - a share that drops - is handed on as a folder not listed, partly, its names so far standing, and
+	// the walk goes on: root's too, unless none of its names was handed on, which is a root that cannot be listed.
 	ModsWalk WalkModsFolder(const wchar_t* root, const ModsVisitor& visitor);
 }

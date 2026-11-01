@@ -214,7 +214,7 @@ namespace TweaksV
 			size_t notUnicode = 0;				// names that are not valid Unicode (an unpaired surrogate): UTF-8 cannot spell them
 			size_t tooLong = 0;					// names whose path in the list would be longer than kMaxModsPath bytes
 			size_t tooDeep = 0;					// folders at the depth limit: listed, what they hold not read
-			size_t unreadable = 0;				// folders that could not be listed
+			size_t unreadable = 0;				// folders that could not be listed, or not to their end
 			DWORD firstError = ERROR_SUCCESS;	// why the first of them, or the mods folder itself, could not be
 			bool rootUnreadable = false;
 			bool full = false;					// the list stopped at kMaxModsEntries
@@ -237,7 +237,8 @@ namespace TweaksV
 				if (read.unreadable++ == 0)
 					read.firstError = entry.error;
 				if (read.unreadable <= kMaxLinesPerKind)
-					WriteLog(kTag, "The folder " + ToUtf8(entry.path) + " could not be read (" + DescribeError(entry.error) + ") - its files are not used.");
+					WriteLog(kTag, "The folder " + ToUtf8(entry.path) + " could not be read" + (entry.partly ? " to its end (" : " (") + DescribeError(entry.error) +
+						(entry.partly ? ") - the rest of its files are not used." : ") - its files are not used."));
 				return;
 			case ModsEntryKind::FolderTooDeep:
 				read.tooDeep++;	// listed; what it holds is not read
@@ -253,8 +254,8 @@ namespace TweaksV
 		// "mods/..." too - into g_modsList, by the walk its check for Legacy packs goes by too, every name in
 		// UTF-8, as the game asks for its files on every Windows. A name that is not valid Unicode - an unpaired
 		// surrogate, which UTF-8 cannot spell - or whose path is longer than the limit is left out and counted:
-		// the game could not ask for it. A folder at the depth limit, and one that cannot be listed, is counted
-		// and the reading goes on; only the entry limit ends it.
+		// the game could not ask for it. A folder at the depth limit, and one that cannot be listed, or not to
+		// its end, is counted and the reading goes on; only the entry limit ends it.
 		ModsFolderRead ReadModsFolder()
 		{
 			ModsFolderRead read;
@@ -383,7 +384,7 @@ namespace TweaksV
 				WriteLog(kTag, "MODS_FOLDER=0 - files in the mods folder are not used.");
 				return;
 			}
-			const DWORD attributes = GetFileAttributesW(L"mods");
+			const DWORD attributes = GetFileAttributesW(kModsRoot);
 			const bool haveFolder = attributes != INVALID_FILE_ATTRIBUTES && (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
 			if (!haveFolder && !g_diagnostic)
 			{

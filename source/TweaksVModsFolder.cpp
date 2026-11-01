@@ -76,6 +76,35 @@ namespace TweaksV
 			out[length] = '\0';
 			return true;
 		}
+
+		// The next name of a listing, FindNextFileW's, the last error saying why when there is none - in test builds
+		// TWEAKSV_TEST_MODS_FAIL_LISTING=<folder> in the environment has the listing of that folder, by the path a walk gives
+		// it, fail after its first name but "." and "..", with the error of a share that drops, read once and said once, so
+		// that a suite reaches a listing that fails half-way (SPECIFICATIONS 13.1).
+		bool NextName(HANDLE find, WIN32_FIND_DATAW& found, const std::wstring& folder)
+		{
+#ifdef TWEAKSV_TEST_BUILD
+			static const std::wstring failing = []
+			{
+				wchar_t text[MAX_PATH]{};
+				const DWORD length = GetEnvironmentVariableW(L"TWEAKSV_TEST_MODS_FAIL_LISTING", text, MAX_PATH);
+				if (length == 0 || length >= MAX_PATH)
+					return std::wstring();
+				const std::wstring value(text, length);
+				WriteLog("RageOpenV", "TEST BUILD: the listing of " + ToUtf8(value) + " fails after its first name with Windows error " +
+					std::to_string(ERROR_NETNAME_DELETED) + " (TWEAKSV_TEST_MODS_FAIL_LISTING=" + ToUtf8(value) + ").");
+				return value;
+			}();
+			if (folder == failing && wcscmp(found.cFileName, L".") != 0 && wcscmp(found.cFileName, L"..") != 0)
+			{
+				SetLastError(ERROR_NETNAME_DELETED);
+				return false;
+			}
+#else
+			(void)folder;
+#endif
+			return FindNextFileW(find, &found) != FALSE;
+		}
 	}
 
 	bool ListSpelling(const char* path, char (&out)[kMaxFolded + 1], size_t& length)
@@ -197,7 +226,21 @@ namespace TweaksV
 					visitor.entry(visitor.context, { kind, path, below, std::string_view(spelling, length) });
 					if (kind == ModsEntryKind::Folder)
 						todo.push_back({ path, below, folder.depth + 1 });
-				} while (FindNextFileW(find.handle, &found));
+				} while (NextName(find.handle, found, folder.path));
+				if (!walk.stopped)
+				{
+					// no more names, or a listing that failed half-way, which must not pass for the end of the folder
+					const DWORD error = GetLastError();
+					if (error != ERROR_NO_MORE_FILES)
+					{
+						if (folder.below.empty() && entries == 0)	// nothing handed on: a root that cannot be listed
+						{
+							walk.rootError = error;
+							break;
+						}
+						visitor.entry(visitor.context, { ModsEntryKind::FolderNotListed, folder.path, folder.below, {}, error, true });
+					}
+				}
 			}
 			if (visitor.folderClosed)
 				visitor.folderClosed(visitor.context);

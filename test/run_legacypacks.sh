@@ -184,6 +184,18 @@ fresh_ini; out=$(TWEAKSV_TEST_MODS_ENTRIES=0 ASI=TweaksV_test.asi game full_game
 check "a value outside 1..200000 is not taken: no line, nothing stopped" "has '$DONE' && log_lacks 'TEST BUILD: the walk' && log_lacks 'the walk stopped' && log_line 'Packs checked for GTA V Legacy versions: 6 in the mods folder, 6 made for Legacy\.\$'"
 fresh_ini; out=$(TWEAKSV_TEST_MODS_ENTRIES=7 game full_game.exe lpwait)
 check "the Release build leaves the limit as it is: no line, nothing stopped" "has '$DONE' && log_lacks 'TEST BUILD' && log_lacks 'the list stopped' && log_line 'Packs checked for GTA V Legacy versions: 6 in the mods folder, 6 made for Legacy\.\$'"
+
+echo "== L18 a listing that fails half-way, a share that drops, through the test build's TWEAKSV_TEST_MODS_FAIL_LISTING: its names so far stand, the rest is said not to be used, the walk goes on"
+# after, half and test listed in that order, so test and half read before after
+packs_gone; fresh_ini; out=$(TWEAKSV_TEST_MODS_FAIL_LISTING='mods\half' ASI=TweaksV_test.asi game full_game.exe lpmany legacy 3 mods/half lpmake legacy mods/after/in.rpf rovask half/p00001.rpf rovask half/p00002.rpf rovask after/in.rpf lpwait)
+check "the test build's line once, for both walks; RageOpenV logs and reports the folder, the rest of its files not used" "has 'lp: 4 made |' && has '$DONE' && [ \$(count 'TEST BUILD: the listing of mods.half fails after its first name with Windows error 64 (TWEAKSV_TEST_MODS_FAIL_LISTING=mods.half)\.') -eq 1 ] && log_has 'The folder mods.half could not be read to its end (Windows error 64) - the rest of its files are not used\.' && log_has 'PROBLEM: Only part of the mods folder is used this session: 1 folder could not be read (Windows error 64)\.'"
+check "the names so far stand, for both: p00001.rpf served and named, p00002.rpf neither" "has 'ask 1 served 8/8 passed 0/8' && log_has 'The pack mods.half.p00001.rpf was made for GTA V Legacy' && has 'ask 2 served 0/8 passed 8/8' && log_lacks 'p00002'"
+check "the walk goes on: the folder read after it served and named; the last line counts what was read" "has 'ask 3 served 8/8 passed 0/8' && log_has 'The pack mods.after.in.rpf was made for GTA V Legacy' && log_line 'Packs checked for GTA V Legacy versions: 2 in the mods folder, 2 made for Legacy\.\$'"
+fresh_ini; out=$(TWEAKSV_TEST_MODS_FAIL_LISTING=mods ASI=TweaksV_test.asi game full_game.exe rovask after/in.rpf rovask half/p00001.rpf lpwait)
+check "the mods folder's own listing, after its first name: the same - that folder served and read, the rest not, the check done" "has '$DONE' && log_has 'The folder mods could not be read to its end (Windows error 64) - the rest of its files are not used\.' && log_has 'PROBLEM: Only part of the mods folder is used this session: 1 folder could not be read (Windows error 64)\.' && has 'ask 1 served 8/8 passed 0/8' && has 'ask 2 served 0/8 passed 8/8' && log_lacks 'is not done this session' && log_line 'Packs checked for GTA V Legacy versions: 1 in the mods folder, 1 made for Legacy\.\$'"
+first=$(printf 'a%.0s' $(seq 1 255))	# a name of 255 bytes, left out: the first the listing gives, and the only one
+packs_gone; touch "mods/$first"; fresh_ini; out=$(TWEAKSV_TEST_MODS_FAIL_LISTING=mods ASI=TweaksV_test.asi game full_game.exe)
+check "the mods folder's listing with no name handed on: a mods folder that cannot be read, not called empty; nothing hooked" "log_has 'PROBLEM: Files in the mods folder are not used this session: the mods folder could not be read (Windows error 64)\.' && log_lacks 'is empty' && log_lacks 'could not be read to its end' && has 'file hooks 0/8 |'"
 packs_gone
 
 echo
