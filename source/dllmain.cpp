@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// TweaksV - Engine Tweaks and Limits Adjuster, one ASI plugin for GTA V Enhanced: its parts raise the
+// TweaksV, one ASI plugin for GTA V Enhanced: its parts raise the
 // game's limits, serve a mods folder and unencrypted archives, skip the start-up screens and free the
 // files DirectStorage keeps locked. Written anew from plugins by Chiheb-Bacha and others (CREDITS.md).
 // License: GPL-3.0-only (see LICENSE).

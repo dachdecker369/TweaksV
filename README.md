@@ -427,9 +427,9 @@ All credit for the original research and code goes to them.
 
 Third-party notices are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
-Engine Tweaks and Limits Adjuster is GPL-3.0-only.
+TweaksV is GPL-3.0-only.
 
 ## License
 
 Copyright (C) dachdecker369.
-Engine Tweaks and Limits Adjuster is free software under the GNU General Public License, version 3 only; the text is in [LICENSE](LICENSE).
+TweaksV is free software under the GNU General Public License, version 3 only; the text is in [LICENSE](LICENSE).

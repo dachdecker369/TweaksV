@@ -1,6 +1,6 @@
 # Third-Party Notices
 
-Engine Tweaks and Limits Adjuster (TweaksV) is free software: Copyright (C) dachdecker369, licensed under version 3 of the GNU General Public License only (GPL-3.0-only).
+TweaksV is free software: Copyright (C) dachdecker369, licensed under version 3 of the GNU General Public License only (GPL-3.0-only).
 It contains the third-party code listed below, each piece used under its own license.
 All of these licenses are compatible with the GPL-3.0, and TweaksV as a whole is distributed under the GPL-3.0-only.
 
