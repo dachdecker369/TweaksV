@@ -14,7 +14,7 @@ namespace TweaksV
 {
 	struct GamePattern
 	{
-		const char* label;	// as in PATTERNS.md: H- Heap, M- Modkit, P- Packfile, B- BoxStreamer, D- Decals, R- RageOpenV, S- StraightToStoryMode, Y- the script programs, L- Blips, W- WeaponLimits, I- SirenSettings, A- PedProps, Q- Resources, T- RayTracing
+		const char* label;	// as in PATTERNS.md: H- Heap, M- Modkit, P- Packfile, B- BoxStreamer, D- Decals, R- RageOpenV, S- StraightToStoryMode, Y- the script programs, L- Blips, W- WeaponLimits, I- SirenSettings, A- PedProps, Q- Resources, T- RayTracing, C- StaticBounds
 		const char* text;	// the bytes in hex, one space apart; ? matches any byte
 	};
 
@@ -240,6 +240,12 @@ namespace TweaksV
 		{ "T-E-C2", "8B 15 ? ? ? ? 31 ED 48 8D 35 ? ? ? ? 41 BA 01 00 00 00 ? ? ? ? ? ? ? ? ? ? ? ? 8B 3C 96 8D 1C 0F 81 FB ? ? ? ? 0F 87" },
 
 		// [static bounds]
+		// StaticBounds (TweaksVStaticBounds.cpp), the patterns of Nochala's Static Bounds Limit Adjuster: the two functions the
+		// game makes its pools through - the set-up, the whole of it down to its ret (P1), and the allocator, from its pushes
+		// on to its call of the memory allocator (A1)
+		{ "C-E-P1", "48 89 C8 48 8B 4C 24 ? 48 89 08 44 89 48 1C 0F 57 C0 0F 11 40 08 C7 40 18 00 00 00 00 81 60 28 00 00 00 C0 C3" },
+		{ "C-E-A1", "56 57 48 83 EC ? 48 89 CE 48 63 51 18 48 63 79 1C 48 0F AF FA 48 83 C7 07 48 83 E7 F8 48 8B 09 48 01 FA 48 8B 01 FF 50 08" },
+
 		// [light capacity]
 		// [vehicle model budget]
 		// [ped model budget]

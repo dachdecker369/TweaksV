@@ -62,6 +62,10 @@ The second relies on Windows, not on the game: a classic replace-rename reaches 
      The RPF7 layout the check reads is in "RageOpenV" below.
    - **RayTracing:** the buffer object's fields, as the buffer maker 0x11927D0 keeps them - +0x08 the count, +0x0C the stride in the low 12 bits of a word, +0x28 its GPU address - and that the buffer's views take their size from them (the maker with its flags' bit 3, and 0x486440): `T-E-B1` pins the stride 20 and the flags 0x89 where the count is set, not these offsets, which the measurement's summary reads under a guard; the 20-byte vertex (the skinning shader 0x4CDF58A2 writes it, the reflection lighting 0x82EE00F4 reads it); the buffer made once, after `DllMain`, its global 0 until then - the part checks it, and a build that made the buffer earlier would show the global set at the start, but one that made it anew later (a hint: ray tracing switched on in the menu) a second store, which no pattern shows; the two frame slots and their adjacent counters, the new slot's counter set to 0 before the frame's ranges - the measurement reads the other slot's as the last finished frame's total; the capacity held only by the two checks and the count - a build that added a check elsewhere would refuse earlier, which is safe, and one that wrote into the buffer by a size of its own would not show; the shaders' 26-bit first vertex, which the cap keeps far below; what a refusal does - 0x38CA30 returns 0 before it moves the counter, its callers hand their job lists back, 0x396710 skips the object at 0x39868D - and that both refusals overwrite or ignore rax and the flags, which the counting stubs rely on; the skinning job's +0x48; and the neighbouring limits of the same frame.
    <!-- [static bounds] -->
+   - **StaticBounds:** that the set-up's second argument is the pool's name and the name `StaticBounds` as it stands - the set-up reads neither that argument nor its third, so no pattern holds it, only the original's source says so, and a game that changed either leaves the pool at the game's size with the hooks in place;
+     that the game sets a pool's capacity between the set-up and the allocator, and keeps no other copy of the size it uses later, in `rcx` the pool in both;
+     that the static bounds pool's stride is 16;
+     and that the game makes the pool after TweaksV's `DllMain`, through these two functions - a build that made it earlier, or another way, leaves it at the game's size, which the part's check reports 60 seconds after the session's start.
    <!-- [light capacity] -->
    <!-- [vehicle model budget] -->
    <!-- [ped model budget] -->
@@ -596,6 +600,22 @@ The three patterns, each matching exactly once in the dump of 1.0.1158.16 and un
 ## StaticBounds
 
 <!-- [static bounds] -->
+The game makes its pools through two functions, and the StaticBounds part hooks both (SPECIFICATIONS.md, section 11.15).
+Its letter is `C`.
+The patterns are the ones Nochala's Static Bounds Limit Adjuster v1.0.2 (commit 61507bc, its newest on 2026-11-01) takes on Enhanced.
+Its other routes do not go on Enhanced: the load of the pool's name, `BA 06 E4 DF 2C`, that its size lookup's call would be found by, is not in the game's code (the first StaticBounds, D15, D24).
+The facts, from the original's source; the two counts and the RVAs from the dumps of 1.0.1158.16 (2026-11-01):
+
+- **A pool,** as the two functions read it: +0x00 the memory allocator, +0x08 to +0x17 zeroed by the set-up, +0x18 the capacity, an int32, +0x1C the stride, an int32, +0x28 a word of which the set-up keeps the top two bits.
+- **The room the allocator asks for:** capacity x stride, rounded up to 8, and a byte per slot behind it.
+- **The static bounds pool:** the name `StaticBounds`, the stride 16, the hash of the name 0x2CDFE406.
+
+The two patterns, each matching exactly once in both dumps, looked for on every boot the part is on:
+
+| Label | Pattern | Use | 1.0.1158.16 | RVA |
+|---|---|---|---|---|
+| C-E-P1 | `48 89 C8 48 8B 4C 24 ? 48 89 08 44 89 48 1C 0F 57 C0 0F 11 40 08 C7 40 18 00 00 00 00 81 60 28 00 00 00 C0 C3` | the pools' set-up, the whole function, its first byte its start - the part's hook lies there: +0 `mov rax, rcx`, the pool, its first argument and its result; +3 `mov rcx, [rsp+?]`, its fifth argument, the memory allocator, kept at the pool's +0x00 (+8); +11 `mov [rax+0x1C], r9d`, its fourth argument, the stride; +15 and +18 the pool's +0x08 to +0x17 zeroed; +22 `mov dword [rax+0x18], 0`, the capacity; +29 `and dword [rax+0x28], 0xC0000000`; +36 `ret`. The wildcard at +7 is the fifth argument's offset | found, its RVA to check | 0x15A3F0 |
+| C-E-A1 | `56 57 48 83 EC ? 48 89 CE 48 63 51 18 48 63 79 1C 48 0F AF FA 48 83 C7 07 48 83 E7 F8 48 8B 09 48 01 FA 48 8B 01 FF 50 08` | the pools' allocator, from its pushes on, its first byte its start - the part's hook lies there: +6 `mov rsi, rcx`, the pool, its first argument; +9 `movsxd rdx, [rcx+0x18]`, the capacity; +13 `movsxd rdi, [rcx+0x1C]`, the stride; +17 to +25 their product rounded up to 8; +29 `mov rcx, [rcx]`, the memory allocator; +32 the capacity added, the bytes asked in `rdx`; +35 and +38 `call [rax+8]` of its table, with no `r8` or `r9` of its own. The wildcard at +5 is the stack frame's size | found, its RVA to check | 0x15A4D0 |
 
 <!-- [light capacity] -->
 
