@@ -10,7 +10,7 @@
 namespace TweaksV
 {
 	// Appends "hh:mm:ss.mmm [Tag] text" to TweaksV.log and, if open, the console.
-	// Thread-safe; lines are cut at 2 KB. Lines written before the log has been
+	// Thread-safe; lines are cut at 2 KB (64 KB in a test build). Lines written before the log has been
 	// started (ClearLogFile + WriteLogHeader) are kept and written after the header.
 	void WriteLog(std::string_view tag, std::string_view text);
 

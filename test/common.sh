@@ -14,7 +14,7 @@ TW="$(cygpath -w "$(dirname "$B")/TestTemp")"
 rm -f "$B/harness.state"	# no run of this suite yet
 
 # Test builds of TweaksV show no message box with this set, so no run waits on one (release builds
-# ignore it).
+# ignore it); a run that reads a box's whole text sets 2 in its place (run_integration.sh's box_run).
 export TWEAKSV_TEST_NO_BOXES=1
 
 # check DESCRIPTION CONDITION: CONDITION is evaluated, the result printed and counted - unless the last run

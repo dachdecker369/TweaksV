@@ -27,7 +27,11 @@ namespace TweaksV
 {
 	namespace
 	{
+#ifdef TWEAKSV_TEST_BUILD
+		constexpr size_t kMaxLine = 64 * 1024;	// test builds: a message box's whole text is one line (ShowBox), past 2 KB with more than a few items
+#else
 		constexpr size_t kMaxLine = 2048;		// the longest line written: 2 KB
+#endif
 		constexpr size_t kMaxPending = 1024;	// lines kept until the log is started
 		constexpr uint64_t kMaxLogBytes = 64ull * 1024 * 1024;	// TweaksV.log grows to 64 MB at most
 #ifdef TWEAKSV_TEST_BUILD

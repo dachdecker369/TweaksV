@@ -52,22 +52,31 @@ namespace TweaksV
 
 		void ShowBox(const std::wstring& heading, const std::wstring& lastLine, const std::vector<std::string>& items, size_t dropped)
 		{
-#ifdef TWEAKSV_TEST_BUILD
-			// test builds only: TWEAKSV_TEST_NO_BOXES=1 in the environment keeps the box off the screen, for
-			// unattended test runs - also those in which TweaksV.ini is not read and cannot turn boxes off
-			wchar_t noBoxes[4]{};
-			if (GetEnvironmentVariableW(L"TWEAKSV_TEST_NO_BOXES", noBoxes, 4) == 1 && noBoxes[0] == L'1')
-			{
-				WriteLog("TweaksV", "TEST BUILD: message box not shown (TWEAKSV_TEST_NO_BOXES=1): " + ToUtf8(heading) + " ... " + ToUtf8(lastLine));
-				return;
-			}
-#endif
 			std::wstring text = heading + L"\n\n";
 			for (const auto& item : items)
 				text += L"• " + FromUtf8(item) + L"\n\n";
 			if (dropped > 0)
 				text += L"• ... and " + std::to_wstring(dropped) + L" more.\n\n";
 			text += lastLine + L" Details are in TweaksV.log:\n" + GetLogPathW() + L"\n\nTo stop this message, set ERROR_POPUP=0 in TweaksV.ini.";
+#ifdef TWEAKSV_TEST_BUILD
+			// test builds only: TWEAKSV_TEST_NO_BOXES=1 in the environment keeps the box off the screen, for
+			// unattended test runs - also those in which TweaksV.ini is not read and cannot turn boxes off. With 2 in its
+			// place the box's whole text goes to the log as well, on one line, each line break a " | ", since the box is the
+			// player's one channel and a suite can read nothing else of it; only then, as the box repeats the words of
+			// the problems, which the suites count.
+			wchar_t noBoxes[4]{};
+			if (GetEnvironmentVariableW(L"TWEAKSV_TEST_NO_BOXES", noBoxes, 4) == 1 && (noBoxes[0] == L'1' || noBoxes[0] == L'2'))
+			{
+				WriteLog("TweaksV", "TEST BUILD: message box not shown (TWEAKSV_TEST_NO_BOXES=" + ToUtf8(noBoxes) + "): " + ToUtf8(heading) + " ... " + ToUtf8(lastLine));
+				if (noBoxes[0] == L'2')
+				{
+					for (size_t at = 0; (at = text.find(L'\n', at)) != std::wstring::npos; at += 3)
+						text.replace(at, text.compare(at, 2, L"\n\n") == 0 ? 2 : 1, L" | ");
+					WriteLog("TweaksV", "TEST BUILD: the text of that box: " + ToUtf8(text));
+				}
+				return;
+			}
+#endif
 			MessageBoxW(nullptr, text.c_str(), L"TweaksV", MB_OK | MB_ICONWARNING | MB_SETFOREGROUND | MB_TOPMOST);
 		}
 
