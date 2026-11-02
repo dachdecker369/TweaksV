@@ -154,7 +154,8 @@ namespace TweaksV
 			for (size_t i = 0; i < kArrayCount; i++)
 			{
 				const size_t block = kInitBlocksAt + i * kInitBlockSize;
-				if (!PatternHolds(init, block, { 0xB9, 0xC0, 0x03, 0x00, 0x00, 0xBA, 0x08, 0x00, 0x00, 0x00, 0xE8 }) || !PatternHolds(init, block + kBlockArrayAt - 3, { 0x48, 0x89, 0x05 }) ||
+				if (!PatternHolds(init, block, { 0xB9, 0xC0, 0x03, 0x00, 0x00, 0xBA, 0x08, 0x00, 0x00, 0x00, 0xE8 }) || !PatternHolds(init, block + kBlockArrayAt - 3, { 0x48, 0x89,
+					0x05 }) ||
 					!PatternHolds(init, block + kBlockCapacityAt - 3, { 0x66, 0xC7, 0x05 }) || !PatternHolds(init, block + kBlockEntriesAt, { 0x78, 0x00 }))
 					return false;
 			}
@@ -165,8 +166,10 @@ namespace TweaksV
 		// The vehicles' two sizes: each lookup's call and its result's store, the request pool's first; then the arrays' size read and the
 		// first array's store.
 		constexpr size_t kSizeCallAt[2] = { 18, 47 }, kSizeStoreAt[2] = { 25, 54 }, kInitSizeAt = 3, kInitArrayAt = 44;
-		static_assert(PatternByte(kVehicleSizes, kSizeCallAt[0]) == 0xE8 && PatternByte(kVehicleSizes, kSizeCallAt[1]) == 0xE8 && PatternHolds(kVehicleSizes, kSizeStoreAt[0] - 2, { 0x89, 0x05 }) &&
-			PatternHolds(kVehicleSizes, kSizeStoreAt[1] - 2, { 0x89, 0x05 }) && PatternHolds(kVehicleInit, kInitSizeAt - 3, { 0x48, 0x63, 0x35 }) && PatternHolds(kVehicleInit, kInitArrayAt - 3, { 0x48, 0x89, 0x05 }),
+		static_assert(PatternByte(kVehicleSizes, kSizeCallAt[0]) == 0xE8 && PatternByte(kVehicleSizes, kSizeCallAt[1]) == 0xE8 && PatternHolds(kVehicleSizes,
+			kSizeStoreAt[0] - 2, { 0x89, 0x05 }) &&
+			PatternHolds(kVehicleSizes, kSizeStoreAt[1] - 2, { 0x89, 0x05 }) && PatternHolds(kVehicleInit, kInitSizeAt - 3, { 0x48, 0x63, 0x35 }) &&
+			PatternHolds(kVehicleInit, kInitArrayAt - 3, { 0x48, 0x89, 0x05 }),
 			"TweaksV: U-E-V5 holds its two calls and stores and U-E-V6 its size's load and the first array's store where the module reads them");
 
 		// The frame's three calls of the flips. Each flip starts its work 6 or 7 bytes on: its lock taken, its index read and 1 added modulo 4.
@@ -183,8 +186,10 @@ namespace TweaksV
 		constexpr size_t kReferencesAt = 0x5D0, kReferencesIndexAt = 0xAC, kManagerStoreAt = 21, kManagerAt = 24, kReferencesEntriesAt = 14;
 		static_assert(PatternHolds(kReferences, 0, { 0x48, 0x89, 0x86, kReferencesAt & 0xFF, kReferencesAt >> 8, 0, 0 }) &&
 			PatternHolds(kReferences, 7, { 0x66, 0xC7, 0x86, (kReferencesAt + kArrayCapacityAt) & 0xFF, (kReferencesAt + kArrayCapacityAt) >> 8, 0, 0 }) &&
-			PatternHolds(kRotation, 6, { 0x8B, 0x91, kReferencesIndexAt, 0, 0, 0 }) && PatternImm32(kManager, 1) == kManagerBytes && PatternHolds(kManager, kManagerStoreAt, { 0x48, 0x89, 0x35 }) &&
-			kReferencesAt + kArrayCount * kArraySize <= kManagerBytes, "TweaksV: U-E-D1 stores the first array of references at +0x5D0, its capacity at +0x5DA; U-E-D2 its index at +0xAC; U-E-D3 the manager of 0x14BA0 bytes");
+			PatternHolds(kRotation, 6, { 0x8B, 0x91, kReferencesIndexAt, 0, 0, 0 }) && PatternImm32(kManager, 1) == kManagerBytes && PatternHolds(kManager, kManagerStoreAt,
+			{ 0x48, 0x89, 0x35 }) &&
+			kReferencesAt + kArrayCount * kArraySize <= kManagerBytes,
+			"TweaksV: U-E-D1 stores the first array of references at +0x5D0, its capacity at +0x5DA; U-E-D2 its index at +0xAC; U-E-D3 the manager of 0x14BA0 bytes");
 
 		// Every site the measurement reads, found and checked.
 		struct Sites
@@ -272,13 +277,15 @@ namespace TweaksV
 				why = pedJump + ", which holds " + HexBytes(trap, 1) + ", not CC" + At(pedMake) + ".";
 				return false;
 			}
-			WriteLog(kTag, std::string("DIAGNOSTIC: ") + kPools[kPedRender].name + "'s full pool's jump at " + DescribeAddress(trapJump) + " -> " + DescribeAddress(trap) + ", the trap: CC" + At(pedMake));
+			WriteLog(kTag, std::string("DIAGNOSTIC: ") + kPools[kPedRender].name + "'s full pool's jump at " + DescribeAddress(trapJump) + " -> " + DescribeAddress(trap) +
+				", the trap: CC" + At(pedMake));
 
 			const GamePattern& vehicleMake = *kPools[kVehicleRender].make;
 			const uint8_t* const fullJump = vehicleRender + kFullJumpAt;
 			const uint8_t* const branch = Rel8Target(fullJump);
 			const uint8_t* const function = FunctionStartOf(fullJump);
-			const std::string vehicleJump = std::string("the ") + kPools[kVehicleRender].name + "'s full pool's jump at " + DescribeAddress(fullJump) + " leads to " + DescribeAddress(branch);
+			const std::string vehicleJump = std::string("the ") + kPools[kVehicleRender].name + "'s full pool's jump at " + DescribeAddress(fullJump) + " leads to " +
+				DescribeAddress(branch);
 			if (!function)
 			{
 				why = vehicleJump + ", and the game's unwind data names no function there" + At(vehicleMake) + ".";
@@ -315,14 +322,17 @@ namespace TweaksV
 				if (array != sites.arrays[family] + i * kArraySize)
 				{
 					why = i == 0 ?
-						std::string("the ") + what + "' add loads their arrays at " + DescribeAddress(sites.arrays[family]) + At(add) + ", their init stores them at " + DescribeAddress(array) + At(init) + "." :
-						std::string("the ") + what + "' array " + std::to_string(i) + " at " + DescribeAddress(array) + " does not lie " + std::to_string(i * kArraySize) + " bytes past their first at " +
+						std::string("the ") + what + "' add loads their arrays at " + DescribeAddress(sites.arrays[family]) + At(add) + ", their init stores them at " +
+						DescribeAddress(array) + At(init) + "." :
+						std::string("the ") + what + "' array " + std::to_string(i) + " at " + DescribeAddress(array) + " does not lie " + std::to_string(i * kArraySize) +
+						" bytes past their first at " +
 							DescribeAddress(sites.arrays[family]) + At(init) + ".";
 					return false;
 				}
 				if (capacity != array + kArrayCapacityAt)
 				{
-					why = std::string("the ") + what + "' array " + std::to_string(i) + " at " + DescribeAddress(array) + " has its capacity at " + DescribeAddress(capacity) + ", not at its +0xA" + At(init) + ".";
+					why = std::string("the ") + what + "' array " + std::to_string(i) + " at " + DescribeAddress(array) + " has its capacity at " + DescribeAddress(capacity) +
+						", not at its +0xA" + At(init) + ".";
 					return false;
 				}
 			}
@@ -335,12 +345,14 @@ namespace TweaksV
 		// The adds and the inits: each family's arrays, in the game's data, as its add loads them and its init stores them, and the vehicles'
 		// size as its init reads it where its second lookup stored it. A family's lock lies 8 bytes past its index, as the research found -
 		// the walk names the vehicles', the flips all three, and what lies there is only compared.
-		bool CheckQueues(const uint8_t* pedAdd, const uint8_t* pedInit, const uint8_t* propAdd, const uint8_t* propInit, const uint8_t* vehicleAdd, const uint8_t* walk, const uint8_t* sizes,
+		bool CheckQueues(const uint8_t* pedAdd, const uint8_t* pedInit, const uint8_t* propAdd, const uint8_t* propInit, const uint8_t* vehicleAdd, const uint8_t* walk,
+			const uint8_t* sizes,
 			const uint8_t* vehicleInit, Sites& sites, std::string& why)
 		{
 			const auto logAdd = [](size_t family, const uint8_t* match, const GamePattern& pattern, const Sites& found)
 			{
-				WriteLog(kTag, std::string("DIAGNOSTIC: ") + kFamilies[family].what + "' add at " + DescribeAddress(match) + ": its index at " + DescribeAddress(found.index[family]) + ", its arrays at " +
+				WriteLog(kTag, std::string("DIAGNOSTIC: ") + kFamilies[family].what + "' add at " + DescribeAddress(match) + ": its index at " +
+					DescribeAddress(found.index[family]) + ", its arrays at " +
 					DescribeAddress(found.arrays[family]) + At(pattern));
 			};
 
@@ -371,13 +383,16 @@ namespace TweaksV
 			}
 			if (!CheckArrays(kVehicles, Rel32Target(walk + kWalkArraysAt), kVehicleWalk, sites, why))
 				return false;
-			WriteLog(kTag, std::string("DIAGNOSTIC: ") + kFamilies[kVehicles].what + "' add at " + DescribeAddress(vehicleAdd) + ": its index at " + DescribeAddress(vehicleIndex) + At(kVehicleAdd));
-			WriteLog(kTag, std::string("DIAGNOSTIC: ") + kFamilies[kVehicles].what + "' walk at " + DescribeAddress(walk) + ": its lock at " + DescribeAddress(sites.lock[kVehicles]) + ", its index at " +
+			WriteLog(kTag, std::string("DIAGNOSTIC: ") + kFamilies[kVehicles].what + "' add at " + DescribeAddress(vehicleAdd) + ": its index at " +
+				DescribeAddress(vehicleIndex) + At(kVehicleAdd));
+			WriteLog(kTag, std::string("DIAGNOSTIC: ") + kFamilies[kVehicles].what + "' walk at " + DescribeAddress(walk) + ": its lock at " +
+				DescribeAddress(sites.lock[kVehicles]) + ", its index at " +
 				DescribeAddress(sites.index[kVehicles]) + ", its arrays at " + DescribeAddress(sites.arrays[kVehicles]) + At(kVehicleWalk));
 			const uint8_t* const firstArray = Rel32Target(vehicleInit + kInitArrayAt);
 			if (firstArray != sites.arrays[kVehicles])
 			{
-				why = std::string("the ") + kFamilies[kVehicles].what + "' walk loads their arrays at " + DescribeAddress(sites.arrays[kVehicles]) + At(kVehicleWalk) + ", their init stores the first at " +
+				why = std::string("the ") + kFamilies[kVehicles].what + "' walk loads their arrays at " + DescribeAddress(sites.arrays[kVehicles]) + At(kVehicleWalk) +
+					", their init stores the first at " +
 					DescribeAddress(firstArray) + At(kVehicleInit) + ".";
 				return false;
 			}
@@ -386,12 +401,16 @@ namespace TweaksV
 			const uint8_t* const initSize = Rel32Target(vehicleInit + kInitSizeAt);
 			if (renderSize != initSize)
 			{
-				why = std::string("the ") + kFamilies[kVehicles].what + "' second size is stored at " + DescribeAddress(renderSize) + At(kVehicleSizes) + ", their init reads their arrays' size at " +
+				why = std::string("the ") + kFamilies[kVehicles].what + "' second size is stored at " + DescribeAddress(renderSize) + At(kVehicleSizes) +
+					", their init reads their arrays' size at " +
 					DescribeAddress(initSize) + At(kVehicleInit) + ".";
 				return false;
 			}
-			WriteLog(kTag, std::string("DIAGNOSTIC: ") + kFamilies[kVehicles].what + "' two sizes at " + DescribeAddress(sizes) + ": stored at " + DescribeAddress(requestsSize) + " and " + DescribeAddress(renderSize) + At(kVehicleSizes));
-			WriteLog(kTag, std::string("DIAGNOSTIC: ") + kFamilies[kVehicles].what + "' init at " + DescribeAddress(vehicleInit) + ": their arrays' size read at " + DescribeAddress(initSize) +
+			WriteLog(kTag, std::string("DIAGNOSTIC: ") + kFamilies[kVehicles].what + "' two sizes at " + DescribeAddress(sizes) + ": stored at " + DescribeAddress(requestsSize) +
+				" and " +
+				DescribeAddress(renderSize) + At(kVehicleSizes));
+			WriteLog(kTag, std::string("DIAGNOSTIC: ") + kFamilies[kVehicles].what + "' init at " + DescribeAddress(vehicleInit) + ": their arrays' size read at " +
+				DescribeAddress(initSize) +
 				", the first at " + DescribeAddress(firstArray) + At(kVehicleInit));
 			return true;
 		}
@@ -478,7 +497,8 @@ namespace TweaksV
 					why = what + " flip at " + DescribeAddress(flip) + " takes the lock at " + DescribeAddress(lock) + ", not at " + DescribeAddress(sites.lock[family]) + At(kFlips) + ".";
 					return false;
 				}
-				WriteLog(kTag, std::string("DIAGNOSTIC: ") + kFamilies[family].what + "' flip, called at " + DescribeAddress(call) + ", at " + DescribeAddress(flip) + ": its head at " + DescribeAddress(head) +
+				WriteLog(kTag, std::string("DIAGNOSTIC: ") + kFamilies[family].what + "' flip, called at " + DescribeAddress(call) + ", at " + DescribeAddress(flip) +
+					": its head at " + DescribeAddress(head) +
 					", its lock at " + DescribeAddress(lock) + ", its index at " + DescribeAddress(index) + At(kFlips));
 			}
 			return true;
@@ -491,10 +511,13 @@ namespace TweaksV
 			if (!GameData("draw list manager's global", global, sizeof(uint64_t), sizeof(uint64_t), kManager, why))
 				return false;
 			sites.manager = global;
-			WriteLog(kTag, "DIAGNOSTIC: the draw list's references at " + DescribeAddress(references) + ": the first array at " + Hex(kReferencesAt) + " of its manager, its capacity holds " +
+			WriteLog(kTag, "DIAGNOSTIC: the draw list's references at " + DescribeAddress(references) + ": the first array at " + Hex(kReferencesAt) +
+				" of its manager, its capacity holds " +
 				std::to_string(ValueAt<uint16_t>(references, kReferencesEntriesAt)) + At(kReferences));
-			WriteLog(kTag, "DIAGNOSTIC: the draw list's rotation at " + DescribeAddress(rotation) + ": the references' index at " + Hex(kReferencesIndexAt) + " of its manager" + At(kRotation));
-			WriteLog(kTag, "DIAGNOSTIC: the draw list manager made at " + DescribeAddress(manager) + ", " + Hex(kManagerBytes) + " bytes, its global at " + DescribeAddress(global) + At(kManager));
+			WriteLog(kTag, "DIAGNOSTIC: the draw list's rotation at " + DescribeAddress(rotation) + ": the references' index at " + Hex(kReferencesIndexAt) + " of its manager" +
+				At(kRotation));
+			WriteLog(kTag, "DIAGNOSTIC: the draw list manager made at " + DescribeAddress(manager) + ", " + Hex(kManagerBytes) + " bytes, its global at " +
+				DescribeAddress(global) + At(kManager));
 			return true;
 		}
 
@@ -535,7 +558,8 @@ namespace TweaksV
 				return false;
 
 			const uint8_t* lookup = nullptr;	// the vehicles' two sizes' calls and each pool's lead to one function, the game's size lookup
-			if (!CheckLookup("VehicleStreamRequest", sizes + kSizeCallAt[0], kVehicleSizes, lookup, why) || !CheckLookup("VehicleStreamRender", sizes + kSizeCallAt[1], kVehicleSizes, lookup, why))
+			if (!CheckLookup("VehicleStreamRequest", sizes + kSizeCallAt[0], kVehicleSizes, lookup, why) || !CheckLookup("VehicleStreamRender", sizes + kSizeCallAt[1],
+				kVehicleSizes, lookup, why))
 				return false;
 			for (size_t i = 0; i < kPoolCount; i++)
 				if (!CheckLookup(kPools[i].name, lookups[i] + kPools[i].lookupCallAt, *kPools[i].lookup, lookup, why))
@@ -548,11 +572,11 @@ namespace TweaksV
 		constexpr DWORD kSampleMs = 20;				// three of a family's four arrays hold a whole past frame: this sees every frame up to about 150 fps
 		constexpr uint32_t kMaxEntriesRead = 4096;	// of an array at a new most: the different ones are counted among these
 
-		enum class Pool : uint8_t { NotMade, CouldNotBeRead, Read, NotReadFurther };
+		enum class State : uint8_t { NotMade, CouldNotBeRead, Read, NotReadFurther };
 
 		struct PoolReading
 		{
-			Pool state = Pool::NotMade;
+			State state = State::NotMade;
 			uint64_t object = 0;	// where its pointer led when it could not be read
 			int32_t capacity = 0;
 			int32_t latest = 0;
@@ -572,7 +596,7 @@ namespace TweaksV
 
 		struct ReferencesReading
 		{
-			Pool state = Pool::NotMade;
+			State state = State::NotMade;
 			uint64_t manager = 0;	// where its global led when it could not be read
 			uint32_t most = 0;
 			uint32_t capacity = 0;
@@ -611,7 +635,7 @@ namespace TweaksV
 		void SamplePool(size_t i)
 		{
 			PoolReading& reading = g_sampled.pools[i];
-			if (reading.state == Pool::NotReadFurther)
+			if (reading.state == State::NotReadFurther)
 				return;
 			struct Fields
 			{
@@ -631,9 +655,9 @@ namespace TweaksV
 			uint8_t bytes[kPoolRead];
 			if (!CopyMemorySafely(bytes, reinterpret_cast<const void*>(static_cast<uintptr_t>(object)), sizeof(bytes)))
 			{
-				if (reading.state != Pool::Read)
+				if (reading.state != State::Read)
 				{
-					reading.state = Pool::CouldNotBeRead;
+					reading.state = State::CouldNotBeRead;
 					reading.object = object;
 				}
 				return;
@@ -643,13 +667,14 @@ namespace TweaksV
 				return;
 			if (stride != kPools[i].stride)
 			{
-				reading.state = Pool::NotReadFurther;
-				WriteLog(kTag, std::string("DIAGNOSTIC: the pool of ") + kPools[i].name + " at " + Hex(object) + " has stride " + std::to_string(stride) + ", not " + std::to_string(kPools[i].stride) +
+				reading.state = State::NotReadFurther;
+				WriteLog(kTag, std::string("DIAGNOSTIC: the pool of ") + kPools[i].name + " at " + Hex(object) + " has stride " + std::to_string(stride) + ", not " +
+					std::to_string(kPools[i].stride) +
 					": it is not read further.");
 				return;
 			}
 			const int32_t count = static_cast<int32_t>(ValueAt<uint32_t>(bytes, kPoolCountAt) << 2) >> 2;
-			reading.state = Pool::Read;
+			reading.state = State::Read;
 			reading.capacity = ValueAt<int32_t>(bytes, kPoolCapacityAt);
 			reading.latest = count > 0 ? count : 0;
 			if (reading.latest > reading.most)
@@ -706,14 +731,14 @@ namespace TweaksV
 			uint8_t arrays[kArrayCount * kArraySize];
 			if (!CopyMemorySafely(arrays, reinterpret_cast<const uint8_t*>(static_cast<uintptr_t>(manager)) + kReferencesAt, sizeof(arrays)))
 			{
-				if (reading.state != Pool::Read)
+				if (reading.state != State::Read)
 				{
-					reading.state = Pool::CouldNotBeRead;
+					reading.state = State::CouldNotBeRead;
 					reading.manager = manager;
 				}
 				return;
 			}
-			reading.state = Pool::Read;
+			reading.state = State::Read;
 			for (size_t i = 0; i < kArrayCount; i++)
 			{
 				reading.most = std::max<uint32_t>(reading.most, ValueAt<uint16_t>(arrays, i * kArraySize + kArrayCountAt));
@@ -765,13 +790,13 @@ namespace TweaksV
 			const std::string text = std::string(label) + " ";
 			switch (pool.state)
 			{
-			case Pool::NotMade:
+			case State::NotMade:
 				return text + "not made yet";
-			case Pool::CouldNotBeRead:
+			case State::CouldNotBeRead:
 				return text + "could not be read at " + Hex(pool.object);
-			case Pool::NotReadFurther:
+			case State::NotReadFurther:
 				return text + "not read further (see above)";
-			case Pool::Read:
+			case State::Read:
 				break;
 			}
 			return text + std::to_string(pool.latest) + inUse + " of " + std::to_string(pool.capacity) + ", at most " + std::to_string(pool.most) +
@@ -787,7 +812,8 @@ namespace TweaksV
 			if (arrays.most != 0 && !arrays.entriesRead)
 				text += ", the entries could not be read";
 			else if (arrays.most != 0)
-				text += ", " + std::to_string(arrays.different) + " different " + (arrays.most > kMaxEntriesRead ? "among the first " + std::to_string(kMaxEntriesRead) + " " : std::string()) + "in that frame";
+				text += ", " + std::to_string(arrays.different) + " different " + (arrays.most > kMaxEntriesRead ? "among the first " + std::to_string(kMaxEntriesRead) + " " :
+					std::string()) + "in that frame";
 			if (arrays.past)
 				text += " - PAST ITS CAPACITY: the game wrote past the array's end, a crash may follow";
 			return text;
@@ -804,9 +830,9 @@ namespace TweaksV
 			}
 			const ReferencesReading& references = now.references;
 			std::string line = "DIAGNOSTIC: the draw list's references: ";
-			if (references.state == Pool::NotMade)
+			if (references.state == State::NotMade)
 				line += "not made yet";
-			else if (references.state == Pool::CouldNotBeRead)
+			else if (references.state == State::CouldNotBeRead)
 				line += "could not be read at " + Hex(references.manager) + " (its manager)";
 			else
 				line += "at most " + std::to_string(references.most) + " of " + std::to_string(references.capacity) + " in a frame" +
@@ -836,7 +862,8 @@ namespace TweaksV
 			WriteLog(kTag, std::string(kNotMeasured) + "its summary thread could not be started.");
 			return;
 		}
-		WriteLog(kTag, "DIAGNOSTIC: the render queues are read every " + std::to_string(kSampleMs) + " ms: how near their pools, their arrays and the draw list's references have come is logged after " +
+		WriteLog(kTag, "DIAGNOSTIC: the render queues are read every " + std::to_string(kSampleMs) +
+			" ms: how near their pools, their arrays and the draw list's references have come is logged after " +
 			std::to_string(kFirstSummaryMs / 1000) + " seconds, then every minute while a most changes.");
 	}
 }
