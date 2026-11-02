@@ -5,6 +5,7 @@
 # TweaksV.asi and then asks for the time once, as the game does. Fake LOCALAPPDATA: the real one
 # is never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
+CHECKS=90
 cd "$B" || exit 1
 cp "$R/x64/Release/TweaksV.asi" .
 cp "$R/object/Test/Release/TweaksV.asi" TweaksV_test.asi

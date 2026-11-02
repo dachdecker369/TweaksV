@@ -11,6 +11,7 @@
 # NtSetInformationFile hook passes on and turns; with "wait" it stays 11 s longer, with "waitlong" 31 s. Fake
 # LOCALAPPDATA: the real one is never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
+CHECKS=102
 cd "$B" || exit 1
 cp "$R/x64/Release/TweaksV.asi" .
 # the file system without file IDs is the test build's (TWEAKSV_TEST_FILE_INDEX), the only build that reads that switch

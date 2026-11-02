@@ -5,6 +5,7 @@
 # once, as the game does - RageOpenV hooks the file functions and starts the check - and waits for the check's last line
 # (lpwait), then opens what it made without sharing (lpfree). Fake LOCALAPPDATA: the real one is never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
+CHECKS=92
 cd "$B" || exit 1
 cp "$R/x64/Release/TweaksV.asi" .
 cp "$R/object/Test/Release/TweaksV.asi" TweaksV_test.asi

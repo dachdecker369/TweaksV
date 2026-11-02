@@ -23,6 +23,7 @@
 # so every check matches the weapon components' lines and problems by their wording. Fake LOCALAPPDATA: the real one is
 # never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
+CHECKS=111
 cd "$B" || exit 1
 cp "$R/x64/Release/TweaksV.asi" TweaksV.asi
 cp "$R/object/Test/Release/TweaksV.asi" TweaksV_test.asi

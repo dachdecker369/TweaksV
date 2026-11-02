@@ -16,6 +16,7 @@
 # its own, always.
 # Fake LOCALAPPDATA: the real one is never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
+CHECKS=74
 cd "$B" || exit 1
 cp "$R/x64/Release/TweaksV.asi" TweaksV.asi
 cp "$R/object/Test/Release/TweaksV.asi" TweaksV_test.asi

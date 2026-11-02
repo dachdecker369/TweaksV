@@ -9,6 +9,7 @@
 # budget's pattern found once through its part, whatever that part did; without DIAGNOSTIC_MODE nothing looked for. In every run the sites as
 # placed: the module writes nothing. Fake LOCALAPPDATA: the real one is never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
+CHECKS=86
 cd "$B" || exit 1
 cp "$R/x64/Release/TweaksV.asi" TweaksV.asi
 cp "$R/object/Test/Release/TweaksV.asi" TweaksV_test.asi

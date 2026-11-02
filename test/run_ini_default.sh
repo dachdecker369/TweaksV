@@ -11,6 +11,7 @@
 # the read-only game folder cannot be renamed, which is reported. Fake LOCALAPPDATA: the real one is
 # never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
+CHECKS=60
 cd "$B" || exit 1
 cp "$R/x64/Release/TweaksV.asi" TweaksV.asi
 # the 1.x scenarios run the test build: the fresh file has ERROR_POPUP=1 and the rename is a problem

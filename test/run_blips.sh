@@ -13,6 +13,7 @@
 # test build alike, and the test build's copy of the program next to the part. Fake LOCALAPPDATA: the real one is
 # never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
+CHECKS=41
 cd "$B" || exit 1
 cp "$R/x64/Release/TweaksV.asi" TweaksV.asi
 cp "$R/object/Test/Release/TweaksV.asi" TweaksV_test.asi

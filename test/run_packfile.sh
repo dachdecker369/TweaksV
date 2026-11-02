@@ -3,6 +3,7 @@
 # PackfileLimit scenarios (TweaksVPackfileLimit): a fake GTA5_Enhanced.exe with copies of the patched game
 # code loads the real TweaksV.asi. Fake LOCALAPPDATA: the real one is never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
+CHECKS=58
 cd "$B" || exit 1
 cp "$R/x64/Release/TweaksV.asi" .
 mkdir -p appdata

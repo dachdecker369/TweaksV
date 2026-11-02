@@ -11,6 +11,7 @@
 # run nothing written: the sites and the game's data as placed, no stub of its own, every page its own protection; without
 # DIAGNOSTIC_MODE nothing looked for, and DRY_RUN changes nothing. Fake LOCALAPPDATA: the real one is never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
+CHECKS=213
 cd "$B" || exit 1
 cp "$R/x64/Release/TweaksV.asi" TweaksV.asi
 cp "$R/object/Test/Release/TweaksV.asi" TweaksV_test.asi

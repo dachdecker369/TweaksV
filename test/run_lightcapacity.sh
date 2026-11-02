@@ -8,6 +8,7 @@
 # dynamic code policy - each logged, never a problem, nothing written; without DIAGNOSTIC_MODE nothing looked for. Fake LOCALAPPDATA: the real
 # one is never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
+CHECKS=135
 cd "$B" || exit 1
 cp "$R/x64/Release/TweaksV.asi" TweaksV.asi
 cp "$R/object/Test/Release/TweaksV.asi" TweaksV_test.asi

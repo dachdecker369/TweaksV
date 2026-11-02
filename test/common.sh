@@ -5,6 +5,7 @@
 # finds that folder again. AW: the fake LOCALAPPDATA inside B, as a Windows path - the real one is never touched.
 # TW: the fake TEMP and TMP, TestTemp next to B, as a Windows path: outside the game folder, as the
 # real %TEMP% is, which is never touched either (run_all.sh deletes this one too).
+# A suite's CHECKS=N, the line below its source of this file, is how many checks it makes, which run_all.sh compares.
 T="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 R="$(cd "$T/.." && pwd)"
 B="${TWEAKSV_TEST_DIR:-$R/object/TestRun/$(basename "$0" .sh | sed 's/^run_//')/TestRun}"
