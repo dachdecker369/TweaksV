@@ -303,7 +303,7 @@ namespace TweaksV
 			if (now.budget != now.site)
 				WriteLog(kTag, "DIAGNOSTIC: pool memory: its allocator at " + DescribeAddress(g_allocator) + " holds a budget of " + BudgetMb(now.budget) + " MB, not the " +
 					Budget(now.site) + " its site holds: the game set it up before TweaksV started, or its layout is not as the research found it.");
-			else if (now.used + now.room != now.budget)
+			if (now.used + now.room != now.budget)
 				WriteLog(kTag, "DIAGNOSTIC: pool memory: " + Tenths(now.used) + " MB in use and " + Tenths(now.room) + " MB of room do not add up to its budget of " +
 					BudgetMb(now.budget) + " MB: the game may have been changing them, or its layout is not as the research found it.");
 			std::string line = "DIAGNOSTIC: pool memory: " + Tenths(now.used) + " of " + BudgetMb(now.budget) + " MB in use, at least " + Tenths(now.leastRoom) +

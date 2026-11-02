@@ -535,11 +535,12 @@
 //   ppstride       with pprun: slots of 0x1000 bytes
 //   ppcountzero, ppcountbig
 //                  with pprun: the pool's count 0, or 20000
-//   ppinusebig     with pprun: more in use than the pool has slots
+//   ppinusebig, ppinusepeak
+//                  with pprun: more in use than the pool has slots, always or only until it settles
 //   ppnoflags, ppnopeds
 //                  with pprun: the flags, or the slots, on a page that cannot be read
-//   ppnospatial, ppbadspatial
-//                  with pprun: the spatial array not made, or its count past its capacity
+//   ppnospatial, ppbadspatial, ppspatialfault, ppspatialbig
+//                  with pprun: the spatial array not made, its count past its capacity, its head on a page that cannot be read, or a capacity of 20000 with 300 in it
 //   ppfreed, ppgone
 //                  with pprun: the pool's head freed when it settles, or the page of the data that holds its pointer no longer readable
 // A site or a field not as the research found it, each on its own - no fake code runs any of them but the accessor, which these leave alone or the pool is not made:
@@ -5949,7 +5950,7 @@ static void PedPoolSetUpSites(int argc, wchar_t** argv)
 		for (size_t i = 0; i < site.size; i++)
 			g_ppPlaced[at++] = site.bytes[i];
 	DWORD old = 0;
-	if (option(L"ppkeysno") || option(L"ppnoflags") || option(L"ppnopeds") || option(L"ppsetterno"))
+	if (option(L"ppkeysno") || option(L"ppnoflags") || option(L"ppnopeds") || option(L"ppsetterno") || option(L"ppspatialfault"))
 		VirtualProtect(g_ppNoAccessPage, sizeof(g_ppNoAccessPage), PAGE_NOACCESS, &old);
 }
 // Once the whole of .fakesit is read+execute, before TweaksV loads: an edge's second page, as the options "...unread" ask.
@@ -5996,7 +5997,7 @@ static void PedPoolMake(int argc, wchar_t** argv)
 	g_ppPool->flags = HasOption(argc, argv, L"ppnoflags") ? g_ppNoAccessPage : g_ppFlags;
 	g_ppPool->count = HasOption(argc, argv, L"ppcountzero") ? 0 : HasOption(argc, argv, L"ppcountbig") ? 20000 : kPpSlots;
 	g_ppPool->stride = HasOption(argc, argv, L"ppstride") ? 0x1000 : kPpStride;
-	PedPoolSetSpatialCapacity(HasOption(argc, argv, L"ppspatialover") ? 300 : kPpSlots);
+	PedPoolSetSpatialCapacity(HasOption(argc, argv, L"ppspatialbig") ? 20000 : HasOption(argc, argv, L"ppspatialover") ? 300 : kPpSlots);
 	data->scenarioFoot = 40;
 	data->scenarioCars = 2;
 	data->capScenario = 40;
@@ -6005,8 +6006,9 @@ static void PedPoolMake(int argc, wchar_t** argv)
 	data->capFoot = 64;
 	data->capCars = 16;
 	if (!HasOption(argc, argv, L"ppnospatial"))
-		data->spatial = reinterpret_cast<uintptr_t>(g_ppSpatialArray);
-	PedPoolSetInUse(HasOption(argc, argv, L"ppfull") ? kPpSlots : 171, HasOption(argc, argv, L"ppspatialover") ? 300 : HasOption(argc, argv, L"ppbadspatial") ? 500 : 165, argc, argv);
+		data->spatial = reinterpret_cast<uintptr_t>(HasOption(argc, argv, L"ppspatialfault") ? g_ppNoAccessPage : g_ppSpatialArray);
+	PedPoolSetInUse(HasOption(argc, argv, L"ppfull") ? kPpSlots : HasOption(argc, argv, L"ppinusepeak") ? 257 : 171,
+		HasOption(argc, argv, L"ppspatialover") || HasOption(argc, argv, L"ppspatialbig") ? 300 : HasOption(argc, argv, L"ppbadspatial") ? 500 : 165, argc, argv);
 	const uint64_t turned = _rotl64(kPpKeys, 30);
 	const int rotation = 32 + static_cast<int>(turned & 0x1F) + 2;
 	data->keys = kPpKeys;

@@ -145,6 +145,7 @@ namespace TweaksV
 		// The spatial array: its capacity and its count.
 		constexpr size_t kSpatialCapacityAt = 0x58, kSpatialCountAt = 0x5C, kSpatialHeadSize = kSpatialCountAt + sizeof(int32_t);
 		constexpr int32_t kSpatialFixedArrays = 256;	// past this the game's fixed arrays overrun
+		constexpr const char* kPastFixedArrays = " - past the 256 of the game's fixed arrays: expect memory corruption";
 
 		// What the sites lead to, set before the measurement's threads start.
 		struct Data
@@ -488,15 +489,24 @@ namespace TweaksV
 			}
 		}
 
-		// The sampling thread: a reading a second. Each pass inside a try, so nothing leaves the thread; it never ends.
+		// The sampling thread: a reading a second, and a line of its own at once the first time the spatial array is seen past the game's fixed
+		// arrays, as the corruption that follows may end the game before the next summary - a reading a second can still miss it. Each pass
+		// inside a try, so nothing leaves the thread; it never ends.
 		DWORD WINAPI SamplePool(LPVOID)
 		{
+			bool pastSaid = false;
 			for (;;)
 			{
 				Sleep(kSampleMs);
 				try
 				{
-					KeepTheMost(ReadNow());
+					const Reading reading = ReadNow();
+					KeepTheMost(reading);
+					if (!pastSaid && reading.spatialRead && reading.spatialCount > kSpatialFixedArrays)
+					{
+						pastSaid = true;
+						WriteLog(kTag, "DIAGNOSTIC: the ped pool's spatial array holds " + std::to_string(reading.spatialCount) + " of " + std::to_string(reading.spatialCapacity) + kPastFixedArrays + ".");
+					}
 				}
 				catch (...)
 				{
@@ -607,7 +617,7 @@ namespace TweaksV
 			if (g_loggedMostInUse >= static_cast<uint32_t>(now.slots))
 				line += " - the pool has been full: the game makes no more peds until one goes";
 			if (g_loggedMostSpatial > kSpatialFixedArrays)
-				line += " - past the 256 of the game's fixed arrays: expect memory corruption";
+				line += kPastFixedArrays;
 			WriteLog(kTag, line + ".");
 		}
 
@@ -628,9 +638,11 @@ namespace TweaksV
 			WriteLog(kTag, std::string(kNotMeasured) + "its summary thread could not be started.");
 			return;
 		}
-		if (!StartModuleThread(SamplePool, "ped pool sampling"))
+		const bool sampled = StartModuleThread(SamplePool, "ped pool sampling");
+		if (!sampled)
 			WriteLog(kTag, "DIAGNOSTIC: the ped pool is not sampled, so its most so far are those of the summaries: its thread could not be started.");
-		WriteLog(kTag, "DIAGNOSTIC: the ped pool is measured, through its pointer at " + DescribeAddress(g_data.value) + At(kAccessor) + ": the slots in use and the spatial array are sampled every second and "
-			"logged after 10 seconds, then every minute while they change.");
+		WriteLog(kTag, "DIAGNOSTIC: the ped pool is measured, through its pointer at " + DescribeAddress(g_data.value) + At(kAccessor) + (sampled ?
+			": the slots in use and the spatial array are sampled every second and logged after 10 seconds, then every minute while they change." :
+			", its numbers not sampled: the slots in use and the spatial array are logged after 10 seconds, then every minute while they change."));
 	}
 }

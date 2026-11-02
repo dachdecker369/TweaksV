@@ -189,6 +189,7 @@ pm odd : pmodd wait &
 pm before : pmbefore wait &
 pm notmade : pmnotmade wait &
 pm nosum : pmnosum wait &
+pm beforesum : pmbefore pmnosum wait &
 pm outside : pmoutside &
 pm unaligned : pmunaligned &
 pm unreadable : pmunreadable &
@@ -218,6 +219,8 @@ pm_in notmade
 check "the allocator not set up: said so, nothing read past it" "pm_line 'DIAGNOSTIC: no pool memory yet - the game has not set its allocator up.' && [ \$(count '\[HeapAdjuster\] DIAGNOSTIC: pool memory: ') -eq 0 ]"
 pm_in nosum
 check "in use and room that do not add up: said so, then the numbers" "pm_line 'DIAGNOSTIC: pool memory: 135.5 MB in use and 121.5 MB of room do not add up to its budget of 256 MB: the game may have been changing them, or its layout is not as the research found it.' && pm_line 'DIAGNOSTIC: pool memory: 135.5 of 256 MB in use, at least 120.4 MB free so far, 120 blocks (900 ends the game).'"
+pm_in beforesum
+check "both things a pattern cannot pin, each its line, then the numbers: a budget that is not the site's does not keep the use and room from being checked" "pm_line 'DIAGNOSTIC: pool memory: its allocator at RVA 0x[0-9A-F]* holds a budget of 136 MB, not the 256 MB its site holds: the game set it up before TweaksV started, or its layout is not as the research found it.' && pm_line 'DIAGNOSTIC: pool memory: 135.5 MB in use and 1.5 MB of room do not add up to its budget of 136 MB: the game may have been changing them, or its layout is not as the research found it.' && pm_line 'DIAGNOSTIC: pool memory: 135.5 of 136 MB in use, at least 0.4 MB free so far, 120 blocks (900 ends the game) - nearly spent: a pool made now can crash the game at RVA 0x15A514 on 1.0.1158.16.'"
 pm_in outside
 check "the allocator outside the game: another mod's, left and logged, no problem, nothing written; not measured, a line" "pm_line 'The pool memory budget is not changed this session: its allocator at 0x[0-9A-F]* (outside the game) is another mod.s (H-E2) - left as it is.' && pm_line 'DIAGNOSTIC: the pool memory is not measured: its allocator at 0x[0-9A-F]* (outside the game) is not inside the game (H-E2).' && log_lacks '\[HeapAdjuster\] PROBLEM' && has 'pool memory: 0x08800000, 136 MB, the rest as placed,' && log_lacks '\[HeapAdjuster\] Pool memory budget patched'"
 pm_in heapout

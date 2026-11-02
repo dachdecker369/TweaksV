@@ -22,6 +22,10 @@ pp_line() { log_line "\[PedPool\] $1\$"; }
 SUMMARY='DIAGNOSTIC: ped pool: 143 of 256 slots in use, at most 171 so far; mission 12, reuse 4; scenario 40 on foot and 2 in cars, cap 40; ambient 61 on foot and 18 in cars, caps 64 and 16 (which is which a hint); spatial array 139 of 256, at most 165.'
 NOT_MEASURED='DIAGNOSTIC: the ped pool is not measured:'
 ANNOUNCED='DIAGNOSTIC: the ped pool is measured, through its pointer at RVA 0x[0-9A-F]* (N-E-A1): the slots in use and the spatial array are sampled every second and logged after 10 seconds, then every minute while they change.'
+ANNOUNCED_UNSAMPLED='DIAGNOSTIC: the ped pool is measured, through its pointer at RVA 0x[0-9A-F]* (N-E-A1), its numbers not sampled: the slots in use and the spatial array are logged after 10 seconds, then every minute while they change.'
+# the line that comes at once, at the first sample past the game's fixed arrays
+PAST='DIAGNOSTIC: the ped pool.s spatial array holds 300 of 300 - past the 256 of the game.s fixed arrays: expect memory corruption.'
+PAST_ANY='\[PedPool\] DIAGNOSTIC: the ped pool.s spatial array holds'
 RVA='RVA 0x[0-9A-F]*'
 OUTSIDE='0x[0-9A-F]* (outside the game)'
 
@@ -86,6 +90,9 @@ pp stride : pprun ppstride wait
 pp countzero : pprun ppcountzero wait
 pp countbig : pprun ppcountbig wait
 pp inusebig : pprun ppinusebig wait
+pp inusepeak : pprun ppinusepeak wait
+pp spatialfault : pprun ppspatialfault wait
+pp spatialbig : pprun ppspatialbig wait
 pp noflags : pprun ppnoflags wait
 pp nopeds : pprun ppnopeds wait
 pp nospatial : pprun ppnospatial wait
@@ -122,6 +129,7 @@ check "the six defaults, their numbers" "pp_line 'DIAGNOSTIC: fwAnimDirector.s p
 check "the announcement, word for word" "pp_line '$ANNOUNCED'"
 check "the summary, word for word: the settled numbers, the most the sampling thread saw before them, skipped peds and free slots' stale bytes not counted, the top bits of the slots in use masked; once" "pp_line '$SUMMARY' && [ \$(count '\[PedPool\] DIAGNOSTIC: ped pool: ') -eq 1 ]"
 check "the fake's own encoding is the game's: its accessor decodes it; the sites as placed, every page its own protection" "has '$MADE' && has 'protect: all restored (RX)'"
+check "the spatial array never past 256: no line of it at once" "log_lacks '$PAST_ANY'"
 check "a measurement reports nothing: no problem of its own" "log_lacks '\[PedPool\] PROBLEM'"
 
 echo "== N3 nothing made yet: said so, nothing read past the flag"
@@ -137,6 +145,7 @@ pp_in full
 check "at most the pool's slots: the pool has been full" "pp_line 'DIAGNOSTIC: ped pool: 143 of 256 slots in use, at most 256 so far; mission 12, reuse 4; scenario 40 on foot and 2 in cars, cap 40; ambient 61 on foot and 18 in cars, caps 64 and 16 (which is which a hint); spatial array 139 of 256, at most 165 - the pool has been full: the game makes no more peds until one goes.'"
 pp_in over
 check "at most 300 in the spatial array: past the 256 of the game's fixed arrays" "pp_line 'DIAGNOSTIC: ped pool: 143 of 256 slots in use, at most 171 so far; mission 12, reuse 4; scenario 40 on foot and 2 in cars, cap 40; ambient 61 on foot and 18 in cars, caps 64 and 16 (which is which a hint); spatial array 139 of 300, at most 300 - past the 256 of the game.s fixed arrays: expect memory corruption.'"
+check "said at once by the sampling thread, word for word, once, before the first summary, as what follows may end the game before it" "pp_line '$PAST' && [ \$(count '$PAST_ANY') -eq 1 ] && [ \$(grep -n '$PAST_ANY' TweaksV.log | cut -d: -f1) -lt \$(grep -n '\[PedPool\] DIAGNOSTIC: ped pool: ' TweaksV.log | head -n 1 | cut -d: -f1) ]"
 pp_in both
 check "both" "pp_line 'DIAGNOSTIC: ped pool: 143 of 256 slots in use, at most 256 so far; mission 12, reuse 4; scenario 40 on foot and 2 in cars, cap 40; ambient 61 on foot and 18 in cars, caps 64 and 16 (which is which a hint); spatial array 139 of 300, at most 300 - the pool has been full: the game makes no more peds until one goes - past the 256 of the game.s fixed arrays: expect memory corruption.'"
 
@@ -152,7 +161,9 @@ check "a count of 0: taken for data being changed, nothing walked" "pp_line 'DIA
 pp_in countbig
 check "a count of 20000: taken for data being changed, nothing walked" "pp_line 'DIAGNOSTIC: the ped pool at $OUTSIDE could not be read this time: its slots, 20000, are outside 1..16384 (the game may have been changing it).' && has 'protect: '"
 pp_in inusebig
-check "more in use than it has slots: taken for data being changed, none of it kept for the most" "pp_line 'DIAGNOSTIC: the ped pool at $OUTSIDE could not be read this time (the game may have been changing it).' && [ \$(count '\[PedPool\] DIAGNOSTIC: ped pool: ') -eq 0 ]"
+check "more in use than it has slots, in every reading: taken for data being changed" "pp_line 'DIAGNOSTIC: the ped pool at $OUTSIDE could not be read this time (the game may have been changing it).' && [ \$(count '\[PedPool\] DIAGNOSTIC: ped pool: ') -eq 0 ]"
+pp_in inusepeak
+check "257 in use only until it settles: none of it kept for the most, which says 143 and not that the pool has been full" "pp_line 'DIAGNOSTIC: ped pool: 143 of 256 slots in use, at most 143 so far; mission 12, reuse 4; scenario 40 on foot and 2 in cars, cap 40; ambient 61 on foot and 18 in cars, caps 64 and 16 (which is which a hint); spatial array 139 of 256, at most 165.' && log_lacks '\[PedPool\] .*has been full'"
 pp_in noflags
 check "the flags that cannot be read: the walk given up, the rest of the line as it is" "pp_line 'DIAGNOSTIC: ped pool: 143 of 256 slots in use, at most 171 so far; mission and reuse not counted this time; scenario 40 on foot and 2 in cars, cap 40; ambient 61 on foot and 18 in cars, caps 64 and 16 (which is which a hint); spatial array 139 of 256, at most 165.'"
 pp_in nopeds
@@ -161,6 +172,11 @@ pp_in nospatial
 check "the spatial array not made" "pp_line 'DIAGNOSTIC: ped pool: 143 of 256 slots in use, at most 171 so far; mission 12, reuse 4; scenario 40 on foot and 2 in cars, cap 40; ambient 61 on foot and 18 in cars, caps 64 and 16 (which is which a hint); spatial array not made yet.'"
 pp_in badspatial
 check "a count past its capacity: not read, and not kept for the most" "pp_line 'DIAGNOSTIC: ped pool: 143 of 256 slots in use, at most 171 so far; mission 12, reuse 4; scenario 40 on foot and 2 in cars, cap 40; ambient 61 on foot and 18 in cars, caps 64 and 16 (which is which a hint); spatial array not read this time.'"
+check "nor said at once" "log_lacks '$PAST_ANY' && log_lacks '\[PedPool\] .*past the 256'"
+pp_in spatialfault
+check "the spatial array's head that faults: not read this time, no crash" "pp_line 'DIAGNOSTIC: ped pool: 143 of 256 slots in use, at most 171 so far; mission 12, reuse 4; scenario 40 on foot and 2 in cars, cap 40; ambient 61 on foot and 18 in cars, caps 64 and 16 (which is which a hint); spatial array not read this time.' && has 'protect: '"
+pp_in spatialbig
+check "a capacity of 20000: taken for data being changed, its 300 kept neither for the most nor said at once" "pp_line 'DIAGNOSTIC: ped pool: 143 of 256 slots in use, at most 171 so far; mission 12, reuse 4; scenario 40 on foot and 2 in cars, cap 40; ambient 61 on foot and 18 in cars, caps 64 and 16 (which is which a hint); spatial array not read this time.' && log_lacks '$PAST_ANY' && log_lacks '\[PedPool\] .*past the 256'"
 pp_in freed
 check "the pool's head freed: could not be read this time, no crash" "pp_line 'DIAGNOSTIC: the ped pool at $OUTSIDE could not be read this time (the game may have been changing it).' && has 'protect: '"
 pp_in gone
@@ -180,7 +196,7 @@ check "the pool made 11 s in: not made yet at the first summary, its numbers onc
 
 echo "== N9 a thread that cannot start (the test build's TWEAKSV_TEST_REFUSE_THREAD): logged, not reported"
 pp_in sampling
-check "no sampling thread: said, and measured all the same, the most so far those of the summaries" "pp_line 'DIAGNOSTIC: the ped pool is not sampled, so its most so far are those of the summaries: its thread could not be started.' && pp_line '$ANNOUNCED' && pp_line 'DIAGNOSTIC: ped pool: 143 of 256 slots in use, at most 143 so far; mission 12, reuse 4; scenario 40 on foot and 2 in cars, cap 40; ambient 61 on foot and 18 in cars, caps 64 and 16 (which is which a hint); spatial array 139 of 256, at most 139.' && log_lacks '\[PedPool\] PROBLEM'"
+check "no sampling thread: said, and measured all the same, the most so far those of the summaries" "pp_line 'DIAGNOSTIC: the ped pool is not sampled, so its most so far are those of the summaries: its thread could not be started.' && pp_line '$ANNOUNCED_UNSAMPLED' && log_lacks 'sampled every second' && pp_line 'DIAGNOSTIC: ped pool: 143 of 256 slots in use, at most 143 so far; mission 12, reuse 4; scenario 40 on foot and 2 in cars, cap 40; ambient 61 on foot and 18 in cars, caps 64 and 16 (which is which a hint); spatial array 139 of 256, at most 139.' && log_lacks '\[PedPool\] PROBLEM'"
 pp_in summary
 check "no summary's thread: not measured, nothing announced, no problem" "pp_line '$NOT_MEASURED its summary thread could not be started.' && log_lacks '\[PedPool\] DIAGNOSTIC: the ped pool is measured' && log_lacks '\[PedPool\] PROBLEM'"
 pp_in diagoff
