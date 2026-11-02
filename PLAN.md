@@ -243,12 +243,12 @@ The overview reads `TweaksV.log`; the pass reads the files.
 
 **2.7.0's proof,** on the Release build of the tagged commit, with `DIAGNOSTIC_MODE=1`, my usual mods folder, my converted emergency packs, a save loaded and about ten minutes of driving and shootouts with a wanted level in the city, which is what the population's measurements need.
 The load is my folder as it stands, `TrainerV.asi` and Collectibles on Map beside TweaksV, which only `POOL_MEMORY` makes safe (below), the police packs coming by the trainer.
-The drive goes on only while the budgets' line still grows (D31).
+The drive goes on only while the budgets' lines still grow, which their last words say, `; no new high for N s` (D31).
 A start with `LARGE_SIREN_IDS=0` and one with `LARGE_SIREN_IDS=1` compare the base game's settings and IDs (D22), and a pack's ID past 255 kept whole; its emergency vehicle shows its own lights.
 `STATICBOUNDS_SIZE` above what my `gameconfig.xml` gives the pool - 24,500 at my second test, so 30000 - since a larger value there keeps the default's 16,000 from changing anything: the raise's line with both sizes, the two hooks at 0x15A3F0 and 0x15A4D0.
 One start at `STATICBOUNDS_SIZE=100000`, the key's maximum, in that load, since my `AnimStore` test ended the game with a failed allocation right behind that allocator's start: if it crashes, the maximum comes down to what boots, or README says so.
 That start is safe only with `POOL_MEMORY`'s raise (D31), so the key goes in before it; the key's maximum stands.
-The render queues' step (D30): about ten `mp_m_freemode_01` spawned in view with Simple Trainer V, some with hats, mods set on three or four cars, 30 seconds standing still; it needs nothing of `[PEDPROPS]`, which stays off.
+The render queues' step (D30), first in its start, since each most holds for the whole boot: about ten `mp_m_freemode_01` spawned in view with Simple Trainer V, some with hats, mods set on three or four cars, then 70 seconds standing still past the last spawn, since the summary comes once a minute and none comes at exit; it needs nothing of `[PEDPROPS]`, which stays off.
 The proof: line 1 names 2.7.0 and the commit without `-dirty`; no `PROBLEM` but what a test means; `Features:` naming the two new parts; each new pattern at its RVA; each measurement's numbers; no crash.
 Then the tag, the searches, and one atomic push.
 The next plan, 2.8.0, comes from those numbers.
@@ -274,10 +274,10 @@ The next plan, 2.8.0, comes from those numbers.
 ## Next steps
 
 **State:** phase C's round runs since 2026-11-02, the split of D29 kept.
-The five coding tracks are merged on main and their documents folded: fifteen parts, `TweaksV.ini`'s layout 5 with its 42 keys, 147 patterns, 1647 checks, the full run about 7 minutes side by side.
+The nine coding tracks are merged on main and their documents folded: fifteen parts, `TweaksV.ini`'s layout 5 with its 43 keys, 228 patterns, 2357 checks, the full run about 9 minutes side by side.
 All six research passes are done and decided (D23, D30, D31): no siren track in this round, the sirens per vehicle being 2.8.0's.
 2.6.0 stands as the last build, tagged on c6c8854 and pushed.
-then the merge, the review, the proof and my boots.
+Next: the review of the merged diff, the proof and my boots.
 The open issues are T-HARDEN, T-DIAG, T-FREEZE and T-PEDPROPS.
 
-
+**Decisions waiting on me:** none.

@@ -13,6 +13,11 @@ A value below the game's own is raised to it and reported.
 A heap of 1024 MB or more is not the game's own: another heap adjuster set it, and TweaksV leaves it as it is and says so in the log.
 Replaces HeapAdjusterEnhanced.
 
+`POOL_MEMORY` under `[HEAP_ADJUSTER]` (default 256 MB, 136 to 2047) sets a budget of its own that the game's pools draw on, which `HEAP_SIZE` does not touch; the game's own is 136 MB.
+Past it the game crashes at `+0x15A514`, and a large load of mods can come within a MB of it, a raised `gameconfig.xml` or a plugin that extends pools more easily still.
+It is a ceiling: raising it takes no memory by itself.
+Any other value than 136 MB found there is another mod's or a new game build's, which TweaksV leaves as it is and says so in the log.
+
 ### ModkitLimit
 
 `MODKITARRAY_SIZE` under `[MODKIT_LIMIT]` (default 65536, 1 to 65536; a value below the game's own 1024 is raised to it and reported) moves the game's array of vehicle modkit IDs, 1024 entries, to a larger one and raises the eight limits the game's code carries for it, so more add-on vehicles with modkits of their own fit.
@@ -213,18 +218,35 @@ With `DIAGNOSTIC_MODE=1` the log names the two functions at their RVAs, and when
 
 Rewritten from Nochala's [Static Bounds Limit Adjuster](https://www.gta5-mods.com/scripts/static-bound-limit-adjuster) v1.0.2, GPL-3.0-or-later: its two patterns, its two hooks and its rule, on TweaksV's own code.
 With `StaticBoundLimitAdjuster.asi` (or `StaticBoundsLimitAdjuster.asi`) installed, TweaksV switches its own StaticBounds part off.
-### Measured first: the sirens per vehicle
+### Measured first: the sirens per vehicle, the lighting capacity, the model budgets, the ped pool and the render queues
 
-One limit more of the game, the sirens per vehicle ([ROADMAP.md](ROADMAP.md)), may be lifted by the SirenSettings part.
-A part goes in only once a mod load reaches its limit, so this limit is measured first: with `DIAGNOSTIC_MODE=1`, TweaksV finds the places in the game's code the limit lies in, checks them as the part will, and logs how close the game and your mods come to it - 10 seconds in and then every minute while the numbers change.
-The measurement changes one thing in the game, the call that draws a vehicle's sirens, which passes through TweaksV, to look at each vehicle model's siren bones once; without `DIAGNOSTIC_MODE`, nothing of it runs.
+More limits of the game may be lifted by parts to come ([ROADMAP.md](ROADMAP.md)): the sirens per vehicle by the SirenSettings part, and the lighting capacity, the model budgets, the ped pool and the render queues if their numbers ask.
+A part goes in only once a mod load reaches its limit, so these limits are measured first: with `DIAGNOSTIC_MODE=1`, TweaksV finds the places in the game's code each limit lies in, checks them as the part will, and logs how close the game and your mods come to it - 10 seconds in and then every minute while the numbers change.
+These measurements change two things in the game, each said below: the call that draws a vehicle's sirens and the jump a full list of lights takes, which pass through TweaksV; without `DIAGNOSTIC_MODE`, nothing of them runs.
 What its lines tell you:
 
 **Siren count** (SirenSettings): the game lights 20 sirens of a vehicle, `siren1` to `siren20`.
 An emergency vehicle made for 32 sirens, as some packs ship them, loads all the same, and its lights past the 20th stay dark without an error; and a siren whose bone lies past the model's 128th bone stays dark too, because the game cannot name it.
 With `DIAGNOSTIC_MODE=1` TweaksV looks once at each vehicle model whose sirens the game draws, and 10 seconds after the first logs how many such models it has seen, the most sirens the game names on one of them (20 at most), how many carry siren bones past `siren20` that the game never lights and how many lose siren bones past bone 127 - with a line for each model concerned, named by the hash of its name, saying how many of its siren and glass bones are lost.
 The game draws sirens only while they are on: drive an emergency vehicle with its sirens on, or let the police chase you.
-This is the one measurement that changes something in the game: the game's call that draws a vehicle's sirens passes through TweaksV, which has the game draw them unchanged first; with `DRY_RUN=1` the call stays as it is and nothing is counted.
+This measurement changes something in the game: the call that draws a vehicle's sirens passes through TweaksV, which has the game draw them unchanged first; with `DRY_RUN=1` the call stays as it is and nothing is counted.
+
+**Lighting capacity** (LightCapacity): a frame's lights pass through layers of fixed room, and many vehicles with real siren lights are where a load may reach them.
+Past some of them a light simply goes dark; past the frame's store of 400 vehicle lights the game writes over its own memory and the crash is next.
+With `DIAGNOSTIC_MODE=1` TweaksV reads how full each layer is about a hundred times a second and logs the most, 10 seconds in and then every minute while it changes, of that minute and of the session: the vehicles, the vehicle lights and coronas, the scene's lights, the ray traced list and how often it passes what its upload takes, the reflection lists, the coronas, and how many lights a job's full list refused; and what your siren settings ask for.
+It changes one thing in the game, with `DIAGNOSTIC_MODE=1` only: the jump a job's list takes when it is full passes through TweaksV to be counted, and costs nothing while the list has room; with `DRY_RUN=1` it stays as it is and those lights are not counted.
+
+**The model budgets** (Population): the game holds only so many bytes of vehicle models and of ped models - with the Population Variety slider at its top, 429 MB and 561 MB - and past that it asks for no further model, so that traffic and crowds repeat fewer of them than your mods could give, without an error.
+`vehicle model budget:` and `ped model budget:` say how many MB are in use and how many models that holds, and `at the stop in 170 of 171 samples` says how long the game stood at its budget: most of the time means the budget binds on your load, and a raise would give you more variety.
+Their `tables:` lines name the values the budgets come from, and are the one proof that a `ConfigPopulationStreaming` block of your own `gameconfig.xml` has taken, since the game ignores a misspelled tag without a word.
+
+**Ped pool** (PedPool): the game keeps its peds in a pool of 256 slots, and a full pool only means that no more peds appear; `Peds` raised above 256 in a `gameconfig.xml`, though, boots well and corrupts memory once more than 256 peds are alive, as three arrays of the game stay at 256.
+With `DIAGNOSTIC_MODE=1` TweaksV logs how many of the slots are in use, the most so far, how many of them are mission peds or wait for reuse, the population's counts against their caps and the most in the spatial array the game finds nearby peds with - and says so when the pool has been full or that array has passed 256.
+This one writes nothing to the game.
+
+**Render queues** (RenderQueues): what streamed peds, their props and vehicles with mods draw in a frame the game keeps in small per-frame arrays, and past 120 entries of the first two it writes into memory that is not theirs, with no error, which can crash the game much later and elsewhere.
+With `DIAGNOSTIC_MODE=1` TweaksV reads these arrays, the pools behind them and the draw list's references, writing nothing, and 10 seconds in, then every minute while a most changes, logs how near each has come; `FULL` and `PAST ITS CAPACITY` are the words to look for.
+Plain driving may never touch them: many multiplayer-style peds in view, and mods set on many cars, do.
 
 ## TweaksV.ini
 
@@ -248,6 +270,7 @@ The settings are read once, at start-up: TweaksV's parts patch the game before i
 | | `VERSION` | 5 | the layout of this file; TweaksV keeps it, and raises it when it adds the keys of a newer layout - leave the line in |
 | `[HEAP_ADJUSTER]` | `ENABLED` | 1 | the part on or off - every part's section has this key, 1 by default but under `[PEDPROPS]` |
 | | `HEAP_SIZE` | 2000 | the game's heap in MB, 1 to 2047; a value below the game's own is raised to it and reported |
+| | `POOL_MEMORY` | 256 | the memory budget of the game's pools in MB, 136 to 2047 |
 | `[MODKIT_LIMIT]` | `MODKITARRAY_SIZE` | 65536 | the number of vehicle modkit IDs, 1 to 65536; a value below the game's own 1024 is raised to it and reported |
 | `[PACKFILE_LIMIT]` | `PACKFILEARRAY_SIZE` | 13000 | the number of RPF archives, 1 to 65535; a value below the game's own 7260 is raised to it and reported; it also replaces the archive count of `gameconfig.xml`, exactly |
 | `[BOXSTREAMER]` | `TRAVERSAL_LIST_SIZE` | 10000 | map boxes one search of the box streamer can return, 1000 to 100000 (the game's own: 1000) |
@@ -274,9 +297,9 @@ You can also delete the old file before the first start.
 The same happens to any `TweaksV.ini` without `VERSION` under `[TWEAKSV]`, so leave that line in.
 What changed: `[HEAP_SETTINGS]` is `[HEAP_ADJUSTER]`, `[MODKIT_SETTINGS]` is `[MODKIT_LIMIT]`, `[PACKFILE_SETTINGS]` is `[PACKFILE_LIMIT]` and `[DECALDEFS_SETTINGS]` is `[DECALS]`; the other four sections lost their `_SETTINGS` ending (`[BOXSTREAMER]`, `[RAGEOPENV]`, `[STRAIGHTTOSTORYMODE]`, `[DIRECTSTORAGE]`), and `[TWEAKSV]` kept its name; `LOG_TO_FILE`, `SHOW_ERROR_POPUPS`, `CHECK_FOR_CONFLICTS` and `INI_VERSION` are `LOG`, `ERROR_POPUP`, `CONFLICT_CHECK` and `VERSION`; the testing switches `LOG_SEARCHES`, `LOG_DECALDEFS`, `LOG_INFO`, `LOG_MODS`, `LOG_CALLS` and `LOG_FILE_OPENS` are all `DIAGNOSTIC_MODE` now; `NEWMODS` and `LOG_DEVICE` are gone with the newmods folder.
 
-**Diagnostics:** `DIAGNOSTIC_MODE=1` makes every part that is on log every pattern it looks for (address, number of matches, bytes), every site it finds and every write, and run its measurement: the box streamer counts its searches, the decals part reads how many definitions are registered, RageOpenV logs every file request, every file served from `mods` and every archive header read, and its check a line per pack read, with its models and textures by version, DirectStorage logs the game's calls into it, every file opened in the game folder and every rename it gives POSIX semantics, the Blips part the natives its script's check calls and how full the game's blip pool is, WeaponLimits every `weapons.meta` file the game loads and how many files and weapon component definitions your game holds against their room, PedProps the most props on one anchor of a ped, Resources how much of the texture budget the streamed textures and buffers take, RayTracing how much of its buffer the frames take and what the full buffer leaves out, SirenSettings its siren settings and IDs, and which settings the game dropped or moved, per file, StaticBounds when the session started and the game made the pool, and, measured first, how close the game and your packs come to the sirens per vehicle (see "Measured first" above).
+**Diagnostics:** `DIAGNOSTIC_MODE=1` makes every part that is on log every pattern it looks for (address, number of matches, bytes), every site it finds and every write, and run its measurement: HeapAdjuster how much of its budget the game's pools take and the least room so far, the box streamer counts its searches, the decals part reads how many definitions are registered, RageOpenV logs every file request, every file served from `mods` and every archive header read, and its check a line per pack read, with its models and textures by version, DirectStorage logs the game's calls into it, every file opened in the game folder and every rename it gives POSIX semantics, the Blips part the natives its script's check calls and how full the game's blip pool is, WeaponLimits every `weapons.meta` file the game loads and how many files and weapon component definitions your game holds against their room, PedProps the most props on one anchor of a ped, Resources how much of the texture budget the streamed textures and buffers take, RayTracing how much of its buffer the frames take and what the full buffer leaves out, SirenSettings its siren settings and IDs, and which settings the game dropped or moved, per file, StaticBounds when the session started and the game made the pool, and, measured first, how close the game and your packs come to the sirens per vehicle, the lighting capacity, the model budgets, the ped pool and the render queues (see "Measured first" above).
 A part with `ENABLED=0` does nothing, so it logs nothing - but for PedProps' measurement, which goes on while that part is off and writes nothing.
-Two ways to use it: with `DRY_RUN=1` nothing in the game is written or hooked (only RageOpenV's one-shot hook on `GetSystemTimeAsFileTime`, which runs its checks and switches itself off) - the quiet check after a game update, which shows the patterns, the sites and the decal count of the unpatched game - `blip_controller`'s guard only a boot without `DRY_RUN` shows; alone, it is the full measurement of the running game with the mods folder served, and it hooks a little more than a normal boot (the box streamer's four search calls, the siren lights' renderer call, RayTracing's two refusal jumps, DirectStorage's configuration calls, its factory and `OpenFile`, and - with `UNLOCK_FILES=0` - the file opens).
+Two ways to use it: with `DRY_RUN=1` nothing in the game is written or hooked (only RageOpenV's one-shot hook on `GetSystemTimeAsFileTime`, which runs its checks and switches itself off) - the quiet check after a game update, which shows the patterns, the sites and the decal count of the unpatched game - `blip_controller`'s guard only a boot without `DRY_RUN` shows; alone, it is the full measurement of the running game with the mods folder served, and it hooks a little more than a normal boot (the box streamer's four search calls, the siren lights' renderer call, the jump a job's full list of lights takes, RayTracing's two refusal jumps, DirectStorage's configuration calls, its factory and `OpenFile`, and - with `UNLOCK_FILES=0` - the file opens).
 Every kind of line that comes per event stops after 20,000 - also DirectStorage's `OpenFile` lines - and the events are then only counted, with a summary every minute where the part has one.
 
 ## Design

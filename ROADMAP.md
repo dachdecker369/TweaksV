@@ -62,6 +62,7 @@ Its place in the order: 2.7.0, beside SirenSettings.
 Ideas from the page of [Resource Extensions [Enhanced]](https://www.gta5-mods.com/scripts/resource-extensions) 2.4 by Koukol, read on 2026-11-01: closed source and its redistribution forbidden, so the page's words alone, its plugin never read.
 Each has a research pass in the dump (PLAN.md, D20) and a measurement before any raise, in 2.7.0; a raise the numbers ask for comes in 2.8.0.
 
-- The population's limits, a pass each: the vehicle model budget (its key `VehicleModelBudget`), the ped model budget (its "fewer repeated ped models"), the ped pool (256 to 768 on that page, 128 kept for missions) and the render queues of streamed peds and vehicles.
-  Nothing is researched yet.
-- The lighting capacity, a pass of its own: many siren lights are where a load may reach it.
+- The vehicle model budget and the ped model budget: researched, each a budget in bytes, 429 MB and 561 MB at the Population Variety slider's top, measured first in `TweaksVPopulation` (SPECIFICATIONS.md, section 11.16.4); a raise goes by my own `gameconfig.xml`'s block for my load (the vehicles' after 2.7.0's boot, PLAN.md, D-V5), a key of a part only if other people's loads are to get it, and only from the numbers.
+- The ped pool: measured in 2.7.0, not raised; 2.8.0 only if the numbers ask, with the render queues' raise first (PLAN.md, D31).
+- The render queues: measured in 2.7.0; a raise waits for the boot's numbers, its design in the findings' section 8.
+- The lighting capacity: measured in 2.7.0; the raises of its findings' 8.1 A, B and C go in 2.8.0, with the sirens per vehicle (PLAN.md, D23, D30).
