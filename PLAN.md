@@ -2,7 +2,7 @@
 
 The order of work for a change to TweaksV, phase by phase, each ending with its proof, a commit and my boot.
 What came before phase C is in the git history and in NOTES.md's Versions; the passes' findings and reviews are in my research tools' `output-1158.16\`.
-Phase C, planned on 2026-11-01, is two builds (D19): 2.7.0, with six research passes side by side, StaticBounds anew through the original's two hooks, the siren setting IDs, the population's limits and the lighting capacity measured, the open issues the round takes, and the sirens per vehicle if approved to them in time; then 2.8.0, the raises 2.7.0's numbers ask for, planned from those numbers.
+Phase C, planned on 2026-11-01, is two builds (D19): 2.7.0, with six research passes side by side, StaticBounds anew through the original's two hooks, the siren setting IDs, the population's limits and the lighting capacity measured, and the open issues the round takes; then 2.8.0, the sirens per vehicle (D23) and the raises 2.7.0's numbers ask for, planned from those numbers.
 
 ## How the work runs
 
@@ -15,7 +15,7 @@ This section holds only what is this round's.
 - **The merge** (the merge) makes the scaffold and the reflow on main (D27), writes one short plan per track and starts the tracks in its track.
 
 - **Eleven tracks at the go** - five coding tracks and six research passes - each on a branch of its own from main at the reflow's commit.
-  The later ones - one measurement for each limit its findings confirm (D25), and the sirens per vehicle if approved (D23) - start from main once the overview has checked the findings and I have decided on them, each.
+  The later ones - one measurement for each limit its findings confirm (D25) - start from main once the overview has checked the findings and I have decided on them, each.
 
 Every coding track builds from what its item names: the findings file in my research tools' folder, `C:\_DEVELOPMENT\_Tools\TweaksV-research\output-1158.16\<topic>_findings_for_the_clean_room_build.txt`, with the decisions below where they change the design and the review beside it, `<topic>_review.md`; the static bounds track from the original's source (D24); the sweeps from the open issues' entries in NOTES.md.
 No track reads code of an original whose license does not allow it (D2) - Resource Extensions' plugin and SirenSetting Limit Adjuster's code least of all.
@@ -52,7 +52,6 @@ Each table is in the order of the merge.
 
 | Track | Track | Owns | Joined by |
 |---|---|---|---|
-| The sirens per vehicle, if approved | | `source\TweaksVSirenCount.cpp` and `.h`; `test\run_sirencount.sh` | the part's raise and its suite; needs its findings first |
 | The lighting capacity, measured | | `source\TweaksVLightCapacity.cpp` and `.h`; `test\run_lightcapacity.sh` | the module and its suite; needs its findings first |
 | The two model budgets, measured | | `source\TweaksVPopulation.cpp` and `.h`; `test\run_population.sh` | one module for both, as they share a block and a site (D31) |
 | The ped pool, measured, and the pool memory raised | | `source\TweaksVPedPool.cpp` and `.h`; `test\run_pedpool.sh`; `POOL_MEMORY` in `source\TweaksVHeapAdjuster.cpp`, its row of `source\TweaksVSettings.h` and the files that pin the layout | the module, its suite and the raise, since they share the site (D31) |
@@ -88,9 +87,9 @@ D1 to D18, phases A and B, in short; their full text is in the git history up to
 - **D17:** RageOpenV's check for packs made for GTA V Legacy.
 - **D18, stands:** parts built in one round ship together as one version, tagged on the commit I boot and pushed with main.
 - **D19, phase C's shape** (2026-11-01): two builds, as phases A and B went.
-  **2.7.0:** six research passes side by side (D20); beside them, since they need nothing from the passes, the data window (D21), the siren setting IDs (D22), StaticBounds anew (D24) and the open issues the round takes (D26); then, as each pass's findings are checked and I have decided on them, a measurement for each limit they confirm (D25) and the sirens per vehicle if approved in time (D23), as the ray tracing buffer joined phase B - what is not ready then waits for 2.8.0.
+  **2.7.0:** six research passes side by side (D20); beside them, since they need nothing from the passes, the data window (D21), the siren setting IDs (D22), StaticBounds anew (D24) and the open issues the round takes (D26); then, as each pass's findings are checked and I have decided on them, a measurement for each limit they confirm (D25), as the ray tracing buffer joined phase B - what is not ready then waits for 2.8.0.
   My boots, the tag on the commit I boot, main and the tag pushed together, for my own use.
-  **2.8.0:** the raises of the population's limits and of the lighting capacity that 2.7.0's numbers ask for, planned from those numbers as phase B was planned from 2.5.0's.
+  **2.8.0:** the sirens per vehicle (D23), and the raises of the population's limits and of the lighting capacity that 2.7.0's numbers ask for, planned from those numbers as phase B was planned from 2.5.0's.
   Neither publishes anything: the next version I publish stays the full one (D7).
   A fresh overview and a fresh merge.
 - **D20, the research passes:** the limit on reverse-engineering the game (D2) is lifted of D19, for three things: the count of the original's two static bounds patterns in the dump and nothing else, done (D24); the sirens' second pass, with the lighting capacity; the population's limits.
@@ -110,10 +109,11 @@ a pass that finds its limit sharing code with a neighbour's may read the neighbo
   The module `TweaksVSirenIds` becomes the part's, while the siren count's stays in `kMeasuredFirst` until a raise is built.
   Its measurement goes on with `DIAGNOSTIC_MODE` with `LARGE_SIREN_IDS=0` and with the part off, through that table as the ped props' does while that part is off, so that my boot can compare the base game's settings and IDs off and on, which settles the findings' open question, what the PSO loader makes of a wider member: the same numbers, and the design stands; not the same, and the track's fallback comes in, the two members widened only after the base loader has returned, binary packs keeping their 8-bit IDs.
   The default, on or off, follows that comparison; until then the default file says 1, the choice, kept.
-- **D23, the sirens per vehicle** (D14): the second pass first.
-  It closes what the first left open - where the bone structure is made, the parser's data, a 21st light - and gives a verdict: about 100 sites would make this the largest part TweaksV has, and the largest surface at each game update, so the findings also say what the smallest raise that lights a 32-siren model's lights would take.
-  I decide on those findings whether it is built, `SIRENS_PER_VEHICLE`, 20 to 32: with 2.7.0 if approved in time, else with 2.8.0, or not at all.
-  The measurement stays as it is until then.
+- **D23, the sirens per vehicle** (D14), on the second pass's findings (2026-11-02).
+  They are built in 2.8.0, `SIRENS_PER_VEHICLE`, 20 to 32, as the hybrid of the findings' 8.7: the lights by a second call of the game's own renderer, the damage by the game's own code raised, glass included; 29 patterns and 26 writes, which have not run on the game.
+  The lighting capacity's 8.1 A and C go in that build, A as D30 has it, C new: without it three fully lit vehicles at 32 sirens in one job lose lights silently.
+  So 2.7.0 has no siren track, and the measurement stays as it is until then.
+  The key's default is for 2.8.0's plan.
 - **D24, StaticBounds anew**: the part through the original's two hooks, the way it goes on Enhanced, which D15 had the wrong way round.
   The overview read the original at 61507bc, still its newest commit on 2026-11-01, and counted its two patterns in both dumps of D19: the named pool's set-up, 37 bytes with a wildcard at +7, once at RVA 0x15A3F0; the pool's allocator, 41 bytes with a wildcard at +5, once at RVA 0x15A4D0.
   What D15 settled stays: GPL-3.0-or-later, the key `STATICBOUNDS_SIZE` under `[STATICBOUNDS]`, 1 to 100,000, 16,000 by default, a larger `gameconfig.xml` value kept, the two old plugins' names in the conflict check, the credit and the notice.
@@ -156,7 +156,7 @@ a pass that finds its limit sharing code with a neighbour's may read the neighbo
 - **D30, the lighting capacity and the render queues, on their findings** (2026-11-02), 1 to 4 to the four decisions in the lighting capacity's summary, 5 to 8 to the four in the render queues'.
   Both measurements go in 2.7.0.
   The lighting capacity's has one write, D25's rule lifted for this alone: the jump at RVA 0xE15711 through a counting stub, with `DIAGNOSTIC_MODE=1` only, as its review's point 6 has it; the jump's target reads no flags, so the stub's `lock inc` is safe (its findings, 6.5).
-  If D23 says yes, the stores' move (its 8 A) goes in the same build; otherwise 8 A and 8 B are 2.8.0's, whatever the numbers say.
+  8 A, the stores' move, and 8 B are 2.8.0's, whatever the numbers say, with the sirens per vehicle (D23).
   An array seen past its capacity is a line of the log, no box.
   `[PEDPROPS]` stays exactly as it ships, off, its comment word for word, and T-PEDPROPS stands; the proof's new step (The boots) needs nothing of that part.
   `StreamPed render data` and `PedProp render data` are a caution for gameconfig questions, no test.
@@ -173,6 +173,8 @@ a pass that finds its limit sharing code with a neighbour's may read the neighbo
   The letters are settled: G the lighting capacity, U the render queues, O the population (the vehicle pass's `V-E-` and the ped pass's `H-E-` rows alike, `O-E-V1`, `O-E-P1`, the shared site once, `H-E-C1`'s longer form), N the ped pool, `H-E2` the budget; the sirens' stay I.
   PATTERNS.md's "Not settled: ... the heap the pool's allocator draws on" goes, with the ped pool's section 3.
   Each pass's review, beside its findings in my research tools' folder, has what its track takes in its "For the coding track".
+- **D-V5, the vehicle budget raised with no code, open:** `VehiclesSP`'s `Level3Kb` at 98,500 in my `gameconfig.xml`, for 600 MB in place of 429 (the vehicle pass's findings, 7.0), untested.
+  Recommended after 2.7.0's boot gives its baseline, with the measurement on, and out again if the lights' peak nears 400.
 
 ## The items
 
@@ -223,7 +225,6 @@ Before its report it makes the builds it needs without a warning and runs the su
 - **Sweep: the code** (D26): T-COPIES' points, which change no line of a run; T-LEGACYWALK and T-NAMES as their entries say; for T-LATEBOX a heading per late report in `TweaksVSummary`, each saying whether a part stopped working or what it found, the last line fitting it, and the guards' refusals and the Legacy check's finding reported as findings; for T-SUMMARY the summary's thread tried again with the next problem reported.
 - **Sweep: the tests** (D26, D29): `test\run_all.sh` parallel first, each suite in a folder of its own, its output and its result as they are, `SUITES` still one suite a line; a table of which suites a changed file needs; a real timer shortened by a test-build switch where a suite waits on one in a file it owns and the switch proves the same; then T-TESTGAPS' four points.
   It runs the full suite, serial and parallel, and gives both times and the same tally of checks; NOTES.md's count is the merge's, so its line is not this track's to pass.
-- **The sirens per vehicle,** if approved (D23): the second pass's design.
 - **A measurement** (D25): its findings' section 6, the module and its suite as phase A's.
 
 **The merge** (the merge): the long tracks verified from their branches as they finish, a sweep's diff read itself.
@@ -272,9 +273,9 @@ The next plan, 2.8.0, comes from those numbers.
 
 **State:** phase C's round runs since 2026-11-02, the split of D29 kept.
 The five coding tracks are merged on main and their documents folded: fifteen parts, `TweaksV.ini`'s layout 5 with its 42 keys, 147 patterns, 1647 checks, the full run about 7 minutes side by side.
-All six research passes are done;
+All six research passes are done and decided (D23, D30, D31): no siren track in this round, the sirens per vehicle being 2.8.0's.
 2.6.0 stands as the last build, tagged on c6c8854 and pushed.
 then the merge, the review, the proof and my boots.
 The open issues are T-HARDEN, T-DIAG, T-FREEZE and T-PEDPROPS.
 
-the sirens per vehicle, whether and when (D23); the tests' sweep's timer switch, not built since it would save about 20 of 345 seconds and add a way to flake, recommended left out.
+the vehicle budget in my `gameconfig.xml` (D-V5), recommended after 2.7.0's boot; the tests' sweep's timer switch, not built since it would save about 20 of 345 seconds and add a way to flake, recommended left out.
