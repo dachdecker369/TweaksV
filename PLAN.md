@@ -296,4 +296,4 @@ The plan also settles what those decisions do not reach: the corona store, 1088 
 Beside them: a count of the vehicles whose siren setting ID finds no setting (SPECIFICATIONS.md, 11.14), a pack's file name, which its line gives as `?` on the game, and, the one hat that answers T-PEDPROPS.
 The open issues are T-HARDEN, T-DIAG, T-FREEZE and T-PEDPROPS.
 
-**Decisions waiting on me:** none. The round's tracks are mine to delete, and their branches go then; the dumps, `GameData-*.bin` and the `work-*` folders stay (D28).
+**Decisions waiting on me:** none. The dumps, `GameData-*.bin` and the `work-*` folders stay (D28).
