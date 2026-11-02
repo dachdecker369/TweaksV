@@ -18,7 +18,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <cstring>
 #include <string>
 #include <string_view>
 
@@ -98,15 +97,6 @@ namespace TweaksV
 			return hash < 2 ? hash + 2 : hash;
 		}
 		static_assert(NameHash("blip_controller") == 0x80CFE974, "TweaksV: the name hash must be the game's");
-
-		// A field of a program - or of a table it points to - as it lies in memory, read only once IsReadable
-		// (TweaksVPatch.h) has said the bytes can be read.
-		template <typename T> T Field(const void* at, size_t offset)
-		{
-			T value{};
-			memcpy(&value, static_cast<const uint8_t*>(at) + offset, sizeof(value));
-			return value;
-		}
 
 		// A program's name - the string its field at kNameOffset points to - is read within this many bytes, the
 		// terminating zero included.

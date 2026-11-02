@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <atomic>
 #include <cstdio>
+#include <cstring>
 #include <vector>
 
 #include "TweaksVConflicts.h"

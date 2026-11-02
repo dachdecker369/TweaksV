@@ -160,13 +160,6 @@ namespace TweaksV
 			return match + operand.end + disp;
 		}
 
-		uint32_t Imm32At(const uint8_t* address)
-		{
-			uint32_t value = 0;
-			memcpy(&value, address, sizeof(value));
-			return value;
-		}
-
 		// True if the size bytes at p lie inside the game and can be read.
 		bool InsideGame(const void* p, size_t size)
 		{
@@ -788,7 +781,7 @@ namespace TweaksV
 		const uint8_t* const files = Target(rebuild, kFilesRead);
 		if (diagnostic)
 		{
-			WriteLog(kTag, "DIAGNOSTIC: entry size at " + DescribeAddress(sort + kEntrySizeAt) + " holds " + std::to_string(Imm32At(sort + kEntrySizeAt)) +
+			WriteLog(kTag, "DIAGNOSTIC: entry size at " + DescribeAddress(sort + kEntrySizeAt) + " holds " + std::to_string(ValueAt<uint32_t>(sort + kEntrySizeAt)) +
 				" (" + kSortPattern.label + ")");
 			WriteLog(kTag, "DIAGNOSTIC: files' count reference at " + DescribeAddress(rebuild + kFilesRead.field) + " -> " + DescribeAddress(files) +
 				" (" + kRebuildPattern.label + ")");
@@ -800,14 +793,14 @@ namespace TweaksV
 		const bool lookupFound = FindPoolSizeCall(pool, why);
 		if (diagnostic && pool.call)
 			WriteLog(kTag, "DIAGNOSTIC: pool size call at " + DescribeAddress(pool.call) + " -> " + DescribeAddress(pool.target) + " for the pool " +
-				Hex32(pool.pool) + ", its default at " + DescribeAddress(pool.defaultSize) + " holds " + std::to_string(Imm32At(pool.defaultSize)) +
+				Hex32(pool.pool) + ", its default at " + DescribeAddress(pool.defaultSize) + " holds " + std::to_string(ValueAt<uint32_t>(pool.defaultSize)) +
 				", the game's configuration at " + DescribeAddress(pool.configuration) + " (" + kPoolSizeCallPattern.label + ")");
 		if (!lookupFound)
 		{
 			RelocationFailed(kSpec, why);
 			return;
 		}
-		const uint32_t poolDefault = Imm32At(pool.defaultSize);
+		const uint32_t poolDefault = ValueAt<uint32_t>(pool.defaultSize);
 		if (poolDefault == 0 || poolDefault > kMaxEntries)
 		{
 			RelocationFailed(kSpec, "the pool's default size at " + DescribeAddress(pool.defaultSize) + " holds " + std::to_string(poolDefault) +

@@ -92,13 +92,6 @@ namespace TweaksV
 
 		// ---- reading
 
-		template <typename T> T Get(const uint8_t* at)
-		{
-			T value;
-			memcpy(&value, at, sizeof(T));
-			return value;
-		}
-
 		uint32_t Get24(const uint8_t* at)
 		{
 			return static_cast<uint32_t>(at[0]) | (static_cast<uint32_t>(at[1]) << 8) | (static_cast<uint32_t>(at[2]) << 16);
@@ -262,7 +255,7 @@ namespace TweaksV
 		// graphics flags (+12) - and the first with Legacy's version kept.
 		void CountResource(Pack& pack, const Archive& archive, std::string_view name, const uint8_t* entry)
 		{
-			const unsigned version = ((Get<uint32_t>(entry + kEntryDataSizeField) >> 28) << 4) | (Get<uint32_t>(entry + kEntryEncryptedField) >> 28);
+			const unsigned version = ((ValueAt<uint32_t>(entry + kEntryDataSizeField) >> 28) << 4) | (ValueAt<uint32_t>(entry + kEntryEncryptedField) >> 28);
 			for (size_t kind = 0; kind < kKinds.size(); kind++)
 			{
 				if (!HasExtension(name, kKinds[kind].extension))
@@ -292,10 +285,10 @@ namespace TweaksV
 			uint8_t header[kHeaderSize];
 			if (const DWORD error = ReadAt(file, archive.start, header, sizeof(header)); error != ERROR_SUCCESS)
 				return notRead(it + " could not be read (" + DescribeError(error) + ")");
-			const uint32_t count = Get<uint32_t>(header + kHeaderCountField);
-			const uint32_t namesSize = Get<uint32_t>(header + kHeaderNamesField);
-			const uint32_t encryption = Get<uint32_t>(header + kHeaderEncryptionField);
-			if (Get<uint32_t>(header) != kMagic)
+			const uint32_t count = ValueAt<uint32_t>(header + kHeaderCountField);
+			const uint32_t namesSize = ValueAt<uint32_t>(header + kHeaderNamesField);
+			const uint32_t encryption = ValueAt<uint32_t>(header + kHeaderEncryptionField);
+			if (ValueAt<uint32_t>(header) != kMagic)
 				return notRead(it + " is not an RPF7 archive (its first bytes are " + HexBytes(header, 4) + ")");
 			if (encryption != kOpenTag && encryption != 0)	// 0 names no encryption: its table is read as it is
 			{
@@ -334,7 +327,7 @@ namespace TweaksV
 				error = ReadAt(file, archive.start + kHeaderSize + tableSize, check.names.data(), namesRead);
 			if (error != ERROR_SUCCESS)
 				return notRead(it + " could not be read (" + DescribeError(error) + ")");
-			if (Get<uint32_t>(check.table.data() + 4) != kFolderType)
+			if (ValueAt<uint32_t>(check.table.data() + 4) != kFolderType)
 				return notRead(it + " has no folder as its first entry");
 			pack.archives++;
 			check.archives++;
@@ -342,11 +335,11 @@ namespace TweaksV
 			for (uint32_t i = 1; i < count; i++)	// the first entry is the root folder
 			{
 				const uint8_t* const entry = check.table.data() + static_cast<size_t>(i) * kEntrySize;
-				const uint32_t type = Get<uint32_t>(entry + kEntryTypeField);
+				const uint32_t type = ValueAt<uint32_t>(entry + kEntryTypeField);
 				if (type == kFolderType)
 					continue;
 				std::string_view name;
-				if (!NameAt(check.names, Get<uint16_t>(entry + kEntryNameField), name))
+				if (!NameAt(check.names, ValueAt<uint16_t>(entry + kEntryNameField), name))
 					return notRead(it + " has a name outside its names (entry " + std::to_string(i) + ")");
 				if ((type & kResourceBit) != 0)
 				{
@@ -359,8 +352,8 @@ namespace TweaksV
 				// block (+5) and of its size (+8) inside this archive, past this one's names
 				const std::string nested = (archive.name.empty() ? std::string() : archive.name + "/") + Printable(name);
 				const uint64_t start = static_cast<uint64_t>(Get24(entry + kEntryBlockField)) * kBlockSize;
-				const uint64_t size = Get<uint32_t>(entry + kEntryDataSizeField);
-				if (Get<uint32_t>(entry + kEntryEncryptedField) != 0)
+				const uint64_t size = ValueAt<uint32_t>(entry + kEntryDataSizeField);
+				if (ValueAt<uint32_t>(entry + kEntryEncryptedField) != 0)
 					pack.nestedNotOpen++;
 				else if (Get24(entry + kEntryStoredField) != 0)
 					notRead("its nested archive " + nested + " is compressed");

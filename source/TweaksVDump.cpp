@@ -392,7 +392,7 @@ namespace TweaksV
 			}
 			uint32_t unreadable = 0;
 			for (uint32_t page = 0; page < pages; page++)
-				unreadable += CopyBlock(Scripts::Field<const uint8_t*>(table, size_t{ page } * sizeof(void*)), Scripts::PageLength(length, page),
+				unreadable += CopyBlock(ValueAt<const uint8_t*>(table, size_t{ page } * sizeof(void*)), Scripts::PageLength(length, page),
 					out + size_t{ page } * Scripts::kPageSize);
 			return unreadable;
 		}
@@ -409,9 +409,9 @@ namespace TweaksV
 						"is not looked at (logged once).");
 				return nullptr;
 			}
-			const uint32_t hash = Scripts::Field<uint32_t>(program, Scripts::kNameHashOffset);
+			const uint32_t hash = ValueAt<uint32_t>(program, Scripts::kNameHashOffset);
 			char name[Scripts::kNameRead];
-			const bool named = Scripts::ReadName(Scripts::Field<const char*>(program, Scripts::kNameOffset), name);
+			const bool named = Scripts::ReadName(ValueAt<const char*>(program, Scripts::kNameOffset), name);
 			const auto shown = [&] { return named ? Scripts::Printable(name) : std::string("(a name that cannot be read)"); };
 			if (g_firstPlacement.exchange(false))
 				WriteLog(kTag, "TEST BUILD: TEST_DUMP_SCRIPT: the first script program the game placed is " + shown() + " (hash " + Hex32(hash) +
@@ -440,9 +440,9 @@ namespace TweaksV
 			}
 			const std::wstring file = L"Script-" + FromUtf8(g_script) + L"-" + std::to_wstring(placement) + L".bin";
 			const std::string what = "TEST_DUMP_SCRIPT: " + ToUtf8(file);
-			const uint32_t codeLength = Scripts::Field<uint32_t>(program, Scripts::kCodeLengthOffset);
-			const uint32_t nativeCount = Scripts::Field<uint32_t>(program, Scripts::kNativeCountOffset);
-			const uint32_t stringLength = Scripts::Field<uint32_t>(program, Scripts::kStringLengthOffset);
+			const uint32_t codeLength = ValueAt<uint32_t>(program, Scripts::kCodeLengthOffset);
+			const uint32_t nativeCount = ValueAt<uint32_t>(program, Scripts::kNativeCountOffset);
+			const uint32_t stringLength = ValueAt<uint32_t>(program, Scripts::kStringLengthOffset);
 			std::string beyond;
 			if (codeLength > Scripts::kMaxLength)
 				beyond = "its code length, " + std::to_string(codeLength) + " bytes, is beyond 16 MB.";
@@ -482,7 +482,7 @@ namespace TweaksV
 				header.nativesAfterOffset = header.nativesBeforeOffset + natives;
 				header.stringsOffset = header.nativesAfterOffset + natives;
 				copy->file.resize(static_cast<size_t>(header.stringsOffset + stringLength));
-				header.unreadable = CopyBlock(Scripts::Field<const uint8_t*>(program, Scripts::kNativesOffset), static_cast<size_t>(natives),
+				header.unreadable = CopyBlock(ValueAt<const uint8_t*>(program, Scripts::kNativesOffset), static_cast<size_t>(natives),
 					copy->file.data() + header.nativesBeforeOffset);
 				return copy.release();
 			}
@@ -503,7 +503,7 @@ namespace TweaksV
 			ScriptDumpHeader& header = copy->header;
 			uint8_t* const file = copy->file.data();
 			const bool readable = IsReadable(program, Scripts::kProgramSize);
-			const auto pointer = [&](size_t offset) { return readable ? Scripts::Field<const uint8_t*>(program, offset) : nullptr; };
+			const auto pointer = [&](size_t offset) { return readable ? ValueAt<const uint8_t*>(program, offset) : nullptr; };
 			header.resolved = resolved;
 			header.unreadable += CopyBlock(program, Scripts::kProgramSize, file + header.programOffset);
 			header.unreadable += CopyPages(pointer(Scripts::kCodePagesOffset), header.codeLength, file + header.codeOffset);

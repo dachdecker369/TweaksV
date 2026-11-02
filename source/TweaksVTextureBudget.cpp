@@ -163,14 +163,6 @@ namespace TweaksV
 		std::atomic<bool> g_raising{ false };
 		std::atomic<bool> g_raised{ false };
 
-		// The 4 bytes of an operand in the game's code, which need not be aligned.
-		uint32_t Imm32(const uint8_t* at)
-		{
-			uint32_t value = 0;
-			memcpy(&value, at, sizeof(value));
-			return value;
-		}
-
 		// What keeps the size bytes from p from being data of the game that is read unit bytes at a time, each read whole: "not
 		// inside the game", or "not aligned to 8 bytes", where a read could straddle a cache line and tear; "" when nothing does.
 		std::string Misplaced(const uint8_t* p, size_t size, size_t unit)
@@ -263,7 +255,7 @@ namespace TweaksV
 			if (const std::string wrong = Misplaced(most, sizeof(uint32_t), sizeof(uint32_t)); !wrong.empty())
 				return fail("the most objects at " + DescribeAddress(most) + At(kStoreMost) + " are " + wrong);
 			LogSite("store of the most objects at " + DescribeAddress(storeMost + kMostStoreAt) + " -> " + DescribeAddress(most) +
-				", from the configuration's +" + Hex(Imm32(storeMost + kMostOffsetAt)) + At(kStoreMost));
+				", from the configuration's +" + Hex(ValueAt<uint32_t>(storeMost + kMostOffsetAt)) + At(kStoreMost));
 			const uint8_t* const shift = storeMost + kShiftAt;
 			if (!IsReadable(shift, kStoreBudgetsAt - kShiftAt))
 				return fail("the code after " + std::string(kStoreMost.label) + " at " + DescribeAddress(shift) + " cannot be read");
@@ -274,7 +266,7 @@ namespace TweaksV
 			if (const std::string wrong = Misplaced(budgets, kBudgetCount * sizeof(uint64_t), sizeof(uint64_t)); !wrong.empty())
 				return fail("the budgets at " + DescribeAddress(budgets) + At(kStoreMost) + " are " + wrong);
 			LogSite("store of budgets 0 and 1 at " + DescribeAddress(storeMost + kBudgets01StoreAt) + " -> " + DescribeAddress(budgets) +
-				", from the configuration's +" + Hex(Imm32(storeMost + kBudgets01OffsetAt)) + " in MB" + At(kStoreMost));
+				", from the configuration's +" + Hex(ValueAt<uint32_t>(storeMost + kBudgets01OffsetAt)) + " in MB" + At(kStoreMost));
 			if (storeBudgets != storeMost + kStoreBudgetsAt)
 				return fail("the store of budgets 2 and 3 at " + DescribeAddress(storeBudgets) + At(kStoreBudgets) +
 					" does not follow the store of budgets 0 and 1, which ends at " + DescribeAddress(storeMost + kStoreBudgetsAt));
@@ -283,7 +275,7 @@ namespace TweaksV
 				return fail("budgets 2 and 3 at " + DescribeAddress(budgets23) + At(kStoreBudgets) + " do not lie 16 bytes after budgets 0 and 1 at " +
 					DescribeAddress(budgets));
 			LogSite("store of budgets 2 and 3 at " + DescribeAddress(storeBudgets + kBudgets23StoreAt) + " -> " + DescribeAddress(budgets23) +
-				", from the configuration's +" + Hex(Imm32(storeBudgets + kBudgets23OffsetAt)) + " in MB" + At(kStoreBudgets));
+				", from the configuration's +" + Hex(ValueAt<uint32_t>(storeBudgets + kBudgets23OffsetAt)) + " in MB" + At(kStoreBudgets));
 
 			// Every writer of the budgets, by the scanner's search for stores of any width: the start-up's two, and any besides
 			// them - which would change the budgets again after the start-up, so that a raise would not hold

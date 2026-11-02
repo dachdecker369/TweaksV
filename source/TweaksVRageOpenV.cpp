@@ -516,13 +516,6 @@ namespace TweaksV
 		void (*g_originalDecryptHeader2)(uint32_t encryption, uint32_t salt, char* header, int size) = nullptr;
 		bool (*g_originalParseHeader)(void* packfile, const char* name, bool readHeader, void* customHeader) = nullptr;
 
-		template <typename T> T Field(const void* base, size_t offset)
-		{
-			T value;
-			memcpy(&value, static_cast<const uint8_t*>(base) + offset, sizeof(T));
-			return value;
-		}
-
 		template <typename T> void SetField(void* base, size_t offset, T value)
 		{
 			memcpy(static_cast<uint8_t*>(base) + offset, &value, sizeof(T));
@@ -568,8 +561,8 @@ namespace TweaksV
 		void PrepareArchive(void* packfile, const char* name, bool open)
 		{
 			uint8_t* const fields = static_cast<uint8_t*>(packfile) + kPackfileShift;
-			char* const table = Field<char*>(fields, kEntryTableField);
-			const int32_t count = Field<int32_t>(fields, kFileCountField);
+			char* const table = ValueAt<char*>(fields, kEntryTableField);
+			const int32_t count = ValueAt<int32_t>(fields, kFileCountField);
 			if (g_diagnostic)
 				LogArchive(name, count, open);
 			if (!open)
@@ -590,10 +583,10 @@ namespace TweaksV
 			for (int32_t i = 0; i < count; i++)
 			{
 				uint8_t* const entry = reinterpret_cast<uint8_t*>(table) + static_cast<size_t>(i) * kEntrySize;
-				const uint32_t type = Field<uint32_t>(entry, kEntryTypeField);
+				const uint32_t type = ValueAt<uint32_t>(entry, kEntryTypeField);
 				if (type == kFolderType || (type & kResourceBit) != 0)
 					continue;
-				if (Field<uint16_t>(entry, kEntryNameField) > 0 && Field<uint32_t>(entry, kEntryEncryptedField) != 0)
+				if (ValueAt<uint16_t>(entry, kEntryNameField) > 0 && ValueAt<uint32_t>(entry, kEntryEncryptedField) != 0)
 					SetField<uint32_t>(entry, kEntryEncryptedField, kEntryMark);
 			}
 			SetField<int32_t>(fields, kCurrentOffsetField, static_cast<int32_t>(kEntryMark));

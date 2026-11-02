@@ -113,13 +113,6 @@ namespace TweaksV
 
 		bool g_diagnostic = false;		// DIAGNOSTIC_MODE, read once: the hook never reads the settings
 
-		template <typename T> T ValueAt(const uint8_t* address)
-		{
-			T value{};
-			memcpy(&value, address, sizeof(value));
-			return value;
-		}
-
 		// " (W-E-I1)" - the pattern a line's site lies in
 		std::string In(const GamePattern& pattern)
 		{

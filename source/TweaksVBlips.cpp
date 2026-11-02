@@ -536,8 +536,8 @@ namespace TweaksV
 		Placement* Examine(const uint8_t* program, uint32_t number)
 		{
 			using namespace Scripts;
-			const uint32_t length = Field<uint32_t>(program, kCodeLengthOffset);
-			const uint32_t nativeCount = Field<uint32_t>(program, kNativeCountOffset);
+			const uint32_t length = ValueAt<uint32_t>(program, kCodeLengthOffset);
+			const uint32_t nativeCount = ValueAt<uint32_t>(program, kNativeCountOffset);
 			if (length == 0 || length > kMaxLength)
 			{
 				Refuse(Failure::Bounds, number, "its code length, " + std::to_string(length) + " bytes, is not within 1 byte to 16 MB");
@@ -548,13 +548,13 @@ namespace TweaksV
 				Refuse(Failure::Bounds, number, "its native count, " + std::to_string(nativeCount) + ", is not within 1 to " + std::to_string(kMaxNatives));
 				return nullptr;
 			}
-			const auto natives = Field<const uint64_t*>(program, kNativesOffset);
+			const auto natives = ValueAt<const uint64_t*>(program, kNativesOffset);
 			if (!IsReadable(natives, size_t{ nativeCount } * sizeof(uint64_t)))
 			{
 				Refuse(Failure::Natives, number, "its native table at " + DescribeAddress(natives) + " cannot be read");
 				return nullptr;
 			}
-			const Code code{ Field<uint8_t* const*>(program, kCodePagesOffset), length };
+			const Code code{ ValueAt<uint8_t* const*>(program, kCodePagesOffset), length };
 			const uint32_t pages = PageCount(length);
 			if (!IsReadable(code.pages, size_t{ pages } * sizeof(void*)))
 			{
@@ -707,8 +707,8 @@ namespace TweaksV
 			using namespace Scripts;
 			const Code& code = record.code;
 			const Guard& guard = record.guard;
-			if (!IsReadable(program, kProgramSize) || program != record.program || Field<uint32_t>(program, kCodeLengthOffset) != code.length ||
-				Field<uint32_t>(program, kNativeCountOffset) != record.nativeCount || Field<uint8_t* const*>(program, kCodePagesOffset) != code.pages)
+			if (!IsReadable(program, kProgramSize) || program != record.program || ValueAt<uint32_t>(program, kCodeLengthOffset) != code.length ||
+				ValueAt<uint32_t>(program, kNativeCountOffset) != record.nativeCount || ValueAt<uint8_t* const*>(program, kCodePagesOffset) != code.pages)
 				return false;
 			const uint32_t lastPage = (guard.windowEnd - 1) / kPageSize;
 			if (!IsReadable(code.pages + record.firstPage, size_t{ lastPage - record.firstPage + 1 } * sizeof(void*)))
@@ -742,7 +742,7 @@ namespace TweaksV
 			}
 			if (g_diagnostic)
 			{
-				const auto natives = IsReadable(program, Scripts::kProgramSize) ? Scripts::Field<const uint64_t*>(program, Scripts::kNativesOffset) : nullptr;
+				const auto natives = IsReadable(program, Scripts::kProgramSize) ? ValueAt<const uint64_t*>(program, Scripts::kNativesOffset) : nullptr;
 				const bool readable = IsReadable(natives, size_t{ record.nativeCount } * sizeof(uint64_t));
 				const auto handler = [&](uint16_t index) { return readable ? DescribeAddress(reinterpret_cast<const void*>(natives[index])) : std::string("unreadable"); };
 				char hashes[2][24];
@@ -789,10 +789,10 @@ namespace TweaksV
 					WriteLog(kTag, "A script program at " + DescribeAddress(program) + " cannot be read, so it is not looked at (logged once).");
 				return nullptr;
 			}
-			if (Scripts::Field<uint32_t>(program, Scripts::kNameHashOffset) != kScriptHash)
+			if (ValueAt<uint32_t>(program, Scripts::kNameHashOffset) != kScriptHash)
 				return nullptr;
 			char name[Scripts::kNameRead] = {};
-			const bool named = Scripts::ReadName(Scripts::Field<const char*>(program, Scripts::kNameOffset), name);
+			const bool named = Scripts::ReadName(ValueAt<const char*>(program, Scripts::kNameOffset), name);
 			static_assert(kScript.size() < sizeof(name), "TweaksV: blip_controller's name is read whole, its zero included");
 			if (!named || memcmp(name, kScript.data(), kScript.size()) != 0 || name[kScript.size()] != '\0')
 			{

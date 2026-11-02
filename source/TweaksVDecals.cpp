@@ -29,7 +29,6 @@
 #include <windows.h>
 
 #include <cstdint>
-#include <cstring>
 #include <string>
 #include <vector>
 
@@ -112,13 +111,6 @@ namespace TweaksV
 
 		// The first summary 10 seconds in, then one a minute while the number changes.
 		constexpr Measurement kMeasurement = { "decal definitions summary", kFirstSummaryMs, &Registered, &LogSummary };
-
-		uint32_t Imm32At(const uint8_t* address)
-		{
-			uint32_t value = 0;
-			memcpy(&value, address, sizeof(value));
-			return value;
-		}
 	}
 
 	void InitDecals()
@@ -148,7 +140,7 @@ namespace TweaksV
 		// 3. the start-up loop: it loads the array, clears a whole number of definitions per pass and ends
 		// at its start offset + N x 80
 		const uint8_t* const loopStart = plan.matches[kLoopStart][0];
-		const uint32_t startOffset = Imm32At(loopStart + 1);				// mov eax, imm32
+		const uint32_t startOffset = ValueAt<uint32_t>(loopStart + 1);				// mov eax, imm32
 		const uint8_t* const loopLea = Rel32Target(loopStart + 8);			// lea rcx, [rip+disp32]
 		if (loopLea != plan.array)
 		{
@@ -157,9 +149,9 @@ namespace TweaksV
 			return;
 		}
 		uint8_t* const loopEnd = plan.matches[kLoopEnd][0];
-		const uint32_t passBytes = Imm32At(loopEnd + 2);					// add rax, imm32
+		const uint32_t passBytes = ValueAt<uint32_t>(loopEnd + 2);					// add rax, imm32
 		uint8_t* const loopEndImmediate = loopEnd + 8;						// cmp rax, imm32
-		const uint32_t endValue = Imm32At(loopEndImmediate);
+		const uint32_t endValue = ValueAt<uint32_t>(loopEndImmediate);
 		if (passBytes == 0 || passBytes % kEntrySize != 0)
 		{
 			RelocationFailed(kSpec, "the decal manager's start-up loop clears " + std::to_string(passBytes) + " bytes per pass, not a whole number of "

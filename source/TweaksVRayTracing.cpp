@@ -138,14 +138,6 @@ namespace TweaksV
 			uint32_t vertices = 0;					// what the three immediates hold
 		};
 
-		// A value of the game's code or data, which need not be aligned.
-		template <typename T> T Read(const uint8_t* at)
-		{
-			T value{};
-			memcpy(&value, at, sizeof(T));
-			return value;
-		}
-
 		// A value of the game's data that the game's threads may write meanwhile: aligned - DataOf checks it - so read whole.
 		template <typename T> T Load(const void* at)
 		{
@@ -225,7 +217,7 @@ namespace TweaksV
 				return false;
 			}
 			if (diagnostic)
-				WriteLog(kTag, "DIAGNOSTIC: buffer's count at " + DescribeAddress(sites.count) + " holds " + std::to_string(Read<uint32_t>(sites.count)) +
+				WriteLog(kTag, "DIAGNOSTIC: buffer's count at " + DescribeAddress(sites.count) + " holds " + std::to_string(ValueAt<uint32_t>(sites.count)) +
 					", the buffer maker's call at " + DescribeAddress(call) + " -> " + DescribeAddress(maker) + ", a function start (unwind data)" + At(kSetUp));
 			sites.object = Rel32Target(setUp + kObjectAt);
 			if (!DataOf<uint64_t>("buffer object's global", sites.object, 1, kSetUp, why))
@@ -274,7 +266,7 @@ namespace TweaksV
 				}
 				if (diagnostic)
 					WriteLog(kTag, "DIAGNOSTIC: " + std::string(check.what) + " check at " + DescribeAddress(sites.capacity[i] - 2) + " holds " +
-						std::to_string(Read<uint32_t>(sites.capacity[i])) + ", its frame slot at " + DescribeAddress(slot) + ", its counters at " +
+						std::to_string(ValueAt<uint32_t>(sites.capacity[i])) + ", its frame slot at " + DescribeAddress(slot) + ", its counters at " +
 						DescribeAddress(counters) + ", its refusal jump at " + DescribeAddress(sites.jump[i]) + " -> " + DescribeAddress(sites.refusal[i]) + ": " +
 						(IsReadable(sites.refusal[i], 8) ? HexBytes(sites.refusal[i], 8) : std::string("cannot be read")) + At(*check.pattern));
 			}
@@ -293,9 +285,9 @@ namespace TweaksV
 			}
 
 			// The buffer's count and its two checks: one value
-			const uint32_t count = Read<uint32_t>(sites.count);
-			const uint32_t geometry = Read<uint32_t>(sites.capacity[0]);
-			const uint32_t ropes = Read<uint32_t>(sites.capacity[1]);
+			const uint32_t count = ValueAt<uint32_t>(sites.count);
+			const uint32_t geometry = ValueAt<uint32_t>(sites.capacity[0]);
+			const uint32_t ropes = ValueAt<uint32_t>(sites.capacity[1]);
 			if (geometry != count || ropes != count)
 			{
 				why = "the buffer's count and its two checks disagree: " + std::to_string(count) + " at " + DescribeAddress(sites.count) + At(kSetUp) + ", " +
@@ -478,8 +470,8 @@ namespace TweaksV
 					sizeof(fields));
 				if (reading.fieldsRead)
 				{
-					reading.count = Read<uint32_t>(fields);
-					reading.stride = Read<uint16_t>(fields + (kObjectStrideAt - kObjectCountAt)) & kObjectStrideMask;
+					reading.count = ValueAt<uint32_t>(fields);
+					reading.stride = ValueAt<uint16_t>(fields + (kObjectStrideAt - kObjectCountAt)) & kObjectStrideMask;
 				}
 			}
 			reading.refused = ReadRefused();

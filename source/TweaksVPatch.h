@@ -54,6 +54,15 @@ namespace TweaksV
 		return bytes;
 	}
 
+	// The value of type T at at + offset, as it lies in memory: an operand in the game's code, a field of its data or of a
+	// file, none of which need be aligned. Read only once the bytes are known to be readable (IsReadable).
+	template <typename T> T ValueAt(const void* at, size_t offset = 0)
+	{
+		T value{};
+		memcpy(&value, static_cast<const uint8_t*>(at) + offset, sizeof(T));
+		return value;
+	}
+
 	// Writes every write, or none. Every page a write touches is made writable first (a page that is
 	// writable already is left alone, and a page that cannot be changed stops everything); then all are
 	// written, every page gets its own protection back - on an exception too, through a guard; nothing
