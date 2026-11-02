@@ -136,6 +136,7 @@ a pass that finds its limit sharing code with a neighbour's may read the neighbo
   A script proves the rendered text unchanged, comparing each file with its line breaks taken out, and the patterns suite must still pass and the grep `run_all.sh` reads NOTES.md's count with must still find it.
 - **D28, the cleanup:** `work-rtbuffer` went on 2026-11-01 of D19, moved to the Recycle Bin.
   `work-wcloader` and the dumps stay until the last pass of this phase is done and its measurement booted; then they go with the passes' work folders and the data windows, as my research tools' README has it.
+  They stay for now.
 - **D29, the workflow** (2026-11-01).
   My rules for every project changed: the fastest split in place of the finest, plans of about ten lines, tracks that test only what they touch and write no shared document, one scripted merge, one review and one proof on the merged tree, state files of about 5 KB, one sentence per line, a message only when a track is done or blocked.
   The full run alone was the clock: 45 minutes at 1,247 checks, the same beside ten tracks, since it runs its 19 suites one after another on 32 threads.
@@ -291,6 +292,8 @@ It has fifteen parts, `TweaksV.ini`'s layout 5 with its 43 keys, 228 patterns an
 My proof passed on it ("The boots"), and 2.2.1 stays the last one published.
 All six research passes and the second one on StaticBounds are done and decided (D23, D30, D31, D32).
 Next: the plan of 2.8.0, from the numbers of my proof, with what is decided: the sirens per vehicle as the hybrid (D23), the lighting capacity's 8.1 A, B and C (D23, D30), `VIDEO_MEMORY_BUDGET` at 6000 by default (D33), and the vehicle budget's raise in my `gameconfig.xml` once the stores are in (D-V5); `MaxStreamingResources`, which now binds, has no finding yet on what else reads it.
+The plan also settles what those decisions do not reach: the corona store, 1088 of 1088 in my proof and in none of 8.1 A, B or C, and the ray traced list, 1024 of 1024, first come with vehicles last, whose gate's sort is not designed (the lighting capacity's findings, 8.2).
+Beside them: a count of the vehicles whose siren setting ID finds no setting (SPECIFICATIONS.md, 11.14), a pack's file name, which its line gives as `?` on the game, and, the one hat that answers T-PEDPROPS.
 The open issues are T-HARDEN, T-DIAG, T-FREEZE and T-PEDPROPS.
 
-**Decisions waiting on me:** the clearing up: what the round left locally, and the dumps, `GameData-*.bin` and the `work-*` folders (D28).
+**Decisions waiting on me:** none. The round's tracks are mine to delete, and their branches go then; the dumps, `GameData-*.bin` and the `work-*` folders stay (D28).

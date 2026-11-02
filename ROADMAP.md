@@ -37,3 +37,6 @@ Each has a research pass in the dump (PLAN.md, D20) and a measurement before any
 - The ped pool: measured in 2.7.0, not raised; 2.8.0 only if the numbers ask, with the render queues' raise first (PLAN.md, D31).
 - The render queues: measured in 2.7.0; a raise waits for the boot's numbers, its design in the findings' section 8.
 - The lighting capacity: measured in 2.7.0; the raises of its findings' 8.1 A, B and C go in 2.8.0, with the sirens per vehicle (PLAN.md, D23, D30).
+- The corona store and the ray traced list: at their room in my proof, 1088 and 1024, and in none of 8.1 A, B or C; the plan of 2.8.0 settles them.
+- The texture budget: `VIDEO_MEMORY_BUDGET` at 6000 by default in 2.8.0 (PLAN.md, D33).
+- The streamed objects: `MaxStreamingResources`, 98,304 in `gameconfig.xml`, binds on my load once the texture budget is raised; what else reads it is not researched yet.

@@ -6,7 +6,7 @@ All of these licenses are compatible with the GPL-3.0, and TweaksV as a whole is
 
 This file reproduces the copyright notices and license texts that this code requires.
 It must accompany every copy of TweaksV, in source or binary form.
-The source of TweaksV is at https://github.com/dachdecker369/engine-tweaks-and-limits-adjuster; a release's notes name the tag it was built from.
+The source of TweaksV is at https://github.com/dachdecker369/TweaksV; a release's notes name the tag it was built from.
 Everyone whose work TweaksV builds on is credited in [CREDITS.md](CREDITS.md), the projects whose ideas its own parts follow among them: nothing of their code is in TweaksV, so nothing of theirs is listed here.
 
 ## Components

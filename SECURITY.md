@@ -7,7 +7,7 @@ A way to make it do harm all the same - with a crafted `TweaksV.ini`, a file in 
 
 Please report it privately, not in a public issue:
 
-1. Open the repository's **Security** tab and choose **Report a vulnerability**, or go straight to the [report form](https://github.com/dachdecker369/engine-tweaks-and-limits-adjuster/security/advisories/new).
+1. Open the repository's **Security** tab and choose **Report a vulnerability**, or go straight to the [report form](https://github.com/dachdecker369/TweaksV/security/advisories/new).
 2. Say what happens and how to make it happen, with the files or settings it needs, the TweaksV version and the game version (both are at the top of `TweaksV.log`).
 
 Only the reporter and I can see the report.
