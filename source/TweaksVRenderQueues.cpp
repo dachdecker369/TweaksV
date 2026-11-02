@@ -123,14 +123,15 @@ namespace TweaksV
 		struct FamilySite
 		{
 			const char* what;			// for the log: "streamed peds"
+			const char* summary;		// what the summary's line starts with, which the ped props' own measurement's words do not match
 			size_t render, requests;	// its two pools
 			const char* renderFull;		// what comes of one more in its render pool
 		};
 		constexpr const char* kFullStops = " - FULL: one more stops the game";
 		constexpr FamilySite kFamilies[kFamilyCount] = {
-			{ "streamed peds", kPedRender, kPedRequests, kFullStops },
-			{ "ped props", kPropRender, kPropRequests, kFullStops },
-			{ "streamed vehicles", kVehicleRender, kVehicleRequests, " - FULL: one more loses its mods" },
+			{ "streamed peds", "streamed peds", kPedRender, kPedRequests, kFullStops },
+			{ "ped props", "props of peds", kPropRender, kPropRequests, kFullStops },
+			{ "streamed vehicles", "streamed vehicles", kVehicleRender, kVehicleRequests, " - FULL: one more loses its mods" },
 		};
 
 		// The adds: "movsxd rax, [rip+disp32]", the index; "shl rax, 4", an array's 16 bytes; "lea rcx, [rip+disp32]", the arrays - the
@@ -798,7 +799,7 @@ namespace TweaksV
 			for (size_t i = 0; i < kFamilyCount; i++)
 			{
 				const FamilySite& family = kFamilies[i];
-				WriteLog(kTag, std::string("DIAGNOSTIC: ") + family.what + ": " + DescribePool("render data", " in use", now.pools[family.render], family.renderFull) + "; " +
+				WriteLog(kTag, std::string("DIAGNOSTIC: ") + family.summary + ": " + DescribePool("render data", " in use", now.pools[family.render], family.renderFull) + "; " +
 					DescribePool("requests", "", now.pools[family.requests], kFullStops) + "; " + DescribeArrays(now.arrays[i]) + ".");
 			}
 			const ReferencesReading& references = now.references;
