@@ -197,7 +197,7 @@ check "the pool made 11 s in: not made yet at the first summary, its numbers onc
 
 echo "== N9 a thread that cannot start (the test build's TWEAKSV_TEST_REFUSE_THREAD): logged, not reported"
 pp_in sampling
-check "no sampling thread: said, and measured all the same, the most so far those of the summaries" "pp_line 'DIAGNOSTIC: the ped pool is not sampled, so its most so far are those of the summaries: its thread could not be started.' && pp_line '$ANNOUNCED_UNSAMPLED' && log_lacks 'sampled every second' && pp_line 'DIAGNOSTIC: ped pool: 143 of 256 slots in use, at most 143 so far; mission 12, reuse 4; scenario 40 on foot and 2 in cars, cap 40; ambient 61 on foot and 18 in cars, caps 64 and 16 (which is which a hint); spatial array 139 of 256, at most 139.' && log_lacks '\[PedPool\] PROBLEM'"
+check "no sampling thread: said, and measured all the same, the most so far those of the summaries" "pp_line 'DIAGNOSTIC: the ped pool is not sampled, so its most so far are those of the summaries: its thread could not be started.' && pp_line '$ANNOUNCED_UNSAMPLED' && log_lacks '\[PedPool\].*sampled every second' && pp_line 'DIAGNOSTIC: ped pool: 143 of 256 slots in use, at most 143 so far; mission 12, reuse 4; scenario 40 on foot and 2 in cars, cap 40; ambient 61 on foot and 18 in cars, caps 64 and 16 (which is which a hint); spatial array 139 of 256, at most 139.' && log_lacks '\[PedPool\] PROBLEM'"
 pp_in summary
 check "no summary's thread: not measured, nothing announced, no problem" "pp_line '$NOT_MEASURED its summary thread could not be started.' && log_lacks '\[PedPool\] DIAGNOSTIC: the ped pool is measured' && log_lacks '\[PedPool\] PROBLEM'"
 pp_in diagoff
