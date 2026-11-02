@@ -272,12 +272,6 @@ namespace TweaksV
 			return read;
 		}
 
-		// "1 folder", "2 folders"
-		std::string Folders(size_t count)
-		{
-			return std::to_string(count) + (count == 1 ? " folder" : " folders");
-		}
-
 		// The line for the names left out of the list, each reason with its count.
 		std::string LeftOutLine(const ModsFolderRead& read)
 		{

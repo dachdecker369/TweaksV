@@ -7,6 +7,7 @@
 #include <windows.h>
 
 #include <cstddef>
+#include <string>
 #include <string_view>
 
 namespace TweaksV
@@ -97,4 +98,7 @@ namespace TweaksV
 	// ERROR_NO_MORE_FILES - a share that drops - is handed on as a folder not listed, partly, its names so far standing, and
 	// the walk goes on: root's too, unless none of its names was handed on, which is a root that cannot be listed.
 	ModsWalk WalkModsFolder(const wchar_t* root, const ModsVisitor& visitor);
+
+	// "1 folder", "2 folders" - for the lines of those who walk.
+	std::string Folders(size_t count);
 }

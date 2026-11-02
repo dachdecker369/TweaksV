@@ -247,4 +247,9 @@ namespace TweaksV
 		}
 		return walk;
 	}
+
+	std::string Folders(size_t count)
+	{
+		return std::to_string(count) + (count == 1 ? " folder" : " folders");
+	}
 }

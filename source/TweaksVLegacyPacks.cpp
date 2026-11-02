@@ -8,8 +8,9 @@
 //   the packs      every .rpf file in the mods folder - in the current directory, where the hooks serve it from -
 //                  by the one walk RageOpenV's list is read by (TweaksVModsFolder.h), so the two list the same files
 //                  the same way and stop at the same name; a folder that cannot be listed, or not to its end, is
-//                  skipped, as RageOpenV skips it, but the mods folder itself, which RageOpenV has just listed, is a
-//                  problem when none of its names can be handed on: the check is not done. A pack is opened by the
+//                  skipped, as RageOpenV skips it, but counted and named, since this walk comes later, on a thread of its
+//                  own, and can lose folders RageOpenV's did not; the mods folder itself, which RageOpenV has just listed, is
+//                  a problem when none of its names can be handed on: the check is not done. A pack is opened by the
 //                  path the walk gives it, as the game's file functions open it, so Windows refuses the check what
 //                  it refuses the game: a pack is never read past the game's reach
 //   the tables     a pack's header of 16 bytes - the magic RPF7, the entry count, the names' length, the encryption
@@ -24,9 +25,9 @@
 //   the verdict    a model (yft 162, ydr or ydd 165) or a texture dictionary (ytd 13) with Legacy's version makes the
 //                  pack one made for Legacy - Enhanced's are 171, 159 and 5; such a pack gets a line, and so does a
 //                  pack that cannot be read, or not in full, named as not checked with the reason - also one that holds
-//                  archives that are not OPEN, with their number; one problem names them all - but the packs not read only
-//                  for archives that are not OPEN, their own or nested ones, which their lines alone name - and is shown
-//                  in a box as ERROR_POPUP allows; the last line counts them
+//                  archives that are not OPEN, with their number; a folder not read gets a line too; one problem names them
+//                  all - but the packs not read only for archives that are not OPEN, their own or nested ones, which their
+//                  lines alone name - and is shown in a box as ERROR_POPUP allows; the last line counts them
 //   the bounds     1,048,576 entries per entry table; the table and the names inside their archive, and a nested
 //                  archive inside the one that holds it, past that one's names - so each is smaller than the one
 //                  that holds it; 8 levels of nesting, 4,096 archives and 64 MB of tables per pack, 1 GB of tables
@@ -216,15 +217,18 @@ namespace TweaksV
 			uint64_t legacyPacks = 0;
 			uint64_t notCheckedPacks = 0;
 			uint64_t notOpenPacks = 0;		// among them, those not OPEN
+			uint64_t foldersNotRead = 0;	// the walk could not list them, or not to their end
 			uint64_t archives = 0;
 			uint64_t tableBytes = 0;
 			bool walkStopped = false;		// at the walk's limit, where RageOpenV's list stops
 			bool limitReached = false;		// at kMaxTableBytes: every pack from there on is not checked
 			std::vector<std::string> legacyNamed;		// the first kMaxNamed of each, for the problem
 			std::vector<std::string> notCheckedNamed;
+			std::vector<std::string> foldersNamed;
 			std::vector<std::pair<std::wstring, std::string>> folderPacks;	// the .rpf files of the folder being listed: the path, the name for the lines
 			LineKind legacyLines{ "packs made for GTA V Legacy", false };
 			LineKind notCheckedLines{ "packs not checked", false };
+			LineKind folderLines{ "folders not read", false };
 			LineKind packLines{ "packs read", true };
 			std::vector<uint8_t> table;		// the buffers, kept from archive to archive
 			std::vector<uint8_t> names;
@@ -449,12 +453,26 @@ namespace TweaksV
 		}
 
 		// A name of the walk: a file named .rpf, in any case, is a pack, read once its folder's find handle is closed. Its
-		// name for the lines is its path from the current directory, as the walk gives it.
+		// name for the lines is its path from the current directory, as the walk gives it. A folder the walk could not list,
+		// or not to its end, gets a line and is counted: what lay in it is not checked, and RageOpenV's report does not
+		// cover a folder only this later walk lost.
 		void PackEntry(void* context, const ModsEntry& entry)
 		{
-			if (entry.kind != ModsEntryKind::File || !HasExtension(entry.below, ".rpf"))
+			Check& check = *static_cast<Check*>(context);
+			if (entry.kind == ModsEntryKind::FolderNotListed)
+			{
+				const std::string name = ToUtf8(entry.path);
+				check.foldersNotRead++;
+				if (check.foldersNamed.size() < kMaxNamed)
+					check.foldersNamed.push_back(name);
+				if (Counted(check.folderLines))
+					WriteLog(kTag, "The folder " + name + " could not be read" + (entry.partly ? " to its end (" : " (") + DescribeError(entry.error) +
+						(entry.partly ? ") - the rest of its packs were not checked for GTA V Legacy versions." :
+						") - its packs were not checked for GTA V Legacy versions."));
 				return;
-			static_cast<Check*>(context)->folderPacks.emplace_back(entry.path, ToUtf8(entry.path));
+			}
+			if (entry.kind == ModsEntryKind::File && HasExtension(entry.below, ".rpf"))
+				check.folderPacks.emplace_back(entry.path, ToUtf8(entry.path));
 		}
 
 		// A folder's packs in the order Windows lists them, every find handle closed.
@@ -477,7 +495,8 @@ namespace TweaksV
 			return text;
 		}
 
-		// The one problem - the packs made for Legacy, the packs not checked but those not OPEN - and the last line.
+		// The one problem - the packs made for Legacy, the packs not checked but those not OPEN, the folders not read - and the
+		// last line.
 		void Report(const Check& check, ULONGLONG started)
 		{
 			const uint64_t notChecked = check.notCheckedPacks - check.notOpenPacks;
@@ -497,6 +516,17 @@ namespace TweaksV
 						" could not be checked for GTA V Legacy versions";
 				problem += " (TweaksV.log says why): " + Named(check.notCheckedNamed, notChecked) + ".";
 			}
+			if (check.foldersNotRead > 0)
+			{
+				if (!problem.empty())
+					problem += " Folders not read, so their packs not checked";
+				else if (check.foldersNotRead == 1)
+					problem = "A folder in the mods folder could not be read, so the packs in it were not all checked for GTA V Legacy versions";
+				else
+					problem = std::to_string(check.foldersNotRead) + " folders in the mods folder could not be read, so the packs in them were not all checked "
+						"for GTA V Legacy versions";
+				problem += " (TweaksV.log says why): " + Named(check.foldersNamed, check.foldersNotRead) + ".";
+			}
 			if (!problem.empty())
 				ReportFailure(kTag, problem);
 			if (check.diagnostic)
@@ -509,7 +539,7 @@ namespace TweaksV
 			}
 			std::string line = "Packs checked for GTA V Legacy versions: ";
 			if (check.packs == 0)
-				line += "none in the mods folder";
+				line += check.foldersNotRead > 0 ? "none in the folders read" : "none in the mods folder";
 			else
 			{
 				line += std::to_string(check.packs) + " in the mods folder, " + (check.legacyPacks ? std::to_string(check.legacyPacks) : "none") +
@@ -518,6 +548,8 @@ namespace TweaksV
 					line += ", " + std::to_string(check.notCheckedPacks) + " not checked" + (check.notOpenPacks ? " (" +
 						std::to_string(check.notOpenPacks) + " of them not OPEN)" : std::string());
 			}
+			if (check.foldersNotRead > 0)
+				line += ", " + Folders(check.foldersNotRead) + " could not be read";
 			if (check.walkStopped)
 				line += " - the walk stopped at " + std::to_string(ModsEntryLimit()) + " files and folders, where RageOpenV's list stops";
 			WriteLog(kTag, line + ".");
