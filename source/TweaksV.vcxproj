@@ -159,6 +159,7 @@
     <ClCompile Include="TweaksVSummary.cpp" />
     <ClCompile Include="TweaksVTextureBudget.cpp" />
     <!-- [population] -->
+    <ClCompile Include="TweaksVPopulation.cpp" />
     <ClCompile Include="TweaksVWeaponComponents.cpp" />
     <ClCompile Include="TweaksVWeaponInfos.cpp" />
     <!-- MinHook v1.3.4, compiled unchanged from vendor\MinHook (x64 only: hde64, not hde32), at warning
@@ -217,6 +218,7 @@
     <ClInclude Include="TweaksVSummary.h" />
     <ClInclude Include="TweaksVTextureBudget.h" />
     <!-- [population] -->
+    <ClInclude Include="TweaksVPopulation.h" />
     <ClInclude Include="TweaksVWeaponComponents.h" />
     <ClInclude Include="TweaksVWeaponInfos.h" />
     <ClInclude Include="..\vendor\MinHook\include\MinHook.h" />

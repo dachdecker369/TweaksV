@@ -113,6 +113,9 @@
       <Filter>TweaksV</Filter>
     </ClCompile>
     <!-- [population] -->
+    <ClCompile Include="TweaksVPopulation.cpp">
+      <Filter>TweaksV</Filter>
+    </ClCompile>
     <ClCompile Include="TweaksVWeaponComponents.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
@@ -242,6 +245,9 @@
       <Filter>TweaksV</Filter>
     </ClInclude>
     <!-- [population] -->
+    <ClInclude Include="TweaksVPopulation.h">
+      <Filter>TweaksV</Filter>
+    </ClInclude>
     <ClInclude Include="TweaksVWeaponComponents.h">
       <Filter>TweaksV</Filter>
     </ClInclude>

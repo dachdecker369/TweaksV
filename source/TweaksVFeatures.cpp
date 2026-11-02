@@ -18,6 +18,7 @@
 #include "TweaksVModkitLimit.h"
 #include "TweaksVPackfileLimit.h"
 #include "TweaksVPedProps.h"
+#include "TweaksVPopulation.h"
 #include "TweaksVRageOpenV.h"
 #include "TweaksVRayTracing.h"
 #include "TweaksVSirenCount.h"
@@ -159,6 +160,7 @@ namespace TweaksV
 			// [light capacity]
 			{ "LightCapacity", MeasureLightCapacity },
 			// [population]
+			{ "Population", MeasurePopulation },
 			// [ped pool]
 			// [render queues]
 			{ "PedProps", MeasurePedPropsWhileOff },

@@ -276,6 +276,23 @@ namespace TweaksV
 		{ "G-E-H1", "B8 58 80 01 00 E8 ? ? ? ? 48 29 C4" },
 		{ "G-E-H2", "48 8D 44 24 50 49 89 04 24 4C 89 E1 41 FF 54 24 60" },
 		// [population]
+		// The two model budgets (TweaksVPopulation.cpp), measured first: the crash context's line, which leads to the population object and both getters (C1); the vehicle pass's sites, the check before a request (V1, V2), the pool's test (V3), the tables' set-up's head (V4), the ambient cars (V5), and a writing half's call and stores (V6, V7); the ped pass's, the sum, the gate, the lists, a model's peds (P1 to P4), and a writing half's stores and the variety's store (P5 to P8)
+		{ "O-E-C1", "8B 35 ? ? ? ? C1 FE 14 8B 3D ? ? ? ? C1 FF 14 48 8D 1D ? ? ? ? 48 89 D9 E8 ? ? ? ? 89 C5 C1 FD 14 48 89 D9 E8 ? ? ? ? 89 C3 C1 FB 14 48 8D 0D" },
+		{ "O-E-V1", "8B 05 ? ? ? ? 0F B6 0D ? ? ? ? 4C 8D 35 ? ? ? ? 48 8D 1D ? ? ? ? EB" },
+		{ "O-E-V2", "41 8B 14 96 0F 57 C0 F3 48 0F 2A C2 F3 0F 59 05 ? ? ? ? F3 0F 2C D0 81 C2 A0 1C E9 FF 39 97 14 62 00 00 7D ? 48 89 F9 E8" },
+		{ "O-E-V3", "48 8B 05 ? ? ? ? 8B 68 28 C1 E5 02 C1 FD 02 2B 68 18 83 C5 14 85 ED 0F 8E" },
+		{ "O-E-V4", "48 8B 05 ? ? ? ? 48 8B 58 18 48 8B 35 ? ? ? ? 69 BB F4 04 00 00 E8 03 00 00 B9 BD C5 AF E3 BA 40 67 D1 1F" },
+		{ "O-E-V5", "44 8B 35 ? ? ? ? 8B 05 ? ? ? ? 89 84 24 ? ? ? ? 44 8B 3D ? ? ? ? 8B 35" },
+		{ "O-E-V6", "41 0F B7 C6 89 34 87 E8 ? ? ? ? 0F 28 74 24 40 48 83 C4 58" },
+		{ "O-E-V7", "69 BB 0C 05 00 00 E8 03 00 00 B9 ? ? ? ? BA ? ? ? ? E8 ? ? ? ? 48 89 F1 89 C2 41 89 F8 E8 ? ? ? ? 05 60 E3 16 00 89 05 ? ? ? ? 48 8B 35 ? ? ? ? 69 BB 10 05 00 00 E8 03 00 00 B9 ? ? ? ? BA ? ? ? ? E8 ? ? ? ? 48 89 F1 89 C2 41 89 F8 E8 ? ? ? ? 05 60 E3 16 00 89 05 ? ? ? ? 48 8B 35 ? ? ? ? 69 BB 14 05 00 00 E8 03 00 00 B9 ? ? ? ? BA ? ? ? ? E8 ? ? ? ? 48 89 F1 89 C2 41 89 F8 E8 ? ? ? ? 05 60 E3 16 00 89 05" },
+		{ "O-E-P1", "8B 86 10 62 00 00 03 86 0C 62 00 00 03 86 2C 62 00 00 03 86 30 62 00 00 89 05" },
+		{ "O-E-P2", "41 8B 8C 24 08 62 00 00 85 C9 79 08 41 8B 8C 24 04 62 00 00 41 8B AC 24 0C 62 00 00 D1 F9 69 D9 A0 1C E9 FF 81 C3 A0 1C E9 FF 8B 0D" },
+		{ "O-E-P3", "48 8D 82 04 4E 00 00 4C 8D 8A 04 56 00 00 4C 8D 82 04 52 00 00 48 81 C2 04 5E 00 00 48 89 44 24 20 48 8D 4C 24 70 E8 ? ? ? ? 0F B7 05" },
+		{ "O-E-P4", "48 8B 0D ? ? ? ? 48 98 48 0F AF 05 ? ? ? ? 48 8B 04 01 8B 80 58 01 00 00 42 89 44 BC 40" },
+		{ "O-E-P5", "69 BB F4 04 00 00 E8 03 00 00 B9 BD C5 AF E3 BA 40 67 D1 1F E8 ? ? ? ? 48 89 F1 89 C2 41 89 F8 E8 ? ? ? ? 05 60 E3 16 00 89 05" },
+		{ "O-E-P6", "69 BB F8 04 00 00 E8 03 00 00 B9 BD C5 AF E3 BA D0 3C 99 0A E8 ? ? ? ? 48 89 F1 89 C2 41 89 F8 E8 ? ? ? ? 05 60 E3 16 00 89 05" },
+		{ "O-E-P7", "69 BB FC 04 00 00 E8 03 00 00 B9 BD C5 AF E3 BA 5C 10 5F F4 E8 ? ? ? ? 48 89 F1 89 C2 41 89 F8 E8 ? ? ? ? 05 60 E3 16 00 89 05" },
+		{ "O-E-P8", "F2 0F 10 86 B4 00 00 00 0F 59 05 ? ? ? ? 0F 58 05 ? ? ? ? F3 0F 10 0D ? ? ? ? 0F 28 D0 0F C2 15 ? ? ? ? 01 66 0F 38 25 D2 66 0F 50 C2 F3 0F 10 15 ? ? ? ? 0F 28 DA A8 01 75 07 0F 28 D9 F3 0F 5D D8 F3 0F 11 1D" },
 		// [ped pool]
 		// [render queues]
 	};

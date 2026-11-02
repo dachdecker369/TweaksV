@@ -70,6 +70,12 @@ The second relies on Windows, not on the game: a classic replace-rename reaches 
      A change in any of them leaves a number wrong without an error, or a raise's room too small.
      The function behind `G-E-C1`'s jump is pinned only by what the module compares at run time, the 12 bytes of its way out, which it must find before it redirects the jump.
    <!-- [population] -->
+   - **Population:** the object's fields no pattern pins - the vehicles' excess, lists, requests in flight and shares, the peds' excess - and the list's format, 256 dwords ended by 0xFFFF or a value not below the model count; the module only logs them, so a wrong one is a wrong number, never harm, and its line then says something odd, without an error.
+     The model info's +0x286 bit 1, the streamed flag (a hint of the render queues' pass), and its +0x9D's kinds.
+     The variety's formula, 5, 1 and the clamp at 0.05 and 10: `O-E-P8`'s line logs the first three as it reads them, and a raise's cap rests on the 10.
+     The block of `gameconfig.xml`, its names, members and offsets but the story entries' dwords, which `O-E-V7` and `O-E-P5` to `P7` pin: a renamed member would be ignored by the game's parser in silence, so the tables' line is what proves a raise there, and the names are read again from the parser's descriptors with a data window.
+     Entry 0 of each table, 1,500,000, and the level's first value, 3, in `.data`: the first tables' line and summary show them.
+     The floor of 9 models and of 6, the frame gates and the 64 frames: behaviour, which TweaksV does not read.
    <!-- [ped pool] -->
    <!-- [render queues] -->
 
@@ -695,6 +701,72 @@ The patterns, each matching exactly once in both dumps of 2026-10-29 but `G-E-G1
 | G-E-H2 | `48 8D 44 24 50 49 89 04 24 4C 89 E1 41 FF 54 24 60` | a job's scratch, rsp+0x50: +4 0x50, right before `call [job+0x60]`; so 0x18008 bytes for it | found | 0x14284B |
 
 <!-- [population] -->
+
+## Population
+
+The two model budgets (`TweaksVPopulation`, SPECIFICATIONS.md section 11.16.4), one module, since they share an object, a set-up and the crash context's line that leads to them.
+Its letter is `O`, for both research passes' rows alike: their shared site once, `O-E-C1`, the ped pass's longer form, since it pins the text; `O-E-V1` to `V7` the vehicle pass's other sites; `O-E-P1` to `P8` the ped pass's.
+The module writes nothing: `O-E-V6`, `V7` and `P5` to `P7` are a writing half's, found and checked now, as D25 has it.
+The facts, from the dumps of 2026-10-29 and, for what lies in `.data`, the data window's boot of 2026-11-02.
+A number in MB counts 1,000,000 bytes, as the game's defaults do; HINT marks what is inferred and not shown.
+
+- **The budget,** in bytes, as the code inlines it at each use: a network game in progress ? the network table[level] : (int)((float)the story table[level] x the variety).
+  Vehicles: the level at RVA 0x2888D10, the story table 0x2888CF0, the network table 0x2888D00, 4 dwords each, the variety 0x28CACE0, a float.
+  Peds: the level 0x2888D14, the story table 0x2888CD0, the network table 0x2888CE0, the variety 0x2888B80.
+  The flag at 0x29CB211 ("Game In Progress").
+  Two getters, 0x4BDA60 and 0x4BDAA0, return it doubled, for the crash context's line alone, which prints it in a network game only (0x4600, its print at 0x6350).
+  Their bytes are the same, so that they are no pattern of the table, which wants one match, but the module's check at the calls' targets, 62 bytes: `8B 05 ? ? ? ? 80 3D ? ? ? ? 00 74 11 48 8D 0D ? ? ? ? 8B 04 81 F3 48 0F 2A C0 EB 17 48 8D 0D ? ? ? ? 8B 04 81 F3 48 0F 2A C0 F3 0F 59 05 ? ? ? ? F3 0F 2C C0 01 C0 C3`: +2 the level; +8 the flag, its `cmp`'s imm8 behind the disp32; +18 the network table; +35 the story table; +51 the variety.
+  The cast is `cvttss2si`, so that a product at 2^31 bytes gives 0x80000000: the margin's add wraps that to a large positive number, the requests never stop, the excess wraps negative and stays at 0, and the budget is gone altogether.
+- **The tables:** entries 1 to 3 come from the set-up 0x4BD7A0, called once (RVA 0x4BD5C8) at the end of the population streaming's init 0x4BB450, so at each run of it, the game's start and a session's: entry = a tunable of `CD_GLOBAL` (0xE3AFC5BD) by a name's hash, whose default is the configuration's value x 1000, + 1,500,000.
+  Twelve blocks of 0x38 bytes, story peds, network peds, story vehicles, network vehicles, three each, and their stores the tables' only writers, by a scan of the code: 0x4BD7E4, 0x4BD81C, 0x4BD854; 0x4BD88C, 0x4BD8C4, 0x4BD8FC; 0x4BD934, 0x4BD96C, 0x4BD9A4; 0x4BD9DC, 0x4BDA14, 0x4BDA4C.
+  Entry 0 has no writer: `.data`'s 1,500,000 for each table.
+  At TweaksV's start the tables hold `.data`'s other numbers - vehicles 17.5, 29.5 and 36.5 MB, peds 28.5, 37.5 and 48.3 MB - the level 3 and the variety 1.0, and the object zeros, which the module goes by: the object's +0x6208 is -1 after the init.
+- **`gameconfig.xml`:** the configuration is [[0x2E96FB0]+0x18], the holder's `[+0x18]`, and CGameConfig's member at +0x4F4 is the block `ConfigPopulationStreaming`, which the game's own file leaves out, of `PedsSP` +0x4F4, `PedsMP` +0x500, `VehiclesSP` +0x50C and `VehiclesMP` +0x518, each of `Level1Kb`, `Level2Kb` and `Level3Kb`, dwords.
+  The names are proved by the parser's hashes in the window `28E0700:900`, a descriptor holding the case-sensitive joaat at +0, the offset at +8 and the type at +0x10: 0xB90C36F2; 0x5734E391, 0x63432F09, 0x754AC6B3, 0x281C138B; 0x4D3F3EC4, 0x4ED77A3E, 0x9EBE88D3.
+  The defaults, from the constructor 0x12BC2C0: peds 54,000, 72,000 and 92,000, vehicles 32,000, 56,000 and 70,000, in story mode and a network game alike, which gives the tables at 180 s of the boot exactly.
+  So the story budget in MB at the slider's top is (`Level3Kb` / 1000 + 1.5) x 6, "Kb" being a thousand; the merge 0x12BC780 copies a value only when it is not negative, so that a partial block holds.
+  The form, untested: `<ConfigPopulationStreaming><VehiclesSP><Level3Kb value="98500"/></VehiclesSP></ConfigPopulationStreaming>` directly inside a `<Config type="CGameConfig">` that applies on PC.
+  `PedMemoryMultiplier` and `VehicleMemoryMultiplier` (cfg+0x38 and +0x54) have no reader among the 359 loads of the holder, and the tables stood at the defaults with 2,500 and 4,500 in the file: neither is in the budget.
+- **The variety:** the settings' apply 0x5003A0 stores it, at 0x5004F5 for the peds and 0x50050C for the vehicles, the only stores: the setting (+0xB4 `PedVarietyMultiplier`, +0xB8 `VehicleVarietyMultiplier`, the menu's Population Variety, 0 to 1) x 5 + 1, clamped to 0.05 to 10, so 1 to 6.
+  The check 0x503380 puts a setting outside 0 to 1 back to its default, so that the clamp's 10 cannot be reached by `settings.xml` (HINT until a boot shows it).
+- **The level:** 3 from `.data` on; 0x4D5030 (the peds' 0x4D5080) stores a level up to 3 and level / 3 at 0x28CACD4 (0x28C23BC), which also scales how many cars and peds the game wants, and is reached only by a hop of the protected code (HINT: a native's handler); 0x4D5010 and 0x4D5060 set 3 and 1.0 again (HINT: a script's clean-up).
+- **The object** at RVA 0x3D73F80, in `.data`: vehicles: +0x6214 the bytes in use, the signed dword every compare reads; +0x6224 what is over the budget, at least 0; the lists +0x3600 traffic of the current pop cycle, +0x3A00 loaded but outside it, +0x3E00 trains, helicopters and two named models (HINT on the types), +0x4200 boats, +0x4A00 dropped but still loaded; +0x62BC the requests in flight; +0x623C the weapons' share, in use too; +0x6234 and +0x6238 the mods' pieces.
+  Peds: +0x620C the bytes in use; +0x621C what is over; +0x6204 the schedule's MaxScenPeds, +0x6208 its override; the lists +0x4E04 the population's, +0x5204 in a group the current schedule does not weigh, +0x5604 in no group (HINT: and the cops), +0x5A04 a network game's chosen models, +0x5E04 asked for directly until loaded.
+  Each list is 256 dwords, ended by 0xFFFF or by a value not below the model count, the word at 0x28D2DE0; one adder stops silently at 256.
+  At +0, 0x240 records of 24 bytes for vehicles, peds and weapons.
+  The displays at 0x3D7A240 and 0x3D7A244, the update's sums (0x4BEB02, 0x4BEB38) that only the crash context reads, count the mods' pieces and a streamed ped's parts twice; every compare reads +0x620C and +0x6214 alone.
+- **What counts:** a model's load callback 0x4CE740 (from 0x1334A70, by the model info's +0x9D & 0x1F: 5 a vehicle, 6 a ped, 4 a weapon) adds through 0x4CDF10 the two sizes of the model and of its dependencies, shared ones once, whoever asked for it; high detail assets come and go on top (0x4C2860), and the common assets are in at the init.
+  So a budget counts bytes and not models, and it is no video memory budget, though a car's bytes are mostly video.
+- **Past it,** nothing ends the game and nothing is logged or shown.
+  Vehicles: the update's model step 0x4BF990 and the ambient step 0xF06C10 ask for one more model (0x4C5A30) while the use is below the budget less 1.5 MB, the stop, and at level 3 below a floor of 9 models in +0x3600 whatever the use.
+  Peds: the gate in 0x4BF990, every 64 frames, about once a second, asks (0x4C7930) while the use is below the budget less 1.5 MB less (n >> 1) x 1.5 MB, n the override or else the schedule's number, and at level 3 below a floor of 6 models in +0x4E04.
+  0x4C1FC0 releases what nothing holds, every frame while over the budget, else every 32nd.
+  A new ambient ped takes the loaded model of its group with the fewest peds, the model info's +0x158 (0x4D24F0), so that repeats are about peds divided by models; the number of cars wanted reads no budget, but a model takes only so many instances (0x4D2D10), so too few models can hold traffic under it.
+  A raised budget adds no ped by itself; streamed-flag models in a popgroup are what would tie it to the render queues' arrays.
+- **`VehicleStruct`:** the pool behind the pointer at 0x471D908, stride 0x34C, 200 slots in the files seen, one per loaded vehicle model, its size at +0x18, its used in the low 30 bits of +0x28.
+  A full pool's New ends the game in an `int3`; 0x4C5A30 stops traffic's requests at the size, and 0x4BEB50 releases unused models from 20 below it.
+  The ped models' request 0x4C7930 has no such check, and no pool of `gameconfig.xml` is named for a loaded ped model (HINT: none exists).
+
+The 16 patterns, looked for only with `DIAGNOSTIC_MODE=1`, each once and at the same RVA in both dumps:
+
+| Label | Pattern | Use | 1.0.1158.16 | RVA |
+|---|---|---|---|---|
+| O-E-C1 | `8B 35 ? ? ? ? C1 FE 14 8B 3D ? ? ? ? C1 FF 14 48 8D 1D ? ? ? ? 48 89 D9 E8 ? ? ? ? 89 C5 C1 FD 14 48 89 D9 E8 ? ? ? ? 89 C3 C1 FB 14 48 8D 0D` | the crash context's line of both memories: +2 the peds' display 0x3D7A240; +11 the vehicles' 0x3D7A244; +21 the object 0x3D73F80; +28 the ped getter's call, to 0x4BDAA0; +41 the vehicle getter's, to 0x4BDA60; +54, past the match, the rel32 of its text, 0x2828A4E, which must read `Ped Memory Use/Budget : %d/%d\n` | found, its RVA to check | 0x631D |
+| O-E-V1 | `8B 05 ? ? ? ? 0F B6 0D ? ? ? ? 4C 8D 35 ? ? ? ? 48 8D 1D ? ? ? ? EB` | in the check before a vehicle model's request 0x4D4F60: +2 the level; +9 the flag; +16 the story table; +23 the network table, each what the getter reads | found, its RVA to check | 0x4D4F76 |
+| O-E-V2 | `41 8B 14 96 0F 57 C0 F3 48 0F 2A C2 F3 0F 59 05 ? ? ? ? F3 0F 2C D0 81 C2 A0 1C E9 FF 39 97 14 62 00 00 7D ? 48 89 F9 E8` | the same function: +16 the variety; +26 the margin, -1,500,000; +32 the use's offset, 0x6214; +42, past the match, the rel32 of the request, 0x4C5A30 | found, its RVA to check | 0x4D4FC0 |
+| O-E-V3 | `48 8B 05 ? ? ? ? 8B 68 28 C1 E5 02 C1 FD 02 2B 68 18 83 C5 14 85 ED 0F 8E` | in the release 0x4BEB50: +3 `VehicleStruct`'s pointer 0x471D908; +9 its used at +0x28, the top two bits off by the shifts; +18 its size at +0x18; +21 the margin 20 | found, its RVA to check | 0x4BEB63 |
+| O-E-V4 | `48 8B 05 ? ? ? ? 48 8B 58 18 48 8B 35 ? ? ? ? 69 BB F4 04 00 00 E8 03 00 00 B9 BD C5 AF E3 BA 40 67 D1 1F` | the set-up's head, 7 bytes behind its start, three pushes and `sub rsp, 0x20`: +3 the configuration's holder 0x2E96FB0; +10 its +0x18; +14 the tunables 0x29C76F0; +18 the first block, `O-E-P5`'s: +20 its offset, +24 the factor 1000, +29 `CD_GLOBAL`, +34 its name's hash | found, its RVA to check | 0x4BD7A7 |
+| O-E-V5 | `44 8B 35 ? ? ? ? 8B 05 ? ? ? ? 89 84 24 ? ? ? ? 44 8B 3D ? ? ? ? 8B 35` | the crash context, right before `O-E-C1`, whose first two bytes end it: +3 the ambient cars on the map 0x439D758, "Total Ambient Cars On Map"; +9 0x47968D0 and +23 0x4796B60, the local vehicles' target and total, a network game's, not read | found, its RVA to check | 0x6302 |
+| O-E-V6 | `41 0F B7 C6 89 34 87 E8 ? ? ? ? 0F 28 74 24 40 48 83 C4 58` | a writing half's: at the end of the init 0x4BB450, +7 the set-up's one call, to `O-E-V4` less 7, a function start | found, its RVA to check | 0x4BD5C1 |
+| O-E-V7 | `69 BB 0C 05 00 00 E8 03 00 00 B9 ? ? ? ? BA ? ? ? ? E8 ? ? ? ? 48 89 F1 89 C2 41 89 F8 E8 ? ? ? ? 05 60 E3 16 00 89 05 ? ? ? ? 48 8B 35 ? ? ? ? 69 BB 10 05 00 00 E8 03 00 00 B9 ? ? ? ? BA ? ? ? ? E8 ? ? ? ? 48 89 F1 89 C2 41 89 F8 E8 ? ? ? ? 05 60 E3 16 00 89 05 ? ? ? ? 48 8B 35 ? ? ? ? 69 BB 14 05 00 00 E8 03 00 00 B9 ? ? ? ? BA ? ? ? ? E8 ? ? ? ? 48 89 F1 89 C2 41 89 F8 E8 ? ? ? ? 05 60 E3 16 00 89 05` | a writing half's: the vehicles' three story blocks, the set-up's seventh to ninth: +2, +58, +114 the offsets 0x50C, 0x510, 0x514; +39, +95, +151 the margin 1,500,000; +45, +101 and, past the match, +157 the rel32 of the stores, which must give the story table + 4, + 8, + 12 | found, its RVA to check | 0x4BD909 |
+| O-E-P1 | `8B 86 10 62 00 00 03 86 0C 62 00 00 03 86 2C 62 00 00 03 86 30 62 00 00 89 05` | the update's sum of the peds' display: the object's +0x6210, +0x620C, +0x622C, +0x6230; +26, past the match, the rel32 of its store, which must be `O-E-C1`'s display | found, its RVA to check | 0x4BEB02 |
+| O-E-P2 | `41 8B 8C 24 08 62 00 00 85 C9 79 08 41 8B 8C 24 04 62 00 00 41 8B AC 24 0C 62 00 00 D1 F9 69 D9 A0 1C E9 FF 81 C3 A0 1C E9 FF 8B 0D` | the gate in 0x4BF990: the object's +0x6208, +0x6204, +0x620C and the two margins; +44, past the match, the rel32 of the level's load, which must be the getter's. Further on, read after `IsReadable`: +0x7A `41 8B 9C AC 04 4E 00 00`, the population's list; +0xEA `83 FD 06 0F 9C C0 83 F9 03 0F 94 C1`, fewer than 6 and level 3; +0x102 the call of the request 0x4C7930 | found, its RVA to check | 0x4BFF56 |
+| O-E-P3 | `48 8D 82 04 4E 00 00 4C 8D 8A 04 56 00 00 4C 8D 82 04 52 00 00 48 81 C2 04 5E 00 00 48 89 44 24 20 48 8D 4C 24 70 E8 ? ? ? ? 0F B7 05` | in the release 0x4C1FC0: the object's +0x4E04, +0x5604, +0x5204, +0x5E04; +46, past the match, the rel32 of the model count, the word at 0x28D2DE0 | found, its RVA to check | 0x4C263E |
+| O-E-P4 | `48 8B 0D ? ? ? ? 48 98 48 0F AF 05 ? ? ? ? 48 8B 04 01 8B 80 58 01 00 00 42 89 44 BC 40` | the read of the least used model, in 0x4D24F0: +3 the model info table 0x444AF90; +13 its stride, a qword, 0x444AFA8; +23 a model's peds at +0x158. The module reads the streamed flag beside it, +0x286 bit 1 | found, its RVA to check | 0x4D2631 |
+| O-E-P5 | `69 BB F4 04 00 00 E8 03 00 00 B9 BD C5 AF E3 BA 40 67 D1 1F E8 ? ? ? ? 48 89 F1 89 C2 41 89 F8 E8 ? ? ? ? 05 60 E3 16 00 89 05` | a writing half's: the peds' story block for level 1, right behind `O-E-V4`'s head's pointers: +6 the factor 1000; +39 the margin 1,500,000; +45, past the match, the rel32 of its store, which must give the story table + 4 | found, its RVA to check | 0x4BD7B9 |
+| O-E-P6 | `69 BB F8 04 00 00 E8 03 00 00 B9 BD C5 AF E3 BA D0 3C 99 0A E8 ? ? ? ? 48 89 F1 89 C2 41 89 F8 E8 ? ? ? ? 05 60 E3 16 00 89 05` | the same for level 2, the story table + 8 | found, its RVA to check | 0x4BD7F1 |
+| O-E-P7 | `69 BB FC 04 00 00 E8 03 00 00 B9 BD C5 AF E3 BA 5C 10 5F F4 E8 ? ? ? ? 48 89 F1 89 C2 41 89 F8 E8 ? ? ? ? 05 60 E3 16 00 89 05` | the same for level 3, the story table + 12 | found, its RVA to check | 0x4BD829 |
+| O-E-P8 | `F2 0F 10 86 B4 00 00 00 0F 59 05 ? ? ? ? 0F 58 05 ? ? ? ? F3 0F 10 0D ? ? ? ? 0F 28 D0 0F C2 15 ? ? ? ? 01 66 0F 38 25 D2 66 0F 50 C2 F3 0F 10 15 ? ? ? ? 0F 28 DA A8 01 75 07 0F 28 D9 F3 0F 5D D8 F3 0F 11 1D` | the settings' store of the peds' variety, only logged: +11 and +18 the vectors 5.0 and 1.0; +26 the 10.0; +76, past the match, the rel32 of the store, which must be the getter's variety | found, its RVA to check | 0x5004AD |
 
 <!-- [ped pool] -->
 
