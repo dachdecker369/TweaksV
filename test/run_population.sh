@@ -2,10 +2,11 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # The two model budgets, a limit measured first (TweaksVPopulation): with DIAGNOSTIC_MODE=1 the fake game's 16 sites found, checked and
 # logged, nothing written, and both budgets sampled and summed up 10 seconds in and again when a high or the samples at the stop move -
-# the numbers of the boot at 180 s, word for word; before the game's init; a level a script lowered, one above the game's, a
+# the numbers of my boot at 180 s, word for word; before the game's init; a level a script lowered, one above the game's, a
 # network game; a table a tunable changed, a raise in gameconfig.xml, a variety past the slider, a budget past an int; models, a pool
 # and a configuration that cannot be read; the object gone for a while; each pattern missing, each site not as the findings have it, a
-# thread that cannot start - each logged, never a problem, nothing more measured - and a writer besides the set-up's, a line alone. The
+# thread that cannot start - each logged, never a problem, nothing more measured - and a writer besides the set-up's, or a scan that
+# misses one of those, a line alone; a model released while its list is read; how long no high has moved, in each line's last words. The
 # runs go side by side, each in a folder of its own, each stopping as soon as its last line is in the log. Fake LOCALAPPDATA: the real
 # one is never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
@@ -33,8 +34,9 @@ tables_line() {	# tables_line vehicle|ped [STORY_TOP [NETWORK_TOP]]: a budget's 
 VEHICLE_TABLES="$(tables_line vehicle)32000, 56000 and 70000, the game.s defaults - the story entries are theirs."
 PED_TABLES="$(tables_line ped)54000, 72000 and 92000, the game.s defaults - the story entries are theirs."
 # Each budget's line at the boot's 180 s
-VEHICLE_AT_180="DIAGNOSTIC: vehicle model budget: 428.7 of 429.0 MB in use at level 3 (the level.s 71.5 MB x variety 6.00), the requests stop at 427.5 MB, over the budget by 0.0 MB, at most 428.7 MB so far; vehicle models loaded: 94 for traffic, 0 outside the pop cycle, 0 trains and helicopters, 0 boats, 8 dropped, 0 in flight, at most 102 at once, about 4.1 MB each; at the stop in [0-9]* of [0-9]* samples; VehicleStruct 102 of 200 slots, at most 102 so far, unused models released past 180; of the bytes: weapons 10.1 MB, mods 0.0 and 0.0 MB; ambient cars on the map 57, at most 57 so far."
-PED_AT_180="DIAGNOSTIC: ped model budget: 305.1 of 561.0 MB in use at level 3 (the level.s 93.5 MB x variety 6.00), the requests stop at 553.5 MB, over the budget by 0.0 MB, at most 305.1 MB so far; ped models loaded: 19 for the population, 1 of them streamed, 5 outside the schedule, 4 in no group, 3 asked for directly, at most 31 at once, about 9.8 MB each; at the stop in 0 of [0-9]* samples; at most 9 peds of one model; at most 1 streamed at once."
+NO_HIGH='; no new high for [0-9]* s.'
+VEHICLE_AT_180="DIAGNOSTIC: vehicle model budget: 428.7 of 429.0 MB in use at level 3 (the level.s 71.5 MB x variety 6.00), the requests stop at 427.5 MB, over the budget by 0.0 MB, at most 428.7 MB so far; vehicle models loaded: 94 for traffic, 0 outside the pop cycle, 0 trains and helicopters, 0 boats, 8 dropped, 0 in flight, at most 102 at once, about 4.1 MB each; at the stop in [0-9]* of [0-9]* samples; VehicleStruct 102 of 200 slots, at most 102 so far, unused models released past 180; of the bytes: weapons 10.1 MB, mods 0.0 and 0.0 MB; ambient cars on the map 57, at most 57 so far$NO_HIGH"
+PED_AT_180="DIAGNOSTIC: ped model budget: 305.1 of 561.0 MB in use at level 3 (the level.s 93.5 MB x variety 6.00), the requests stop at 553.5 MB, over the budget by 0.0 MB, at most 305.1 MB so far; ped models loaded: 19 for the population, 1 of them streamed, 5 outside the schedule, 4 in no group, 3 asked for directly, at most 31 at once, about 9.8 MB each; at the stop in 0 of [0-9]* samples; at most 9 peds of one model; at most 1 streamed at once$NO_HIGH"
 VEHICLE_MODELS='vehicle models loaded: 94 for traffic, 0 outside the pop cycle, 0 trains and helicopters, 0 boats, 8 dropped, 0 in flight, at most 102 at once, about 4.1 MB each'
 PED_MODELS='ped models loaded: 19 for the population, 1 of them streamed, 5 outside the schedule, 4 in no group, 3 asked for directly, at most 31 at once'
 no_problem() { log_lacks '\[Population\] PROBLEM' && has 'pop sites: as placed | pop data: as placed |' && has 'protect: all restored (RX)'; }
@@ -61,11 +63,11 @@ side_by_side() {
 all_ended() { wait; running=0; }
 after_run() { in_folder "$1"; out=$(tr -d '\r' < harness.out); }
 
-echo "== O1 DIAGNOSTIC_MODE=0: nothing looked for, nothing logged, however the data stand"
-fresh_ini; out=$(game full_game.exe popfill)
-check "no O pattern looked for, no line of the part, no thread of it; the sites and data as placed, no call stub of its own, every page its own protection" "log_lacks 'O-E-' && log_lacks '\[Population\]' && log_lacks 'population s' && no_problem && has 'stubs: 7, all RX'"
+echo "== O1 DIAGNOSTIC_MODE=0: nothing looked for, nothing logged, no thread tried (the test build refuses the summary's), however the data stand"
+fresh_ini; out=$(TWEAKSV_TEST_REFUSE_THREAD="1 population summary" ASI=TweaksV_test.asi game full_game.exe popfill)
+check "no O pattern looked for, no line of the part, its thread not tried; the sites and data as placed, no call stub of its own, every page its own protection" "log_lacks 'O-E-' && log_lacks '\[Population\]' && log_lacks 'The population summary thread could not be started' && no_problem && has 'stubs: 7, all RX'"
 
-echo "== O2 DIAGNOSTIC_MODE=1, the data as the boot at 180 s: the sites found and logged, the summary 10 s in, nothing written"
+echo "== O2 DIAGNOSTIC_MODE=1, the data as my boot at 180 s: the sites found and logged, the summary 10 s in, nothing written"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe popfill popwait); echo "      $out"
 check "the 16 patterns each found exactly once" "[ \$(grep -c -E 'Pattern O-E-[CVP][0-9] found: .* 1 match,' TweaksV.log) -eq 16 ]"
 check "the crash context's line and its two getters, word for word" "pop_line 'DIAGNOSTIC: crash context.s line at $A: its text at $A, the population object at $A, the memories it prints at $A and $A (O-E-C1)' && pop_line 'DIAGNOSTIC: ped budget.s getter at $A: level at $A, story mode.s table at $A, network.s at $A, variety at $A, network flag at $A (O-E-C1)' && pop_line 'DIAGNOSTIC: vehicle budget.s getter at $A: level at $A, story mode.s table at $A, network.s at $A, variety at $A, network flag at $A (O-E-C1)'"
@@ -81,7 +83,7 @@ check "both tables' lines, word for word, each once: the game's defaults" "pop_l
 check "the vehicles' line and the peds', word for word: 428.7 of 429, past the stop at 427.5; 305.1 of 561, the stop at 553.5 with MaxScenPeds 8" "pop_line '$VEHICLE_AT_180' && pop_line '$PED_AT_180'"
 samples=$(tr -d '\r' < TweaksV.log | sed -n 's/.*vehicle model budget: .*at the stop in \([0-9]*\) of \([0-9]*\) samples.*/\1 \2/p' | head -n 1)
 check "the vehicles at the stop in every sample, about one a second over the first 10 s: $samples" "[ \"\${samples% *}\" = \"\${samples#* }\" ] && [ \"\${samples% *}\" -ge 5 ] && [ \"\${samples% *}\" -le 12 ]"
-check "no problem, no box, no line but the module's, nothing written, no call stub of its own (the 12 are the other parts'), every page its own protection" "no_problem && log_lacks 'Start-up summary' && has 'stubs: 12, all RX'"
+check "no problem, no box, nothing written, no call stub of its own (the 12 are the other parts'), every page its own protection" "no_problem && log_lacks 'Start-up summary' && has 'stubs: 12, all RX'"
 
 echo "== O3 DRY_RUN=1 changes nothing here"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; setkey DRY_RUN 1; out=$(game full_game.exe popfill popwait)
@@ -112,7 +114,10 @@ side_by_side poolunread "" popfill poppoolunread popwait
 side_by_side noconfig "" popfill popnoconfig popwait
 ENVS='TWEAKSV_TEST_SUMMARY_MS=2000' side_by_side gone "" popfill popgone
 side_by_side writer "" popfill popwriter popwait
-ENVS='TWEAKSV_TEST_REFUSE_THREAD="1 population sampling"' side_by_side nosampling "" popfill popwait
+side_by_side scanmiss "" popfill popscanmiss popwait
+side_by_side flip "" popfill popflip popwait
+ENVS='TWEAKSV_TEST_SUMMARY_MS=2000' side_by_side configlate "" popfill popquiet popconfiglate
+ENVS='TWEAKSV_TEST_SUMMARY_MS=2000 TWEAKSV_TEST_REFUSE_THREAD="1 population sampling"' side_by_side nosampling "" popfill popwait
 ENVS='TWEAKSV_TEST_REFUSE_THREAD="1 population summary"' side_by_side nosummary "" popfill
 all_ended
 
@@ -126,9 +131,11 @@ check "never filled: the one line, its summaries every 2 s bringing no other" "p
 echo "== O6 a peak between two summaries, the fields the lines name, a level a script lowered and back (the test build, summaries every 3 s)"
 after_run grow
 check "the test build's line for this measurement" "log_line '\[TweaksV\] TEST BUILD: the population summary comes every 3000 ms after its first (TWEAKSV_TEST_SUMMARY_MS=3000).\$'"
-check "the peak shows in the highs of the next summary, with the use back: 500.0 now, at most 550.0; 31 + 21 models at once, 12 peds of one, 3 streamed" "pop_line 'DIAGNOSTIC: ped model budget: 500.0 of 561.0 MB in use at level 3 (the level.s 93.5 MB x variety 6.00), the requests stop at 553.5 MB, over the budget by 1.0 MB, at most 550.0 MB so far; ped models loaded: 19 for the population, 1 of them streamed, 5 outside the schedule, 4 in no group, 3 asked for directly, at most 52 at once, about 16.1 MB each; at the stop in 0 of [0-9]* samples; at most 12 peds of one model; at most 3 streamed at once.'"
-check "the vehicles' fields read where the findings have them: over by 1.5, 2 in flight, the pool's 100, at most 120, mods 2.0 and 3.0, the ambient cars 50, at most 64" "pop_line 'DIAGNOSTIC: vehicle model budget: 428.7 of 429.0 MB in use at level 3 (the level.s 71.5 MB x variety 6.00), the requests stop at 427.5 MB, over the budget by 1.5 MB, at most 428.7 MB so far; vehicle models loaded: 94 for traffic, 0 outside the pop cycle, 0 trains and helicopters, 0 boats, 8 dropped, 2 in flight, at most 102 at once, about 4.1 MB each; at the stop in [0-9]* of [0-9]* samples; VehicleStruct 100 of 200 slots, at most 120 so far, unused models released past 180; of the bytes: weapons 10.1 MB, mods 2.0 and 3.0 MB; ambient cars on the map 50, at most 64 so far.'"
-check "level 1: its entry and its budget; back at 3, the lowest level said; the tables' lines still once each" "pop_line 'DIAGNOSTIC: ped model budget: 500.0 of 333.0 MB in use at level 1 (the level.s 55.5 MB x variety 6.00), the requests stop at 325.5 MB,.*' && pop_line 'DIAGNOSTIC: ped model budget: 500.0 of 561.0 MB in use at level 3 .*; at level 1 at the lowest so far; at most 12 peds of one model; at most 3 streamed at once.' && pop_line 'DIAGNOSTIC: vehicle model budget: 428.7 of 561.0 MB\|DIAGNOSTIC: vehicle model budget: 428.7 of 201.0 MB in use at level 1 .*' && [ \$(count 'model budget.s tables:') -eq 2 ]"
+check "the peak shows in the highs of the next summary, with the use back: 500.0 now, at most 550.0; 31 + 21 models at once, 12 peds of one, 3 streamed" "pop_line 'DIAGNOSTIC: ped model budget: 500.0 of 561.0 MB in use at level 3 (the level.s 93.5 MB x variety 6.00), the requests stop at 553.5 MB, over the budget by 1.0 MB, at most 550.0 MB so far; ped models loaded: 19 for the population, 1 of them streamed, 5 outside the schedule, 4 in no group, 3 asked for directly, at most 52 at once, about 16.1 MB each; at the stop in 0 of [0-9]* samples; at most 12 peds of one model; at most 3 streamed at once$NO_HIGH'"
+check "the vehicles' fields read where the findings have them: over by 1.5, 2 in flight, the pool's 100, at most 120, mods 2.0 and 3.0, the ambient cars 50, at most 64" "pop_line 'DIAGNOSTIC: vehicle model budget: 428.7 of 429.0 MB in use at level 3 (the level.s 71.5 MB x variety 6.00), the requests stop at 427.5 MB, over the budget by 1.5 MB, at most 428.7 MB so far; vehicle models loaded: 94 for traffic, 0 outside the pop cycle, 0 trains and helicopters, 0 boats, 8 dropped, 2 in flight, at most 102 at once, about 4.1 MB each; at the stop in [0-9]* of [0-9]* samples; VehicleStruct 100 of 200 slots, at most 120 so far, unused models released past 180; of the bytes: weapons 10.1 MB, mods 2.0 and 3.0 MB; ambient cars on the map 50, at most 64 so far$NO_HIGH'"
+check "level 1: its entry and its budget; back at 3, the lowest level said; the tables' lines still once each" "pop_line 'DIAGNOSTIC: ped model budget: 500.0 of 333.0 MB in use at level 1 (the level.s 55.5 MB x variety 6.00), the requests stop at 325.5 MB,.*' && pop_line 'DIAGNOSTIC: ped model budget: 500.0 of 561.0 MB in use at level 3 .*; at level 1 at the lowest so far; at most 12 peds of one model; at most 3 streamed at once$NO_HIGH' && pop_line 'DIAGNOSTIC: vehicle model budget: 428.7 of 201.0 MB in use at level 1 .*' && [ \$(count 'model budget.s tables:') -eq 2 ]"
+highs=($(tr -d '\r' < TweaksV.log | sed -n 's/.*DIAGNOSTIC: ped model budget: .*no new high for \([0-9]*\) s\.$/\1/p')); last=${highs[*]: -1}
+check "each line's last words, in the seconds since a high moved: long at the first summary, short at the one after the peak, then growing with no high moving: ${highs[*]}" "[ ${#highs[@]} -ge 3 ] && [ ${highs[0]:-0} -gt ${highs[1]:-0} ] && [ ${last:-0} -gt ${highs[1]:-0} ]"
 check "no problem, nothing written but what the fake changed" "no_problem"
 
 echo "== O7 no number moves (popquiet, summaries every 500 ms, 3 s more): no second summary, however many samples"
@@ -153,7 +160,7 @@ echo "== O9 what the tables' line is for: a tunable, a raise in gameconfig.xml; 
 after_run tunable
 check "an entry the configuration does not give: named, in each table's line; the budget from it" "pop_line '$(tables_line vehicle 120000000)32000, 56000 and 70000 - level 3.s entry holds 120000000 bytes, not the 71500000 they give: a tunable or another mod has changed it.' && pop_line 'DIAGNOSTIC: ped model budget.s tables: story 1500000, 60000000, 73500000 and 93500000 bytes, network 1500000, 55500000, 73500000 and 93500000 bytes; the configuration.s story Level1Kb to Level3Kb: 54000, 72000 and 92000 - level 1.s entry holds 60000000 bytes, not the 55500000 they give: a tunable or another mod has changed it.' && pop_line 'DIAGNOSTIC: vehicle model budget: 428.7 of 720.0 MB in use at level 3 (the level.s 120.0 MB x variety 6.00),.*' && no_problem"
 after_run raise
-check "the raise of the findings' 7.0, 98500 in gameconfig.xml: the entry 100000000, 600 MB, and the line says the file took" "pop_line '$(tables_line vehicle 100000000)32000, 56000 and 98500, not the game.s defaults of 32000, 56000 and 70000 - the story entries are theirs: gameconfig.xml has changed them.' && pop_line 'DIAGNOSTIC: vehicle model budget: 428.7 of 600.0 MB in use at level 3 (the level.s 100.0 MB x variety 6.00), the requests stop at 598.5 MB,.*; at the stop in 0 of [0-9]* samples; .*' && pop_line '$PED_TABLES' && no_problem"
+check "the raise of the findings' 7.0, 98500 in gameconfig.xml: the entry 100000000, 600 MB, and the line says the file took" "pop_line '$(tables_line vehicle 100000000)32000, 56000 and 98500, not the defaults of 1.0.1158.16, 32000, 56000 and 70000 - the story entries are theirs: gameconfig.xml, or a game update, has changed them.' && pop_line 'DIAGNOSTIC: vehicle model budget: 428.7 of 600.0 MB in use at level 3 (the level.s 100.0 MB x variety 6.00), the requests stop at 598.5 MB,.*; at the stop in 0 of [0-9]* samples; .*' && pop_line '$PED_TABLES' && no_problem"
 after_run variety
 check "a variety of 10: its line, once for each budget, and the budget by it" "pop_line 'DIAGNOSTIC: vehicle model budget: the variety has been 10.00, above the 6.00 of the game.s slider - settings.xml or another mod has changed it.' && pop_line 'DIAGNOSTIC: ped model budget: the variety has been 10.00, above the 6.00 of the game.s slider - settings.xml or another mod has changed it.' && [ \$(count 'the variety has been') -eq 2 ] && pop_line 'DIAGNOSTIC: vehicle model budget: 428.7 of 715.0 MB in use at level 3 (the level.s 71.5 MB x variety 10.00),.*' && no_problem"
 after_run overflow
@@ -161,7 +168,9 @@ check "a budget past an int, by the game's own cast: nothing stops its requests,
 
 echo "== O10 what cannot be read: each said, the rest of the line standing"
 after_run badmodel
-check "two models' infos, a null pointer and one into the hole: skipped and counted, the most peds and the streamed from the others" "pop_line 'DIAGNOSTIC: ped model budget: 305.1 of 561.0 MB in use .*; $PED_MODELS, about 9.8 MB each; at the stop in 0 of [0-9]* samples; at most 9 peds of one model; at most 1 streamed at once; 2 model infos could not be read this time.' && no_problem"
+check "two models' infos, a null pointer and one into the hole: skipped and counted, the most peds and the streamed from the others" "pop_line 'DIAGNOSTIC: ped model budget: 305.1 of 561.0 MB in use .*; $PED_MODELS, about 9.8 MB each; at the stop in 0 of [0-9]* samples; at most 9 peds of one model; at most 1 streamed at once; 2 model infos could not be read this time$NO_HIGH' && no_problem"
+after_run flip
+check "a model of the population's list released while it is read, over and over: the free value never read as a model" "pop_line 'DIAGNOSTIC: ped model budget: 305.1 of 561.0 MB in use .*; at most 9 peds of one model; at most 1 streamed at once$NO_HIGH' && no_problem"
 after_run lists
 check "a list's ends: a value not below the model count, at its 50th entry; the 256 entries of a list with none" "pop_line 'DIAGNOSTIC: vehicle model budget: .*; vehicle models loaded: 50 for traffic, 0 outside the pop cycle, 0 trains and helicopters, 256 boats, 8 dropped, 0 in flight, at most 314 at once, about 1.3 MB each; .*' && no_problem"
 after_run nopool
@@ -170,6 +179,8 @@ after_run poolunread
 check "VehicleStruct's pointer into the hole" "pop_line 'DIAGNOSTIC: vehicle model budget: .*; VehicleStruct could not be read this time; of the bytes: .*' && no_problem"
 after_run noconfig
 check "the configuration: the tables' lines without it, the budgets as they are" "pop_line '$(tables_line vehicle | sed 's/; the configuration.*//'); the configuration at $A could not be read this time.' && pop_line '$(tables_line ped | sed 's/; the configuration.*//'); the configuration at $A could not be read this time.' && pop_line '$VEHICLE_AT_180' && no_problem"
+after_run configlate
+check "the configuration read at the next summary: the tables' lines come again, whole, each once; then, nothing moving, no summary more" "pop_line '$(tables_line vehicle | sed 's/; the configuration.*//'); the configuration at $A could not be read this time.' && pop_line '$VEHICLE_TABLES' && pop_line '$PED_TABLES' && [ \$(count 'model budget.s tables:') -eq 4 ] && [ \$(count 'DIAGNOSTIC: vehicle model budget: 300.0') -eq 2 ] && no_problem"
 after_run gone
 check "the object's page gone: the line, no other; back again, the summaries as before" "pop_line 'DIAGNOSTIC: the model budgets at $A could not be read this time.' && pop_line '$VEHICLE_AT_180' && pop_line '$PED_AT_180' && no_problem"
 
@@ -178,11 +189,15 @@ after_run writer
 check "the line of each table, naming the other store" "pop_line 'DIAGNOSTIC: writers of the vehicle story table at $A: the set-up.s stores at $A, $A and $A, 1 besides them: $A (O-E-V7)' && pop_line 'DIAGNOSTIC: writers of the ped story table at $A: the set-up.s stores at $A, $A and $A, 1 besides them: $A ($P_LABELS)'"
 check "the measurement goes on: announced, both lines, no problem" "pop_line '$ANNOUNCED' && pop_line '$VEHICLE_AT_180' && pop_line '$PED_AT_180' && no_problem"
 
+after_run scanmiss
+check "a scan that misses one of the set-up's stores: said, and no proof claimed; the other table's as ever" "pop_line 'DIAGNOSTIC: writers of the vehicle story table at $A: the scan finds 2 of the set-up.s 3 stores, not the one at $A, so it proves nothing about other writers (O-E-V7)' && pop_line 'DIAGNOSTIC: writers of the ped story table at $A: the set-up.s stores at $A, $A and $A, none besides them ($P_LABELS)'"
+check "the measurement goes on: announced, both lines; no problem of the part, nothing written" "pop_line '$ANNOUNCED' && pop_line '$VEHICLE_AT_180' && pop_line '$PED_AT_180' && log_lacks '\[Population\] PROBLEM' && has 'pop sites: as placed | pop data: as placed |'"
+
 echo "== O12 a thread that cannot start: logged, never a problem"
 after_run nosampling
-check "no sampling thread: its lines, and each summary takes a sample of its own" "log_line '\[TweaksV\] The population sampling thread could not be started (Windows error 8).' && pop_line 'DIAGNOSTIC: the model budgets are sampled once a summary alone: their sampling thread could not be started.' && pop_line 'DIAGNOSTIC: vehicle model budget: .*; at the stop in 1 of 1 samples; .*' && no_problem"
+check "no sampling thread: its lines, and each summary takes a sample of its own: the first finds the fill, not yet taken from one sample, the next counts" "log_line '\[TweaksV\] The population sampling thread could not be started (Windows error 8).' && pop_line 'DIAGNOSTIC: the model budgets are sampled once a summary alone: their sampling thread could not be started.' && pop_line '$NOT_FILLED' && pop_line 'DIAGNOSTIC: vehicle model budget: .*; at the stop in 1 of 1 samples; .*' && no_problem"
 after_run nosummary
-check "no summary thread: its lines, no sampling thread, no line of a budget" "log_line '\[TweaksV\] The population summary thread could not be started (Windows error 8).' && pop_line '$NOT_MEASURED its summary thread could not be started.' && log_lacks '\[Population\].*model budget: ' && log_lacks 'population sampling' && no_problem"
+check "no summary thread: its lines, no line of a budget" "log_line '\[TweaksV\] The population summary thread could not be started (Windows error 8).' && pop_line '$NOT_MEASURED its summary thread could not be started.' && log_lacks '\[Population\].*model budget: ' && no_problem"
 
 # ---- each pattern missing and each site not as the findings have it: runs of 2 seconds, side by side
 for label in $LABELS; do

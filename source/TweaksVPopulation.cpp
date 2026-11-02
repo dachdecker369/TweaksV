@@ -12,8 +12,9 @@
 //                    would, logged, and read once a second by a thread beside the summary's: the level, the variety, the budget
 //                    and what is in use, the models each list holds, how often the game stands at its stop, the pool VehicleStruct,
 //                    the ambient cars, the peds of a model. 10 seconds in, and then every minute while a high or the samples at the
-//                    stop change, one line per budget; and, as soon as the game has filled them and whenever they change, a line
-//                    of the tables with the values of gameconfig.xml, which is the only proof that a raise there has taken
+//                    stop change, one line per budget, its last words how long no high has moved, which is what a drive for its
+//                    numbers goes by; and, as soon as the game has filled them and whenever they change, a line of the tables with
+//                    the values of gameconfig.xml, which is the only proof that a raise there has taken
 //   DRY_RUN          changes nothing here: nothing is written either way
 // A pattern missing, a site not as expected or a thread that cannot start is logged, not reported - the measurement is an aid
 // (NOTES.md, T-DIAG) - and nothing more is measured. A writer of a story table besides the set-up's three stores would undo a
@@ -25,6 +26,7 @@
 #include <windows.h>
 #include <xmmintrin.h>
 
+#include <algorithm>
 #include <bit>
 #include <cmath>
 #include <cstdint>
@@ -188,12 +190,13 @@ namespace TweaksV
 		constexpr size_t kWritersLooked = 16;		// the writers of a story table the scan looks for: the set-up's three, and more besides them
 		constexpr float kTopVariety = 6.0f;			// the Population Variety's multiplier at the slider's top
 		constexpr uint32_t kGameLevels = 3;			// the top level; a level above it is a moment of change
+		constexpr int32_t kMegabyte = 1000000;		// a high counts in whole MB, so that noise moves none
 
 		enum { kVehicles, kPeds, kBudgets };
 		constexpr const char* kNames[kBudgets] = { "vehicle", "ped" };
 		constexpr size_t kUsedAt[kBudgets] = { kVehicleUsedAt, kPedUsedAt };
 		constexpr size_t kOverAt[kBudgets] = { kVehicleOverAt, kPedOverAt };
-		constexpr uint32_t kGameKb[kBudgets][3] = { { 32000, 56000, 70000 }, { 54000, 72000, 92000 } };	// the constructor's defaults of the configuration
+		constexpr uint32_t kGameKb[kBudgets][3] = { { 32000, 56000, 70000 }, { 54000, 72000, 92000 } };	// the configuration's constructor's defaults on 1.0.1158.16, which no pattern pins
 
 		// The lists a budget's models are filed in, each with its words for the log: the population's or traffic's first.
 		struct ListAt
@@ -252,10 +255,12 @@ namespace TweaksV
 			float highestVariety = 0;
 			int32_t mostUsed = 0;
 			uint32_t mostModels = 0;
+			uint64_t lastHighMs = 0;			// when one of this budget's highs last moved, or its first sample
 		};
 		struct State
 		{
 			bool unreadable = false;		// the last sample could not read the game's data
+			uint64_t fillSeenMs = 0;		// when a sample first found the object's override not 0, with none since that found it 0
 			bool filled = false;			// the game has run its set-up
 			bool network = false;
 			BudgetState budgets[kBudgets];
@@ -282,17 +287,18 @@ namespace TweaksV
 			return Load<T>(g_sites.object + at);
 		}
 
-		// The entries of a list, up to its end: a free entry, or a value not below the model count.
+		// A list ends at a free entry, or a value not below the model count.
+		bool EndsList(uint32_t index, uint32_t modelCount)
+		{
+			return index == kListFree || index >= modelCount;
+		}
+
+		// The entries of a list, up to its end.
 		uint32_t ListCount(size_t at, uint32_t modelCount)
 		{
 			uint32_t count = 0;
-			while (count < kListEntries)
-			{
-				const uint32_t index = Field<uint32_t>(at + count * sizeof(uint32_t));
-				if (index == kListFree || index >= modelCount)
-					break;
+			while (count < kListEntries && !EndsList(Field<uint32_t>(at + count * sizeof(uint32_t)), modelCount))
 				count++;
-			}
 			return count;
 		}
 
@@ -318,7 +324,7 @@ namespace TweaksV
 
 		// One budget's sample: a level above the top is taken for a moment of change, and makes none. reserve is what the game
 		// stays short of the budget by; the stop wraps as the game's add does, so that a budget the cast overflowed never reads as reached.
-		void SampleBudget(size_t index, bool network, uint32_t reserve, uint32_t modelCount, BudgetState& b)
+		void SampleBudget(size_t index, bool network, uint32_t reserve, uint32_t modelCount, uint64_t now, BudgetState& b)
 		{
 			const BudgetSites& sites = g_sites.budgets[index];
 			const uint32_t level = Load<uint32_t>(sites.level);
@@ -343,7 +349,8 @@ namespace TweaksV
 				b.lists[i] = kLists[index][i].words ? ListCount(kLists[index][i].at, modelCount) : 0;
 				b.models += b.lists[i];
 			}
-			b.samples++;
+			if (b.samples++ == 0)
+				b.lastHighMs = now;
 			if (b.used >= b.stop)
 				b.atStop++;
 			if (level < b.lowestLevel)
@@ -351,13 +358,20 @@ namespace TweaksV
 			if (b.variety > b.highestVariety)
 				b.highestVariety = b.variety;
 			if (b.used > b.mostUsed)
+			{
+				if (b.used / kMegabyte > b.mostUsed / kMegabyte)
+					b.lastHighMs = now;
 				b.mostUsed = b.used;
+			}
 			if (b.models > b.mostModels)
+			{
 				b.mostModels = b.models;
+				b.lastHighMs = now;
+			}
 		}
 
 		// VehicleStruct, on the game's heap: its used with the top two bits off, as the game's shifts take them, and its size.
-		void SamplePool(State& state)
+		void SamplePool(uint64_t now, State& state)
 		{
 			const uint8_t* const pool = Load<const uint8_t*>(g_sites.pool);
 			if (!pool)
@@ -376,25 +390,30 @@ namespace TweaksV
 			state.poolUsed = static_cast<int32_t>(used << 2) >> 2;
 			state.poolSize = size;
 			if (state.poolUsed > state.mostPoolUsed)
+			{
 				state.mostPoolUsed = state.poolUsed;
+				state.budgets[kVehicles].lastHighMs = now;
+			}
 		}
 
-		// The population's models, each through its model info on the game's heap: its peds and its streamed flag. A pointer that
-		// fails skips that model; the list's end has kept the index below the model count.
-		void SampleModels(uint32_t modelCount, State& state)
+		// The population's models, each through its model info on the game's heap: its peds and its streamed flag. Each entry is read
+		// once and its end test goes by what was read, since the game may release a model meanwhile; a pointer that fails skips that
+		// model. A value past the model count would read another table's bytes as a pointer, and no access violation need come of it.
+		void SampleModels(uint32_t modelCount, uint64_t now, State& state)
 		{
 			const uint8_t* const table = Load<const uint8_t*>(g_sites.modelTable);
 			const uint64_t stride = Load<uint64_t>(g_sites.modelStride);
-			const uint32_t models = ListCount(kPopulationListAt, modelCount);
 			state.streamed = 0;
 			state.unreadModels = 0;
-			for (uint32_t i = 0; i < models; i++)
+			for (uint32_t i = 0; i < kListEntries; i++)
 			{
-				const uint64_t index = Field<uint32_t>(kPopulationListAt + i * sizeof(uint32_t));
+				const uint32_t index = Field<uint32_t>(kPopulationListAt + i * sizeof(uint32_t));
+				if (EndsList(index, modelCount))
+					break;
 				const uint8_t* info = nullptr;
 				int32_t peds = 0;
 				uint8_t flags = 0;
-				if (!CopyMemorySafely(&info, table + index * stride, sizeof(info)) || !CopyMemorySafely(&peds, info + kPedsAt, sizeof(peds)) ||
+				if (!CopyMemorySafely(&info, table + uint64_t{ index } * stride, sizeof(info)) || !CopyMemorySafely(&peds, info + kPedsAt, sizeof(peds)) ||
 					!CopyMemorySafely(&flags, info + kModelFlagsAt, sizeof(flags)))
 				{
 					state.unreadModels++;
@@ -403,38 +422,57 @@ namespace TweaksV
 				if (flags & kStreamedBit)
 					state.streamed++;
 				if (peds > state.mostPeds)
+				{
 					state.mostPeds = peds;
+					state.budgets[kPeds].lastHighMs = now;
+				}
 			}
 			if (state.streamed > state.mostStreamed)
+			{
 				state.mostStreamed = state.streamed;
+				state.budgets[kPeds].lastHighMs = now;
+			}
 		}
 
 		// One sample of both budgets, with the lock held. Before the game's init the object is zeros, and the tables hold other
-		// numbers, which must not read as a change: its override, -1 after that, tells.
+		// numbers, which must not read as a change: its override, -1 after that, tells, though the tables' set-up comes last in the
+		// init and the findings do not give when the override is stored before it. So the fill counts from a second sample running
+		// that finds the override not 0, half a sampling period or more after the first.
 		void TakeSample()
 		{
 			State& state = g_state;
 			state.unreadable = !DataIsReadable();
 			if (state.unreadable)
 				return;
+			const uint64_t now = GetTickCount64();
 			const int32_t override = Field<int32_t>(kOverrideAt);
-			if (!state.filled && override == 0)
-				return;
-			state.filled = true;
+			if (!state.filled)
+			{
+				if (override == 0)
+					state.fillSeenMs = 0;
+				else if (state.fillSeenMs == 0)
+					state.fillSeenMs = now;
+				if (state.fillSeenMs == 0 || now - state.fillSeenMs < kSampleMs / 2)
+					return;
+				state.filled = true;
+			}
 			state.network = Load<uint8_t>(g_sites.flag) != 0;
 			const uint32_t modelCount = Load<uint16_t>(g_sites.modelCount);
 			const int32_t scenarioPeds = override < 0 ? Field<int32_t>(kScheduleAt) : override;
-			SampleBudget(kVehicles, state.network, kMargin, modelCount, state.budgets[kVehicles]);
-			SampleBudget(kPeds, state.network, kMargin + static_cast<uint32_t>(scenarioPeds >> 1) * kMargin, modelCount, state.budgets[kPeds]);
+			SampleBudget(kVehicles, state.network, kMargin, modelCount, now, state.budgets[kVehicles]);
+			SampleBudget(kPeds, state.network, kMargin + static_cast<uint32_t>(scenarioPeds >> 1) * kMargin, modelCount, now, state.budgets[kPeds]);
 			state.inFlight = Field<uint32_t>(kInFlightAt);
 			state.weapons = Field<int32_t>(kWeaponsAt);
 			state.mods[0] = Field<int32_t>(kModsAt[0]);
 			state.mods[1] = Field<int32_t>(kModsAt[1]);
 			state.ambient = Load<int32_t>(g_sites.ambient);
 			if (state.ambient > state.mostAmbient)
+			{
 				state.mostAmbient = state.ambient;
-			SamplePool(state);
-			SampleModels(modelCount, state);
+				state.budgets[kVehicles].lastHighMs = now;
+			}
+			SamplePool(now, state);
+			SampleModels(modelCount, now, state);
 		}
 
 		// The sampling thread: a sample a second. Each pass inside a try, so nothing leaves the thread; it never ends.
@@ -454,9 +492,16 @@ namespace TweaksV
 			}
 		}
 
+		// What the summary has said, on its thread alone: a table's line that could not read the configuration is still to come.
+		bool g_tablesSaid[kBudgets] = {};
+		uint32_t g_saidTables[kBudgets][8] = {};
+		bool g_tablesUnread[kBudgets] = {};
+		uint64_t g_tablesTries = 0;
+		bool g_varietySaid[kBudgets] = {};
+
 		// A sample of its own, so that a summary is fresh and comes without the sampling thread too; then what changes a summary:
 		// whether it could read and the game has filled the tables, each budget's highs and its time at the stop, its level, its
-		// tables and its variety, the rest in whole MB or as counted.
+		// tables and its variety, the rest in whole MB or as counted; and every time, while a table's line is still to come.
 		uint64_t Numbers()
 		{
 			const ExclusiveLock lock(g_lock);
@@ -473,7 +518,7 @@ namespace TweaksV
 				mix(b.level);
 				mix(b.lowestLevel);
 				mix(std::bit_cast<uint32_t>(b.variety));
-				mix(b.mostUsed / 1000000);
+				mix(b.mostUsed / kMegabyte);
 				mix(b.mostModels);
 				for (const uint32_t entry : b.tables)
 					mix(entry);
@@ -484,6 +529,9 @@ namespace TweaksV
 			mix(state.mostStreamed);
 			mix(state.unreadModels);
 			mix(static_cast<uint64_t>(state.mostPeds));
+			if (g_tablesUnread[kVehicles] || g_tablesUnread[kPeds])
+				g_tablesTries++;
+			mix(g_tablesTries);
 			return hash;
 		}
 
@@ -524,8 +572,9 @@ namespace TweaksV
 		}
 
 		// The tables, whenever they change: all eight entries in bytes, and whether the story table's are what gameconfig.xml gives -
-		// the only proof that a raise there has taken, since a misspelled tag is ignored without a word.
-		void LogTables(size_t index, const BudgetState& b)
+		// the only proof that a raise there has taken, since a misspelled tag is ignored without a word. False while the configuration
+		// cannot be read, so that the line comes again, the proof with it.
+		bool LogTables(size_t index, const BudgetState& b)
 		{
 			std::string line = "DIAGNOSTIC: " + std::string(kNames[index]) + " model budget's tables: story " + std::to_string(b.tables[0]) + ", " + std::to_string(b.tables[1]) + ", " +
 				std::to_string(b.tables[2]) + " and " + std::to_string(b.tables[3]) + " bytes, network " + std::to_string(b.tables[4]) + ", " + std::to_string(b.tables[5]) + ", " +
@@ -534,7 +583,7 @@ namespace TweaksV
 			if (!ReadConfigured(index, configured))
 			{
 				WriteLog(kTag, line + "; the configuration at " + DescribeAddress(g_sites.holder) + " could not be read this time.");
-				return;
+				return false;
 			}
 			line += "; the configuration's story Level1Kb to Level3Kb: " + Three(configured);
 			for (uint32_t level = 1; level <= kGameLevels; level++)
@@ -544,13 +593,14 @@ namespace TweaksV
 				{
 					WriteLog(kTag, line + " - level " + std::to_string(level) + "'s entry holds " + std::to_string(b.tables[level]) + " bytes, not the " + std::to_string(expected) +
 						" they give: a tunable or another mod has changed it.");
-					return;
+					return true;
 				}
 			}
 			if (memcmp(configured, kGameKb[index], sizeof(configured)) == 0)
 				WriteLog(kTag, line + ", the game's defaults - the story entries are theirs.");
 			else
-				WriteLog(kTag, line + ", not the game's defaults of " + Three(kGameKb[index]) + " - the story entries are theirs: gameconfig.xml has changed them.");
+				WriteLog(kTag, line + ", not the defaults of 1.0.1158.16, " + Three(kGameKb[index]) + " - the story entries are theirs: gameconfig.xml, or a game update, has changed them.");
+			return true;
 		}
 
 		// A budget's line up to its models: what is in use of what, and where the game stops asking.
@@ -574,6 +624,12 @@ namespace TweaksV
 			return line;
 		}
 
+		// A budget's last words: how long none of its highs has moved, which is what a drive for its numbers goes by.
+		std::string NoNewHigh(const BudgetState& b)
+		{
+			return "; no new high for " + std::to_string((GetTickCount64() - b.lastHighMs) / 1000) + " s.";
+		}
+
 		void LogVehicles(const State& state)
 		{
 			const BudgetState& b = state.budgets[kVehicles];
@@ -592,7 +648,7 @@ namespace TweaksV
 				line += std::to_string(state.poolUsed) + " of " + std::to_string(state.poolSize) + " slots, at most " + std::to_string(state.mostPoolUsed) +
 					" so far, unused models released past " + std::to_string(state.poolSize - kPoolMargin);
 			WriteLog(kTag, line + "; of the bytes: weapons " + Megabytes(state.weapons) + " MB, mods " + Megabytes(state.mods[0]) + " and " + Megabytes(state.mods[1]) +
-				" MB; ambient cars on the map " + std::to_string(state.ambient) + ", at most " + std::to_string(state.mostAmbient) + " so far.");
+				" MB; ambient cars on the map " + std::to_string(state.ambient) + ", at most " + std::to_string(state.mostAmbient) + " so far" + NoNewHigh(b));
 		}
 
 		void LogPeds(const State& state)
@@ -604,17 +660,12 @@ namespace TweaksV
 				line += ", " + std::to_string(b.lists[i]) + " " + kLists[kPeds][i].words;
 			line += ", at most " + std::to_string(b.mostModels) + " at once";
 			if (b.models)
-				line += ", about " + Megabytes(b.used / b.models) + " MB each";
+				line += ", about " + Megabytes(int64_t{ b.used } / b.models) + " MB each";
 			line += AtStop(b) + "; at most " + std::to_string(state.mostPeds) + " peds of one model; at most " + std::to_string(state.mostStreamed) + " streamed at once";
 			if (state.unreadModels)
 				line += "; " + std::to_string(state.unreadModels) + " model infos could not be read this time";
-			WriteLog(kTag, line + ".");
+			WriteLog(kTag, line + NoNewHigh(b));
 		}
-
-		// What the summary has said, on its thread alone.
-		bool g_tablesSaid[kBudgets] = {};
-		uint32_t g_saidTables[kBudgets][8] = {};
-		bool g_varietySaid[kBudgets] = {};
 
 		void LogSummary(uint64_t)
 		{
@@ -644,8 +695,8 @@ namespace TweaksV
 				}
 				if (!g_tablesSaid[index] || memcmp(g_saidTables[index], b.tables, sizeof(b.tables)) != 0)
 				{
-					LogTables(index, b);
-					g_tablesSaid[index] = true;
+					g_tablesUnread[index] = !LogTables(index, b);
+					g_tablesSaid[index] = !g_tablesUnread[index];
 					memcpy(g_saidTables[index], b.tables, sizeof(b.tables));
 				}
 				if (!g_varietySaid[index] && b.highestVariety > kTopVariety)
@@ -762,12 +813,26 @@ namespace TweaksV
 		}
 
 		// Check W3 of a writing half: the scan for stores of any width into a story table, which should find those three and no other
-		// (SPECIFICATIONS 8). A writer besides them would undo a raise, which is none of a measurement's, so it is a line and nothing stops.
+		// (SPECIFICATIONS 8). A writer besides them would undo a raise, which is none of a measurement's, so it is a line and nothing
+		// stops. The scan skips what it cannot read, so that one which misses a store the patterns pin proves nothing of the others.
 		void LogWriters(size_t index, const uint8_t* const (&disps)[3], const std::string& labels)
 		{
 			const uint8_t* const story = g_sites.budgets[index].story;
 			const std::vector<uint8_t*> writers = Scanner::FindRipRelativeStores(story, 4 * sizeof(uint32_t), kWritersLooked);
 			const uint8_t* const stores[3] = { disps[0] - 2, disps[1] - 2, disps[2] - 2 };
+			size_t found = 0;
+			const uint8_t* missed = nullptr;
+			for (const uint8_t* const store : stores)
+				if (std::find(writers.begin(), writers.end(), store) != writers.end())
+					found++;
+				else if (!missed)
+					missed = store;
+			if (missed && writers.size() < kWritersLooked)
+			{
+				WriteLog(kTag, "DIAGNOSTIC: writers of the " + std::string(kNames[index]) + " story table at " + DescribeAddress(story) + ": the scan finds " + std::to_string(found) +
+					" of the set-up's 3 stores, not the one at " + DescribeAddress(missed) + ", so it proves nothing about other writers (" + labels + ")");
+				return;
+			}
 			size_t others = 0;
 			std::string besides;
 			for (const uint8_t* const writer : writers)

@@ -482,7 +482,7 @@
 // [population]
 // The two model budgets (Population): their sites in .fakesit, none of them run, and their data in this program's own. With no option
 // the data are as at the game's start: the tables' first values, level 3, variety 1, the object zeros.
-//   popfill        the data as the boot at 180 s: the tables filled, variety 6, level 3; vehicles 428,679,168 bytes, 94 models
+//   popfill        the data as my boot at 180 s: the tables filled, variety 6, level 3; vehicles 428,679,168 bytes, 94 models
 //                  for traffic and 8 dropped, VehicleStruct 102 of 200, 57 ambient cars; peds 305,127,424 bytes, 19 models for the
 //                  population, one streamed, the most peds of one 9, and 5, 4 and 3 in the other lists
 //   poplate        as at the game's start; once TweaksV.log says they are not filled yet, the data of popfill, then it waits for their line
@@ -503,6 +503,12 @@
 //                  not, the fields a line names changed, then level 1 and back to 3, each waiting for its summary (the test build's
 //                  TWEAKSV_TEST_SUMMARY_MS), 10 seconds at most
 //   popgone        with popfill; from when TweaksV has started the object's first page cannot be read, until the log says so
+//   popflip        with popfill and popwait: while the run waits, a thread turns the population's list's 18th entry between its model and
+//                  free, as a release of the model would; the free value's slot of the model info table leads to a model of 1065353216 peds
+//   popconfiglate  with popfill: the configuration's holder null, until the log says it could not be read
+//   popscanmiss    .fakesit, as the section table in memory has it, ends right after the ModRM of O-E-V7's last store, so that the scan
+//                  for writers cannot take that store, its disp32 past the code it reads, where the pattern still matches; what lies
+//                  behind in .fakesit is not code then, and stays writable
 //   popref NAME HOW  the rel32 of a site (the table in PopSetUp) leads: out, outside the game; hole, to a page inside it that cannot be
 //                  read, a network table 16 bytes further on in either, behind where its story table's leads; odd, 2 bytes on; byte, 1 byte
 //                  on; next, 8 bytes on
@@ -1270,10 +1276,11 @@ static Site g_lcJumpRel = SITE(g_lcAddToList, 19);	// the rel32 of the jump when
 // [population]
 // The two model budgets (Population), none of it run: the crash context's read of the ambient cars, O-E-V5, whose last two bytes begin
 // its line, O-E-C1; the two getters; the check before a vehicle model's request, O-E-V1 and O-E-V2; the release's test of VehicleStruct,
-// O-E-V3; the tables' set-up, a NOP before it, its head O-E-V4 behind three pushes and sub rsp, 0x20, and twelve blocks of 0x38 bytes:
-// story peds, O-E-P5 to P7, network peds, story vehicles, O-E-V7, network vehicles; its call, O-E-V6; the ped memory's sum, O-E-P1; the
-// gate, O-E-P2, the rest of whose bytes PopSetUp places; the ped lists, O-E-P3; a model's peds, O-E-P4; the variety's store, O-E-P8. Then
-// what the options use: two stores and a call that are none until their first byte is set, and a place for a match moved.
+// O-E-V3; the tables' set-up's call, O-E-V6; the ped memory's sum, O-E-P1; the gate, O-E-P2, the rest of whose bytes PopSetUp places; the
+// ped lists, O-E-P3; a model's peds, O-E-P4; the variety's store, O-E-P8. Then what the options use: two stores and a call that are none
+// until their first byte is set, and a place for a match moved. Last, for popscanmiss, the tables' set-up, a NOP before it, its head O-E-V4
+// behind three pushes and sub rsp, 0x20, and twelve blocks of 0x38 bytes: story peds, O-E-P5 to P7, network peds, story vehicles, O-E-V7,
+// network vehicles.
 #define POP_GETTER 0x8B, 0x05, 0, 0, 0, 0, 0x80, 0x3D, 0, 0, 0, 0, 0x00, 0x74, 0x11, 0x48, 0x8D, 0x0D, 0, 0, 0, 0, 0x8B, 0x04, 0x81, 0xF3, 0x48, 0x0F, 0x2A, 0xC0, \
 	0xEB, 0x17, 0x48, 0x8D, 0x0D, 0, 0, 0, 0, 0x8B, 0x04, 0x81, 0xF3, 0x48, 0x0F, 0x2A, 0xC0, 0xF3, 0x0F, 0x59, 0x05, 0, 0, 0, 0, 0xF3, 0x0F, 0x2C, 0xC0, 0x01, 0xC0, 0xC3, 0xCC
 #define POP_BLOCK(low, high, n0, n1, n2, n3) 0x69, 0xBB, low, high, 0x00, 0x00, 0xE8, 0x03, 0x00, 0x00, 0xB9, 0xBD, 0xC5, 0xAF, 0xE3, 0xBA, n0, n1, n2, n3, 0xE8, 0, 0, 0, 0, \
@@ -1288,13 +1295,6 @@ volatile unsigned char g_popVehicleCheck[] = { 0x41, 0x8B, 0x14, 0x96, 0x0F, 0x5
 	0x81, 0xC2, 0xA0, 0x1C, 0xE9, 0xFF, 0x39, 0x97, 0x14, 0x62, 0x00, 0x00, 0x7D, 0x05, 0x48, 0x89, 0xF9, 0xE8, 0, 0, 0, 0, 0xCC };
 volatile unsigned char g_popVehiclePool[] = { 0x48, 0x8B, 0x05, 0, 0, 0, 0, 0x8B, 0x68, 0x28, 0xC1, 0xE5, 0x02, 0xC1, 0xFD, 0x02, 0x2B, 0x68, 0x18, 0x83, 0xC5, 0x14, 0x85, 0xED,
 	0x0F, 0x8E, 0, 0, 0, 0, 0xCC };
-volatile unsigned char g_popSetUp[] = { 0x90, 0x56, 0x57, 0x53, 0x48, 0x83, 0xEC, 0x20, 0x48, 0x8B, 0x05, 0, 0, 0, 0, 0x48, 0x8B, 0x58, 0x18, 0x48, 0x8B, 0x35, 0, 0, 0, 0,	// +1, +8: O-E-V4
-	POP_BLOCK(0xF4, 0x04, 0x40, 0x67, 0xD1, 0x1F), POP_BLOCK(0xF8, 0x04, 0xD0, 0x3C, 0x99, 0x0A), POP_BLOCK(0xFC, 0x04, 0x5C, 0x10, 0x5F, 0xF4),	// +26
-	POP_BLOCK(0x00, 0x05, 0x11, 0x11, 0x11, 0x11), POP_BLOCK(0x04, 0x05, 0x22, 0x22, 0x22, 0x22), POP_BLOCK(0x08, 0x05, 0x33, 0x33, 0x33, 0x33),
-	POP_BLOCK(0x0C, 0x05, 0xD8, 0xC1, 0xCB, 0x18), POP_BLOCK(0x10, 0x05, 0x8A, 0x9B, 0xA4, 0x05), POP_BLOCK(0x14, 0x05, 0x01, 0xFF, 0x5F, 0xF7),
-	POP_BLOCK(0x18, 0x05, 0x44, 0x44, 0x44, 0x44), POP_BLOCK(0x1C, 0x05, 0x55, 0x55, 0x55, 0x55), POP_BLOCK(0x20, 0x05, 0x66, 0x66, 0x66, 0x66),
-	0x48, 0x83, 0xC4, 0x20, 0x5B, 0x5F, 0x5E, 0xC3, 0xCC };
-constexpr size_t kPopStart = 1, kPopHead = 8, kPopBlocks = 26, kPopBlockBytes = 0x38, kPopStoreInBlock = 45, kPopMatchV7 = 157, kPopMatchV5 = 29;
 volatile unsigned char g_popSetUpCall[] = { 0x41, 0x0F, 0xB7, 0xC6, 0x89, 0x34, 0x87, 0xE8, 0, 0, 0, 0, 0x0F, 0x28, 0x74, 0x24, 0x40, 0x48, 0x83, 0xC4, 0x58, 0xC3, 0xCC };
 volatile unsigned char g_popPedSum[] = { 0x8B, 0x86, 0x10, 0x62, 0x00, 0x00, 0x03, 0x86, 0x0C, 0x62, 0x00, 0x00, 0x03, 0x86, 0x2C, 0x62, 0x00, 0x00, 0x03, 0x86, 0x30, 0x62, 0x00, 0x00,
 	0x89, 0x05, 0, 0, 0, 0, 0xCC };
@@ -1311,6 +1311,13 @@ volatile unsigned char g_popVariety[] = { 0xF2, 0x0F, 0x10, 0x86, 0xB4, 0x00, 0x
 volatile unsigned char g_popExtraStores[] = { 0xCC, 0x05, 0, 0, 0, 0, 0xCC, 0x05, 0, 0, 0, 0, 0xCC };
 volatile unsigned char g_popExtraCall[] = { 0xCC, 0, 0, 0, 0, 0xCC };
 volatile unsigned char g_popTwin[256] = { 0xCC };
+volatile unsigned char g_popSetUp[] = { 0x90, 0x56, 0x57, 0x53, 0x48, 0x83, 0xEC, 0x20, 0x48, 0x8B, 0x05, 0, 0, 0, 0, 0x48, 0x8B, 0x58, 0x18, 0x48, 0x8B, 0x35, 0, 0, 0, 0,	// +1, +8: O-E-V4
+	POP_BLOCK(0xF4, 0x04, 0x40, 0x67, 0xD1, 0x1F), POP_BLOCK(0xF8, 0x04, 0xD0, 0x3C, 0x99, 0x0A), POP_BLOCK(0xFC, 0x04, 0x5C, 0x10, 0x5F, 0xF4),	// +26
+	POP_BLOCK(0x00, 0x05, 0x11, 0x11, 0x11, 0x11), POP_BLOCK(0x04, 0x05, 0x22, 0x22, 0x22, 0x22), POP_BLOCK(0x08, 0x05, 0x33, 0x33, 0x33, 0x33),
+	POP_BLOCK(0x0C, 0x05, 0xD8, 0xC1, 0xCB, 0x18), POP_BLOCK(0x10, 0x05, 0x8A, 0x9B, 0xA4, 0x05), POP_BLOCK(0x14, 0x05, 0x01, 0xFF, 0x5F, 0xF7),
+	POP_BLOCK(0x18, 0x05, 0x44, 0x44, 0x44, 0x44), POP_BLOCK(0x1C, 0x05, 0x55, 0x55, 0x55, 0x55), POP_BLOCK(0x20, 0x05, 0x66, 0x66, 0x66, 0x66),
+	0x48, 0x83, 0xC4, 0x20, 0x5B, 0x5F, 0x5E, 0xC3, 0xCC };
+constexpr size_t kPopStart = 1, kPopHead = 8, kPopBlocks = 26, kPopBlockBytes = 0x38, kPopStoreInBlock = 45, kPopMatchV7 = 157, kPopMatchV5 = 29;
 static Site g_popSites[] = { SITE(g_popContext, 0), SITE(g_popPedGetter, 0), SITE(g_popVehicleGetter, 0), SITE(g_popVehicleTables, 0), SITE(g_popVehicleCheck, 0), SITE(g_popVehiclePool, 0),
 	SITE(g_popSetUp, 0), SITE(g_popSetUpCall, 0), SITE(g_popPedSum, 0), SITE(g_popGate, 0), SITE(g_popPedLists, 0), SITE(g_popPedsOfModel, 0), SITE(g_popVariety, 0),
 	SITE(g_popExtraStores, 0), SITE(g_popExtraCall, 0), SITE(g_popTwin, 0) };
@@ -5352,7 +5359,7 @@ struct PopTables
 };
 struct PopModel { unsigned char bytes[0x290]; };
 struct PopEntry { const PopModel* model; uint64_t other; };
-constexpr size_t kPopObjectBytes = 0x7000, kPopModels = 40, kPopModelCount = 1000, kPopFirstModel = 100;
+constexpr size_t kPopObjectBytes = 0x7000, kPopModels = 40, kPopModelCount = 1000, kPopFirstModel = 100, kPopFlipEntry = 17;
 constexpr size_t kPopVehicleUsed = 0x6214, kPopPedUsed = 0x620C, kPopPopulationList = 0x4E04;
 static_assert(offsetof(PopTables, pedNetwork) == 0x10 && offsetof(PopTables, vehicleNetwork) == 0x30 && alignof(PopTables) == 8 && kPopModelCount > kPopFirstModel + kPopModels, "the budgets' data");
 static PopTables g_popTablesStorage;
@@ -5365,7 +5372,8 @@ static unsigned char g_popManager[0x20];		// the configuration's holder leads he
 static unsigned char g_popConfiguration[0x588];
 static unsigned char g_popPool[0x40];			// VehicleStruct: +0x18 its size, +0x28 its used
 static PopModel g_popModelsStorage[kPopModels];
-static PopEntry g_popModelTable[kPopModelCount];
+static PopEntry g_popModelTable[0x10000];		// up to the free value's slot, which no list's end test lets a reader reach
+static PopModel g_popJunkModel;
 static unsigned char g_popPlaced[kPopSites][0x300];
 static uint64_t g_popDataHash = 0;
 
@@ -5405,7 +5413,7 @@ static uint64_t PopHashOfData()
 	return hash;
 }
 
-// The data as the boot read them at 180 s, then what an option asks of them.
+// The data as my boot read them at 180 s, then what an option asks of them.
 static void PopFill(int argc, wchar_t** argv)
 {
 	PopTables& t = *g_popTables;
@@ -5481,7 +5489,7 @@ static void PopFill(int argc, wchar_t** argv)
 		t.pool = nullptr;
 	if (HasOption(argc, argv, L"poppoolunread"))
 		t.pool = g_popHole;
-	if (HasOption(argc, argv, L"popnoconfig"))
+	if (HasOption(argc, argv, L"popnoconfig") || HasOption(argc, argv, L"popconfiglate"))
 		t.holder = nullptr;
 }
 
@@ -5579,6 +5587,9 @@ static void PopSetUp(int argc, wchar_t** argv)
 		g_popModelTable[kPopFirstModel + i].model = &g_popModelsStorage[i];
 		g_popModelTable[kPopFirstModel + i].other = 0xBAD0BAD0BAD0BAD0ull;
 	}
+	const int32_t junk = 1065353216;
+	memcpy(g_popJunkModel.bytes + 0x158, &junk, sizeof(junk));
+	g_popModelTable[0xFFFF].model = &g_popJunkModel;
 
 	// what the options ask
 	if (HasOption(argc, argv, L"popfill"))
@@ -5650,6 +5661,21 @@ static void PopSetUp(int argc, wchar_t** argv)
 		g_popGate[0] = 0x90;
 		SetRel32(Site{ g_rtEdge, static_cast<int>(at + kPopMatchP2), sizeof(g_rtEdge) }, &t.pedLevel);
 	}
+	if (HasOption(argc, argv, L"popscanmiss"))
+	{
+		const auto base = const_cast<unsigned char*>(ImageBase());
+		const auto nt = reinterpret_cast<IMAGE_NT_HEADERS*>(base + reinterpret_cast<const IMAGE_DOS_HEADER*>(base)->e_lfanew);
+		IMAGE_SECTION_HEADER* section = IMAGE_FIRST_SECTION(nt);
+		for (WORD i = 0; i < nt->FileHeader.NumberOfSections; i++, section++)
+			if (memcmp(section->Name, ".fakesit", 8) == 0)
+			{
+				const auto end = const_cast<const unsigned char*>(g_popSetUp + kPopBlocks + 8 * kPopBlockBytes + kPopStoreInBlock);
+				DWORD old = 0;
+				VirtualProtect(section, sizeof(*section), PAGE_READWRITE, &old);
+				section->Misc.VirtualSize = static_cast<DWORD>(end - base) - section->VirtualAddress;
+				VirtualProtect(section, sizeof(*section), old, &old);
+			}
+	}
 	if (HasOption(argc, argv, L"popref") || HasOption(argc, argv, L"popbadmodel") || HasOption(argc, argv, L"poppoolunread"))
 	{
 		DWORD old = 0;
@@ -5662,9 +5688,27 @@ static void PopSetUp(int argc, wchar_t** argv)
 	g_popDataHash = PopHashOfData();
 }
 
-// Once TweaksV has started, as the game's streaming would change the data: what poplate, popgone and popgrow ask, each waiting for its summary.
+static volatile LONG g_popFlipping = 0;
+static DWORD WINAPI PopFlip(LPVOID)
+{
+	const auto entry = reinterpret_cast<volatile uint32_t*>(g_popObject + kPopPopulationList + kPopFlipEntry * sizeof(uint32_t));
+	while (g_popFlipping)
+	{
+		*entry = 0xFFFF;
+		*entry = static_cast<uint32_t>(kPopFirstModel + kPopFlipEntry);
+	}
+	return 0;
+}
+
+// Once TweaksV has started, as the game's streaming would change the data: what the options ask, each waiting for its summary.
 static void PopActions(int argc, wchar_t** argv)
 {
+	HANDLE flip = nullptr;
+	if (HasOption(argc, argv, L"popflip"))
+	{
+		g_popFlipping = 1;
+		flip = CreateThread(nullptr, 0, PopFlip, nullptr, 0, nullptr);
+	}
 	if (HasOption(argc, argv, L"poplate") && RtWaitFor("the model budgets are not filled yet", 25000))
 	{
 		PopFill(argc, argv);
@@ -5705,8 +5749,20 @@ static void PopActions(int argc, wchar_t** argv)
 		g_popDataHash = PopHashOfData();
 		RtWaitFor("at level 1 at the lowest so far", 10000);
 	}
+	if (HasOption(argc, argv, L"popconfiglate") && RtWaitFor("could not be read this time", 25000))
+	{
+		g_popTables->holder = g_popManager;
+		g_popDataHash = PopHashOfData();
+		RtWaitFor("54000, 72000 and 92000, the game's defaults", 10000);
+	}
 	if (HasOption(argc, argv, L"popwait"))
 		RtWaitFor("DIAGNOSTIC: ped model budget: ", 25000);
+	if (flip)
+	{
+		g_popFlipping = 0;
+		WaitForSingleObject(flip, INFINITE);
+		CloseHandle(flip);
+	}
 	if (HasOption(argc, argv, L"popquiet"))
 		Sleep(3000);
 	if (HasOption(argc, argv, L"popstayssec") && RtWaitFor("the model budgets are not filled yet", 25000))

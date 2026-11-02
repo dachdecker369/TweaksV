@@ -72,10 +72,11 @@ The second relies on Windows, not on the game: a classic replace-rename reaches 
    <!-- [population] -->
    - **Population:** the object's fields no pattern pins - the vehicles' excess, lists, requests in flight and shares, the peds' excess - and the list's format, 256 dwords ended by 0xFFFF or a value not below the model count; the module only logs them, so a wrong one is a wrong number, never harm, and its line then says something odd, without an error.
      The model info's +0x286 bit 1, the streamed flag (a hint of the render queues' pass), and its +0x9D's kinds.
-     The variety's formula, 5, 1 and the clamp at 0.05 and 10: `O-E-P8`'s line logs the first three as it reads them, and a raise's cap rests on the 10.
+     The variety's formula, 5, 1 and the clamp at 0.05 and 10: `O-E-P8`'s line logs the 5, the 1 and the 10 as it reads them, not the 0.05, and a raise's cap rests on the 10.
      The block of `gameconfig.xml`, its names, members and offsets but the story entries' dwords, which `O-E-V7` and `O-E-P5` to `P7` pin: a renamed member would be ignored by the game's parser in silence, so the tables' line is what proves a raise there, and the names are read again from the parser's descriptors with a data window.
+     The constructor's defaults, 54,000, 72,000 and 92,000 for the peds and 32,000, 56,000 and 70,000 for the vehicles, which the tables' line compares with and which nothing pins: an update that changes them reads there as `not the defaults of 1.0.1158.16`, and the module's two arrays are read again.
      Entry 0 of each table, 1,500,000, and the level's first value, 3, in `.data`: the first tables' line and summary show them.
-     The floor of 9 models and of 6, the frame gates and the 64 frames: behaviour, which TweaksV does not read.
+     The floor of 9 vehicle models, the frame gates and the 64 frames: behaviour, which TweaksV does not read; the floor of 6 ped models only as the bytes `O-E-P2`'s check compares at +0xEA, which an update that changes it stops the measurement at.
    <!-- [ped pool] -->
    - **Ped pool:** the pool's layout and the high 2 bits of its +0x28; the spatial array's offsets, +0x28, +0x30 and +0x38 x, y and z, +0x40 and +0x48 the node's address's parts, +0x50 flags, +0x58 capacity, +0x5C count, set in 0x11682D0; that no other function holds a list by the spatial array's count, so every read of +0x5C after a load of its pointer; the sizes of the fixed arrays, the singleton's offsets in 0x1D90620, +0x20 and +0x1020, the filler's three arrays, 1,024 in the six methods and 0x1164D40; the ped's offsets the measurement reads; that the pool's size never passes the number.
      A change in any of them leaves the measurement's numbers wrong without an error, or a raise's limits unmet.
