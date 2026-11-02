@@ -5,9 +5,9 @@
 # and STATICBOUNDS_SIZE when the fake makes it, said once, and the fake's eight other pools stay as they are: the size below and
 # above the key, the key at its limits and beyond; ENABLED=0 and both old plugins; DRY_RUN; DIAGNOSTIC_MODE with both sites and
 # every making; each check failing on its own - each pattern missing, each held twice, another mod's jump on each function, each
-# hook not made with the other taken back, no code to be changed - each reported with nothing written; the pool made twice, its
-# address taken by another pool, its stride changed before its allocation, a capacity below 0; what IsFunctionStart says, which
-# refuses nothing; the lines' cap; the plain game; the check that the game makes the pool, its clock from the session's start, the
+# hook not made with the other taken back, no code to be changed, the set-up's allocator read from another stack slot - each reported
+# with nothing written; the pool made twice, its address taken by another pool, its stride changed before its allocation, a capacity
+# below 0 and of 0; what IsFunctionStart says, which refuses nothing; the lines' cap; the plain game; the check that the game makes the pool, its clock from the session's start, the
 # first script program placed (the test build's TWEAKSV_TEST_STATICBOUNDS_CHECK): made in time, made before TweaksV loaded, never
 # made, its name unreadable, set up and not allocated, made after the check, the hook made by the part with the Blips part off in
 # TweaksV.ini and the check reporting, no hook and no check with BlipLimitFix.asi installed or with Resource Extensions installed and
@@ -93,7 +93,7 @@ setup=$(rva_of "s/.*Pattern C-E-P1 found: .* -> RVA \(0x[0-9A-F]*\), 1 match,.*/
 alloc=$(rva_of "s/.*Pattern C-E-A1 found: .* -> RVA \(0x[0-9A-F]*\), 1 match,.*/\1/p")
 check "C-E-P1 and C-E-A1 found exactly once each" "[ -n '$setup' ] && [ -n '$alloc' ] && [ \$(grep -c -E 'Pattern C-E-(P1|A1) found: .* 1 match,' TweaksV.log) -eq 2 ]"
 check "each site at the RVA of its match, with what IsFunctionStart says, word for word" "log_line '${TAG}DIAGNOSTIC: the pools. set-up at RVA ${setup:-none} (C-E-P1): no unwind data, byte before it 90\$' && log_line '${TAG}DIAGNOSTIC: the pools. allocator at RVA ${alloc:-none} (C-E-A1): no unwind data, byte before it 90\$'"
-check "the making's two lines, once each, word for word, with their times" "log_line '${TAG}DIAGNOSTIC: the static bounds pool at $RVA is set up, [0-9]* ms after TweaksV.s start.\$' && log_line '${TAG}DIAGNOSTIC: the static bounds pool at $RVA is allocated with 16000 slots, the game.s 12000, [0-9]* ms after TweaksV.s start.\$' && [ \$(count 'DIAGNOSTIC: the static bounds pool at') -eq 2 ]"
+check "the making's two lines, once each, word for word, with their times" "log_line '${TAG}DIAGNOSTIC: the static bounds pool at $RVA is set up, [0-9]* ms after the part.s start.\$' && log_line '${TAG}DIAGNOSTIC: the static bounds pool at $RVA is allocated with 16000 slots, the game.s 12000, [0-9]* ms after the part.s start.\$' && [ \$(count 'DIAGNOSTIC: the static bounds pool at') -eq 2 ]"
 check "the hooks and the sizes as without DIAGNOSTIC_MODE, no problem" "hooks_made 16000 && has '$RAISED' && [ \$(said) -eq 1 ] && quiet"
 
 echo "== SB10 TEST_BREAK_PATTERN for each pattern (test build): reported by its label, nothing hooked - the other looked for all the same"
@@ -119,6 +119,10 @@ for pair in "sbp1jump C-E-P1" "sba1jump C-E-A1"; do
 	check "$label: the pool made as the game made it, every call good, every page its own protection" "has 'the pool made once: 12000 slots, 204000 bytes asked, $OTHERS' && has 'protect: all restored (RX)' && log_lacks 'are hooked: the static bounds pool'"
 done
 
+echo "== SB12b the set-up reads its allocator from another stack slot, the byte its pattern leaves open: refused, nothing hooked"
+fresh_ini; out=$(game full_game.exe sbslot)
+check "the problem, word for word, naming the slot; nothing hooked, no pool made" "log_line '${NOT_RAISED}the pools. set-up at $RVA reads its allocator from the stack at +0x30, not at +0x28, the slot of a fifth argument, the last the hook hands on (C-E-P1).\$' && has '${PLACED}the pool not made' && log_lacks 'are hooked: the static bounds pool' && has 'protect: all restored (RX)'"
+
 echo "== SB13 each function's page not executable while TweaksV starts: MinHook refuses that hook, the other taken back"
 fresh_ini; out=$(game full_game.exe sbp1noexec)
 check "the set-up, the first of the two: its line and the problem, word for word; nothing written" "log_line '${TAG}the pools. set-up could not be hooked (MinHook: MH_ERROR_NOT_EXECUTABLE) - none of the 2 hooks is on.\$' && log_line '${NOT_RAISED}the pools. set-up at $RVA and the pools. allocator at $RVA could not be hooked (details in TweaksV.log).\$' && kept"
@@ -143,9 +147,19 @@ echo "== SB17 the game gives the pool -1: left as the game gave it, reported onc
 fresh_ini; out=$(game full_game.exe sbnegative)
 check "the problem, word for word, once; -1 through the hooks; no sizes line" "log_line '${NOT_RAISED}the game gives the static bounds pool the size -1, which is none - left as the game gave it.\$' && [ \$(count 'which is none') -eq 1 ] && has '${HOOKED}the pool made once: -1 slots' && [ \$(said) -eq 0 ]"
 
+fresh_ini; out=$(game full_game.exe sbnegative sbtwice)
+check "made twice, at another address: the problem still once" "[ \$(count 'which is none') -eq 1 ] && has '${HOOKED}the pool made 2 times: -1 and -1 slots'"
+
+echo "== SB17b the game gives the pool 0: raised, as any size below the key"
+fresh_ini; out=$(game full_game.exe sbzero)
+check "16000 slots through the hooks; the sizes said once, word for word; no problem" "has '$RAISED' && sizes 0 'is raised to 16000 (STATICBOUNDS_SIZE).' && [ \$(said) -eq 1 ] && quiet"
+
 echo "== SB18 the pool's stride 24 by the time the game allocates it: left as the game made it, reported once"
 fresh_ini; out=$(game full_game.exe sbstride)
 check "the problem, word for word, once; the pool's 12000 slots of 24 bytes through the hooks; no sizes line" "log_line '${NOT_RAISED}the pool at $RVA holds the stride 24 when the game allocates it, not the 16 it was set up with - it is left as the game made it.\$' && [ \$(count 'holds the stride') -eq 1 ] && has '${HOOKED}the pool made once: 12000 slots, 300000 bytes asked, $OTHERS' && [ \$(said) -eq 0 ]"
+
+fresh_ini; out=$(game full_game.exe sbstride sbtwice)
+check "made twice, at another address: the problem still once" "[ \$(count 'holds the stride') -eq 1 ] && has '${HOOKED}the pool made 2 times: 12000 and 12000 slots'"
 
 echo "== SB19 the byte before each function 48 (DIAGNOSTIC_MODE=1): what IsFunctionStart says is a line, and refuses nothing"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe sbnotstart)
@@ -167,8 +181,8 @@ AFTER_ALL='The game made the static bounds pool after all, after the check had r
 echo "== SB22 the check (test build, TWEAKSV_TEST_STATICBOUNDS_CHECK=10, DIAGNOSTIC_MODE=1, a script program placed, past the check's time): the game makes the pool in time - timed, nothing reported"
 export TWEAKSV_TEST_STATICBOUNDS_CHECK=10
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(ASI=TweaksV_test.asi game full_game.exe script wait)
-allocated=$(rva_of "s/.*${TAG}DIAGNOSTIC: the static bounds pool at $RVA is allocated with 16000 slots, the game.s 12000, \([0-9]*\) ms after TweaksV.s start.\$/\1/p")
-session=$(rva_of "s/.*${TAG}DIAGNOSTIC: the session started \([0-9]*\) ms after TweaksV.s start (the first script program placed): the static bounds check.s clock runs.\$/\1/p")
+allocated=$(rva_of "s/.*${TAG}DIAGNOSTIC: the static bounds pool at $RVA is allocated with 16000 slots, the game.s 12000, \([0-9]*\) ms after the part.s start.\$/\1/p")
+session=$(rva_of "s/.*${TAG}DIAGNOSTIC: the session started \([0-9]*\) ms after the part.s start (the first script program placed): the static bounds check.s clock runs.\$/\1/p")
 check "the test build's line and the check's line, once each; the hooks' line" "[ \$(count 'TEST BUILD: the static bounds check comes 10 seconds after the session.s start instead of 60 seconds (TWEAKSV_TEST_STATICBOUNDS_CHECK=10).') -eq 1 ] && made '10 seconds' && [ \$(count 'The static bounds check waits') -eq 1 ] && hooks_made 16000"
 check "the session's start and the making timed, once each, the making within the check's 10 seconds of the start; the sizes said once" "[ '${session:-none}' != none ] && [ '${allocated:-none}' != none ] && [ \$(( ${allocated:-99999} - ${session:-0} )) -lt 10000 ] && [ \$(said) -eq 1 ]"
 check "past the check's time: nothing reported, the pool raised" "log_lacks 'did not make the pool' && quiet && has '$RAISED'"
@@ -196,6 +210,8 @@ echo "== SB27 the pool made 4 seconds late, after the check of 2 seconds (test b
 fresh_ini; out=$(ASI=TweaksV_test.asi game full_game.exe sblate script)
 check "the problem first, then the line that the game made it after all, then the sizes, each once" "[ \$(count 'did not make the pool') -eq 1 ] && [ \$(count '$AFTER_ALL') -eq 1 ] && [ \$(grep -n 'did not make the pool' TweaksV.log | cut -d: -f1) -lt \$(grep -n 'after all, after the check' TweaksV.log | cut -d: -f1) ] && sizes 12000 'is raised to 16000 (STATICBOUNDS_SIZE).' && [ \$(said) -eq 1 ]"
 check "the pool raised all the same" "has '$RAISED'"
+fresh_ini; out=$(ASI=TweaksV_test.asi game full_game.exe sblate sbtwice script)
+check "made twice after the check: that line still once" "[ \$(count '$AFTER_ALL') -eq 1 ]"
 
 echo "== SB28 [BLIPS] ENABLED=0 (test build, the pool made before TweaksV, a script program placed): the part makes the script programs' hook itself, and the check reports"
 fresh_ini; setkey ENABLED 0 BLIPS; out=$(ASI=TweaksV_test.asi game full_game.exe sbearly script sbwait)
@@ -216,10 +232,11 @@ for case in dryrun sbp1jump sba1noexec; do
 	check "$case: no check - neither its line nor its test build's line nor its problem past its time" "log_lacks 'static bounds check' && log_lacks 'did not make the pool'"
 done
 
-echo "== SB31 a capacity below 0, a script program placed (test build, TWEAKSV_TEST_STATICBOUNDS_CHECK=2): its problem once, and the check not again"
+echo "== SB31 a capacity below 0, a script program placed (test build, TWEAKSV_TEST_STATICBOUNDS_CHECK=4, past the fake's making): its problem once, and the check not again"
+export TWEAKSV_TEST_STATICBOUNDS_CHECK=4
 fresh_ini; out=$(ASI=TweaksV_test.asi game full_game.exe sbnegative script sbwait)
 unset TWEAKSV_TEST_STATICBOUNDS_CHECK
-check "the capacity reported once, the check made and silent past its time" "[ \$(count 'which is none') -eq 1 ] && made '2 seconds' && log_lacks 'did not make the pool'"
+check "the capacity reported once, the check made and silent past its time" "[ \$(count 'which is none') -eq 1 ] && made '4 seconds' && log_lacks 'did not make the pool'"
 
 # the line of a check left to a plugin that does the Blips part's job, word for word
 LEFT="${TAG}The static bounds check is not made this session: it starts with the session, which TweaksV sees through the script programs. hook, and a plugin that does the Blips part.s job on the script programs is installed (named above) - TweaksV leaves the script programs to it.\$"

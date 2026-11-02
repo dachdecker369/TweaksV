@@ -23,7 +23,7 @@
 // thread not there - is reported, the hooks staying: nothing else would say when the game does not make the pool.
 //   DRY_RUN          nothing is hooked, nothing checked; the line says what would be
 //   DIAGNOSTIC_MODE  the two sites at their RVAs, with what IsFunctionStart says of each, which refuses nothing since
-//                    the patterns pin it; every making of the pool, and its time after TweaksV's start
+//                    the patterns pin it; every making of the pool, and its time after the part's start
 // Written for TweaksV from the Static Bounds Limit Adjuster v1.0.2 by Nochala (3_Washing_Machines), commit 61507bc:
 //   Copyright (C) 2026 Nochala
 //   License: GPL-3.0-or-later - https://github.com/Nochala/StaticboundsLimitAdjuster (THIRD_PARTY_NOTICES.md)
@@ -80,6 +80,13 @@ namespace TweaksV
 		static_assert(PatternHolds(kAllocatorPattern, 9, { 0x48, 0x63, 0x51, kCapacityAt }) && PatternHolds(kAllocatorPattern, 13, { 0x48, 0x63, 0x79, kStrideAt }),
 			"TweaksV: C-E-A1 reads the capacity and the stride at these offsets");
 
+		// The set-up's mov rcx, [rsp+disp8], its allocator: the disp8 is the pattern's one wildcard, and the hook hands on five
+		// arguments, so the job is done only where the set-up reads its fifth from the stack slot of a fifth.
+		constexpr size_t kAllocatorSlotAt = 7;
+		constexpr uint8_t kAllocatorSlot = 0x28;
+		static_assert(PatternHolds(kSetUpPattern, 3, { 0x48, 0x8B, 0x4C, 0x24 }) && PatternByte(kSetUpPattern, kAllocatorSlotAt) == -1,
+			"TweaksV: C-E-P1 reads the allocator from the stack at a byte it leaves open");
+
 		// The job not done, for the start-up summary.
 		void Fail(const std::string& why)
 		{
@@ -97,7 +104,7 @@ namespace TweaksV
 		std::atomic<void*> g_noted{ nullptr };		// the static bounds pool the set-up saw last, until another takes its place
 		int32_t g_size = 0;							// STATICBOUNDS_SIZE
 		bool g_diagnostic = false;					// DIAGNOSTIC_MODE, read once at the start: the hooks never read a switch
-		ULONGLONG g_start = 0;						// TweaksV's start, for the time of each making
+		ULONGLONG g_start = 0;						// the part's start, for the time of each making
 		std::atomic<uint64_t> g_makingLines{ 0 };	// the lines of the makings, up to the cap
 		std::atomic<bool> g_sizesSaid{ false };		// the pool's sizes are said once
 		std::atomic<bool> g_noSizeSaid{ false };	// a capacity below 0 is reported once
@@ -190,7 +197,7 @@ namespace TweaksV
 			try
 			{
 				if (g_diagnostic)
-					WriteLog(kTag, "DIAGNOSTIC: the session started " + std::to_string(g_sessionTick - g_start) + " ms after TweaksV's start (the first script "
+					WriteLog(kTag, "DIAGNOSTIC: the session started " + std::to_string(g_sessionTick - g_start) + " ms after the part's start (the first script "
 						"program placed): the static bounds check's clock runs.");
 			}
 			catch (...)
@@ -224,7 +231,7 @@ namespace TweaksV
 			const uint64_t line = g_makingLines.fetch_add(1, std::memory_order_relaxed) + 1;
 			if (line <= kMaxLinesPerKind)
 				WriteLog(kTag, "DIAGNOSTIC: the static bounds pool at " + DescribeAddress(pool) + " " + what + ", " + std::to_string(GetTickCount64() - g_start) +
-					" ms after TweaksV's start.");
+					" ms after the part's start.");
 			else if (line == kMaxLinesPerKind + 1)
 				WriteLog(kTag, "DIAGNOSTIC: " + std::to_string(kMaxLinesPerKind) + " lines of the pool's makings written - from now on they are only counted.");
 		}
@@ -258,8 +265,11 @@ namespace TweaksV
 					SetLastError(lastError);
 				}
 			}
-			else if (pool == g_noted.load(std::memory_order_relaxed))
-				g_noted.store(nullptr, std::memory_order_release);
+			else
+			{
+				void* noted = pool;
+				g_noted.compare_exchange_strong(noted, nullptr, std::memory_order_acq_rel);	// one step: another thread may note a pool meanwhile
+			}
 			return g_setUp(pool, name, third, stride, allocator);
 		}
 
@@ -346,6 +356,14 @@ namespace TweaksV
 			WriteLog(kTag, std::string("DIAGNOSTIC: ") + kSetUpWhat + " at " + DescribeAddress(setUp) + At(kSetUpPattern) + ": " + detail);
 			IsFunctionStart(allocator, detail);
 			WriteLog(kTag, std::string("DIAGNOSTIC: ") + kAllocatorWhat + " at " + DescribeAddress(allocator) + At(kAllocatorPattern) + ": " + detail);
+		}
+
+		// the set-up reads its allocator where the hook hands it on, the one byte its pattern leaves open
+		if (setUp[kAllocatorSlotAt] != kAllocatorSlot)
+		{
+			Fail(std::string(kSetUpWhat) + " at " + DescribeAddress(setUp) + " reads its allocator from the stack at +" + Hex(setUp[kAllocatorSlotAt]) +
+				", not at +" + Hex(kAllocatorSlot) + ", the slot of a fifth argument, the last the hook hands on" + At(kSetUpPattern) + ".");
+			return;
 		}
 
 		g_size = GetNumber(kStaticBoundsSize);

@@ -421,6 +421,8 @@
 // such a page - and the static bounds pool, stride 16, named StaticBounds, with the 12000 slots the fake's configuration gives it.
 //   sbbig          the configuration gives the pool 24500, more than STATICBOUNDS_SIZE's default
 //   sbnegative     the game gives the pool -1
+//   sbzero         the game gives the pool 0
+//   sbslot         the set-up's allocator read from the stack at +0x30, the byte its pattern leaves open: no pool is made
 //   sbtwice        the pool made a second time, at another address
 //   sbreuse        after the pool, another pool of stride 16 set up and allocated at the pool's address
 //   sbstride       the pool's stride becomes 24 between its set-up and its allocation
@@ -4475,6 +4477,8 @@ static void StaticBoundsMakeThePool(StaticBoundsPool* pool, const char* name, in
 // Every pool, in the game's way, the static bounds pool among the others. The names that cannot be read lie around a page of no access.
 static void StaticBoundsMakePools(int argc, wchar_t** argv)
 {
+	if (HasOption(argc, argv, L"sbslot"))		// the set-up would read a stack slot the fake's call does not fill
+		return;
 	static StaticBoundsPool other;
 	const auto pages = static_cast<char*>(VirtualAlloc(nullptr, 2 * kSbPage, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE));
 	DWORD old = 0;
@@ -4512,7 +4516,9 @@ static void StaticBoundsPlaceJump(volatile unsigned char* function, const void* 
 }
 static void StaticBoundsSetUpSites(int argc, wchar_t** argv)
 {
-	g_staticBoundsConfigured = HasOption(argc, argv, L"sbbig") ? 24500 : HasOption(argc, argv, L"sbnegative") ? -1 : 12000;
+	g_staticBoundsConfigured = HasOption(argc, argv, L"sbbig") ? 24500 : HasOption(argc, argv, L"sbnegative") ? -1 : HasOption(argc, argv, L"sbzero") ? 0 : 12000;
+	if (HasOption(argc, argv, L"sbslot"))
+		g_staticBoundsSetUp[1 + 7] = 0x30;
 	if (HasOption(argc, argv, L"sbnotstart"))
 	{
 		g_staticBoundsSetUp[0] = 0x48;
