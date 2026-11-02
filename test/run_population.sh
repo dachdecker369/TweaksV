@@ -96,6 +96,9 @@ check "each pattern named by the scanner, the first by the module; nothing more,
 # ---- the runs that wait for a summary, side by side
 ENVS='TWEAKSV_TEST_SUMMARY_MS=2000' side_by_side late "" poplate
 ENVS='TWEAKSV_TEST_SUMMARY_MS=2000' side_by_side nofill "" popstayssec
+ENVS='TWEAKSV_TEST_SUMMARY_MS=2000' side_by_side zeros "" popfill popzeros
+ENVS='TWEAKSV_TEST_SUMMARY_MS=2000' side_by_side tablelater "" popfill poptablelater
+ENVS='TWEAKSV_TEST_SUMMARY_MS=6000' side_by_side stillness "" popfill popquiet popwait popstay 11
 ENVS='TWEAKSV_TEST_SUMMARY_MS=3000' side_by_side grow "" popfill popgrow
 ENVS='TWEAKSV_TEST_SUMMARY_MS=500' side_by_side quiet "" popfill popquiet popwait
 side_by_side level1 "" popfill poplevel1 popwait
@@ -128,6 +131,9 @@ check "the tables' first values never logged, no problem" "log_lacks '\[Populati
 after_run nofill
 check "never filled: the one line, its summaries every 2 s bringing no other" "pop_line '$NOT_FILLED' && [ \$(count 'model budgets are not filled yet') -eq 1 ] && log_lacks '\[Population\].*model budget: ' && log_lacks '\[Population\].*tables:' && no_problem"
 
+after_run zeros
+check "the override -1 with the lists still zeros: not filled yet, no entry of model 0 counted; once laid out, the boot's numbers" "pop_line '$NOT_FILLED' && log_lacks '\[Population\].*256 for traffic' && log_lacks '\[Population\].*at most 1280 at once' && pop_line '$VEHICLE_AT_180' && pop_line '$PED_AT_180' && no_problem"
+
 echo "== O6 a peak between two summaries, the fields the lines name, a level a script lowered and back (the test build, summaries every 3 s)"
 after_run grow
 check "the test build's line for this measurement" "log_line '\[TweaksV\] TEST BUILD: the population summary comes every 3000 ms after its first (TWEAKSV_TEST_SUMMARY_MS=3000).\$'"
@@ -142,6 +148,10 @@ echo "== O7 no number moves (popquiet, summaries every 500 ms, 3 s more): no sec
 after_run quiet
 check "the test build's line, one summary of each budget" "log_line 'TWEAKSV_TEST_SUMMARY_MS=500' && [ \$(count 'DIAGNOSTIC: vehicle model budget: 300.0 of 429.0 MB') -eq 1 ] && [ \$(count 'DIAGNOSTIC: ped model budget: ') -eq 1 ] && [ \$(count 'model budget.s tables:') -eq 2 ]"
 check "below the stop: at the stop in none of the samples" "pop_line 'DIAGNOSTIC: vehicle model budget: 300.0 of 429.0 MB in use .*; at the stop in 0 of [0-9]* samples; VehicleStruct .*' && no_problem"
+
+after_run stillness
+stills=($(tr -d '\r' < TweaksV.log | sed -n 's/.*DIAGNOSTIC: vehicle model budget: .*no new high for \([0-9]*\) s\.$/\1/p'))
+check "summaries every 6 s, no number moving: one more line once no high has moved for two periods, 12 s, then none: ${stills[*]}" "[ ${#stills[@]} -eq 2 ] && [ ${stills[0]:-99} -lt 12 ] && [ ${stills[1]:-0} -ge 12 ] && no_problem"
 
 echo "== O8 levels, a network game and the reserve"
 after_run level1
@@ -158,9 +168,11 @@ check "the object's override of 4 in place of the schedule's 8: the stop at 556.
 
 echo "== O9 what the tables' line is for: a tunable, a raise in gameconfig.xml; a variety past the slider, a budget past an int"
 after_run tunable
-check "an entry the configuration does not give: named, in each table's line; the budget from it" "pop_line '$(tables_line vehicle 120000000)32000, 56000 and 70000 - level 3.s entry holds 120000000 bytes, not the 71500000 they give: a tunable or another mod has changed it.' && pop_line 'DIAGNOSTIC: ped model budget.s tables: story 1500000, 60000000, 73500000 and 93500000 bytes, network 1500000, 55500000, 73500000 and 93500000 bytes; the configuration.s story Level1Kb to Level3Kb: 54000, 72000 and 92000 - level 1.s entry holds 60000000 bytes, not the 55500000 they give: a tunable or another mod has changed it.' && pop_line 'DIAGNOSTIC: vehicle model budget: 428.7 of 720.0 MB in use at level 3 (the level.s 120.0 MB x variety 6.00),.*' && no_problem"
+check "an entry the configuration does not give: named, in each table's line; the budget from it" "pop_line '$(tables_line vehicle 120000000)32000, 56000 and 70000 - level 3.s entry holds 120000000 bytes, not the 71500000 they give: a tunable or another mod has changed it, or the game.s set-up has not run yet.' && pop_line 'DIAGNOSTIC: ped model budget.s tables: story 1500000, 60000000, 73500000 and 93500000 bytes, network 1500000, 55500000, 73500000 and 93500000 bytes; the configuration.s story Level1Kb to Level3Kb: 54000, 72000 and 92000 - level 1.s entry holds 60000000 bytes, not the 55500000 they give: a tunable or another mod has changed it, or the game.s set-up has not run yet.' && pop_line 'DIAGNOSTIC: vehicle model budget: 428.7 of 720.0 MB in use at level 3 (the level.s 120.0 MB x variety 6.00),.*' && no_problem"
 after_run raise
 check "the raise of the findings' 7.0, 98500 in gameconfig.xml: the entry 100000000, 600 MB, and the line says the file took" "pop_line '$(tables_line vehicle 100000000)32000, 56000 and 98500, not the defaults of 1.0.1158.16, 32000, 56000 and 70000 - the story entries are theirs: gameconfig.xml, or a game update, has changed them.' && pop_line 'DIAGNOSTIC: vehicle model budget: 428.7 of 600.0 MB in use at level 3 (the level.s 100.0 MB x variety 6.00), the requests stop at 598.5 MB,.*; at the stop in 0 of [0-9]* samples; .*' && pop_line '$PED_TABLES' && no_problem"
+after_run tablelater
+check "an entry changed after the first tables' line: that table's next line with its numbers, the other's not again, and the budget from it" "pop_line '$VEHICLE_TABLES' && pop_line '$(tables_line vehicle 100000000)32000, 56000 and 98500, not the defaults of 1.0.1158.16, 32000, 56000 and 70000 - the story entries are theirs: gameconfig.xml, or a game update, has changed them.' && [ \$(count 'vehicle model budget.s tables:') -eq 2 ] && [ \$(count 'ped model budget.s tables:') -eq 1 ] && pop_line 'DIAGNOSTIC: vehicle model budget: 428.7 of 600.0 MB in use .*' && no_problem"
 after_run variety
 check "a variety of 10: its line, once for each budget, and the budget by it" "pop_line 'DIAGNOSTIC: vehicle model budget: the variety has been 10.00, above the 6.00 of the game.s slider - settings.xml or another mod has changed it.' && pop_line 'DIAGNOSTIC: ped model budget: the variety has been 10.00, above the 6.00 of the game.s slider - settings.xml or another mod has changed it.' && [ \$(count 'the variety has been') -eq 2 ] && pop_line 'DIAGNOSTIC: vehicle model budget: 428.7 of 715.0 MB in use at level 3 (the level.s 71.5 MB x variety 10.00),.*' && no_problem"
 after_run overflow
@@ -195,9 +207,9 @@ check "the measurement goes on: announced, both lines; no problem of the part, n
 
 echo "== O12 a thread that cannot start: logged, never a problem"
 after_run nosampling
-check "no sampling thread: its lines, and each summary takes a sample of its own: the first finds the fill, not yet taken from one sample, the next counts" "log_line '\[TweaksV\] The population sampling thread could not be started (Windows error 8).' && pop_line 'DIAGNOSTIC: the model budgets are sampled once a summary alone: their sampling thread could not be started.' && pop_line '$NOT_FILLED' && pop_line 'DIAGNOSTIC: vehicle model budget: .*; at the stop in 1 of 1 samples; .*' && no_problem"
+check "no sampling thread: its line, the announcement's other words, and each summary takes a sample of its own: the first finds the fill, not yet taken from one sample, the next counts" "log_line '\[TweaksV\] The population sampling thread could not be started (Windows error 8).' && pop_line 'DIAGNOSTIC: the model budgets, in the population object at $A (O-E-C1): sampled once a summary alone, their sampling thread not started, nothing written; .*' && log_lacks 'sampled every second' && pop_line '$NOT_FILLED' && pop_line 'DIAGNOSTIC: vehicle model budget: .*; at the stop in 1 of 1 samples; .*' && no_problem"
 after_run nosummary
-check "no summary thread: its lines, no line of a budget" "log_line '\[TweaksV\] The population summary thread could not be started (Windows error 8).' && pop_line '$NOT_MEASURED its summary thread could not be started.' && log_lacks '\[Population\].*model budget: ' && no_problem"
+check "no summary thread: its lines, no announcement, no line of a budget" "log_line '\[TweaksV\] The population summary thread could not be started (Windows error 8).' && pop_line '$NOT_MEASURED its summary thread could not be started.' && log_lacks '\[Population\] DIAGNOSTIC: the model budgets, in the population' && log_lacks '\[Population\].*model budget: ' && no_problem"
 
 # ---- each pattern missing and each site not as the findings have it: runs of 2 seconds, side by side
 for label in $LABELS; do

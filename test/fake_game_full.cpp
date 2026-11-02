@@ -511,6 +511,11 @@
 //                  read, a network table 16 bytes further on in either, behind where its story table's leads; odd, 2 bytes on; byte, 1 byte
 //                  on; next, 8 bytes on
 //   popwait        stays until the log holds the peds' first line, 25 seconds at most; popstayssec until the 8 s after the first "not filled yet"
+//   popstay N      stays N seconds more, after the rest
+//   popzeros       with popfill: the lists still zeros, the override -1; once the log says they are not filled yet, the lists laid out, then it
+//                  waits for their line
+//   poptablelater  with popfill; once the first summary is in the log, VehiclesSP's Level3Kb 98500 and its entry 100,000,000, then it waits for
+//                  the vehicles' line that has them
 //   popgetterbyte, popgetterbytev, popgatelist, popgatefloor, popgatecall
 //                  a byte changed in the ped getter or the vehicle getter; at the gate's +0x7A, its +0xEA or its call's E8
 //   popnotstart    the byte before the tables' set-up 48: no function start there
@@ -5407,6 +5412,20 @@ static uint64_t PopHashOfData()
 	return hash;
 }
 
+static void PopLayOutLists()
+{
+	PopList(0x3600, 300, 94);
+	PopList(0x3A00, 0, 0);
+	PopList(0x3E00, 0, 0);
+	PopList(0x4200, 0, 0);
+	PopList(0x4A00, 400, 8);
+	PopList(kPopPopulationList, kPopFirstModel, 19);
+	PopList(0x5204, 500, 5);
+	PopList(0x5604, 510, 4);
+	PopList(0x5A04, 0, 0);
+	PopList(0x5E04, 520, 3);
+}
+
 // The data as my boot read them at 180 s, then what an option asks of them.
 static void PopFill(int argc, wchar_t** argv)
 {
@@ -5424,16 +5443,8 @@ static void PopFill(int argc, wchar_t** argv)
 	PopField<int32_t>(kPopPedUsed, 305127424);
 	PopField<int32_t>(kPopVehicleUsed, 428679168);
 	PopField<int32_t>(0x623C, 10100000);
-	PopList(0x3600, 300, 94);
-	PopList(0x3A00, 0, 0);
-	PopList(0x3E00, 0, 0);
-	PopList(0x4200, 0, 0);
-	PopList(0x4A00, 400, 8);
-	PopList(kPopPopulationList, kPopFirstModel, 19);
-	PopList(0x5204, 500, 5);
-	PopList(0x5604, 510, 4);
-	PopList(0x5A04, 0, 0);
-	PopList(0x5E04, 520, 3);
+	if (!HasOption(argc, argv, L"popzeros"))
+		PopLayOutLists();
 	PopPoolField(0x18, 200);
 	PopPoolField(0x28, 102 | 0x40000000);	// a flag in the top two bits
 	t.pool = g_popPool;
@@ -5709,6 +5720,20 @@ static void PopActions(int argc, wchar_t** argv)
 		g_popDataHash = PopHashOfData();
 		RtWaitFor("DIAGNOSTIC: ped model budget: ", 10000);
 	}
+	if (HasOption(argc, argv, L"popzeros") && RtWaitFor("the model budgets are not filled yet", 25000))
+	{
+		PopLayOutLists();
+		g_popDataHash = PopHashOfData();
+		RtWaitFor("DIAGNOSTIC: ped model budget: ", 10000);
+	}
+	if (HasOption(argc, argv, L"poptablelater") && RtWaitFor("DIAGNOSTIC: ped model budget: ", 25000))
+	{
+		const uint32_t kb = 98500;
+		memcpy(g_popConfiguration + 0x514, &kb, sizeof(kb));
+		g_popTables->vehicleStory[3] = 100000000;
+		g_popDataHash = PopHashOfData();
+		RtWaitFor("428.7 of 600.0 MB", 10000);
+	}
 	if (HasOption(argc, argv, L"popgone"))
 	{
 		DWORD old = 0;
@@ -5761,6 +5786,9 @@ static void PopActions(int argc, wchar_t** argv)
 		Sleep(3000);
 	if (HasOption(argc, argv, L"popstayssec") && RtWaitFor("the model budgets are not filled yet", 25000))
 		Sleep(8000);
+	for (int i = 2; i + 1 < argc; i++)
+		if (wcscmp(argv[i], L"popstay") == 0)
+			Sleep(1000 * static_cast<DWORD>(_wtoi(argv[i + 1])));
 }
 
 // "pop sites: as placed | pop data: as placed | pop rvas: object 0x..., ... | " - TweaksV writes nothing, and where the data lie, for the

@@ -19,7 +19,9 @@
 // A pattern missing, a site not as expected or a thread that cannot start is logged, not reported - the measurement is an aid
 // (NOTES.md, T-DIAG) - and nothing more is measured. A writer of a story table besides the set-up's three stores would undo a
 // raise and not the measurement, so it is a line and the measurement goes on.
-// Written for TweaksV from the research's own findings in the game's code (PATTERNS.md); no code of anyone's was read.
+// Written for TweaksV from the research's own findings in the game's code (PATTERNS.md); the idea of the two budgets, the key
+// VehicleModelBudget and "fewer repeated ped models", is that of Resource Extensions [Enhanced] by Koukol, whose plugin was not read
+// (CREDITS.md).
 
 #include "TweaksVPopulation.h"
 
@@ -42,6 +44,10 @@
 #include "TweaksVPatterns.h"
 #include "TweaksVScanner.h"
 #include "TweaksVSummary.h"
+
+#ifdef TWEAKSV_TEST_BUILD
+#include <cwchar>
+#endif
 
 namespace TweaksV
 {
@@ -434,10 +440,26 @@ namespace TweaksV
 			}
 		}
 
+		// True once the game has laid out the lists a sample counts. A list of zeros would count 256 entries of model 0, in highs that
+		// nothing lowers. A laid-out list holds an entry that is not 0 whether or not it starts with model 0, its free ones 0xFFFF.
+		bool ListsAreLaidOut()
+		{
+			for (const auto& lists : kLists)
+				for (const ListAt& list : lists)
+				{
+					bool laidOut = !list.words;
+					for (size_t i = 0; i < kListEntries && !laidOut; i++)
+						laidOut = Field<uint32_t>(list.at + i * sizeof(uint32_t)) != 0;
+					if (!laidOut)
+						return false;
+				}
+			return true;
+		}
+
 		// One sample of both budgets, with the lock held. Before the game's init the object is zeros, and the tables hold other
 		// numbers, which must not read as a change: its override, -1 after that, tells, though the tables' set-up comes last in the
-		// init and the findings do not give when the override is stored before it. So the fill counts from a second sample running
-		// that finds the override not 0, half a sampling period or more after the first.
+		// init and the findings do not give when the override is stored before it, nor the lists. So the fill counts from a second
+		// sample running that finds the override not 0 and the lists laid out, half a sampling period or more after the first.
 		void TakeSample()
 		{
 			State& state = g_state;
@@ -448,7 +470,7 @@ namespace TweaksV
 			const int32_t override = Field<int32_t>(kOverrideAt);
 			if (!state.filled)
 			{
-				if (override == 0)
+				if (override == 0 || !ListsAreLaidOut())
 					state.fillSeenMs = 0;
 				else if (state.fillSeenMs == 0)
 					state.fillSeenMs = now;
@@ -499,14 +521,33 @@ namespace TweaksV
 		uint64_t g_tablesTries = 0;
 		bool g_varietySaid[kBudgets] = {};
 
+		// How long no high may move before one more line says so: two minutes, two summaries' periods, in a test build by
+		// TWEAKSV_TEST_SUMMARY_MS too, so that a suite sees it within the minute a fake game runs.
+		uint64_t NoHighLineMs()
+		{
+#ifdef TWEAKSV_TEST_BUILD
+			wchar_t text[8]{};
+			const DWORD length = GetEnvironmentVariableW(L"TWEAKSV_TEST_SUMMARY_MS", text, 8);
+			if (length > 0 && length < 8)
+			{
+				const long ms = wcstol(text, nullptr, 10);
+				if (ms >= 100 && ms <= 60000)
+					return 2 * static_cast<uint64_t>(ms);
+			}
+#endif
+			return 2 * uint64_t{ kSummaryEveryMs };
+		}
+
 		// A sample of its own, so that a summary is fresh and comes without the sampling thread too; then what changes a summary:
-		// whether it could read and the game has filled the tables, each budget's highs and its time at the stop, its level, its
-		// tables and its variety, the rest in whole MB or as counted; and every time, while a table's line is still to come.
+		// whether it could read and the game has filled the tables, each budget's highs and its time at the stop, whether its highs
+		// have stood still past NoHighLineMs, so that a drive's last line says so, its level, its tables and its variety, the rest in
+		// whole MB or as counted; and every time, while a table's line is still to come.
 		uint64_t Numbers()
 		{
 			const ExclusiveLock lock(g_lock);
 			TakeSample();
 			const State& state = g_state;
+			const uint64_t now = GetTickCount64();
 			uint64_t hash = 14695981039346656037ull;
 			const auto mix = [&hash](uint64_t value) { hash = (hash ^ value) * 1099511628211ull; };
 			mix(state.unreadable);
@@ -515,6 +556,7 @@ namespace TweaksV
 			for (const BudgetState& b : state.budgets)
 			{
 				mix(b.atStop);
+				mix(b.samples != 0 && now - b.lastHighMs > NoHighLineMs());
 				mix(b.level);
 				mix(b.lowestLevel);
 				mix(std::bit_cast<uint32_t>(b.variety));
@@ -592,7 +634,7 @@ namespace TweaksV
 				if (b.tables[level] != expected)
 				{
 					WriteLog(kTag, line + " - level " + std::to_string(level) + "'s entry holds " + std::to_string(b.tables[level]) + " bytes, not the " + std::to_string(expected) +
-						" they give: a tunable or another mod has changed it.");
+						" they give: a tunable or another mod has changed it, or the game's set-up has not run yet.");
 					return true;
 				}
 			}
@@ -1052,14 +1094,14 @@ namespace TweaksV
 			NotMeasured(why);
 			return;
 		}
-		WriteLog(kTag, "DIAGNOSTIC: the model budgets, in the population object at " + DescribeAddress(g_sites.object) + At(kContext) + ": sampled every second, nothing written; their tables are logged once the game "
-			"has filled them and whenever they change, each budget's line after 10 seconds, then every minute while its highs or its samples at the stop change.");
 		if (!StartMeasurement<kMeasurement>())	// its line is written
 		{
 			NotMeasured("its summary thread could not be started.");
 			return;
 		}
-		if (!StartModuleThread(SampleBudgets, "population sampling"))	// its line is written; each summary takes a sample of its own
-			WriteLog(kTag, "DIAGNOSTIC: the model budgets are sampled once a summary alone: their sampling thread could not be started.");
+		const bool sampled = StartModuleThread(SampleBudgets, "population sampling");	// its line is written; each summary takes a sample of its own
+		WriteLog(kTag, "DIAGNOSTIC: the model budgets, in the population object at " + DescribeAddress(g_sites.object) + At(kContext) + (sampled ? ": sampled every second" :
+			": sampled once a summary alone, their sampling thread not started") + ", nothing written; their tables are logged once the game has filled them and whenever they change, "
+			"each budget's line after 10 seconds, then every minute while its highs or its samples at the stop change.");
 	}
 }
