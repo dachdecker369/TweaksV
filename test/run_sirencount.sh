@@ -31,7 +31,7 @@ SITES="\[SirenSettings\] DIAGNOSTIC: .* (I-E-B[1-4])"
 
 echo "== C1 DIAGNOSTIC_MODE=0: nothing looked for, the call not redirected, the sirens drawn as the game draws them"
 fresh_ini; out=$(game full_game.exe scdraw); echo "      $out"
-check "no siren count pattern looked for, no SirenSettings line" "log_lacks 'I-E-B' && log_lacks '\[SirenSettings\]'"
+check "no siren count pattern looked for, no SirenSettings line but the siren IDs' two" "log_lacks 'I-E-B' && log_lacks '\[SirenSettings\] DIAGNOSTIC' && [ \$(count '\[SirenSettings\]') -eq 2 ]"
 check "the stand-ins built; 800 passes through the renderer itself, its arguments, result and last error as the game's, no lookup" "has '$BUILT' && has '$UNCOUNTED'"
 check "sites and data as placed, no call stub of its own (the 7 are the other parts'), every page its own protection" "has '$PLACED' && has 'stubs: 7, all RX' && has 'protect: all restored (RX)'"
 
@@ -109,7 +109,7 @@ fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe scdraw scnounwind)
 check "its site line and the module's line, word for word; the call not redirected; no problem" "sc_line 'DIAGNOSTIC: find-bone-by-name at RVA 0x[0-9A-F]*, no unwind data, bone count offset at RVA 0x[0-9A-F]* holds 0x5E (I-E-B4)' && sc_line '$NOT_MEASURED find-bone-by-name at RVA 0x[0-9A-F]* is not a function start (no unwind data) (I-E-B4).' && has '$UNCOUNTED' && has 'stubs: 11, all RX' && log_lacks 'PROBLEM'"
 
 echo "== C11 none of the game code present (plain fake game): logged, not a problem"
-fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game plain_game.exe)
+fresh_ini; setkey DIAGNOSTIC_MODE 1; setkey LARGE_SIREN_IDS 0 SIRENSETTINGS; out=$(game plain_game.exe)
 check "the scanner's four misses and the module's line, word for word; none of it a problem" "[ \$(grep -c -E 'Pattern I-E-B[1-4] not found: ' TweaksV.log) -eq 4 ] && sc_line '$NOT_MEASURED I-E-B1 was not found.' && log_lacks '\[SirenSettings\] PROBLEM'"
 
 echo "== C12 DRY_RUN=1 with DIAGNOSTIC_MODE=1: the sites found and checked, the call not redirected, nothing counted"
@@ -118,7 +118,7 @@ check "the four patterns found once each, the four site lines" "[ \$(grep -c -E 
 check "the would line and the module's line, word for word; nothing written, drawn through the renderer itself; no stub; no problem" "sc_line 'DRY_RUN: would redirect the siren lights. renderer call at RVA 0x[0-9A-F]*.' && sc_line '$NOT_MEASURED DRY_RUN - the siren lights. renderer call is not redirected, so nothing is counted.' && log_lacks 'renderer call at RVA 0x[0-9A-F]*: E8' && has '$UNCOUNTED' && has '$PLACED' && has 'stubs: 0,' && log_lacks 'PROBLEM'"
 
 echo "== C13 Windows' dynamic code policy: no call stub can be made - logged under the part, not its problem, nothing redirected"
-fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe scdraw nodyncode)
+fresh_ini; setkey DIAGNOSTIC_MODE 1; setkey LARGE_SIREN_IDS 0 SIRENSETTINGS; out=$(game full_game.exe scdraw nodyncode)
 check "the stubs' line and the module's line, word for word; the call as it was; no problem of the part's" "sc_line 'The call stubs could not be made read+execute (.*) - nothing is changed.' && sc_line '$NOT_MEASURED the siren lights. renderer call at RVA 0x[0-9A-F]* could not be redirected (details above).' && has '$UNCOUNTED' && log_lacks '\[SirenSettings\] PROBLEM'"
 
 echo

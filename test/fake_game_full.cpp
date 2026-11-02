@@ -200,7 +200,21 @@
 // and the vehicle variations with their tables and the two ID members' data (type 0x01), the XML reader, the base and a
 // pack's loops and builders with the four lea of the ID table, the dedupe and its loop, the three constructors, the init's
 // last fill of the table and its call of the base loader, the getter - and so are the carcols data with 24 siren settings of
-// 0x5E8 bytes and the ID table of 256 entries with their 24 IDs; the options, all for the measurement with DIAGNOSTIC_MODE:
+// 0x5E8 bytes and the ID table of 256 entries with their 24 IDs. The part writes into them; the ID's loads and stores, the dedupe
+// and its loop and the constructors run as code from their bytes, so that what it writes is proved by what it does, and the
+// loaders, C++ of the fake's own, go by the sites as they are - the table the lea leads to, the width of an ID, the limit - and
+// the two members' types. A pack's carcols callback (I-E-H1) and the base builder (I-E-H2) are real code around them, a NOP
+// before each. The options:
+//   siload        no settings yet, the table zeros, until the game's init runs after TweaksV has started: its table filled and
+//                 the base loader called through the site's call, which reads the base files and their variations
+//   sitwice       with siload: the init a second time
+//   siclash       with siload: a base setting's ID taken by an earlier one, the next without an ID
+//   sipacks       with siload: three packs' carcols through the callback's start - IDs past 255, one taken, one twice, one without
+//                 an ID, the low byte 0xFF, none at all - and their variations
+//   siflood       with siload: 20,001 packs' carcols of no settings
+//   sibyte0       the byte before the two hooked functions a 00: neither where a function starts
+//   silimit       a base builder's limit 65537, past the table's fixed size
+//   sidisagree    a pack's builder's second limit 512
 //   sipack        12 s after TweaksV has loaded, a pack's 6 settings appended and their IDs entered; the fake stays to 15 s
 //   sinone        the carcols pointer null - no settings loaded yet - until 12 s after TweaksV has loaded; stays to 15 s
 //   simany        300 settings, given their IDs as the game's builder gives them: the table full, the ID 255 to the last 45
@@ -782,14 +796,17 @@ volatile unsigned char g_sirenIdsT1[0xCD] = { 0xCC };
 volatile unsigned char g_sirenIdsT2[0xDA] = { 0xCC };
 volatile unsigned char g_sirenIdsT3[0xC6] = { 0xCC };
 volatile unsigned char g_sirenIdsT4[0xD6] = { 0xCC };
-volatile unsigned char g_sirenIdsD1[26] = { 0xCC };
-volatile unsigned char g_sirenIdsD2[35] = { 0xCC };
-volatile unsigned char g_sirenIdsC1[0xCD] = { 0xCC };
+volatile unsigned char g_sirenIdsD1[27] = { 0xCC };
+volatile unsigned char g_sirenIdsD2[43] = { 0xCC };
+volatile unsigned char g_sirenIdsC1[0xD2] = { 0xCC };
 volatile unsigned char g_sirenIdsC2[31] = { 0xCC };
 volatile unsigned char g_sirenIdsC3[35] = { 0xCC };
 volatile unsigned char g_sirenIdsR1[21] = { 0xCC };
 volatile unsigned char g_sirenIdsM1[32] = { 0xCC };
 volatile unsigned char g_sirenIdsLeaExtra[8] = { 0xCC };
+volatile unsigned char g_sirenIdsH1[64] = { 0xCC };
+volatile unsigned char g_sirenIdsH2[64] = { 0xCC };
+volatile unsigned char g_sirenIdsRun[0x98] = { 0xCC };	// not a site: the fake's way into the sites as code
 
 // The siren count: the vehicle lights' calls of the siren lights' renderer - the E8 at +13 - and of the siren settings getter -
 // the E8 at +24, its rel32 past the pattern (I-E-B1); a read of a siren's glass bone, siren_glass1's byte at +4 (I-E-B3). The
@@ -1788,10 +1805,15 @@ static void WeaponComponentsReport()
 // "SirenSettings") - the members' data the two parser registrations' tables lead to, the ID members of type 0x01 and
 // every member's offset at +0x08 as the game writes it when it registers the structure; the members' offsets; the ID
 // table, per ID the position of its setting, 0xFF free; the carcols data with the siren settings' array at +0x48, their
-// count at +0x50 and capacity at +0x52; the game's pointer to it - then the set-up, the late actions and the report field.
+// count at +0x50 and capacity at +0x52; the game's pointer to it - then the sites as code, the fake's loaders, the set-up, the
+// late actions and the report's fields.
 static void SetRel32(const Site& site, const void* target);
+static const unsigned char* Rel32Target(const Site& site);
 static const unsigned char* ImageEnd();
+static bool InImage(const void* p);
 static bool HasOption(int argc, wchar_t** argv, const wchar_t* option);
+static DWORD ProtectionOf(const volatile void* p);
+static void CheckData(const volatile unsigned char* bytes, size_t size);
 struct SirenIdsMember { uint64_t nameHash; uint64_t offset; unsigned char type; unsigned char rest[15]; };
 static SirenIdsMember g_sirenIdsMembersStorage[28];			// the siren settings' 20, the variations' 7 and an eighth
 static SirenIdsMember* volatile g_sirenIdsMembers = g_sirenIdsMembersStorage;
@@ -1814,6 +1836,7 @@ constexpr size_t kSirenIdsSettingSize = 0x5E8;
 static unsigned char* g_sirenIdsSettings = nullptr;			// the siren settings' array, allocated by SirenIdsSetup
 static size_t g_sirenIdsCapacity = 0;
 static bool g_sirenIdsPack = false, g_sirenIdsNone = false, g_sirenIdsUnreadable = false, g_sirenIdsRegister = false;
+static bool g_sirenIdsLoad = false, g_sirenIdsTwice = false, g_sirenIdsClash = false, g_sirenIdsPacks = false, g_sirenIdsFlood = false;
 
 // The sites, each with a hash of its bytes as placed, and one of the data, for the report
 struct SirenIdsSite { volatile unsigned char* bytes; size_t size; uint64_t placed; };
@@ -1822,8 +1845,11 @@ static SirenIdsSite g_sirenIdsSites[] = { { g_sirenIdsP1, sizeof(g_sirenIdsP1), 
 	{ g_sirenIdsT3, sizeof(g_sirenIdsT3), 0 }, { g_sirenIdsT4, sizeof(g_sirenIdsT4), 0 }, { g_sirenIdsD1, sizeof(g_sirenIdsD1), 0 },
 	{ g_sirenIdsD2, sizeof(g_sirenIdsD2), 0 }, { g_sirenIdsC1, sizeof(g_sirenIdsC1), 0 }, { g_sirenIdsC2, sizeof(g_sirenIdsC2), 0 },
 	{ g_sirenIdsC3, sizeof(g_sirenIdsC3), 0 }, { g_sirenIdsR1, sizeof(g_sirenIdsR1), 0 }, { g_sirenIdsM1, sizeof(g_sirenIdsM1), 0 },
-	{ g_sirenIdsLeaExtra, sizeof(g_sirenIdsLeaExtra), 0 } };
+	{ g_sirenIdsLeaExtra, sizeof(g_sirenIdsLeaExtra), 0 }, { g_sirenIdsH1, sizeof(g_sirenIdsH1), 0 }, { g_sirenIdsH2, sizeof(g_sirenIdsH2), 0 } };
+constexpr size_t kSirenIdsSites = sizeof(g_sirenIdsSites) / sizeof(g_sirenIdsSites[0]);
+static unsigned char g_sirenIdsCopy[kSirenIdsSites][0xE0];	// their bytes as placed
 static uint64_t g_sirenIdsDataPlaced = 0;
+static unsigned char g_sirenIdsTypesPlaced[2] = {};			// the two ID members' types as placed; the data's hash leaves them out
 constexpr uint64_t kSirenIdsHashStart = 0xCBF29CE484222325ull;
 static uint64_t SirenIdsHash(uint64_t hash, const volatile unsigned char* bytes, size_t size)
 {
@@ -1835,7 +1861,10 @@ static uint64_t SirenIdsData()
 {
 	uint64_t hash = SirenIdsHash(kSirenIdsHashStart, g_sirenIdsTable, sizeof(g_sirenIdsTableStorage));
 	hash = SirenIdsHash(hash, g_sirenIdsCarcols, sizeof(g_sirenIdsCarcolsStorage));
-	hash = SirenIdsHash(hash, reinterpret_cast<const unsigned char*>(g_sirenIdsMembers), sizeof(g_sirenIdsMembersStorage));
+	SirenIdsMember members[28];
+	memcpy(members, g_sirenIdsMembers, sizeof(members));
+	members[0].type = members[26].type = 0;
+	hash = SirenIdsHash(hash, reinterpret_cast<const unsigned char*>(members), sizeof(members));
 	hash = SirenIdsHash(hash, reinterpret_cast<const unsigned char*>(g_sirenIdsSettingTable), sizeof(g_sirenIdsSettingTableStorage));
 	hash = SirenIdsHash(hash, reinterpret_cast<const unsigned char*>(g_sirenIdsVariationTable), sizeof(g_sirenIdsVariationTableStorage));
 	hash = SirenIdsHash(hash, reinterpret_cast<const unsigned char*>(g_sirenIdsSettingOffsets), sizeof(g_sirenIdsSettingOffsetsStorage));
@@ -1860,28 +1889,63 @@ static void SirenIdsRel32(volatile unsigned char* site, int offset, const void* 
 	SetRel32(field, target);
 }
 
+// A site run as code, from a byte of it to its next ret, with the registers it reads and writes as they are here
+struct SirenIdsRegs { uint64_t rax, rcx, rdx, rbx, rbp, rsi, rdi, r13, r15; };
+static void SirenIdsRunAt(SirenIdsRegs& regs, const volatile unsigned char* code)
+{
+	using Run = void (*)(SirenIdsRegs*, const void*);
+	reinterpret_cast<Run>(const_cast<unsigned char*>(g_sirenIdsRun))(&regs, const_cast<const unsigned char*>(code));
+}
+
+// How the game's code stands: the table its lea loads, the width of an ID, the free-ID searches' limit - as placed before
+// TweaksV loads and read from the sites once it has started
+static unsigned char* g_sirenIdsLoaderTable = g_sirenIdsTableStorage;
+static size_t g_sirenIdsWidth = 1;
+static uint32_t g_sirenIdsLimit = 256;
+static void SirenIdsReadCode()
+{
+	const Site lea = { g_sirenIdsT4, 16, 0 };
+	g_sirenIdsLoaderTable = const_cast<unsigned char*>(Rel32Target(lea));
+	g_sirenIdsWidth = g_sirenIdsT4[0x43] == 0xB7 ? 2 : 1;
+	memcpy(&g_sirenIdsLimit, const_cast<const unsigned char*>(g_sirenIdsT4 + 0x84), sizeof(g_sirenIdsLimit));
+}
+
+// The ID at a setting, as wide as the game's code takes it
+static unsigned SirenIdsLoad(const unsigned char* at)
+{
+	uint16_t id = 0;
+	memcpy(&id, at, g_sirenIdsWidth);
+	return id;
+}
+
 // The game's builder: a setting whose ID is none (0xFF) or taken gets the first free one - none when none is free - and the
 // table the setting's position, a byte; then the settings' count
-static void SirenIdsGive(size_t position, unsigned char wanted)
+static void SirenIdsGive(size_t position, unsigned wanted)
 {
-	unsigned char id = wanted;
-	if (id == 0xFF || g_sirenIdsTable[id] != 0xFF)
+	unsigned id = wanted;
+	if (id == 0xFF || g_sirenIdsLoaderTable[id] != 0xFF)
 	{
 		id = 0xFF;
-		for (unsigned candidate = 0; candidate < 256; candidate++)
-			if (g_sirenIdsTable[candidate] == 0xFF)
+		for (unsigned candidate = 0; candidate < g_sirenIdsLimit; candidate++)
+			if (g_sirenIdsLoaderTable[candidate] == 0xFF)
 			{
-				id = static_cast<unsigned char>(candidate);
+				id = candidate;
 				break;
 			}
 	}
-	g_sirenIdsSettings[position * kSirenIdsSettingSize] = id;
-	g_sirenIdsTable[id] = static_cast<unsigned char>(position);
+	memcpy(g_sirenIdsSettings + position * kSirenIdsSettingSize, &id, g_sirenIdsWidth);
+	g_sirenIdsLoaderTable[id] = static_cast<unsigned char>(position);
 }
 static void SirenIdsCount(size_t count)
 {
 	const uint16_t value = static_cast<uint16_t>(count);
 	memcpy(g_sirenIdsCarcols + 0x50, &value, sizeof(value));
+}
+static size_t SirenIdsCounted()
+{
+	uint16_t value = 0;
+	memcpy(&value, g_sirenIdsCarcols + 0x50, sizeof(value));
+	return value;
 }
 // The game registering the two structures: every member's offset into its data
 static void SirenIdsRegister()
@@ -1890,6 +1954,186 @@ static void SirenIdsRegister()
 		g_sirenIdsMembers[i].offset = g_sirenIdsSettingOffsets[i];
 	for (size_t i = 0; i < 7; i++)
 		g_sirenIdsMembers[20 + i].offset = g_sirenIdsVariationOffsets[i];
+}
+
+// The parser's reader of a file's value: as wide as the member's type says, the rest of the value cut (types 1 and 2 a byte)
+static void SirenIdsParse(unsigned char* at, unsigned value, const SirenIdsMember& member)
+{
+	memcpy(at, &value, member.type == 0x03 || member.type == 0x04 ? 2 : 1);
+}
+
+// The settings' and variations' constructors, run as code
+static void SirenIdsMakeSetting(unsigned char* setting)
+{
+	SirenIdsRegs regs{};
+	regs.rcx = reinterpret_cast<uint64_t>(setting);
+	SirenIdsRunAt(regs, g_sirenIdsC1);
+}
+static void SirenIdsMakeVariation(unsigned char* variation, bool inPlace)
+{
+	SirenIdsRegs regs{};
+	regs.rcx = regs.rax = reinterpret_cast<uint64_t>(variation);
+	if (inPlace)
+		SirenIdsRunAt(regs, g_sirenIdsC2);
+	else
+		SirenIdsRunAt(regs, g_sirenIdsRun + 0x88);	// sub rsp, 0x28, then on to the allocating constructor's stores, which end with add rsp, 0x28
+}
+
+// A variation of a file: the ID its file gives through the parser, then the loaders' lookup of its setting's position; true if
+// it leads to the setting that now has that ID
+static int g_sirenIdsVariations = 0, g_sirenIdsVariationsRight = 0;
+static void SirenIdsVariation(unsigned idInFile, bool inPlace)
+{
+	unsigned char variation[0x50];
+	memset(variation, 0xCC, sizeof(variation));
+	SirenIdsMakeVariation(variation, inPlace);
+	SirenIdsParse(variation + 0x4B, idInFile, g_sirenIdsMembers[26]);
+	const unsigned id = SirenIdsLoad(variation + 0x4B);
+	const size_t count = SirenIdsCounted();
+	const unsigned char position = g_sirenIdsLoaderTable[id];
+	g_sirenIdsVariations++;
+	if (id != 0xFF && position < count && SirenIdsLoad(g_sirenIdsSettings + position * kSirenIdsSettingSize) == id)
+		g_sirenIdsVariationsRight++;
+}
+
+// The base builder's body, behind its prologue in .fakesit: the rule over the settings the base file gave
+constexpr uint64_t kSirenIdsResult = 0x5151515151515151ull;
+constexpr DWORD kSirenIdsLastError = 0x515;
+static uint64_t SirenIdsBaseBuilder(unsigned char* carcols)
+{
+	unsigned char* array = nullptr;
+	memcpy(&array, carcols + 0x48, sizeof(array));
+	const size_t count = SirenIdsCounted();
+	for (size_t i = 0; i < count; i++)
+		SirenIdsGive(i, SirenIdsLoad(array + i * kSirenIdsSettingSize));
+	SetLastError(kSirenIdsLastError);
+	return kSirenIdsResult;
+}
+
+// The base loader: the base file's settings, each constructed and its ID through the parser, the builder through its start,
+// the variations; the carcols pointer set. What the call brought and found is kept for the report.
+static int g_sirenIdsLoaderCalls = 0, g_sirenIdsTableFree = 0, g_sirenIdsLoaderArguments = 0, g_sirenIdsBuilderKept = 0;
+constexpr uint64_t kSirenIdsArguments[4] = { 0x1111111111111111ull, 0x2222222222222222ull, 0x3333333333333333ull, 0x4444444444444444ull };
+static uint64_t SirenIdsBaseLoader(uint64_t first, uint64_t second, uint64_t third, uint64_t fourth)
+{
+	g_sirenIdsLoaderCalls++;
+	if (first == kSirenIdsArguments[0] && second == kSirenIdsArguments[1] && third == kSirenIdsArguments[2] && fourth == kSirenIdsArguments[3])
+		g_sirenIdsLoaderArguments++;
+	SirenIdsReadCode();
+	bool isFree = true;
+	for (uint32_t id = 0; id < g_sirenIdsLimit; id++)
+		isFree = isFree && g_sirenIdsLoaderTable[id] == 0xFF;
+	if (isFree)
+		g_sirenIdsTableFree++;
+	constexpr size_t kBase = 24;
+	for (size_t i = 0; i < kBase; i++)
+	{
+		unsigned char* const setting = g_sirenIdsSettings + i * kSirenIdsSettingSize;
+		SirenIdsMakeSetting(setting);
+		if (g_sirenIdsClash && i == 11)	// no ID in the file
+			continue;
+		SirenIdsParse(setting, g_sirenIdsClash && i == 10 ? 7 : static_cast<unsigned>(1 + i), g_sirenIdsMembers[0]);
+	}
+	SirenIdsCount(kBase);
+	using Builder = uint64_t (*)(unsigned char*);
+	SetLastError(0);
+	const uint64_t result = reinterpret_cast<Builder>(const_cast<unsigned char*>(g_sirenIdsH2 + 1))(g_sirenIdsCarcols);
+	if (result == kSirenIdsResult && GetLastError() == kSirenIdsLastError)
+		g_sirenIdsBuilderKept++;
+	const unsigned variations[] = { 1, 13, 24 };
+	for (const unsigned id : variations)
+		SirenIdsVariation(id, true);
+	g_sirenIdsPointer[0] = g_sirenIdsCarcols;
+	SetLastError(kSirenIdsLastError);
+	return kSirenIdsResult;
+}
+
+// The game's init: its own table filled, then the base loader through the call at the site
+static int g_sirenIdsInitKept = 0, g_sirenIdsInits = 0;
+static void SirenIdsInit()
+{
+	memset(g_sirenIdsTable, 0xFF, sizeof(g_sirenIdsTableStorage));
+	const Site call = { g_sirenIdsR1, 14, 0 };
+	using Loader = uint64_t (*)(uint64_t, uint64_t, uint64_t, uint64_t);
+	SetLastError(0);
+	const uint64_t result = reinterpret_cast<Loader>(const_cast<unsigned char*>(Rel32Target(call)))(kSirenIdsArguments[0], kSirenIdsArguments[1], kSirenIdsArguments[2],
+		kSirenIdsArguments[3]);
+	g_sirenIdsInits++;
+	if (result == kSirenIdsResult && GetLastError() == kSirenIdsLastError)
+		g_sirenIdsInitKept++;
+}
+
+// A pack's file: its name as the game's data file entry holds it at +0, and the IDs of its settings, -1 for none given
+struct SirenIdsFile { char name[0xA8]; int ids[8]; size_t count; };
+static SirenIdsFile g_sirenIdsFiles[] = {
+	{ "dlcpacks:/sipack1/data/carcols.meta", { 300, 1534, 40, 5, -1, 300 }, 6 },
+	{ "dlcpacks:/sipack2/data/carcols.meta", { 511, 767, 511 }, 3 },
+	{ "dlcpacks:/sipack3/data/carcols.meta", {}, 0 },
+};
+static unsigned char g_sirenIdsFileSettings[8 * kSirenIdsSettingSize];
+
+// The callback's body, behind its prologue in .fakesit: the file read and each setting constructed; the dedupe's load run as
+// code, every register it must keep compared, then its compare loop as code; what is not dropped appended raw; then the
+// builder's rule over the appended ones
+static int g_sirenIdsDedupeLoads = 0, g_sirenIdsDedupeKept = 0;
+static uint64_t SirenIdsPackBody(void*, const SirenIdsFile* file)
+{
+	for (size_t i = 0; i < file->count; i++)
+	{
+		unsigned char* const setting = g_sirenIdsFileSettings + i * kSirenIdsSettingSize;
+		SirenIdsMakeSetting(setting);
+		if (file->ids[i] >= 0)
+			SirenIdsParse(setting, static_cast<unsigned>(file->ids[i]), g_sirenIdsMembers[0]);
+	}
+	const size_t first = SirenIdsCounted();
+	for (size_t i = 0; i < file->count; i++)
+	{
+		const size_t count = SirenIdsCounted();
+		SirenIdsRegs load{};
+		load.rax = 0x0123456789ABCDEFull;
+		load.rcx = 0xFEDCBA9876543210ull;
+		load.rdx = 0xDDDDDDDDDDDDDDDDull;
+		load.rbx = reinterpret_cast<uint64_t>(g_sirenIdsCarcols);
+		load.rsi = 0x5555555555555555ull;
+		load.r13 = reinterpret_cast<uint64_t>(g_sirenIdsFileSettings);
+		load.r15 = i * kSirenIdsSettingSize;
+		const SirenIdsRegs before = load;
+		SirenIdsRunAt(load, g_sirenIdsD1 + 0x0B);
+		g_sirenIdsDedupeLoads++;
+		if (load.rax == before.rax && load.rcx == before.rcx && load.rbx == before.rbx && load.rsi == before.rsi && load.r13 == before.r13 && load.r15 == before.r15 &&
+			load.rdi == count)
+			g_sirenIdsDedupeKept++;
+		const unsigned id = static_cast<unsigned>(load.rdx);
+		if ((id & 0xFF) != 0xFF && count != 0)
+		{
+			SirenIdsRegs loop{};
+			loop.rdx = id;
+			loop.rbp = reinterpret_cast<uint64_t>(g_sirenIdsSettings);
+			loop.rbx = count * kSirenIdsSettingSize;
+			loop.rsi = 0x5555555555555555ull;
+			SirenIdsRunAt(loop, g_sirenIdsD2);
+			if (loop.rax == 1)	// the jz: an ID loaded already, the setting dropped
+				continue;
+		}
+		memcpy(g_sirenIdsSettings + count * kSirenIdsSettingSize, g_sirenIdsFileSettings + i * kSirenIdsSettingSize, 2);
+		SirenIdsCount(count + 1);
+	}
+	const size_t count = SirenIdsCounted();
+	for (size_t i = first; i < count; i++)
+		SirenIdsGive(i, SirenIdsLoad(g_sirenIdsSettings + i * kSirenIdsSettingSize));
+	SetLastError(kSirenIdsLastError);
+	return kSirenIdsResult;
+}
+
+static int g_sirenIdsPackCalls = 0, g_sirenIdsPackKept = 0;
+static void SirenIdsMountPack(const SirenIdsFile& file)
+{
+	using Callback = uint64_t (*)(void*, const SirenIdsFile*);
+	SetLastError(0);
+	const uint64_t result = reinterpret_cast<Callback>(const_cast<unsigned char*>(g_sirenIdsH1 + 1))(g_sirenIdsCarcols, &file);
+	g_sirenIdsPackCalls++;
+	if (result == kSirenIdsResult && GetLastError() == kSirenIdsLastError)
+		g_sirenIdsPackKept++;
 }
 
 // The sites as the game has them, as the options change them, and the data: 24 siren settings with the IDs 1 to 24 (simany: 300,
@@ -1903,35 +2147,51 @@ static void SirenIdsSetup(int argc, wchar_t** argv)
 	SirenIdsPut(g_sirenIdsP2, 0, "C7 05 00 00 00 00 A9 FE EA 18 0F 57 C0 0F 11 05 00 00 00 00 48 8D 05 00 00 00 00 48 89 05 00 00 00 00 48 8D 05");
 	SirenIdsPut(g_sirenIdsP3, 0, "48 8B 41 08 0F B6 48 10 48 83 F9 21 0F 87");
 	SirenIdsPut(g_sirenIdsT1, 0, "B9 4B 00 00 00 31 D2 4C 8D 05 00 00 00 00 4C 8D 0D 00 00 00 00");
-	SirenIdsPut(g_sirenIdsT1, 0x93, HasOption(argc, argv, L"siwidened") ? "0F B7 2C 0F 48 81 FD FF 00 00 00" : "0F B6 2C 0F 48 81 FD FF 00 00 00");
-	SirenIdsPut(g_sirenIdsT1, 0xC4, "0F B6 1C 2B 88 1C 0F");
+	SirenIdsPut(g_sirenIdsT1, 0x93, HasOption(argc, argv, L"siwidened") ? "0F B7 2C 0F 48 81 FD FF 00 00 00 C3" : "0F B6 2C 0F 48 81 FD FF 00 00 00 C3");
+	SirenIdsPut(g_sirenIdsT1, 0xC4, "0F B6 1C 2B 88 1C 0F C3");
 	SirenIdsPut(g_sirenIdsT2, 0, "41 0F B7 46 50 48 85 C0 0F 84 00 00 00 00 49 8B 4E 48 31 D2 48 8D 1D 00 00 00 00");
-	SirenIdsPut(g_sirenIdsT2, 0x29, "40 88 31");
-	SirenIdsPut(g_sirenIdsT2, 0x30, "0F B6 2C 39");
-	SirenIdsPut(g_sirenIdsT2, 0x4B, "0F B6 2C 39 48 81 FD FF 00 00 00");
-	SirenIdsPut(g_sirenIdsT2, 0x85, "48 81 FE 00 01 00 00");
+	SirenIdsPut(g_sirenIdsT2, 0x29, "40 88 31 C3");
+	SirenIdsPut(g_sirenIdsT2, 0x30, "0F B6 2C 39 C3");
+	SirenIdsPut(g_sirenIdsT2, 0x4B, "0F B6 2C 39 48 81 FD FF 00 00 00 C3");
+	SirenIdsPut(g_sirenIdsT2, 0x85, HasOption(argc, argv, L"silimit") ? "48 81 FE 01 00 01 00" : "48 81 FE 00 01 00 00");
 	SirenIdsPut(g_sirenIdsT2, 0xCD, "48 81 FE 00 01 00 00");
 	SirenIdsPut(g_sirenIdsT2, 0xD6, "40 B6 FF");
 	SirenIdsPut(g_sirenIdsT3, 0, "B8 4B 00 00 00 31 C9 4C 8D 05 00 00 00 00 48 8D 2D 00 00 00 00");
-	SirenIdsPut(g_sirenIdsT3, 0x8D, "0F B6 3C 03 48 81 FF FF 00 00 00");
-	SirenIdsPut(g_sirenIdsT3, 0xBE, "0F B6 14 17 88 14 03");
+	SirenIdsPut(g_sirenIdsT3, 0x8D, "0F B6 3C 03 48 81 FF FF 00 00 00 C3");
+	SirenIdsPut(g_sirenIdsT3, 0xBE, "0F B6 14 17 88 14 03 C3");
 	SirenIdsPut(g_sirenIdsT4, 0, "4C 8B 05 00 00 00 00 49 8B 58 48 89 CA 48 8D 2D 00 00 00 00");
-	SirenIdsPut(g_sirenIdsT4, 0x21, "40 88 33");
-	SirenIdsPut(g_sirenIdsT4, 0x28, "0F B6 0C 3B");
-	SirenIdsPut(g_sirenIdsT4, 0x42, "0F B6 34 3B 48 81 FE FF 00 00 00");
+	SirenIdsPut(g_sirenIdsT4, 0x21, "40 88 33 C3");
+	SirenIdsPut(g_sirenIdsT4, 0x28, "0F B6 0C 3B C3");
+	SirenIdsPut(g_sirenIdsT4, 0x42, "0F B6 34 3B 48 81 FE FF 00 00 00 C3");
 	SirenIdsPut(g_sirenIdsT4, 0x81, "48 81 FE 00 01 00 00");
-	SirenIdsPut(g_sirenIdsT4, 0xC9, "48 81 FE 00 01 00 00");
+	SirenIdsPut(g_sirenIdsT4, 0xC9, HasOption(argc, argv, L"sidisagree") ? "48 81 FE 00 02 00 00" : "48 81 FE 00 01 00 00");
 	SirenIdsPut(g_sirenIdsT4, 0xD2, "40 B6 FF");
-	SirenIdsPut(g_sirenIdsD1, 0, "4D 8B 6F 48 4D 69 FE E8 05 00 00 43 0F B6 54 3D 00 0F B7 7B 50 80 FA FF 74");
+	SirenIdsPut(g_sirenIdsD1, 0, "4D 8B 6F 48 4D 69 FE E8 05 00 00 43 0F B6 54 3D 00 0F B7 7B 50 80 FA FF 74 00 C3");
 	SirenIdsPut(g_sirenIdsD2, 0, "31 F6 66 2E 0F 1F 84 00 00 00 00 00 38 54 35 00 0F 84 00 00 00 00 48 81 C6 E8 05 00 00 48 39 F3 75 EA");
-	SirenIdsPut(g_sirenIdsC1, 0, "56 48 83 EC 20 48 89 CE C7 41 1C 00 00 00 00 B8 83 00 00 00 0F 57 C0");
-	SirenIdsPut(g_sirenIdsC1, 0xA0, "C6 06 FF");
-	SirenIdsPut(g_sirenIdsC1, 0xC9, "89 46 1C");
+	SirenIdsPut(g_sirenIdsD2, 34, "31 C0 C3 B8 01 00 00 00 C3");	// the loop's way out, no ID the same: 0; its jz's, an ID the same: 1
+	SirenIdsPut(g_sirenIdsC1, 0, "56 48 83 EC 20 48 89 CE C7 41 1C 00 00 00 00 B8 83 00 00 00 0F 57 C0 E9 84 00 00 00");	// then on to the ID's default
+	SirenIdsPut(g_sirenIdsC1, 0xA0, "C6 06 FF EB 24");
+	SirenIdsPut(g_sirenIdsC1, 0xC9, "89 46 1C 48 83 C4 20 5E C3");
 	SirenIdsPut(g_sirenIdsC2, 0, "C7 41 30 00 00 00 00 48 C7 41 38 00 00 00 00 C7 41 40 00 00 00 00 C7 41 48 00 00 FF FF C3");
 	SirenIdsPut(g_sirenIdsC3, 0, "C7 40 30 00 00 00 00 48 C7 40 38 00 00 00 00 C7 40 40 00 00 00 00 C7 40 48 00 00 FF FF 48 83 C4 28 C3");
 	SirenIdsPut(g_sirenIdsR1, 0, "66 0F 7F 05 00 00 00 00 E8 00 00 00 00 E8 00 00 00 00 80 3D");
 	SirenIdsPut(g_sirenIdsM1, 0, "0F B6 81 3B 05 00 00 48 85 C0 74 13 48 8B 0D 00 00 00 00 48 69 C0 E8 05 00 00 48 03 41 48 C3");
 	SirenIdsPut(g_sirenIdsLeaExtra, 0, HasOption(argc, argv, L"sififth") ? "48 8D 05 00 00 00 00" : "CC 8D 05 00 00 00 00");
+	// a pack's carcols callback and the base builder: a NOP before each, their prologues, a call of the fake's body, the epilogues
+	const bool byte0 = HasOption(argc, argv, L"sibyte0");
+	SirenIdsPut(g_sirenIdsH1, 0, byte0 ? "00" : "90");
+	SirenIdsPut(g_sirenIdsH1, 1, "41 57 41 56 41 55 41 54 56 57 55 53 48 83 EC 68 80 3A 00 0F 84 0C 00 00 00 48 B8 00 00 00 00 00 00 00 00 FF D0 48 83 C4 68 5B 5D 5F 5E 41 5C 41 5D 41 5E 41 5F C3");
+	const uint64_t packBody = reinterpret_cast<uint64_t>(&SirenIdsPackBody);
+	memcpy(const_cast<unsigned char*>(g_sirenIdsH1 + 28), &packBody, sizeof(packBody));
+	SirenIdsPut(g_sirenIdsH2, 0, byte0 ? "00" : "90");
+	SirenIdsPut(g_sirenIdsH2, 1, "41 57 41 56 41 55 41 54 56 57 55 53 48 83 EC 28 49 89 CE 0F B7 71 10 89 F0 4C 89 F1 48 B8 00 00 00 00 00 00 00 00 FF D0 48 83 C4 28 5B 5D 5F 5E 41 5C 41 5D 41 5E 41 5F C3");
+	const uint64_t builderBody = reinterpret_cast<uint64_t>(&SirenIdsBaseBuilder);
+	memcpy(const_cast<unsigned char*>(g_sirenIdsH2 + 31), &builderBody, sizeof(builderBody));
+	// the way into the sites as code: rcx the registers, rdx the code; rbx, rbp, rsi, rdi, r13, r15 saved around them
+	SirenIdsPut(g_sirenIdsRun, 0, "53 55 57 56 41 55 41 57 51 49 89 CA 49 89 D3 49 8B 02 49 8B 4A 08 49 8B 52 10 49 8B 5A 18 49 8B 6A 20 49 8B 72 28 49 8B 7A 30 4D 8B 6A 38 4D 8B 7A 40 "
+		"48 83 EC 20 41 FF D3 48 83 C4 20 41 5A 49 89 02 49 89 4A 08 49 89 52 10 49 89 5A 18 49 89 6A 20 49 89 72 28 49 89 7A 30 4D 89 6A 38 4D 89 7A 40 41 5F 41 5D 5E 5F 5D 5B C3");
+	// at +0x88, for the allocating constructor, whose stores end with add rsp, 0x28: sub rsp, 0x28, then jmp to them
+	SirenIdsPut(g_sirenIdsRun, 0x88, "48 83 EC 28 E9 00 00 00 00");
 
 	// the parser registrations' tables and the members' data, registered - siregister: once TweaksV has started
 	for (size_t i = 0; i < 20; i++)
@@ -1956,17 +2216,27 @@ static void SirenIdsSetup(int argc, wchar_t** argv)
 		g_sirenIdsSettingOffsets[2] = 0x8;
 	if (HasOption(argc, argv, L"sidataout"))
 		g_sirenIdsSettingTable[0] = reinterpret_cast<SirenIdsMember*>(const_cast<unsigned char*>(ImageEnd() + 0x73000));
+	g_sirenIdsTypesPlaced[0] = g_sirenIdsMembers[0].type;
+	g_sirenIdsTypesPlaced[1] = g_sirenIdsMembers[26].type;
 
 	// the siren settings, given their IDs as the game gives them
 	const bool many = HasOption(argc, argv, L"simany");
-	g_sirenIdsCapacity = many ? 304 : 32;
+	g_sirenIdsLoad = HasOption(argc, argv, L"siload");
+	g_sirenIdsTwice = HasOption(argc, argv, L"sitwice");
+	g_sirenIdsClash = HasOption(argc, argv, L"siclash");
+	g_sirenIdsPacks = HasOption(argc, argv, L"sipacks");
+	g_sirenIdsFlood = HasOption(argc, argv, L"siflood");
+	g_sirenIdsCapacity = many ? 304 : 64;
 	g_sirenIdsSettings = static_cast<unsigned char*>(VirtualAlloc(nullptr, g_sirenIdsCapacity * kSirenIdsSettingSize, MEM_RESERVE | MEM_COMMIT,
 		PAGE_READWRITE));
-	memset(g_sirenIdsTable, 0xFF, sizeof(g_sirenIdsTableStorage));
-	const size_t count = many ? 300 : 24;
-	for (size_t i = 0; i < count; i++)
-		SirenIdsGive(i, static_cast<unsigned char>(many ? (i < 255 ? i : 0xFF) : 1 + i));
-	SirenIdsCount(count);
+	if (!g_sirenIdsLoad)
+	{
+		memset(g_sirenIdsTable, 0xFF, sizeof(g_sirenIdsTableStorage));
+		const size_t count = many ? 300 : 24;
+		for (size_t i = 0; i < count; i++)
+			SirenIdsGive(i, many ? (i < 255 ? static_cast<unsigned>(i) : 0xFFu) : static_cast<unsigned>(1 + i));
+		SirenIdsCount(count);
+	}
 	const uint16_t capacity = static_cast<uint16_t>(g_sirenIdsCapacity);
 	memcpy(g_sirenIdsCarcols + 0x52, &capacity, sizeof(capacity));
 	memcpy(g_sirenIdsCarcols + 0x48, &g_sirenIdsSettings, sizeof(g_sirenIdsSettings));
@@ -1976,7 +2246,7 @@ static void SirenIdsSetup(int argc, wchar_t** argv)
 		VirtualProtect(g_sirenIdsSettings, g_sirenIdsCapacity * kSirenIdsSettingSize, PAGE_NOACCESS, &old);
 	g_sirenIdsPack = HasOption(argc, argv, L"sipack");
 	g_sirenIdsNone = HasOption(argc, argv, L"sinone");
-	g_sirenIdsPointer[0] = g_sirenIdsNone ? nullptr : g_sirenIdsCarcols;
+	g_sirenIdsPointer[0] = g_sirenIdsNone || g_sirenIdsLoad ? nullptr : g_sirenIdsCarcols;
 	g_sirenIdsPointer[1] = g_sirenIdsCarcols;
 
 	// where the sites lead
@@ -1992,23 +2262,67 @@ static void SirenIdsSetup(int argc, wchar_t** argv)
 	SirenIdsRel32(g_sirenIdsLeaExtra, 3, table);
 	SirenIdsRel32(g_sirenIdsT4, 3, &g_sirenIdsPointer[0]);
 	SirenIdsRel32(g_sirenIdsM1, 15, &g_sirenIdsPointer[HasOption(argc, argv, L"sicarcols") ? 1 : 0]);
-	SirenIdsRel32(g_sirenIdsD2, 18, HasOption(argc, argv, L"sijz") ? ImageEnd() + 0x71000 : const_cast<const unsigned char*>(g_sirenIdsD1));
+	SirenIdsRel32(g_sirenIdsD2, 18, HasOption(argc, argv, L"sijz") ? ImageEnd() + 0x71000 : const_cast<const unsigned char*>(g_sirenIdsD2 + 37));
 	SirenIdsRel32(g_sirenIdsR1, 4, table + (HasOption(argc, argv, L"sifill") ? 0xE0 : 0xF0));
-	SirenIdsRel32(g_sirenIdsR1, 14, HasOption(argc, argv, L"sicallhooked") ? ImageEnd() + 0x72000 : const_cast<const unsigned char*>(g_sirenIdsT1));
+	SirenIdsRel32(g_sirenIdsR1, 14, HasOption(argc, argv, L"sicallhooked") ? ImageEnd() + 0x72000 : reinterpret_cast<const unsigned char*>(&SirenIdsBaseLoader));
+	SirenIdsRel32(g_sirenIdsH1, 22, const_cast<const unsigned char*>(g_sirenIdsH1 + 38));	// the jz of an empty name, to the epilogue
+	SirenIdsRel32(g_sirenIdsRun, 0x8D, const_cast<const unsigned char*>(g_sirenIdsC3));
 
-	for (SirenIdsSite& site : g_sirenIdsSites)
+	for (size_t i = 0; i < kSirenIdsSites; i++)
+	{
+		SirenIdsSite& site = g_sirenIdsSites[i];
 		site.placed = SirenIdsHash(kSirenIdsHashStart, site.bytes, site.size);
+		for (size_t at = 0; at < site.size; at++)
+			g_sirenIdsCopy[i][at] = site.bytes[at];
+	}
 	g_sirenIdsDataPlaced = SirenIdsData();
 }
 
-// What the game does with its siren settings once TweaksV has started: the structures registered at once (siregister); 12 s
-// after TweaksV loaded - after the measurement's first summary - a pack's 6 settings appended with the IDs 40 to 45 (sipack),
-// or the base files read (sinone), and the fake stays to 15 s, for the summary after it
+// The moved table as TweaksV left it, read before the game's init can fill it
+static wchar_t g_sirenIdsMovedTable[96] = L"not moved";
+static void SirenIdsNoteTable()
+{
+	const Site lea = { g_sirenIdsT1, 10, 0 };
+	const unsigned char* const moved = Rel32Target(lea);
+	if (moved == g_sirenIdsTable || InImage(moved) || ProtectionOf(moved) == 0 || ProtectionOf(moved) == PAGE_NOACCESS)	// not the part's: left alone
+		return;
+	bool copied = memcmp(moved, g_sirenIdsTable, sizeof(g_sirenIdsTableStorage)) == 0;
+	bool rest = true;
+	for (size_t i = sizeof(g_sirenIdsTableStorage); i < 65536; i++)
+		rest = rest && moved[i] == 0xFF;
+	swprintf(g_sirenIdsMovedTable, 96, L"moved, %ls, %ls, the rest %ls", ProtectionOf(moved) == PAGE_READWRITE && ProtectionOf(moved + 65535) == PAGE_READWRITE ? L"RW" : L"NOT RW",
+		copied ? L"the game's 256 copied" : L"NOT the game's 256", rest ? L"0xFF" : L"NOT 0xFF");
+}
+
+// What the game does with its siren settings once TweaksV has started: the structures registered at once (siregister); the init
+// and the base files, the packs (siload, sipacks, siflood); 12 s after TweaksV loaded - after the measurement's first summary - a
+// pack's 6 settings appended with the IDs 40 to 45 (sipack), or the base files read (sinone), and the fake stays to 15 s, for the
+// summary after it
 static void SirenIdsLater()
 {
+	SirenIdsNoteTable();
 	if (g_sirenIdsRegister)
 	{
 		SirenIdsRegister();
+		g_sirenIdsDataPlaced = SirenIdsData();
+	}
+	SirenIdsReadCode();
+	if (g_sirenIdsLoad)
+	{
+		SirenIdsInit();
+		if (g_sirenIdsTwice)
+			SirenIdsInit();
+		if (g_sirenIdsPacks)
+		{
+			for (const SirenIdsFile& file : g_sirenIdsFiles)
+				SirenIdsMountPack(file);
+			const unsigned variations[] = { 300, 1534, 40, 511, 767 };
+			for (const unsigned id : variations)
+				SirenIdsVariation(id, false);
+		}
+		if (g_sirenIdsFlood)
+			for (int i = 0; i < 20001; i++)
+				SirenIdsMountPack(g_sirenIdsFiles[2]);
 		g_sirenIdsDataPlaced = SirenIdsData();
 	}
 	if (!g_sirenIdsPack && !g_sirenIdsNone)
@@ -2017,7 +2331,7 @@ static void SirenIdsLater()
 	if (g_sirenIdsPack)
 	{
 		for (size_t i = 24; i < 30; i++)
-			SirenIdsGive(i, static_cast<unsigned char>(16 + i));
+			SirenIdsGive(i, static_cast<unsigned>(16 + i));
 		SirenIdsCount(30);
 	}
 	if (g_sirenIdsNone)
@@ -2026,15 +2340,214 @@ static void SirenIdsLater()
 	Sleep(3000);
 }
 
-// "siren ids: sites as placed 15 of 15, data as placed | ": TweaksV wrote nothing into the sites or the data
+// The sites' bytes as the part leaves them: its writes on each site's bytes as placed, as a text of their own here
+struct SirenIdsWrite { volatile unsigned char* site; size_t offset; const char* bytes; };
+static const SirenIdsWrite g_sirenIdsWrites[] = {
+	{ g_sirenIdsT1, 0x93, "0F B7 2C 0F" }, { g_sirenIdsT1, 0xC4, "0F B7 1C 2B" },
+	{ g_sirenIdsT2, 0x29, "66 89 31" }, { g_sirenIdsT2, 0x30, "0F B7 2C 39" }, { g_sirenIdsT2, 0x4B, "0F B7 2C 39" },
+	{ g_sirenIdsT2, 0x85, "48 81 FE 00 00 01 00" }, { g_sirenIdsT2, 0xCD, "48 81 FE 00 00 01 00" },
+	{ g_sirenIdsT3, 0x8D, "0F B7 3C 03" }, { g_sirenIdsT3, 0xBE, "0F B7 14 17" },
+	{ g_sirenIdsT4, 0x21, "66 89 33" }, { g_sirenIdsT4, 0x28, "0F B7 0C 3B" }, { g_sirenIdsT4, 0x42, "0F B7 34 3B" },
+	{ g_sirenIdsT4, 0x81, "48 81 FE 00 00 01 00" }, { g_sirenIdsT4, 0xC9, "48 81 FE 00 00 01 00" },
+	{ g_sirenIdsD1, 0x0B, "43 0F B7 54 3D 00" },
+	{ g_sirenIdsD2, 2, "66 39 54 35 00 0F 84 18 00 00 00 48 81 C6 E8 05 00 00 48 39 F3 75 E9 66 0F 1F 84 00 00 00 00 00" },
+	{ g_sirenIdsC1, 8, "66 C7 01 FF 00 66 90" },
+	{ g_sirenIdsC2, 0, "83 61 30 00 48 C7 41 38 00 00 00 00 83 61 40 00 C7 41 48 00 00 FF FF C6 41 4C 00 C3 90 90" },
+	{ g_sirenIdsC3, 0, "83 60 30 00 48 C7 40 38 00 00 00 00 83 60 40 00 C7 40 48 00 00 FF FF C6 40 4C 00 48 83 C4 28 C3 90 90" },
+};
+
+// "siren writes: 17 of 17 as the part leaves them, a pack's dedupe's load a word's, 0 hooks, ...": each site's bytes against what the
+// part must leave, the lea to the moved table, the call's rel32 and a hook's jump apart
+static void SirenIdsReportWrites()
+{
+	const Site firstLea = { g_sirenIdsT1, 10, 0 };
+	const unsigned char* const moved = Rel32Target(firstLea);
+	int asWritten = 0, hooks = 0;
+	const wchar_t* dedupe = L"as placed";
+	for (size_t s = 0; s < kSirenIdsSites; s++)
+	{
+		const SirenIdsSite& site = g_sirenIdsSites[s];
+		unsigned char expected[0xE0];
+		memcpy(expected, g_sirenIdsCopy[s], site.size);
+		const auto is = [&site](const volatile unsigned char* bytes) { return site.bytes == bytes; };
+		for (const SirenIdsWrite& write : g_sirenIdsWrites)
+			if (write.site == site.bytes)
+				SirenIdsPut(expected, write.offset, write.bytes);
+		const auto lea = [&](int offset)
+		{
+			const int32_t rel = static_cast<int32_t>(moved - const_cast<const unsigned char*>(site.bytes + offset + 4));
+			memcpy(expected + offset, &rel, sizeof(rel));
+		};
+		if (is(g_sirenIdsT1) || is(g_sirenIdsT3))
+			lea(10);
+		if (is(g_sirenIdsT2))
+			lea(23);
+		if (is(g_sirenIdsT4))
+			lea(16);
+		if (is(g_sirenIdsR1))
+			for (int i = 14; i < 18; i++)
+				expected[i] = site.bytes[i];
+		if ((is(g_sirenIdsH1) || is(g_sirenIdsH2)) && site.bytes[1] == 0xE9)	// the jump of a hook, in the first instructions
+		{
+			hooks++;
+			for (int i = 1; i < 7; i++)
+				expected[i] = site.bytes[i];
+		}
+		if (is(g_sirenIdsD1))
+		{
+			if (site.bytes[0x0B] == 0xE9 && site.bytes[0x10] == 0x90)
+			{
+				for (int i = 0x0B; i < 0x11; i++)
+					expected[i] = site.bytes[i];
+				const Site toStub = { g_sirenIdsD1, 0x0C, 0 };
+				const unsigned char* const stub = Rel32Target(toStub);
+				const Site back = { const_cast<unsigned char*>(stub), 42, 0 };
+				dedupe = !InImage(stub) && ProtectionOf(stub) == PAGE_EXECUTE_READ && stub[0] == 0x43 && stub[1] == 0x0F && stub[2] == 0xB7 && stub[41] == 0xE9 &&
+					Rel32Target(back) == const_cast<const unsigned char*>(g_sirenIdsD1 + 0x11) ? L"through a stub, RX" : L"through a stub NOT as it must be";
+			}
+			else
+				dedupe = site.bytes[0x0D] == 0xB7 ? L"a word's" : L"as placed";
+		}
+		bool same = true;
+		for (size_t i = 0; i < site.size; i++)
+			same = same && site.bytes[i] == expected[i];
+		if (same)
+			asWritten++;
+	}
+	const Site call = { g_sirenIdsR1, 14, 0 };
+	const unsigned char* const target = Rel32Target(call);
+	const wchar_t* const leads = target == reinterpret_cast<const unsigned char*>(&SirenIdsBaseLoader) ? L"to the loader"
+		: !InImage(target) && ProtectionOf(target) == PAGE_EXECUTE_READ && memcmp(target, "\xFF\x25\x00\x00\x00\x00", 6) == 0 ? L"to a stub, RX" : L"elsewhere";
+	wprintf(L"siren writes: %d of %d as the part leaves them, a pack's dedupe's load %ls, %d hooks, types 0x%X and 0x%X, member data %ls, table %ls, base loader call %ls | ", asWritten,
+		static_cast<int>(kSirenIdsSites), dedupe, hooks, g_sirenIdsMembers[0].type, g_sirenIdsMembers[26].type,
+		ProtectionOf(g_sirenIdsMembers) == PAGE_READWRITE ? L"RW" : L"NOT RW", g_sirenIdsMovedTable, leads);
+}
+
+// "siren code: loads and stores 11 words 0 bytes, loop words, constructors 3 words": what the sites do, run as code
+static void SirenIdsReportCode()
+{
+	// a load: the value at an address two registers give, into a third; a store: a register's value at an address
+	struct LoadSite { volatile unsigned char* site; size_t offset; uint64_t SirenIdsRegs::*base; uint64_t SirenIdsRegs::*index; uint64_t SirenIdsRegs::*result; };
+	const LoadSite loads[] = {
+		{ g_sirenIdsT1, 0x93, &SirenIdsRegs::rdi, &SirenIdsRegs::rcx, &SirenIdsRegs::rbp },
+		{ g_sirenIdsT1, 0xC4, &SirenIdsRegs::rbx, &SirenIdsRegs::rbp, &SirenIdsRegs::rbx },
+		{ g_sirenIdsT2, 0x30, &SirenIdsRegs::rcx, &SirenIdsRegs::rdi, &SirenIdsRegs::rbp },
+		{ g_sirenIdsT2, 0x4B, &SirenIdsRegs::rcx, &SirenIdsRegs::rdi, &SirenIdsRegs::rbp },
+		{ g_sirenIdsT3, 0x8D, &SirenIdsRegs::rbx, &SirenIdsRegs::rax, &SirenIdsRegs::rdi },
+		{ g_sirenIdsT3, 0xBE, &SirenIdsRegs::rdi, &SirenIdsRegs::rdx, &SirenIdsRegs::rdx },
+		{ g_sirenIdsT4, 0x28, &SirenIdsRegs::rbx, &SirenIdsRegs::rdi, &SirenIdsRegs::rcx },
+		{ g_sirenIdsT4, 0x42, &SirenIdsRegs::rbx, &SirenIdsRegs::rdi, &SirenIdsRegs::rsi },
+		{ g_sirenIdsD1, 0x0B, &SirenIdsRegs::r13, &SirenIdsRegs::r15, &SirenIdsRegs::rdx },
+	};
+	unsigned char value[0x60] = {};
+	value[0] = 0xFE;
+	value[1] = 0x05;
+	unsigned char out[0x60];
+	int words = 0, bytes = 0;
+	for (const LoadSite& load : loads)
+	{
+		SirenIdsRegs regs{};
+		regs.*load.base = reinterpret_cast<uint64_t>(value);
+		regs.*load.index = 0;
+		if (load.site == g_sirenIdsT1 && load.offset == 0xC4)	// its byte store into the variation, which stays: its own address
+		{
+			regs.rdi = reinterpret_cast<uint64_t>(out);
+			regs.rcx = 0;
+		}
+		if (load.site == g_sirenIdsT3 && load.offset == 0xBE)
+		{
+			regs.rbx = reinterpret_cast<uint64_t>(out);
+			regs.rax = 0;
+		}
+		if (load.site == g_sirenIdsD1)
+			regs.rbx = reinterpret_cast<uint64_t>(value);
+		SirenIdsRunAt(regs, load.site + load.offset);
+		if (regs.*load.result == 0x05FE)
+			words++;
+		else if (regs.*load.result == 0xFE)
+			bytes++;
+	}
+	struct StoreSite { volatile unsigned char* site; size_t offset; uint64_t SirenIdsRegs::*address; };
+	const StoreSite stores[] = { { g_sirenIdsT2, 0x29, &SirenIdsRegs::rcx }, { g_sirenIdsT4, 0x21, &SirenIdsRegs::rbx } };
+	for (const StoreSite& store : stores)
+	{
+		out[0] = out[1] = 0xAA;
+		SirenIdsRegs regs{};
+		regs.rsi = 0x05FE;
+		regs.*store.address = reinterpret_cast<uint64_t>(out);
+		SirenIdsRunAt(regs, store.site + store.offset);
+		if (out[0] == 0xFE && out[1] == 0x05)
+			words++;
+		else if (out[0] == 0xFE && out[1] == 0xAA)
+			bytes++;
+	}
+	// the compare loop over three settings: an ID found by its whole word, or by its low byte
+	unsigned char settings[3 * kSirenIdsSettingSize] = {};
+	settings[0] = 0x05; settings[1] = 0x01;
+	settings[kSirenIdsSettingSize] = 0x05; settings[kSirenIdsSettingSize + 1] = 0x02;
+	settings[2 * kSirenIdsSettingSize] = 0x05; settings[2 * kSirenIdsSettingSize + 1] = 0x03;
+	const auto found = [&settings](uint64_t id)
+	{
+		SirenIdsRegs regs{};
+		regs.rdx = id;
+		regs.rbp = reinterpret_cast<uint64_t>(settings);
+		regs.rbx = sizeof(settings);
+		SirenIdsRunAt(regs, g_sirenIdsD2);
+		return regs.rax;
+	};
+	const Site jz = { g_sirenIdsD2, g_sirenIdsD2[16] == 0x0F ? 18 : 9, 0 };	// a jz that leads out of the game (sijz) is not run
+	const bool runs = Rel32Target(jz) == const_cast<const unsigned char*>(g_sirenIdsD2 + 37);
+	const bool loopWords = runs && found(0x0305) == 1 && found(0x0205) == 1 && found(0x0105) == 1 && found(0x0405) == 0 && found(0x0005) == 0;
+	const bool loopBytes = runs && found(0x0005) == 1 && found(0x0006) == 0;
+	// the constructors: the ID's default as a word, or a byte with nothing written after it
+	unsigned char setting[kSirenIdsSettingSize];
+	memset(setting, 0xCC, sizeof(setting));
+	SirenIdsMakeSetting(setting);
+	int constructorWords = setting[0] == 0xFF && setting[1] == 0x00 && setting[0x1C] == 0x83 && setting[0x1D] == 0 ? 1 : 0;
+	int constructorBytes = setting[0] == 0xFF && setting[1] == 0xCC && setting[0x1C] == 0x83 && setting[0x1D] == 0 ? 1 : 0;
+	const bool ways[] = { true, false };
+	for (const bool inPlace : ways)
+	{
+		unsigned char variation[0x50];
+		memset(variation, 0xCC, sizeof(variation));
+		SirenIdsMakeVariation(variation, inPlace);
+		bool others = true;
+		for (size_t i = 0x30; i < 0x34; i++)
+			others = others && variation[i] == 0;
+		for (size_t i = 0x38; i < 0x44; i++)
+			others = others && variation[i] == 0;
+		others = others && variation[0x34] == 0xCC && variation[0x44] == 0xCC && variation[0x48] == 0 && variation[0x49] == 0 && variation[0x4A] == 0xFF &&
+			variation[0x4B] == 0xFF && variation[0x4D] == 0xCC;
+		if (others && variation[0x4C] == 0)
+			constructorWords++;
+		else if (others && variation[0x4C] == 0xCC)
+			constructorBytes++;
+	}
+	wprintf(L"siren code: loads and stores %d words %d bytes, loop %ls, constructors %d words %d bytes | ", words, bytes, !runs ? L"not run" : loopWords ? L"words" : loopBytes ? L"bytes" : L"WRONG",
+		constructorWords, constructorBytes);
+}
+
+// "siren ids: sites as placed 17 of 17, data as placed | ": TweaksV wrote nothing into the sites or the data; its writes and what
+// they do after it; with siload what the game's load found
 static void SirenIdsReport()
 {
 	int asPlaced = 0;
 	for (const SirenIdsSite& site : g_sirenIdsSites)
+	{
 		if (SirenIdsHash(kSirenIdsHashStart, site.bytes, site.size) == site.placed)
 			asPlaced++;
-	wprintf(L"siren ids: sites as placed %d of %d, data %ls | ", asPlaced, static_cast<int>(sizeof(g_sirenIdsSites) / sizeof(g_sirenIdsSites[0])),
-		SirenIdsData() == g_sirenIdsDataPlaced ? L"as placed" : L"NOT as placed");
+		CheckData(site.bytes, site.size);
+	}
+	const bool typesPlaced = g_sirenIdsMembers[0].type == g_sirenIdsTypesPlaced[0] && g_sirenIdsMembers[26].type == g_sirenIdsTypesPlaced[1];
+	const bool typesWidened = g_sirenIdsMembers[0].type == g_sirenIdsTypesPlaced[0] + 2 && g_sirenIdsMembers[26].type == g_sirenIdsTypesPlaced[1] + 2;
+	wprintf(L"siren ids: sites as placed %d of %d, data %ls | ", asPlaced, static_cast<int>(kSirenIdsSites),
+		SirenIdsData() != g_sirenIdsDataPlaced ? L"NOT as placed" : typesPlaced ? L"as placed" : typesWidened ? L"widened" : L"types CHANGED");
+	SirenIdsReportWrites();
+	SirenIdsReportCode();
+	if (g_sirenIdsLoad)
+		wprintf(L"siren load: %d inits, loader %d calls, %d with its table free, %d with their arguments, %d of them back with result and last error, builder %d back, "
+			L"packs %d of %d back, dedupe's registers kept %d of %d, variations %d of %d | ", g_sirenIdsInits, g_sirenIdsLoaderCalls, g_sirenIdsTableFree, g_sirenIdsLoaderArguments, g_sirenIdsInitKept,
+			g_sirenIdsBuilderKept, g_sirenIdsPackKept, g_sirenIdsPackCalls, g_sirenIdsDedupeKept, g_sirenIdsDedupeLoads, g_sirenIdsVariationsRight, g_sirenIdsVariations);
 }
 
 // The siren count: the game's siren lights' renderer and find-bone-by-name, and the vehicle models the fake draws. The two
