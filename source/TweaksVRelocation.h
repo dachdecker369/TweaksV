@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // TweaksV - the relocation core: moves one of the game's static arrays to a larger one and raises the
-// limit the game's code carries for it. The five array parts - the modkit array, the packfile array,
-// the box streamer's traversal list, the decal definitions array and the weapon component list -
-// describe their array in the tables below, and the core does the work once for all of them: it finds
-// every site, checks everything before anything is written, clamps the setting, allocates the new array
+// limit the game's code carries for it. The six array parts - the modkit array, the packfile array,
+// the box streamer's traversal list, the decal definitions array, the weapon component list and the siren
+// setting ID table - describe their array in the tables below, and the core does the work once for all of
+// them: it finds every site, checks everything before anything is written, clamps the setting, allocates the new array
 // in full as read/write data near the game and writes every reference and every limit in one go, all or
 // nothing. What is particular to a part - a hooked call, counted calls, a loop end - stays in the part's
 // file, which reads its sites from the plan and adds its writes to the one write.
@@ -127,6 +127,11 @@ namespace TweaksV
 		return { &pattern, 1, true, reference, 1, { limit, kNoLimit, kNoLimit } };
 	}
 
+	constexpr Anchor ReferenceAndLimits(const GamePattern& pattern, ReferenceSite reference, LimitSite a, LimitSite b)
+	{
+		return { &pattern, 1, true, reference, 2, { a, b, kNoLimit } };
+	}
+
 	// One array: its names, its sizes, its setting and its sites.
 	struct RelocationSpec
 	{
@@ -136,7 +141,7 @@ namespace TweaksV
 		const char* job;					// "The modkit limit is not changed": the start of every failure line
 		size_t entrySize;					// bytes per entry
 		uint32_t maxEntries;				// the new array's size, the setting's maximum or more
-		const Setting* setting;				// the size asked for
+		const Setting* setting;				// the size asked for; nullptr: no setting, the array's size is fixed at maxEntries
 		std::span<const Anchor> anchors;
 		size_t scannedReferences;			// 0: the anchors' references are the ones moved; else exactly this many "lea r64,
 											// [rip+disp32]" load the array, found by its address, and those are moved
@@ -145,6 +150,7 @@ namespace TweaksV
 		size_t expectedReferences;			// with the anchors' references moved: 0, not checked; else the game's code reaches the
 											// array in exactly this many places ("lea r64, [rip+disp32]" and "mov [rip+disp32],
 											// r64", found by its address), every one of them an anchor's reference
+		uint8_t emptyEntry = 0;				// the byte the new array's entries past the game's own hold: a free entry of the array
 	};
 
 	// A limit as found and to be written: where its value lies (the imm32, or the variable itself) and how it
@@ -175,12 +181,13 @@ namespace TweaksV
 	// same plausible size - a follower lies inside the game, a whole number of entries after the array -
 	// the scanned loads are exactly as many as expected, and with expectedReferences the anchors'
 	// references are every one the game has. Clamps the setting to the game's own size..its maximum,
-	// reported when it lay outside. False, reported, if the part must leave the game as it is.
+	// reported when it lay outside; an array of a fixed size takes maxEntries. False, reported, if the part must
+	// leave the game as it is.
 	bool FindRelocation(const RelocationSpec& spec, RelocationPlan& plan);
 
 	// DRY_RUN: logs what would change (with also, the part's own addition to the line) and returns true.
 	// Otherwise allocates the new array - the full maxEntries, read/write, near the game, the game's own
-	// entries copied in and the rest zero - and writes every reference (its rel32 recomputed, with the distance check) and every limit (re-encoded
+	// entries copied in and the rest emptyEntry - and writes every reference (its rel32 recomputed, with the distance check) and every limit (re-encoded
 	// for plan.size; a follower stays as it is), together with the part's own writes and redirected calls, all or nothing; then logs
 	// "The <name> moved and its limit raised from A to B entries." False, reported, if nothing was written.
 	bool ApplyRelocation(const RelocationSpec& spec, const RelocationPlan& plan, std::vector<CodeWrite> alsoWrite,

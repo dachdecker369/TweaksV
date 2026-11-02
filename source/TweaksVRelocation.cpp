@@ -286,7 +286,12 @@ namespace TweaksV
 		// 3. the size to use: the game's own size up to the setting's maximum, which the new array may pass (the weapon
 		// component list's holds one file more) - smaller would shrink the array; a value outside is reported, so that the
 		// start-up summary names the size really used. A game's own size past the setting's maximum is all there is to use:
-		// the part decides whether its array has room for it
+		// the part decides whether its array has room for it. An array of a fixed size has no setting to clamp
+		if (!spec.setting)
+		{
+			plan.size = spec.maxEntries;
+			return true;
+		}
 		const uint32_t requested = static_cast<uint32_t>(GetNumber(*spec.setting));
 		const uint32_t most = std::max(plan.gameSize, std::min(spec.maxEntries, static_cast<uint32_t>(spec.setting->maxValue)));
 		uint32_t size = requested;
@@ -315,8 +320,8 @@ namespace TweaksV
 		}
 
 		// the new array: always the full maxEntries, read/write data near the game (a lea reaches +-2 GB),
-		// the game's own entries copied into it - whatever the image holds there - and the rest zero, as
-		// Windows gives it
+		// the game's own entries copied into it - whatever the image holds there - and the rest empty: zero, as
+		// Windows gives it, or the byte that means a free entry of this array
 		const size_t gameBytes = static_cast<size_t>(plan.gameSize) * spec.entrySize;
 		if (!IsReadable(plan.array, gameBytes))
 		{
@@ -330,6 +335,8 @@ namespace TweaksV
 			return false;
 		}
 		memcpy(newArray, plan.array, gameBytes);
+		if (spec.emptyEntry != 0)
+			memset(newArray + gameBytes, spec.emptyEntry, spec.entrySize * spec.maxEntries - gameBytes);
 
 		// one write, all or nothing: every reference to the new array, every limit to the new size, the
 		// part's own writes, and the redirected calls if it has any
