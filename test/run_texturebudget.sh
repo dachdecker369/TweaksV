@@ -202,9 +202,9 @@ fresh_ini; setkey DIAGNOSTIC_MODE 1; setkey DRY_RUN 1; out=$(game full_game.exe 
 check "the five patterns, the nine lines of the sites, the announcement and the summary 10 s in, word for word" "patterns_found && sites_logged && announced && log_line '$SUMMARY1' && first_after_10s"
 check "no problem; nothing written" "log_lacks 'PROBLEM' && untouched"
 
-echo "== TB16 six writers of the budgets besides the start-up's stores, each of another kind: each named, measured all the same"
-fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe tbwritemov tbwritebyte tbwritesse tbwriteavx tbwritelock tbwriteimm)
-check "the line, word for word: mov of 8 bytes, of a byte with an imm8, movups, vmovdqu of 32 bytes, lock add, mov with an imm32" "writers_line 'and 6 besides them: $(rva writers 97), $(rva writers 106), $(rva writers 115), $(rva writers 124), $(rva writers 134), $(rva writers 144)'"
+echo "== TB16 nine writers of the budgets besides the start-up's stores, each of another kind: each named, measured all the same"
+fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe tbwritemov tbwritebyte tbwritesse tbwriteavx tbwritelock tbwriteimm tbwriteextract tbwriteword tbwriteaddword)
+check "the line, word for word: mov of 8 bytes, of a byte with an imm8, movups, vmovdqu of 32 bytes, lock add, mov with an imm32, vextractf128 behind a C4 prefix with an imm8, mov and add of a word with an imm16" "writers_line 'and 9 besides them: $(rva writers 97), $(rva writers 106), $(rva writers 115), $(rva writers 124), $(rva writers 134), $(rva writers 144), $(rva writers 157), $(rva writers 169), $(rva writers 180)'"
 check "the measurement announced all the same; no problem; nothing written" "announced && log_lacks 'PROBLEM' && untouched"
 
 echo "== TB17 VIDEO_MEMORY_BUDGET=6000: the budgets raised as the game's start-up sets them, through the redirected call and nothing else"

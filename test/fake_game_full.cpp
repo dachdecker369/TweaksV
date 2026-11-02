@@ -336,10 +336,12 @@
 //   tbt1twice, tbt2twice, tbt3twice, tbt4twice, tbt5twice
 //                  the game holds Q-E-T1, Q-E-T2, Q-E-T3, Q-E-T4 or Q-E-T5 twice: a copy of the site's bytes in the update check's
 //                  NOPs at +0x60
-//   tbwritemov, tbwritebyte, tbwritesse, tbwriteavx, tbwritelock, tbwriteimm
+//   tbwritemov, tbwritebyte, tbwritesse, tbwriteavx, tbwritelock, tbwriteimm, tbwriteextract, tbwriteword, tbwriteaddword
 //                  a writer of the budgets besides the start-up's two stores, each of another kind: "mov" of 8 bytes from 4
 //                  bytes before them, "mov" of their last byte with an imm8, "movups" of budgets 2 and 3, "vmovdqu" of 32 bytes
-//                  from 16 bytes before them, "lock add" of budget 1, "mov" of budget 3 with an imm32; without its option each
+//                  from 16 bytes before them, "lock add" of budget 1, "mov" of budget 3 with an imm32, "vextractf128", a store with a
+//                  C4 VEX prefix and an imm8, of 16 bytes whose last is the budgets' first, "mov" and "add" of their last word with an
+//                  imm16, past their end if the 66 goes unread (altImmediate in the scanner); without its option each
 //                  leads to a dummy, while the budgets' neighbours and readers, which are no writers, always lead to them
 //   tbmisread0f, tbmisreadc5, tbmisreadc4, tbmisreadf3, tbmisread38, tbmisreadf2
 //                  a writer of the budgets behind a byte that once hid it from the scanner's search for stores (SPECIFICATIONS 8):
@@ -939,7 +941,10 @@ static Site g_textureBudgetFactorRefs[] = { SITE(g_textureBudgetUpdate, 0x58), S
 // option, else to a dummy: "mov [rip+disp32], rax" 4 bytes before them (tbwritemov, at +97), "mov byte [rip+disp32], imm8" of
 // their last byte (tbwritebyte, +106), "movups [rip+disp32], xmm1" of budgets 2 and 3 (tbwritesse, +115), "vmovdqu
 // [rip+disp32], ymm0" from 16 bytes before them (tbwriteavx, +124), "lock add [rip+disp32], rax" of budget 1 (tbwritelock,
-// +134) and "mov qword [rip+disp32], imm32" of budget 3 (tbwriteimm, +144). Two NOPs before each, so that no byte of the one
+// +134), "mov qword [rip+disp32], imm32" of budget 3 (tbwriteimm, +144), "vextractf128 [rip+disp32], ymm0, 1" of 16 bytes whose
+// last is the budgets' first (tbwriteextract, +157: a C4 VEX prefix, and neither the prefix nor the imm8 unread would count it),
+// "mov word [rip+disp32], imm16" (tbwriteword, +169) and "add word [rip+disp32], imm16" (tbwriteaddword, +180) of their last word:
+// with the immediate read as an imm32, not as the 66 makes it, each would lie past their end. Two NOPs before each, so that no byte of the one
 // before it is read as its prefix.
 volatile unsigned char g_textureBudgetWriters[] = {
 	0x90, 0x90, 0x89, 0x05, 0, 0, 0, 0,
@@ -958,6 +963,9 @@ volatile unsigned char g_textureBudgetWriters[] = {
 	0x90, 0x90, 0xC5, 0xFE, 0x7F, 0x05, 0, 0, 0, 0,
 	0x90, 0x90, 0xF0, 0x48, 0x01, 0x05, 0, 0, 0, 0,
 	0x90, 0x90, 0x48, 0xC7, 0x05, 0, 0, 0, 0, 0x33, 0x33, 0x33, 0x33,
+	0x90, 0x90, 0xC4, 0xE3, 0x7D, 0x19, 0x05, 0, 0, 0, 0, 0x01,
+	0x90, 0x90, 0x66, 0xC7, 0x05, 0, 0, 0, 0, 0x44, 0x44,
+	0x90, 0x90, 0x66, 0x81, 0x05, 0, 0, 0, 0, 0x55, 0x55,
 	0xCC };
 // each one's disp32, the byte of the budgets its store or load starts at, the size of the immediate after the disp32, and
 // the option that leads a writer to the budgets
@@ -970,7 +978,9 @@ static TextureBudgetOperand g_textureBudgetOperands[] = { { SITE(g_textureBudget
 	{ SITE(g_textureBudgetWriters, 91), 32, 0, nullptr },
 	{ SITE(g_textureBudgetWriters, 100), -4, 0, L"tbwritemov" }, { SITE(g_textureBudgetWriters, 108), 31, 1, L"tbwritebyte" },
 	{ SITE(g_textureBudgetWriters, 118), 16, 0, L"tbwritesse" }, { SITE(g_textureBudgetWriters, 128), -16, 0, L"tbwriteavx" },
-	{ SITE(g_textureBudgetWriters, 138), 8, 0, L"tbwritelock" }, { SITE(g_textureBudgetWriters, 147), 24, 4, L"tbwriteimm" } };
+	{ SITE(g_textureBudgetWriters, 138), 8, 0, L"tbwritelock" }, { SITE(g_textureBudgetWriters, 147), 24, 4, L"tbwriteimm" },
+	{ SITE(g_textureBudgetWriters, 162), -15, 1, L"tbwriteextract" }, { SITE(g_textureBudgetWriters, 172), 30, 2, L"tbwriteword" },
+	{ SITE(g_textureBudgetWriters, 183), 30, 2, L"tbwriteaddword" } };
 // The scanner's readings of the bytes before an operand (SPECIFICATIONS 8): a writer of the budgets behind each kind of
 // byte that once hid it, each leading to the budgets only with its option, else to the dummy - "and eax, 0Fh" then "mov
 // [rip+disp32], eax" of budget 0 (tbmisread0f, the store at +5: the 0F read as an escape made it no store), "mov al, 0C5h" then
