@@ -198,6 +198,8 @@ check "the mods folder's own listing, after its first name: the same - that fold
 first=$(printf 'a%.0s' $(seq 1 255))	# a name of 255 bytes, left out: the first the listing gives, and the only one
 packs_gone; touch "mods/$first"; fresh_ini; out=$(TWEAKSV_TEST_MODS_FAIL_LISTING=mods ASI=TweaksV_test.asi game full_game.exe)
 check "the mods folder's listing with no name handed on: a mods folder that cannot be read, not called empty; nothing hooked" "log_has 'PROBLEM: Files in the mods folder are not used this session: the mods folder could not be read (Windows error 64)\.' && log_lacks 'is empty' && log_lacks 'could not be read to its end' && has 'file hooks 0/8 |'"
+packs_gone; fresh_ini; out=$(TWEAKSV_TEST_MODS_FAIL_LISTING='mods\half' game full_game.exe lpmany legacy 3 mods/half lpmake legacy mods/after/in.rpf rovask half/p00001.rpf rovask half/p00002.rpf rovask after/in.rpf lpwait)
+check "the Release build ignores the switch: no line, nothing stopped - all 4 served and named, counted in the last line" "has 'lp: 4 made |' && has '$DONE' && log_lacks 'TEST BUILD' && log_lacks 'could not be read to its end' && log_lacks 'Only part of the mods folder' && has 'ask 1 served 8/8 passed 0/8' && has 'ask 2 served 8/8 passed 0/8' && has 'ask 3 served 8/8 passed 0/8' && log_has 'The pack mods.half.p00002.rpf was made for GTA V Legacy' && log_line 'Packs checked for GTA V Legacy versions: 4 in the mods folder, 4 made for Legacy\.\$'"
 packs_gone
 
 echo "== L19 folders only the check's own walk cannot list, through the test build's TWEAKSV_TEST_LEGACY_FOLDER: each a line, the one problem names them, the last line says how many"
