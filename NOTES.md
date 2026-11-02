@@ -68,12 +68,13 @@ Every part is TweaksV's own code since 2.0.0; the parts that follow another proj
   - The tests check that `PATTERNS.md` lists exactly the table's patterns, and that the code uses each one once;
   - `TweaksV.log` names each pattern by its label, and `TEST_BREAK_PATTERN` (test builds only) takes a label.
   - `GTA5_Enhanced.exe` is encrypted on disk, so patterns are looked for in the running game: test builds save a copy of its code with `TEST_DUMP_CODE` - its code, constants and function table, never its data.
+  - The game's static data lies in `.data`, which that copy leaves out: test builds save named windows of it with `TEST_DUMP_DATA`, at TweaksV's start and that many seconds later, never `.data` as a whole.
   - The game's archives store its scripts encrypted, so a script's code is read in the running game too: test builds save a script program as the game places it in memory with `TEST_DUMP_SCRIPT`, through the hook that the shared module `TweaksVScripts` keeps for every part that works on a script program - its three patterns, `Y-E-H1`, `Y-E-N1` and `Y-E-I1`, are looked for on every boot the Blips part is on, and by a test build with `TEST_DUMP_SCRIPT`.
 
 - **One feature table:** `TweaksVFeatures.cpp` lists each feature once: its section of `TweaksV.ini`, the stand-alone plugins that do its job - the old ones TweaksV replaces and the ones that stay installed - and the function that starts it.
   DllMain starts the features from it and the conflict check takes their plugins from it, so a new feature is one entry there, plus its settings, and a new plugin one name in the entry of each part it does the job of.
 
-- **One relocation core:** the five parts that move one of the game's static arrays - the modkit array, the packfile array, the box streamer's traversal list, the decal definitions array, the weapon component list - describe it in a table (`TweaksVRelocation.h`: each pattern, where its match holds a reference to the array or a limit, and how the limit encodes the size - for the weapon component list, whose size no instruction carries, the distance to the variable that follows it, its count, which stays as it is) and share one implementation:
+- **One relocation core:** the six parts that move one of the game's static arrays - the modkit array, the packfile array, the box streamer's traversal list, the decal definitions array, the weapon component list, the siren setting ID table - describe it in a table (`TweaksVRelocation.h`: each pattern, where its match holds a reference to the array or a limit, and how the limit encodes the size - for the weapon component list, whose size no instruction carries, the distance to the variable that follows it, its count, which stays as it is) and share one implementation:
   - Every site is found and checked before anything is written: every reference must point at one array inside the game, every limit must be the expected instruction and decode to the same plausible size, and where the array's loads are found by its address (the box streamer's list, the decal definitions array, the weapon component list) exactly as many must be found as the game has; where the patterns name the references (the modkit and packfile arrays), a scan for every `lea` and `mov` that reaches the array must find exactly those, so that a reference a game update adds cannot stay on the old, smaller array while the limits rise;
   - The new array always has its full size, as read/write data near the game, the game's own entries copied into it and the rest zero; the setting is clamped to the game's own size..that size, and a value below the game's own is reported, so that the start-up summary names the size really used;
   - Every reference and every limit, with what the part adds (a redirected call, a loop end), is written in one go, all or nothing - a part either does its whole job or leaves the game as it was;
@@ -131,7 +132,7 @@ Every part is TweaksV's own code since 2.0.0; the parts that follow another proj
 - **RageOpenV:** the mods folder, unencrypted (OPEN) RPF archives and the RPF cache check skip each have a switch in `[RAGEOPENV]`.
   The part does its work when the game first asks for the time - a hook on `GetSystemTimeAsFileTime` that runs once, shows the start-up summary and switches itself off - because the game's file system is not up in DllMain; if the game has not asked 30 seconds in, a thread reports that the start-up never ran, shows the start-up summary and switches the hook off:
   - The mods folder, in the game's current directory, normally the game folder - a game that runs in another folder while the game folder has a mods folder is reported, the two compared by their final paths, so that a short name or a junction of the game folder is the game folder: the eight file functions of the game's two file devices (`R-E-F1..F8`; two per device found at their start, two by a pattern inside them, every computed start checked with the game's unwind data) are hooked together or not at all, so that a path that exists under `mods\` is served from there.
-    The folder is read once at start-up into a list of at most 200,000 files and folders, 32 levels deep: a folder deeper than that, and one that cannot be read, or not to its end, is skipped, counted and reported in the start-up summary while the rest is read, and a mods folder that cannot be read at all is reported, not called empty; its names are spelled in UTF-8, as the game's file functions take their paths on every Windows, whatever its ANSI code page (PATTERNS.md, item 5); a name that is not valid Unicode (an unpaired surrogate, which UTF-8 cannot spell), or whose path is longer than 254 bytes - the hooks hand the game `mods/` and the path, and its file functions read 259 bytes of that - is left out and counted in the log, and a folder whose list is empty hooks nothing; every call looks its path up in that list: no file system call, memory allocation or lock per call; both spellings of a path match, its letters compared as Windows compares file names, by their upper case, outside ASCII too; a path whose bytes are not UTF-8, one longer than 254 bytes, one with `..`, and one that is not relative (a leading separator, a drive), is never redirected; a file the folder does not have reaches the game's own function untouched.
+    The folder is read once at start-up into a list of at most 200,000 files and folders, from 800,000 names at most, those left out counted too, 32 levels deep: a folder deeper than that, and one that cannot be read, or not to its end, is skipped, counted and reported in the start-up summary while the rest is read, and a mods folder that cannot be read at all is reported, not called empty; its names are spelled in UTF-8, as the game's file functions take their paths on every Windows, whatever its ANSI code page (PATTERNS.md, item 5); a name that is not valid Unicode (an unpaired surrogate, which UTF-8 cannot spell), or whose path is longer than 254 bytes - the hooks hand the game `mods/` and the path, and its file functions read 259 bytes of that - is left out and counted in the log, and a folder whose list is empty hooks nothing; every call looks its path up in that list: no file system call, memory allocation or lock per call; both spellings of a path match, its letters compared as Windows compares file names, by their upper case, outside ASCII too; a path whose bytes are not UTF-8, one longer than 254 bytes, one with `..`, and one that is not relative (a leading separator, a drive), is never redirected; a file the folder does not have reaches the game's own function untouched.
     None of the four functions falls back to the game's own file: when a mods file cannot be opened, OpenBulk gives the game that failure, as for any file it cannot open - the player's file is never replaced behind their back - logs each such call (20,000 lines at most, then only counted) and reports the first of a session; GetFileTime, GetFileSize and GetAttributes answer for the mods file.
     Without a mods folder nothing is hooked (DIAGNOSTIC_MODE still checks the patterns).
     A function another mod has hooked is hooked on top and chains through, said in the log - for the four found by a pattern inside them, GetFileTime and GetFileSize: another mod's hook on OpenBulk or GetAttributes changes the bytes their patterns match at the start, so the mods folder is not used and the start-up summary names the pattern;
@@ -228,12 +229,28 @@ Every part is TweaksV's own code since 2.0.0; the parts that follow another proj
     In a dry run, and when the game has made the buffer already - its threads may then run the checks - nothing is redirected and the refusals are not counted;
   - `ResourceExtensions.asi` switches the part off (see "Conflicts").
 
-- **Measured first:** the two limits of the part to come on [ROADMAP.md](ROADMAP.md), SirenSettings, are measured before either is lifted, each by a module of its part, with `DIAGNOSTIC_MODE=1` only: every pattern of the limit found as often as it must match, every site checked as the part's writing half will check it and logged, and a summary 10 seconds in and then every minute while it changes.
+- **SirenSettings:** `[SIRENSETTINGS] LARGE_SIREN_IDS` (default 1) widens the siren setting IDs to 16 bits on the whole load path, the position staying a byte, so 255 settings stay the most (SPECIFICATIONS.md, section 11.14):
+  - Every site is checked first and all of it is one write: the ID table moved on the relocation core to a fixed 65,536 entries of a byte with its 4 `lea` and 4 limits, the 9 loads and 2 stores made word ones, a pack's dedupe's loop rewritten inside its padding, the 3 constructors' defaults, the 2 parser members' types, and the base loader's call redirected, so that the moved table is filled whenever the game fills its own.
+  - The two type bytes are TweaksV's first write to the game's data, refused where they lie outside the game's `.data`.
+  - With `DIAGNOSTIC_MODE=1` the measurement over the moved table, the IDs themselves in their settings' order, and the settings the game drops and moves, per file: hooks on `I-E-H1` and `I-E-H2` and a pack's dedupe's load through a stub, an aid that is logged, not reported, when it cannot be set up.
+  - With `LARGE_SIREN_IDS=0` or the part off the measurement goes on, nothing written, through `kMeasuredFirst`, so that the base game's settings and IDs can be compared: what the PSO loader makes of a wider member rests on my first boot (D22), and the default follows it.
+  - No old plugin: the original is Legacy only.
+
+- **StaticBounds:** `TweaksVStaticBounds`, `C-E-P1` and `C-E-A1`, rewritten in 2.7.0 from Nochala's Static Bounds Limit Adjuster v1.0.2 (CREDITS.md), through its two hooks, the way it goes on Enhanced.
+  The game makes its pool of static collision bounds, `StaticBounds`, stride 16, through the two functions it makes its pools through - `gameconfig.xml`'s value for the pool, else the code's default, in its capacity by the time of the second - and a full pool ends the game in an access violation, the crash heavy map mods meet:
+  - The set-up's hook notes a pool of stride 16 whose name, copied through `CopyMemorySafely`, is `StaticBounds`; the allocator's hook raises the noted pool's capacity at +0x18, its stride at +0x1C checked again, to the larger of the game's size and `STATICBOUNDS_SIZE` (1 to 100000, 16000 by default, the original's key) before the game's allocator runs: a `gameconfig.xml` that gives the pool more keeps it.
+    The sizes are said once, the game's last error is kept, and a capacity below 0 or a stride that changed is left as the game made it and reported once;
+  - Both are hooked in `DllMain`, all or none, a pattern missing or held twice, the set-up's allocator in another stack slot than the hook hands on, or a hook not made reported with nothing changed; both hooks stay on, where the original takes them off, so that a pool made a second time is raised as well: the set-up's tests the stride before it touches the name, the allocator's compares one pointer, and the allocator's four argument registers go on as they came;
+  - The hooks raise the pool only if the game makes it after TweaksV's `DllMain`, so a thread of the part checks it: when the game has not made it 60 seconds after the session's start - the first script program the game places, seen through the script programs' hook - the Blips part's, which the part joins, or while `TweaksV.ini` switches Blips off the part's own, as the first part to use it; the game makes its pools as the session starts - the part reports that the pool keeps the game's size, in a box of its own after the start-up summary; a making after that is said with the sizes.
+    While `BlipLimitFix.asi` or Resource Extensions, which do the Blips part's job on the same script programs, is installed - as the conflict check found it, whatever `[BLIPS] ENABLED` says - no check is made, and the log says so: TweaksV makes no hook and leaves the script programs to it.
+    A check that cannot be made otherwise - its events, the hook or its thread not there - is reported in the start-up summary, the hooks staying: nothing else would say when the game does not make the pool.
+    With `DIAGNOSTIC_MODE=1` the two sites with what `IsFunctionStart` says of each, which refuses nothing since the patterns pin it, the session's start and every making are timed;
+  - The original's other ways - the size lookup's call and a hook on the lookup itself - are left out: a hook that cannot be made is reported, nothing changed, as with every part;
+  - `StaticBoundLimitAdjuster.asi` and `StaticBoundsLimitAdjuster.asi`, the original's two names, count as old plugins: with either installed, this part is switched off.
+- **Measured first:** the sirens per vehicle, of the part on [ROADMAP.md](ROADMAP.md), are measured before they are lifted, by a module of its part, with `DIAGNOSTIC_MODE=1` only: every pattern of the limit found as often as it must match, every site checked as the part's writing half will check it and logged, and a summary 10 seconds in and then every minute while it changes.
   The measurements write nothing to the game - but the siren count's, which redirects the game's call that draws a vehicle's sirens - and have no section in `TweaksV.ini`, no feature entry and no old plugin yet; without `DIAGNOSTIC_MODE` nothing is looked for, so a normal boot does what it did before.
   A pattern not found, a site not as expected, an address outside the game or a thread that cannot start is logged, not reported (T-DIAG), and that measurement does nothing more.
   A part goes in only once a mod load reaches its limit: of the seven limits 2.5.0 measured first, four are their parts' own since 2.6.0 - WeaponLimits', PedProps' and Resources' - and the streaming heap's measurement is gone (Versions).
-  The two:
-  - **Siren IDs:** the 14 patterns `I-E-P1` to `I-E-M1` found once each, and every site the SirenSettings part's writing half will change or rely on checked and logged - the two parser registrations with the ID members' offsets, their offset fields and types read, never written, and logged again at the first summary (a type other than a byte's is a finding for the writing half and stops nothing), the XML reader, the ID table's four `lea`, which a scan must find exactly, the loaders' nine ID loads, two ID stores, four checks for none, two IDs given when none is free, two stores into a variation and four limits of 256, the dedupe and its loop, the three constructors, the base loader's call after the table's fill and the getter; then, 10 seconds in and every minute while they change, the siren settings loaded against the 255 a vehicle can use, the IDs in use against the table's 256, the settings past position 255 and the IDs given to more than one setting, the settings read through `CopyMemorySafely`.
   - **Siren count:** the game lights `siren1` to `siren20` of a vehicle - its renderer loops over 20 lights, and a model's bone structure names the siren and glass bones of `siren1` to `siren20` alone, by signed bytes, so a bone past index 127 cannot be named either - and a vehicle made for 32 sirens keeps the rest dark, without an error.
     With `DIAGNOSTIC_MODE=1` the vehicle lights' call of the siren lights' renderer is redirected - the one write of the measurements - to a wrapper that has the game draw first and then counts each model once, its siren bones looked up by name up to `siren32`; the summary names the models seen, the most sirens a model's bone structure names, those with siren bones past `siren20` and those losing siren bones past bone 127, with a line per such model, and one per model the measurement could not read - a lookup that faults among them, caught - or whose names and bone structure disagree.
     With `DRY_RUN` nothing is redirected or counted.
@@ -251,8 +268,8 @@ Every part is TweaksV's own code since 2.0.0; the parts that follow another proj
   The release notes name the tag the build came from and link the repository, which `THIRD_PARTY_NOTICES.md` and `README.md` in the zip name too, so the source is one step from the binary wherever the zip goes (GPL-3.0, section 6d); the mod page carries the credits, links the repository and adds no restrictions of its own.
   Check the zip on VirusTotal before uploading: a plain build with its version resource and no packer stays clean.
 
-- **Tests:** `test\` holds fake-game test suites (1254 checks): small programs that pretend to be the game, with copies of the code TweaksV patches and a script program they place as the game does, load the real `TweaksV.asi` and report what it changed.
-  One more suite checks the pattern table against `PATTERNS.md`.
+- **Tests:** `test\` holds fake-game test suites (1647 checks): small programs that pretend to be the game, with copies of the code TweaksV patches and a script program they place as the game does, load the real `TweaksV.asi` and report what it changed.
+  One more suite checks the pattern table against `PATTERNS.md` and has each pattern held too often.
   `bash test/run_all.sh` builds and runs them (see README).
 
 ## Versions
@@ -305,13 +322,6 @@ Known bugs and open issues in TweaksV.
   An aid is switched on for a test, by someone who reads `TweaksV.log` for what it gives - or misses the console's window - and finds the reason there, and the `UNLOCK_FILES` summary only says what the part did; the game and every part's job go on as without the aid.
 - **When it goes:** when a player is meant to rely on one of these switches: then an aid that cannot be set up is reported like a job not done while its switch is on.
 
-### T-SUMMARY: no start-up summary when its thread cannot start
-
-- **What:** the start-up summary is shown from a thread of its own, because a message box must not block `DllMain` or the game's thread that first asks for the time.
-  When Windows cannot start that thread, the log says so (`The start-up summary thread could not be started (Windows error N).`) and no box comes for the rest of the session: the problems of the start-up and every later one stand only in `TweaksV.log`.
-- **Status:** accepted as rare: Windows refuses a new thread only in an exceptional state, and the log says what happened.
-- **When it goes:** with phase C's round, T-LATEBOX's change to the start-up summary (`TweaksVSummary`): the thread is tried again with the next problem reported, as a new thread is started for the next problem after a box that could not be built.
-
 ### T-FREEZE: RageOpenV's start-up writes without freezing the other threads
 
 - **What:** the writes in `DllMain` happen while the game is still single-threaded.
@@ -320,51 +330,6 @@ Known bugs and open issues in TweaksV.
 - **Status:** accepted: no other thread runs that code at that point of the start-up.
   The Blips part's write after `DllMain` is not of this kind: it goes into a script program on the game's resource placement thread before the game enters the program in its registry, where no script thread can run it (PATTERNS.md, "Script programs").
 - **When it goes:** when `WriteCode` freezes the game's other threads around a write made after `DllMain`, as MinHook does - at the latest when a game build runs one of those sites on another thread that early.
-
-### T-LATEBOX: a finding after the start-up summary comes under a failing part's heading
-
-- **What:** a problem reported after the start-up summary is shown comes in a box of its own under the heading "TweaksV: a part stopped working after the start-up:", which ends "The game continues without the affected parts." - also for findings that are not a part failing: a pack made for GTA V Legacy that RageOpenV's check names (it reads the packs for a while, so in the game its box comes after the summary) and a file a guard of WeaponLimits refuses.
-  Each item says what happened; the heading and the last line do not fit it.
-- **Status:** open, kept for 2.6.0: the items and `TweaksV.log` say what each finding is.
-- **When it goes:** with phase C's round: a heading per late report in `TweaksVSummary`, each report saying whether a part stopped working or what it found.
-
-### T-LEGACYWALK: a folder only the Legacy check's own walk cannot list is skipped with no word
-
-- **What:** the check's `PackEntry` (`TweaksVLegacyPacks.cpp`) drops every kind of name but a file, so a folder the walk hands on as not listed, or listed only in part, leaves no count, no line and no problem.
-  RageOpenV's report covers a folder its own walk could not list, but the check walks later, on its own thread, by a relative path, for as long as its packs take: a share that drops, or a `SetCurrentDirectory` by the game or another plugin meanwhile, loses folders for the check alone, and a Legacy pack in them goes unnamed.
-  With RageOpenV's report on screen the last line is still wrong: where every pack lies in such a folder it says none is in the mods folder.
-  The suites' L15 and L18 pin only what both walks share.
-- **Status:** accepted for 2.6.0: the trigger is narrow, and a change would mean another build before my boot.
-- **When it goes:** with phase C's round: `PackEntry` counts the folders not listed, the last line says how many, and the check's one problem names them.
-
-### T-COPIES: what review B's F7 left of the helpers, and small tidy-ups
-
-- **What:** F7 moved the helpers the review named into one place, and these remain, none of them changing what a part does:
-  - `In` (`TweaksVWeaponInfos.cpp`) is `At` under another name, about 20 callers.
-  - The twins `Imm32At` (Decals, WeaponComponents), `Load<T>` (RayTracing, TextureBudget) and `FunctionStartOf` (RayTracing, SirenCount).
-  - `Hex32`'s body inline in HeapAdjuster and LegacyPacks; `Holds` twice, word for word (Scripts, SirenCount); `Printable`, the same rule twice (LegacyPacks, Scripts); and the unaligned read under seven names in nine files (`Imm32At`, `Imm32`, `ValueAt`, `ReadAt`, `Read`, `Field`, `Get`).
-  - The root's name by hand beside `kModsRoot`: `game + L"\\mods"` in `TweaksVRageOpenV.cpp`, `"mods\\"` in `TweaksVLegacyPacks.cpp`, each meaning what it says.
-  - A local with no reader: `label` in RageOpenV's archive calls.
-  - Includes the moves left unused: `<cstdio>` in RayTracing, SirenIds, WeaponComponents and WeaponInfos.
-- **Status:** accepted for 2.6.0.
-- **When it goes:** with phase C's round: `In` and the twins replaced by the one copy, the unaligned read one template in `TweaksVPatch`, the rest deleted or corrected.
-
-### T-NAMES: names a walk leaves out count against no limit
-
-- **What:** `WalkModsFolder` counts only the names it hands on, so a folder of names too long or not valid Unicode is walked to its end, on the game's thread for RageOpenV's reading; only the disk bounds it, where the code standard asks for a limit on every count.
-  It was so before the walk was made one, and `TweaksVModsFolder.h` says so.
-- **Status:** accepted for 2.6.0.
-- **When it goes:** with phase C's round: a second bound on names seen, 4 times the entry limit say, ends the walk as `stopped` does.
-
-### T-TESTGAPS: what the suites do not pin of the fix round
-
-- **What:** the code in each case reads right; nothing would fail if it broke:
-  - `TWEAKSV_TEST_MODS_FAIL_LISTING` has no check that the Release build ignores it (L18 runs the test build alone).
-  - The words for a pattern held twice are pinned for two of the older parts' searches alone, `S-E3` and `R-E-K1`; the others have at most their miss pinned, though the words come from one function.
-  - Two readings of the search for stores have no scenario: a real store with a `C4` VEX prefix, and `altImmediate`, `66 C7` and `66 81`.
-  - The fake's "last error kept" fields pin the outcome, not the restore: a good `WriteLog` sets no error, so the weapon components' pool size function could lose its `SetLastError` with every check green (review A's F5).
-- **Status:** accepted for 2.6.0.
-- **When it goes:** with phase C's round: a run of the Release build for the switch; a test build's `TEST_TWICE_PATTERN=<label>` beside `TEST_BREAK_PATTERN`, run over the patterns' list; two writers more in TB16's block, `vextractf128 [rip+disp32], ymm0, 1` and `mov word [rip+disp32], imm16`; a test-build line in `WriteLog` that leaves a last error of its own.
 
 ### T-PEDPROPS: the ped props' raise is untested and experimental, and ships off
 

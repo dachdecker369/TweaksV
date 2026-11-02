@@ -239,6 +239,7 @@ I copy it into the game folder, start the game, stay in it for the seconds the l
 The overview reads `TweaksV.log`; the pass reads the files.
 
 **2.7.0's proof,** on the Release build of the tagged commit, with `DIAGNOSTIC_MODE=1`, my usual mods folder, my converted emergency packs, a save loaded and about ten minutes of driving and shootouts with a wanted level in the city, which is what the population's measurements need.
+The load is my folder as it stands, `TrainerV.asi` and Collectibles on Map beside TweaksV, which only `POOL_MEMORY` makes safe (below), the police packs coming by the trainer.
 The drive goes on only while the budgets' line still grows (D31).
 A start with `LARGE_SIREN_IDS=0` and one with `LARGE_SIREN_IDS=1` compare the base game's settings and IDs (D22), and a pack's ID past 255 kept whole; its emergency vehicle shows its own lights.
 `STATICBOUNDS_SIZE` above what my `gameconfig.xml` gives the pool - 24,500 at my second test, so 30000 - since a larger value there keeps the default's 16,000 from changing anything: the raise's line with both sizes, the two hooks at 0x15A3F0 and 0x15A4D0.
@@ -250,6 +251,9 @@ Then the tag, the searches, and one atomic push.
 The next plan, 2.8.0, comes from those numbers.
 
 **What my boots have shown so far** (the full account is in the git history up to 098836c):
+- **The data window's boot,** 2026-11-02, the test build of 498a6de on the windows: the nine windows at both moments, 18 files, none unreadable; one `PROBLEM`, the Legacy box for `lfpolice`, which stays Legacy on purpose, never spawned.
+  Both budgets at 180 seconds: the variety 6.0, vehicles 71.5 MB x 6 = 429, peds 93.5 MB x 6 = 561, level 3, entry 0 of each table 1.5 MB; vehicles in use 428.7 of 429 MB, past the stop at 427.5, with 94 traffic models and 8 dropped, peds 305.1 MB: the vehicle budget looks to bind at the three-minute mark, one reading only, which the drive will say.
+  A start before it, with `TrainerV.asi` and Collectibles on Map in, crashed at `+0x15A514`, a write to 0x170, `rax` 0, a pool of 23 slots of 16 bytes, room under 64 KB, a third site near 0x1AEA7FC, the ninth sample; without the two plugins it passed.
 
 - **2.6.0's proof,** 2026-11-01, with `VIDEO_MEMORY_BUDGET=6000`, `DYNAMIC_BVH_VERTICES=8388608`, the seven weapon packs and one Legacy pack: 166 `weapons.meta` files and 556 component definitions loaded; the budgets at most 4,155 of 6,000 MB; the objects 98,359 of `MaxStreamingResources`' 98,304; the ray tracing buffer at most 2,281,234 of 8,388,608 vertices, none refused.
   The guards' boot passed; a refused pack's weapon spawns without its magazine.
@@ -267,10 +271,10 @@ The next plan, 2.8.0, comes from those numbers.
 ## Next steps
 
 **State:** phase C's round runs since 2026-11-02, the split of D29 kept.
-The scaffold (D27) is on main: `TweaksV.ini`'s layout 5 with its 42 keys, the two new parts as stubs, the test keys and the anchors; nothing of the tracks is built.
-2.6.0 stands as the last build, tagged on c6c8854 and pushed: thirteen parts, layout 4 with its 38 keys, 143 patterns, 1247 checks.
-The reflow is on main too;
-the sirens' pass waits for my boot of the data window.
-The open issues are T-HARDEN, T-DIAG, T-SUMMARY, T-FREEZE, T-LATEBOX, T-LEGACYWALK, T-COPIES, T-NAMES, T-TESTGAPS and T-PEDPROPS.
+The five coding tracks are merged on main and their documents folded: fifteen parts, `TweaksV.ini`'s layout 5 with its 42 keys, 147 patterns, 1647 checks, the full run about 7 minutes side by side.
+All six research passes are done;
+2.6.0 stands as the last build, tagged on c6c8854 and pushed.
+then the merge, the review, the proof and my boots.
+The open issues are T-HARDEN, T-DIAG, T-FREEZE and T-PEDPROPS.
 
-
+the sirens per vehicle, whether and when (D23); the tests' sweep's timer switch, not built since it would save about 20 of 345 seconds and add a way to flake, recommended left out.
