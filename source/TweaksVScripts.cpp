@@ -18,7 +18,6 @@
 
 #include <algorithm>
 #include <atomic>
-#include <cstdio>
 #include <cstring>
 #include <vector>
 
@@ -107,14 +106,6 @@ namespace TweaksV
 				return resolved;
 			}
 
-			// "holds 0x1C" - an offset a site's instruction carries, for the DIAGNOSTIC lines
-			std::string Holds(const uint8_t* at)
-			{
-				char text[16];
-				snprintf(text, sizeof(text), "holds 0x%X", static_cast<unsigned>(*at));
-				return text;
-			}
-
 			// Finds and checks the three sites and redirects the call; false with g_reason set if it cannot.
 			bool MakeHook(const char* tag)
 			{
@@ -184,14 +175,6 @@ namespace TweaksV
 			}
 			memset(out, 0, sizeof(out));
 			return false;
-		}
-
-		std::string Printable(const char* name)
-		{
-			std::string printable;
-			for (; *name; name++)
-				printable += (*name < 0x20 || *name > 0x7E) ? '?' : *name;
-			return printable;
 		}
 
 		bool AddUser(const User& user, std::string& reason)

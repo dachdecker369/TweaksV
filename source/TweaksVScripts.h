@@ -107,9 +107,6 @@ namespace TweaksV
 		// them.
 		bool ReadName(const char* name, char (&out)[kNameRead]);
 
-		// A name ReadName read, for a log line: a byte that cannot be printed becomes '?'.
-		std::string Printable(const char* name);
-
 		// A user of the hook. before runs for every script program the game places, before the game resolves
 		// its natives - the native table still holds their hashes - with how many programs the hook has seen
 		// so far, this one included; what it returns comes back to after, which runs once the game has

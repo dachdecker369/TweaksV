@@ -157,22 +157,9 @@ namespace TweaksV
 			return true;
 		}
 
-		// A name from a pack, for a line: printable ASCII as it is, every other byte '?' - the names are the pack
-		// author's, and a line must stay one line.
-		std::string Printable(std::string_view name)
-		{
-			std::string text(name);
-			for (char& c : text)
-				if (static_cast<unsigned char>(c) < 0x20 || static_cast<unsigned char>(c) > 0x7E)
-					c = '?';
-			return text;
-		}
-
 		std::string EncryptionText(uint32_t encryption)
 		{
-			char text[16];
-			snprintf(text, sizeof(text), "0x%08X", encryption);
-			return std::string("encryption ") + text + (encryption == kAesTag ? ", AES" : (encryption & kNgMask) == kNgTag ? ", NG" : "");
+			return "encryption " + Hex32(encryption) + (encryption == kAesTag ? ", AES" : (encryption & kNgMask) == kNgTag ? ", NG" : "");
 		}
 
 		// ---- the check, on its one thread

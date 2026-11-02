@@ -412,7 +412,7 @@ namespace TweaksV
 			const uint32_t hash = ValueAt<uint32_t>(program, Scripts::kNameHashOffset);
 			char name[Scripts::kNameRead];
 			const bool named = Scripts::ReadName(ValueAt<const char*>(program, Scripts::kNameOffset), name);
-			const auto shown = [&] { return named ? Scripts::Printable(name) : std::string("(a name that cannot be read)"); };
+			const auto shown = [&] { return named ? Printable(name) : std::string("(a name that cannot be read)"); };
 			if (g_firstPlacement.exchange(false))
 				WriteLog(kTag, "TEST BUILD: TEST_DUMP_SCRIPT: the first script program the game placed is " + shown() + " (hash " + Hex32(hash) +
 					"), on thread " + std::to_string(GetCurrentThreadId()) + " - the hook runs.");

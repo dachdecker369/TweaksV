@@ -798,7 +798,7 @@ namespace TweaksV
 			{
 				if (!g_otherNameLogged.exchange(true))
 					WriteLog(kTag, "A script program has the hash of blip_controller, " + Hex(kScriptHash) + ", but is named " +
-						(named ? Scripts::Printable(name) : std::string("(a name that cannot be read)")) + " - left as it is (logged once).");
+						(named ? Printable(name) : std::string("(a name that cannot be read)")) + " - left as it is (logged once).");
 				return nullptr;
 			}
 			const uint32_t number = g_placements.fetch_add(1) + 1;

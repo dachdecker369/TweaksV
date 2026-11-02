@@ -17,7 +17,6 @@
 #include <windows.h>
 
 #include <cstdint>
-#include <cstdio>
 #include <cstring>
 #include <string>
 
@@ -68,9 +67,7 @@ namespace TweaksV
 		memcpy(&bytes, site, sizeof(bytes));
 		if (bytes == 0 || bytes % kMegabyte != 0)
 		{
-			char text[32];
-			snprintf(text, sizeof(text), "0x%08X", bytes);
-			Fail(std::string("the game code found holds an unexpected value (") + text + ").");
+			Fail("the game code found holds an unexpected value (" + Hex32(bytes) + ").");
 			return;
 		}
 		const int found = static_cast<int>(bytes / kMegabyte);

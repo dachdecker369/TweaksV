@@ -138,12 +138,6 @@ namespace TweaksV
 			uint32_t vertices = 0;					// what the three immediates hold
 		};
 
-		// A value of the game's data that the game's threads may write meanwhile: aligned - DataOf checks it - so read whole.
-		template <typename T> T Load(const void* at)
-		{
-			return *static_cast<const volatile T*>(at);
-		}
-
 		// "RVA 0x1, RVA 0x2 and RVA 0x3"
 		std::string Addresses(const std::vector<uint8_t*>& addresses)
 		{
@@ -157,14 +151,6 @@ namespace TweaksV
 		std::string Megabytes(uint64_t vertices)
 		{
 			return std::to_string((vertices * kStride + (uint64_t{ 1 } << 19)) >> 20);
-		}
-
-		// The start of the function the game's unwind data puts address in, or nullptr where it names none.
-		const uint8_t* FunctionStartOf(const uint8_t* address)
-		{
-			DWORD64 imageBase = 0;
-			const PRUNTIME_FUNCTION entry = RtlLookupFunctionEntry(reinterpret_cast<DWORD64>(address), &imageBase, nullptr);
-			return entry ? reinterpret_cast<const uint8_t*>(imageBase + entry->BeginAddress) : nullptr;
 		}
 
 		// True if the count values of T at at lie inside the game, aligned to their size, so that Load reads each whole, and can be

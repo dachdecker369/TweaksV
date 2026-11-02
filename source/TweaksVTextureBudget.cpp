@@ -403,12 +403,6 @@ namespace TweaksV
 
 		// ---- the measurement (DIAGNOSTIC_MODE): the counters, read as they are
 
-		// A value of the game's data that the game's threads may write meanwhile: aligned, as the checks hold it, so read whole.
-		template <typename T> T Load(const uint8_t* at)
-		{
-			return *reinterpret_cast<const volatile T*>(at);
-		}
-
 		struct Reading
 		{
 			bool readable = false;

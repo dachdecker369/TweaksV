@@ -113,12 +113,6 @@ namespace TweaksV
 
 		bool g_diagnostic = false;		// DIAGNOSTIC_MODE, read once: the hook never reads the settings
 
-		// " (W-E-I1)" - the pattern a line's site lies in
-		std::string In(const GamePattern& pattern)
-		{
-			return std::string(" (") + pattern.label + ")";
-		}
-
 		void Diagnostic(const std::string& text)
 		{
 			if (g_diagnostic)
@@ -157,30 +151,30 @@ namespace TweaksV
 			sites.capacityAt = sites.init + kCapacityStoreAt + kCapacityStoreSize - sizeof(uint16_t);
 			const uint32_t allocated = ValueAt<uint32_t>(sites.allocatedAt);
 			const uint32_t capacity = ValueAt<uint16_t>(sites.capacityAt);
-			Diagnostic("limit at " + DescribeAddress(sites.allocatedAt) + " holds " + std::to_string(allocated) + In(kInitPattern) +
+			Diagnostic("limit at " + DescribeAddress(sites.allocatedAt) + " holds " + std::to_string(allocated) + At(kInitPattern) +
 				": the blobs the game allocates");
-			Diagnostic("limit at " + DescribeAddress(sites.capacityAt) + " holds " + std::to_string(capacity) + In(kInitPattern) +
+			Diagnostic("limit at " + DescribeAddress(sites.capacityAt) + " holds " + std::to_string(capacity) + At(kInitPattern) +
 				": the array's capacity");
 			if (allocated != capacity)
 				return "the two limits of the weapon info blob array disagree: " + std::to_string(allocated) + " at " +
 					DescribeAddress(sites.allocatedAt) + " and " + std::to_string(capacity) + " at " + DescribeAddress(sites.capacityAt) + " (" +
 					kInitPattern.label + "; another mod may have changed one).";
 			if (allocated == 0)
-				return "the limits of the weapon info blob array hold 0" + In(kInitPattern) + ".";
+				return "the limits of the weapon info blob array hold 0" + At(kInitPattern) + ".";
 			sites.gameRoom = allocated;
 
 			// 3. the call to the allocation: into the game, the allocation's first bytes there and its element size
 			const uint8_t* const call = init + kCallAt;
 			const uint8_t* const allocation = CallTarget(call);
 			const bool readable = IsInsideGameImage(allocation) && IsReadable(allocation, kAllocationRead);
-			Diagnostic("allocation call at " + DescribeAddress(call) + " -> " + DescribeAddress(allocation) + In(kInitPattern) +
+			Diagnostic("allocation call at " + DescribeAddress(call) + " -> " + DescribeAddress(allocation) + At(kInitPattern) +
 				(readable ? ": " + HexBytes(allocation, kAllocationRead) : std::string()));
 			if (!IsInsideGameImage(allocation))
 				return "the allocation call at " + DescribeAddress(call) + " is not a call into the game (another mod may have hooked it already)" +
-					In(kInitPattern) + ".";
+					At(kInitPattern) + ".";
 			if (!readable || memcmp(allocation, kAllocationHead, sizeof(kAllocationHead)) != 0)
 				return "the allocation at " + DescribeAddress(allocation) + (readable ? " does not begin with the bytes it is expected to" :
-					" cannot be read") + In(kInitPattern) + ".";
+					" cannot be read") + At(kInitPattern) + ".";
 			sites.elementSize = ValueAt<uint32_t>(allocation + sizeof(kAllocationHead));
 
 			// 4. the block's store, which gives the array, and the capacity's store, 0xA after it: the array inside the game
@@ -188,15 +182,15 @@ namespace TweaksV
 			const uint8_t* const array = Rel32Target(blockStore);
 			const uint8_t* const capacityStore = init + kCapacityStoreAt + kDispAt;
 			const uint8_t* const capacityField = Rel32Target(capacityStore) + sizeof(uint16_t);	// the instruction ends after its imm16
-			Diagnostic("reference at " + DescribeAddress(blockStore) + " -> " + DescribeAddress(array) + In(kInitPattern) +
+			Diagnostic("reference at " + DescribeAddress(blockStore) + " -> " + DescribeAddress(array) + At(kInitPattern) +
 				": the block's store - the weapon info blob array");
-			Diagnostic("reference at " + DescribeAddress(capacityStore) + " -> " + DescribeAddress(capacityField) + In(kInitPattern) +
+			Diagnostic("reference at " + DescribeAddress(capacityStore) + " -> " + DescribeAddress(capacityField) + At(kInitPattern) +
 				": the capacity's store");
 			if (!IsInsideGameImage(array) || !IsInsideGameImage(array + kArraySize - 1))
-				return "the weapon info blob array at " + DescribeAddress(array) + In(kInitPattern) + " is not inside the game.";
+				return "the weapon info blob array at " + DescribeAddress(array) + At(kInitPattern) + " is not inside the game.";
 			if (capacityField != array + kCapacityOffset)
 				return "the capacity's store at " + DescribeAddress(capacityStore) + " leads to " + DescribeAddress(capacityField) +
-					", not to the array's capacity at " + DescribeAddress(array + kCapacityOffset) + In(kInitPattern) + ".";
+					", not to the array's capacity at " + DescribeAddress(array + kCapacityOffset) + At(kInitPattern) + ".";
 			sites.array = array;
 
 			// 5. W-E-I2, the loader: its count read and written at the array + 8, its block read at the array, its blob
@@ -214,20 +208,20 @@ namespace TweaksV
 			for (const auto& reference : loaderReferences)
 			{
 				const uint8_t* const target = Rel32Target(reference.field);
-				Diagnostic("reference at " + DescribeAddress(reference.field) + " -> " + DescribeAddress(target) + In(kLoaderPattern) + ": " +
+				Diagnostic("reference at " + DescribeAddress(reference.field) + " -> " + DescribeAddress(target) + At(kLoaderPattern) + ": " +
 					reference.what);
 				if (target != reference.expected)
 					return std::string(reference.what) + " at " + DescribeAddress(reference.field) + " leads to " + DescribeAddress(target) +
-						", not to " + DescribeAddress(reference.expected) + In(kLoaderPattern) + ".";
+						", not to " + DescribeAddress(reference.expected) + At(kLoaderPattern) + ".";
 			}
 			const uint8_t* const blobSizeAt = loader + kBlobSizeAt + kDispAt;
 			const uint32_t blobSize = ValueAt<uint32_t>(blobSizeAt);
-			Diagnostic("blob size at " + DescribeAddress(blobSizeAt) + " holds " + Hex(blobSize) + In(kLoaderPattern));
+			Diagnostic("blob size at " + DescribeAddress(blobSizeAt) + " holds " + Hex(blobSize) + At(kLoaderPattern));
 			if (blobSize != sites.elementSize)
 				return "the loader's blob size, " + Hex(blobSize) + " at " + DescribeAddress(blobSizeAt) + ", is not the allocation's element size, " +
-					Hex(sites.elementSize) + In(kLoaderPattern) + ".";
+					Hex(sites.elementSize) + At(kLoaderPattern) + ".";
 			if (blobSize == 0)
-				return "the blob size of the loader and the allocation is 0" + In(kLoaderPattern) + ".";
+				return "the blob size of the loader and the allocation is 0" + At(kLoaderPattern) + ".";
 			return std::string();
 		}
 
@@ -640,7 +634,7 @@ namespace TweaksV
 		if (!g_diagnostic)
 			return;
 		g_array = sites.array;
-		WriteLog(kTag, "DIAGNOSTIC: the weapon info blob array at " + DescribeAddress(sites.array) + In(kInitPattern) + ", blobs of " +
+		WriteLog(kTag, "DIAGNOSTIC: the weapon info blob array at " + DescribeAddress(sites.array) + At(kInitPattern) + ", blobs of " +
 			std::to_string(sites.elementSize) + " bytes: the weapons.meta files loaded and its room are logged after 10 seconds, then every minute "
 			"while the numbers change.");
 		StartMeasurement<kMeasurement>();	// one that cannot start is logged

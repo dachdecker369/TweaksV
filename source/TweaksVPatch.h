@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <cstring>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace TweaksV
@@ -33,6 +34,13 @@ namespace TweaksV
 
 	// " (T-E-B1)" - the pattern a site in a log line comes from.
 	std::string At(const GamePattern& pattern);
+
+	// "holds 0x1C" - an offset a site's instruction carries, for the DIAGNOSTIC lines.
+	std::string Holds(const uint8_t* at);
+
+	// A name from a file or the game's memory, for a line: printable ASCII as it is, every other byte '?' - the names are
+	// strangers', and a line must stay one line.
+	std::string Printable(std::string_view name);
 
 	// The bytes of a page of memory.
 	size_t PageSize();
@@ -61,6 +69,12 @@ namespace TweaksV
 		T value{};
 		memcpy(&value, static_cast<const uint8_t*>(at) + offset, sizeof(T));
 		return value;
+	}
+
+	// A value of the game's data that the game's threads may write meanwhile: aligned, as its caller has checked, so read whole.
+	template <typename T> T Load(const void* at)
+	{
+		return *static_cast<const volatile T*>(at);
 	}
 
 	// Writes every write, or none. Every page a write touches is made writable first (a page that is
@@ -99,6 +113,9 @@ namespace TweaksV
 	// True if the code at address starts with a jump (E9, EB or FF 25) - the usual sign that
 	// another mod has already hooked that function.
 	bool StartsWithJump(const void* address);
+
+	// The start of the function the game's unwind data puts address in, or nullptr where it names none.
+	const uint8_t* FunctionStartOf(const uint8_t* address);
 
 	// True if address is where a function starts: the game's unwind data says so, or - for code
 	// without unwind data - the byte before it, read only where it is readable, is padding or a ret

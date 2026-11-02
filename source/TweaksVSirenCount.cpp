@@ -412,25 +412,9 @@ namespace TweaksV
 
 		// ---- the sites, found and checked
 
-		// The start of the function the game's unwind data puts address in, or nullptr where it names none.
-		const uint8_t* FunctionStartOf(const uint8_t* address)
-		{
-			DWORD64 imageBase = 0;
-			const PRUNTIME_FUNCTION entry = RtlLookupFunctionEntry(reinterpret_cast<DWORD64>(address), &imageBase, nullptr);
-			return entry ? reinterpret_cast<const uint8_t*>(imageBase + entry->BeginAddress) : nullptr;
-		}
-
 		void NotMeasured(const std::string& why)
 		{
 			WriteLog(kTag, "DIAGNOSTIC: the siren count is not measured: " + why);
-		}
-
-		// "holds 0xB0" - an offset a site's instruction carries, for the DIAGNOSTIC lines
-		std::string Holds(const uint8_t* at)
-		{
-			char text[16];
-			snprintf(text, sizeof(text), "holds 0x%X", static_cast<unsigned>(*at));
-			return text;
 		}
 	}
 

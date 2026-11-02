@@ -130,6 +130,22 @@ namespace TweaksV
 		return std::string(" (") + pattern.label + ")";
 	}
 
+	std::string Holds(const uint8_t* at)
+	{
+		char text[16];
+		snprintf(text, sizeof(text), "holds 0x%X", static_cast<unsigned>(*at));
+		return text;
+	}
+
+	std::string Printable(std::string_view name)
+	{
+		std::string text(name);
+		for (char& c : text)
+			if (static_cast<unsigned char>(c) < 0x20 || static_cast<unsigned char>(c) > 0x7E)
+				c = '?';
+		return text;
+	}
+
 	std::string HexBytes(const void* bytes, size_t size)
 	{
 		std::string text;
@@ -290,6 +306,13 @@ namespace TweaksV
 	{
 		const auto code = static_cast<const uint8_t*>(address);
 		return code && (code[0] == 0xE9 || code[0] == 0xEB || (code[0] == 0xFF && code[1] == 0x25));
+	}
+
+	const uint8_t* FunctionStartOf(const uint8_t* address)
+	{
+		DWORD64 imageBase = 0;
+		const PRUNTIME_FUNCTION entry = RtlLookupFunctionEntry(reinterpret_cast<DWORD64>(address), &imageBase, nullptr);
+		return entry ? reinterpret_cast<const uint8_t*>(imageBase + entry->BeginAddress) : nullptr;
 	}
 
 	bool IsFunctionStart(const void* address, std::string& detail)
