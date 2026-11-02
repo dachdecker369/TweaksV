@@ -449,6 +449,8 @@ The hook's two, a pack's carcols callback (RVA 0x1378210) and the base builder (
 | I-E-C3 | `C7 40 40 00 00 00 00 C7 40 48 00 00 FF FF 48 83 C4 28 C3` | the variation's allocating constructor (RVA 0x1363960): the same stores through `rax` from -0x0F, then `add rsp, 0x28` and `ret` | found | 0x13639AD |
 | I-E-R1 | `66 0F 7F 05 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? 80 3D` | the vehicle metadata's init (RVA 0x1349BD0): +4 the disp32 of the last `movdqa` that fills the ID table, its last 16 bytes (RVA 0x471E600); +13 the call of the base loader (RVA 0x1349E40) | found | 0x1349CE6 |
 | I-E-M1 | `0F B6 81 3B 05 00 00 48 85 C0 74 13 48 8B 0D ? ? ? ? 48 69 C0 E8 05 00 00 48 03 41 48 C3` | the getter of a model's siren setting (no unwind data): +3 0x53B, the model info's siren index, a byte; +15 the rel32 of `mov rcx, [rip+disp32]` - the carcols pointer (RVA 0x471D920); +22 0x5E8, a setting's size; +29 0x48, the settings' array | found | 0x135D220 |
+| I-E-H1 | `41 57 41 56 41 55 41 54 56 57 55 53 48 83 EC 68 80 3A 00 0F 84 ? ? ? ?` | a pack's carcols callback, hooked at its start with `DIAGNOSTIC_MODE` and the part at work: `rdx` its data file's entry, the file's name at +0; `I-E-D1`'s and `I-E-T4`'s code lies inside it | found | 0x1378210 |
+| I-E-H2 | `41 57 41 56 41 55 41 54 56 57 55 53 48 83 EC 28 49 89 CE 0F B7 71 10 89` | the base builder, hooked at its start the same: `rcx` the carcols data, the file's IDs in its settings as it starts; `I-E-T2`'s code lies inside it | found | 0x134A3A0 |
 
 <!-- [siren ids] -->
 

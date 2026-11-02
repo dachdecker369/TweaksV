@@ -177,7 +177,8 @@ namespace TweaksV
 		// variations' loop (T1), the base builder (T2), a pack's variations (T3) and a pack's builder (T4); a pack's dedupe (D1)
 		// and its compare loop (D2); the constructors of a siren setting (C1) and of a variation, in place (C2) and allocating
 		// (C3); the vehicle metadata's init, its last fill of the table and its call of the base loader (R1); the getter of a
-		// model's siren setting (M1)
+		// model's siren setting (M1); with DIAGNOSTIC_MODE and the part at work, a pack's carcols callback (H1) and the base
+		// builder (H2), which it hooks, each at its function's start
 		{ "I-E-P1", "C7 05 ? ? ? ? 0D 9B EB 84 0F 57 C0 0F 11 05 ? ? ? ? 48 8D 05 ? ? ? ? 48 89 05 ? ? ? ? 48 8D 05" },
 		{ "I-E-P2", "C7 05 ? ? ? ? A9 FE EA 18 0F 57 C0 0F 11 05 ? ? ? ? 48 8D 05 ? ? ? ? 48 89 05 ? ? ? ? 48 8D 05" },
 		{ "I-E-P3", "48 8B 41 08 0F B6 48 10 48 83 F9 21 0F 87" },
@@ -192,6 +193,8 @@ namespace TweaksV
 		{ "I-E-C3", "C7 40 40 00 00 00 00 C7 40 48 00 00 FF FF 48 83 C4 28 C3" },
 		{ "I-E-R1", "66 0F 7F 05 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? 80 3D" },
 		{ "I-E-M1", "0F B6 81 3B 05 00 00 48 85 C0 74 13 48 8B 0D ? ? ? ? 48 69 C0 E8 05 00 00 48 03 41 48 C3" },
+		{ "I-E-H1", "41 57 41 56 41 55 41 54 56 57 55 53 48 83 EC 68 80 3A 00 0F 84 ? ? ? ?" },
+		{ "I-E-H2", "41 57 41 56 41 55 41 54 56 57 55 53 48 83 EC 28 49 89 CE 0F B7 71 10 89" },
 
 		// [siren count]
 		// SirenSettings, the siren count (TweaksVSirenCount.cpp): the vehicle lights' calls of the siren lights' renderer, which the

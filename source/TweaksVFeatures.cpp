@@ -152,7 +152,8 @@ namespace TweaksV
 		// its part is built, or when it is not, so the table may be empty.
 		constexpr std::initializer_list<MeasuredFirst> kMeasuredFirst = {
 			// [siren ids]
-			{ "SirenSettings", MeasureSirenIds },
+			// the siren IDs' measurement goes on while their job, LARGE_SIREN_IDS, is off, for a start with it and one without (11.14)
+			{ "SirenSettings", MeasureSirenIdsWhileOff },
 			// [siren count]
 			{ "SirenSettings", MeasureSirenCount },
 			// [light capacity]
