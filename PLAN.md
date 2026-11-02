@@ -122,7 +122,7 @@ a pass that finds its limit sharing code with a neighbour's may read the neighbo
   The set-up's hook gets the pool, its name, a third argument, the stride and the allocator: a pool of stride 16 whose name, copied through `CopyMemorySafely`, is `StaticBounds` is noted.
   The allocator's hook gets the pool: the noted pool's capacity at +0x18, with its stride at +0x1C checked again, is raised to the key before the game's allocator runs, and the sizes are logged once.
   Both hooks stay on, where the original takes them off after the first allocation - the choice, kept: the set-up's hook tests the stride before it touches the name, the allocator's compares one pointer, no thread of the game is frozen in the middle of its start, and a pool made a second time is raised as well.
-  Never silent: a pattern missing or a hook not made is a problem with nothing changed; the pool not seen within 60 seconds of the session's start is a problem with the part's box, since it keeps the game's size then - phase B's check, its clock the first script program the game places, with its events, its test switches and `IsPluginInstalledFor`, which come back from the git history at 66cd684.
+  Never silent: a pattern missing or a hook not made is a problem with nothing changed; the pool not seen within 60 seconds of the session's start is a problem with the part's box, since it keeps the game's size then - phase B's check, its clock the game placing blip_controller, with its events, its test switches and `IsPluginInstalledFor`, which come back from the git history at 66cd684.
   The original's other routes - the size lookup's call, whose load `BA 06 E4 DF 2C` is not in the game, and hooks on the lookup - stay out: a part does not try a second way.
   `DRY_RUN` hooks nothing.
   With `DIAGNOSTIC_MODE` the two sites, every making of the pool and its time after TweaksV's start.
@@ -249,7 +249,11 @@ A start with `LARGE_SIREN_IDS=0` and one with `LARGE_SIREN_IDS=1` compare the ba
 One start at `STATICBOUNDS_SIZE=100000`, the key's maximum, in that load, since my `AnimStore` test ended the game with a failed allocation right behind that allocator's start: if it crashes, the maximum comes down to what boots, or README says so.
 That start is safe only with `POOL_MEMORY`'s raise (D31), so the key goes in before it; the key's maximum stands.
 The render queues' step (D30), first in its start, since each most holds for the whole boot: about ten `mp_m_freemode_01` spawned in view with Simple Trainer V, some with hats, mods set on three or four cars, then 70 seconds standing still past the last spawn, since the summary comes once a minute and none comes at exit; it needs nothing of `[PEDPROPS]`, which stays off.
+One start more (2026-11-02): the pool in my `gameconfig.xml` below the load's use, 8000 against its 10,406, `STATICBOUNDS_SIZE` at its default, and `SKIP_LANDING_PAGE=0` with 70 seconds on the page, since the load's use never passes the game's size at 24,500, so that the proof as planned cannot fail on what the part is for.
 The proof: line 1 names 2.7.0 and the commit without `-dirty`; no `PROBLEM` but what a test means; `Features:` naming the two new parts; each new pattern at its RVA; each measurement's numbers; no crash.
+`the lighting capacity is measured` must be in the log, since a check that ends that measurement is a line alone, and `a job's refused lights 0` shows the redirect was made, not that the stub ran.
+`pool memory: N of 256 MB` and no too-late problem are the proof that `H-E2`'s write came before the game read it.
+The model budgets' first lines must not read `256 for traffic, 256 outside the pop cycle`.
 Then the tag, the searches, and one atomic push.
 The next plan, 2.8.0, comes from those numbers.
 
@@ -274,10 +278,10 @@ The next plan, 2.8.0, comes from those numbers.
 ## Next steps
 
 **State:** phase C's round runs since 2026-11-02, the split of D29 kept.
-The nine coding tracks are merged on main and their documents folded: fifteen parts, `TweaksV.ini`'s layout 5 with its 43 keys, 228 patterns, 2357 checks, the full run about 9 minutes side by side.
+The nine coding tracks and the review's fixes are merged on main and their documents folded: fifteen parts, `TweaksV.ini`'s layout 5 with its 43 keys, 228 patterns, 2408 checks, the full run about 10 minutes side by side.
 All six research passes are done and decided (D23, D30, D31): no siren track in this round, the sirens per vehicle being 2.8.0's.
 2.6.0 stands as the last build, tagged on c6c8854 and pushed.
-Next: the review of the merged diff, the proof and my boots.
+Next: the version commit, the proof and my boots.
 The open issues are T-HARDEN, T-DIAG, T-FREEZE and T-PEDPROPS.
 
 **Decisions waiting on me:** none.

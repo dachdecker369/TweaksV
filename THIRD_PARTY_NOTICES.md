@@ -139,5 +139,5 @@ applications, and to alter it and redistribute it freely, subject to the followi
 
 ### GNU General Public License, version 3
 
-Applies to TweaksV as a whole and to the console opener from RageOpenV.
+Applies to TweaksV as a whole, to the console opener from RageOpenV and to the Static Bounds Limit Adjuster's code in the StaticBounds part, which TweaksV takes under version 3.
 The text is [LICENSE](LICENSE), next to this file in the repository and in every release.

@@ -10,7 +10,7 @@ Please report it privately, not in a public issue:
 1. Open the repository's **Security** tab and choose **Report a vulnerability**, or go straight to the [report form](https://github.com/dachdecker369/engine-tweaks-and-limits-adjuster/security/advisories/new).
 2. Say what happens and how to make it happen, with the files or settings it needs, the TweaksV version and the game version (both are at the top of `TweaksV.log`).
 
-Only you and I can see the report.
+Only the reporter and I can see the report.
 The answer comes there, and the report stays private until a version with the fix is out.
 
 ## Supported Versions

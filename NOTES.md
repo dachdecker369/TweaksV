@@ -14,7 +14,7 @@ Every part is TweaksV's own code since 2.0.0; the parts that follow another proj
     The default file, the keys added back - without a comment, since TweaksV adds none to an existing file - the log header and every reader come from it, and each setting is read once at start-up.
     A comment after a value, from `//` or `;`, is not part of it.
   - A value TweaksV cannot use - not a number, not on or off, outside its limits - is shown in the start-up summary as well as the log, with the value used instead.
-  - `VERSION` under `[TWEAKSV]` says which layout the file has (4).
+  - `VERSION` under `[TWEAKSV]` says which layout the file has (5).
     A file of an older layout, from 2 on, is carried forward: it gets the keys it lacks, then the current `VERSION` written back in its line, a comment after it kept, and the log says so; a `VERSION` that cannot be written back is logged when the file is read-only and reported otherwise.
     A file without it has the layout of TweaksV 1.x, whatever else it holds: it is renamed to `TweaksV.old.ini` (an older `TweaksV.old.ini` that passes the own-file checks is replaced), the default file is written in its place and the start-up summary says so - nothing of the old file is read; a 1.x file that cannot be renamed is reported every start and not read either.
     A file from a newer TweaksV is reported.
@@ -78,7 +78,7 @@ Every part is TweaksV's own code since 2.0.0; the parts that follow another proj
   - Every site is found and checked before anything is written: every reference must point at one array inside the game, every limit must be the expected instruction and decode to the same plausible size, and where the array's loads are found by its address (the box streamer's list, the decal definitions array, the weapon component list) exactly as many must be found as the game has; where the patterns name the references (the modkit and packfile arrays), a scan for every `lea` and `mov` that reaches the array must find exactly those, so that a reference a game update adds cannot stay on the old, smaller array while the limits rise;
   - The new array always has its full size, as read/write data near the game, the game's own entries copied into it and the rest zero; the setting is clamped to the game's own size..that size, and a value below the game's own is reported, so that the start-up summary names the size really used;
   - Every reference and every limit, with what the part adds (a redirected call, a loop end), is written in one go, all or nothing - a part either does its whole job or leaves the game as it was;
-  - DRY_RUN logs one line with what would change; DIAGNOSTIC_MODE logs every site, the value it holds and every write, in one wording for all five parts.
+  - DRY_RUN logs one line with what would change; DIAGNOSTIC_MODE logs every site, the value it holds and every write, in one wording for all six parts.
 
 - **HeapAdjuster:** `[HEAP_ADJUSTER] HEAP_SIZE` (default 2000 MB) sets the game's memory heap, one immediate in its start-up code (`H-E1`):
   - The instruction is checked before the write, and the size it holds must be a whole number of MB;
@@ -242,10 +242,10 @@ Every part is TweaksV's own code since 2.0.0; the parts that follow another proj
   - The set-up's hook notes a pool of stride 16 whose name, copied through `CopyMemorySafely`, is `StaticBounds`; the allocator's hook raises the noted pool's capacity at +0x18, its stride at +0x1C checked again, to the larger of the game's size and `STATICBOUNDS_SIZE` (1 to 100000, 16000 by default, the original's key) before the game's allocator runs: a `gameconfig.xml` that gives the pool more keeps it.
     The sizes are said once, the game's last error is kept, and a capacity below 0 or a stride that changed is left as the game made it and reported once;
   - Both are hooked in `DllMain`, all or none, a pattern missing or held twice, the set-up's allocator in another stack slot than the hook hands on, or a hook not made reported with nothing changed; both hooks stay on, where the original takes them off, so that a pool made a second time is raised as well: the set-up's tests the stride before it touches the name, the allocator's compares one pointer, and the allocator's four argument registers go on as they came;
-  - The hooks raise the pool only if the game makes it after TweaksV's `DllMain`, so a thread of the part checks it: when the game has not made it 60 seconds after the session's start - the first script program the game places, seen through the script programs' hook - the Blips part's, which the part joins, or while `TweaksV.ini` switches Blips off the part's own, as the first part to use it; the game makes its pools as the session starts - the part reports that the pool keeps the game's size, in a box of its own after the start-up summary; a making after that is said with the sizes.
+  - The hooks raise the pool only if the game makes it after TweaksV's `DllMain`, so a thread of the part checks it: when the game has not made it 60 seconds after the session's start - the game placing blip_controller, seen through the script programs' hook - the Blips part's, which the part joins, or while `TweaksV.ini` switches Blips off the part's own, as the first part to use it; the game makes its pools as the session starts - the part reports that the pool keeps the game's size, in a box of its own after the start-up summary; a making after that is said with the sizes.
     While `BlipLimitFix.asi` or Resource Extensions, which do the Blips part's job on the same script programs, is installed - as the conflict check found it, whatever `[BLIPS] ENABLED` says - no check is made, and the log says so: TweaksV makes no hook and leaves the script programs to it.
     A check that cannot be made otherwise - its events, the hook or its thread not there - is reported in the start-up summary, the hooks staying: nothing else would say when the game does not make the pool.
-    With `DIAGNOSTIC_MODE=1` the two sites with what `IsFunctionStart` says of each, which refuses nothing since the patterns pin it, the session's start and every making are timed;
+    With `DIAGNOSTIC_MODE=1` the two sites with what `IsFunctionStart` says of each, which refuses nothing since the patterns pin it, the session's start and every making are timed, and every set-up of stride 16 gives the first bytes of its name;
   - The original's other ways - the size lookup's call and a hook on the lookup itself - are left out: a hook that cannot be made is reported, nothing changed, as with every part;
   - `StaticBoundLimitAdjuster.asi` and `StaticBoundsLimitAdjuster.asi`, the original's two names, count as old plugins: with either installed, this part is switched off.
 - **Measured first:** the sirens per vehicle, of the part on [ROADMAP.md](ROADMAP.md), and the limits of phase C's research, the lighting capacity, the two model budgets, the ped pool and the render queues, are measured before they are lifted, each by a module of its own, with `DIAGNOSTIC_MODE=1` only: every pattern of the limit found as often as it must match, every site checked as the part's writing half will check it and logged, and a summary 10 seconds in and then every minute while it changes.
@@ -276,7 +276,7 @@ Every part is TweaksV's own code since 2.0.0; the parts that follow another proj
   The release notes name the tag the build came from and link the repository, which `THIRD_PARTY_NOTICES.md` and `README.md` in the zip name too, so the source is one step from the binary wherever the zip goes (GPL-3.0, section 6d); the mod page carries the credits, links the repository and adds no restrictions of its own.
   Check the zip on VirusTotal before uploading: a plain build with its version resource and no packer stays clean.
 
-- **Tests:** `test\` holds fake-game test suites (2357 checks): small programs that pretend to be the game, with copies of the code TweaksV patches and a script program they place as the game does, load the real `TweaksV.asi` and report what it changed.
+- **Tests:** `test\` holds fake-game test suites (2408 checks): small programs that pretend to be the game, with copies of the code TweaksV patches and a script program they place as the game does, load the real `TweaksV.asi` and report what it changed.
   One more suite checks the pattern table against `PATTERNS.md` and has each pattern held too often.
   `bash test/run_all.sh` builds and runs them (see README).
 
@@ -318,6 +318,8 @@ Known bugs and open issues in TweaksV.
 - **What:** MinHook, the hook library, keeps the trampolines of TweaksV's hooks in memory that is writable and executable at once, and which Control Flow Guard treats as valid call targets - in a game that turned the guard on, the one gap TweaksV would leave in it.
   That only helps an attack that can already write to the game's memory.
   The rest of the code review's hardening is done: links, the user name and the size limit of `TweaksV.log`, problems after the start-up summary, the exploit mitigations.
+  The walk of the mods folder follows links: `WalkModsFolder` and `ReadPack` read through a directory symlink in `mods`, so one that points at `\\server\share` makes TweaksV connect there at start-up.
+  Making one takes Developer Mode or elevation, so no boundary is crossed, and a junction to another drive is how a player may keep a mods folder, so it stays as it is.
 - **Status:** accepted.
   It is MinHook's own design, and `vendor\MinHook` stays unchanged; TweaksV's own stubs are never writable and executable at once.
 - **When it goes:** when MinHook keeps its trampolines read and execute only, or TweaksV moves to a hook library that does.

@@ -6,10 +6,10 @@
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 CHECKS=231
 
-# "LABEL TEXT" per line, sorted: the table's entries, PATTERNS.md's rows (but the removed ones) and the
+# "LABEL TEXT" per line, sorted: the table's entries, PATTERNS.md's rows and the
 # labels the code names with Pattern("...") (the table's own comment does not count)
 table=$(sed -nE 's/^\s*\{ "([A-Za-z0-9-]+)", "([^"]+)" \},.*/\1 \2/p' "$R/source/TweaksVPatterns.h" | sort)
-docs=$(grep -E '^\| [A-Z]-E[-A-Za-z0-9]* \| `' "$R/PATTERNS.md" | grep -v '| removed |' | sed -E 's/^\| ([^ ]+) \| `([^`]+)` \|.*/\1 \2/' | sort)
+docs=$(grep -E '^\| [A-Z]-E[-A-Za-z0-9]* \| `' "$R/PATTERNS.md" | sed -E 's/^\| ([^ ]+) \| `([^`]+)` \|.*/\1 \2/' | sort)
 uses=$(grep -ohE 'Pattern\("[A-Za-z0-9-]+"\)' $(ls "$R"/source/*.cpp "$R"/source/*.h | grep -v TweaksVPatterns.h) | sed -E 's/Pattern\("(.*)"\)/\1/' | sort)
 labels=$(cut -d' ' -f1 <<< "$table")
 echo "      $(wc -l <<< "$table") patterns in the table, $(wc -l <<< "$docs") in PATTERNS.md, $(wc -l <<< "$uses") uses in the code"

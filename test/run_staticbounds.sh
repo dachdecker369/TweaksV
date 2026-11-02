@@ -22,7 +22,7 @@
 # budget, in DRY_RUN or with no hook made. In every run the sites as placed but for the hooks' jumps, and every page its own
 # protection. Fake LOCALAPPDATA: the real one is never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
-CHECKS=94
+CHECKS=112
 cd "$B" || exit 1
 cp "$R/x64/Release/TweaksV.asi" TweaksV.asi
 cp "$R/object/Test/Release/TweaksV.asi" TweaksV_test.asi

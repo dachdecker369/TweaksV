@@ -15,7 +15,7 @@
 # DIAGNOSTIC_MODE, a file past what the stub of its dedupe keeps, that stub or the hooks not to be made; and a start without the part
 # against one with it. Fake LOCALAPPDATA: the real one is never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
-CHECKS=120
+CHECKS=125
 cd "$B" || exit 1
 cp "$R/x64/Release/TweaksV.asi" TweaksV.asi
 cp "$R/object/Test/Release/TweaksV.asi" TweaksV_test.asi
