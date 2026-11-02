@@ -77,6 +77,7 @@ The second relies on Windows, not on the game: a classic replace-rename reaches 
      Entry 0 of each table, 1,500,000, and the level's first value, 3, in `.data`: the first tables' line and summary show them.
      The floor of 9 models and of 6, the frame gates and the 64 frames: behaviour, which TweaksV does not read.
    <!-- [ped pool] -->
+   - **A pool's memory:** the allocator's offsets (below, "A pool's memory"), which the pool memory's line reads and only its budget and the sum of its use and room check, and that the pools' proxy leads to that allocator, slot 5 of the master allocator (0x36D90, and 0x13CB90 with slot 5 in the start-up).
    <!-- [render queues] -->
 
 ## HeapAdjuster
@@ -84,6 +85,7 @@ The second relies on Windows, not on the game: a classic replace-rename reaches 
 | Label | Pattern | Use | 1.0.1158.16 | RVA |
 |---|---|---|---|---|
 | H-E1 | `BA ? ? ? ? 45 31 C0 41 B1 01 E8 ? ? ? ? 48 8D 0D` | +1: imm32 of `mov edx` - heap size in bytes; 646 MB on current build | found | 0x13F7 |
+| H-E2 | `48 8D 0D ? ? ? ? 48 8D 15 ? ? ? ? 41 B8 00 00 01 00 41 B9 ? ? ? ? E8` | the set-up of the allocator a pool's memory comes from: +3 rel32 the allocator (ends +7, 0x29B1508); +10 rel32 the heap (ends +14, 0x29A8590); +22 imm32 of `mov r9d` - its budget in bytes, 136 MB on current build; +26 E8 to its constructor | found | 0x143D |
 
 ## ModkitLimit
 
@@ -769,5 +771,31 @@ The 16 patterns, looked for only with `DIAGNOSTIC_MODE=1`, each once and at the 
 | O-E-P8 | `F2 0F 10 86 B4 00 00 00 0F 59 05 ? ? ? ? 0F 58 05 ? ? ? ? F3 0F 10 0D ? ? ? ? 0F 28 D0 0F C2 15 ? ? ? ? 01 66 0F 38 25 D2 66 0F 50 C2 F3 0F 10 15 ? ? ? ? 0F 28 DA A8 01 75 07 0F 28 D9 F3 0F 5D D8 F3 0F 11 1D` | the settings' store of the peds' variety, only logged: +11 and +18 the vectors 5.0 and 1.0; +26 the 10.0; +76, past the match, the rel32 of the store, which must be the getter's variety | found, its RVA to check | 0x5004AD |
 
 <!-- [ped pool] -->
+
+## A pool's memory
+
+A pool of the game's does not draw on the heap `H-E1` sizes: it draws on a budget of its own, kept by a big-block allocator that `H-E2` sets up, 0x5A bytes after `H-E1` in the same start-up function, so that the HeapAdjuster part writes both at the same moment (SPECIFICATIONS.md, section 11.1).
+From the research of 2026-11-02 on the dumps of 1.0.1158.16, each step read in the code but for what is marked a hint, and from my crash dumps:
+
+- **The route:** a pool's allocator, 0x15A4D0 (`C-E-A1`), asks the allocator at the pool's +0x00, through its vtable's slot 1, for its room, and writes the slots' flags at the result plus the slots' size with no test of the result: `or byte [rcx+rax], 0x80` at 0x15A514.
+  In the pools' makers +0x00 is the proxy at 0x286A310, whose vtable lies in `.data` (a hint: the table at 0x247CF90).
+  The function at 0x36D90 takes the master allocator from TLS+0x5C8, its slot 5, and jumps to that allocator's vtable +0x40 with the size and alignment 16; 0x36E00 frees the same way.
+  The start-up 0x1020 fills the master allocator at 0x29B1580: slots 0 and 4 the heap at 0x29A8590, slots 1, 2, 3 and 6 another at 0x29B15D8, slot 5 the big-block allocator at 0x29B1508.
+- **The allocator,** from its constructor 0x141560, called once, at 0x1457, its allocation 0x141640 and its free 0x141800: +0x08 the heap, +0x10 the list of blocks, +0x18 the threshold 0x10000, +0x20 the budget, +0x28 in use, +0x30 room, +0x38 the least room so far, +0x40 the number of blocks, a word, +0x42 bit 0 the fatal flag, which its constructor sets, +0x48 a critical section.
+  Its getters are vtable slot 19 the room, slot 22 the least room and slot 17 the use.
+- **An allocation of n bytes,** under its lock: rounded = (n + 0x1003F) & ~0xFFFF; rounded above the room returns null, which is the limit; the fatal flag and 900 blocks, int3; rounded above the threshold, `VirtualAlloc` of rounded + 0x1000 with a guard page at its end, else n + 0x40 from the heap; room and in use change by what was charged, the least room is kept, the block is linked.
+  Free gives the charge back.
+- **The budget:** 0x8800000, 136 MB, `H-E2`'s immediate: a ceiling on a counter, so raising it allocates nothing, and the blocks still come from Windows when asked for.
+  `HEAP_SIZE` changes the heap, not this.
+  At once 0x10F0 takes 8 MB of it, kept at 0x29C76C0 (a hint: the block stays; nothing read gives it back).
+- **A pool's cost:** of n slots s = (stride x n + 7 & ~7) + n, then (s + 0x1003F) & ~0xFFFF above 64 KB and s + 0x40 below it; a store's pool costs stride + 1 bytes a slot.
+  My sum over the 248 references that load the proxy, with my `gameconfig.xml`, comes to 132 to 136 MB of the 136: `InstanceBuffer` 50.7, `Building` 12.0, `GrassBatch` 8.8, the asset stores' pools 18.9, `HandlingData` 6.8, the 8 MB block, the ped pool's 1.6 among them.
+  Script Hook V extends two pools (a hint for who: its log says so, and the same crash's log has their numbers), which costs about 0.4 MB more; whatever raises a pool pays here, a part of TweaksV too.
+- **The crash:** past the budget the allocator returns null, and the pool's allocator writes through it at 0x15A514, with `rax` 0 and the address the slots' size.
+  Nine dumps of 2026-10-30 to 2026-11-02 fail there: six at 0x1030DA0's pool of 512 slots (a write to 0x26000), two at `HandlingData`'s 8700 x 816 (0x6C5340), the ninth at a pool of 23 slots of 16 bytes (0x170), with room under 64 KB and a third site near 0x1AEA7FC, with `TrainerV.asi` and Collectibles on Map in; without the two plugins the same load passed.
+  In the dump of 2026-11-01 at 18:02 the dead stack holds the allocator and its lock, and the jump of 0x36D90 is in `r10`.
+  That the budget ran out and not `VirtualAlloc` is by elimination: that log has 46 GB of memory free, and `VirtualAlloc`'s failure makes a call the stack does not show.
+- **Not settled:** why the same load passes one time and fails another: at that crash no other thread stands in an allocator of it or in a pool's maker.
+  The pool memory's line gives each boot's least room.
 
 <!-- [render queues] -->

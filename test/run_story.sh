@@ -1,15 +1,19 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-only
-# StraightToStoryMode scenarios: a fake GTA5_Enhanced.exe with copies of the patched
+# StraightToStoryMode scenarios and HeapAdjuster's: a fake GTA5_Enhanced.exe with copies of the patched
 # game code loads the real TweaksV.asi. Fake LOCALAPPDATA: the real one is never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 cd "$B" || exit 1
 cp "$R/x64/Release/TweaksV.asi" .
+cp "$R/object/Test/Release/TweaksV.asi" TweaksV_test.asi
 mkdir -p appdata
 
 ORIG_SPLASH='splash: 0F 84 85 01 00 00 |'; NEW_SPLASH='splash: E9 86 01 00 00 90 |'
 ORIG_LEGAL='legal: 0F 84 07 05 00 00 |';   NEW_LEGAL='legal: 90 90 90 90 90 90 |'
 ORIG_LANDING='landing: 48 89 5C 24 08 |';  NEW_LANDING='landing: 31 C0 C3 24 08 |'
+# the pool memory budget: what its site holds, the rest of the site as placed, what the game's start-up made of it
+GAME_POOLS='pool memory: 0x08800000, 136 MB, the rest as placed, its constructor given 136 MB, 120 blocks, 0 refused |'
+RAISED_POOLS='pool memory: 0x10000000, 256 MB, the rest as placed, its constructor given 256 MB, 120 blocks, 0 refused |'
 
 echo "== S1 defaults: all three screens skipped, heap adjusted"
 fresh_ini; out=$(game full_game.exe); echo "      $out"
@@ -17,6 +21,7 @@ check "splash: jz +0x185 -> jmp +0x186 / nop (computed, same as upstream's bytes
 check "legal: 6 NOPs" "[[ \"\$out\" == *\"$NEW_LEGAL\"* ]]"
 check "landing page: xor eax,eax / ret" "[[ \"\$out\" == *\"$NEW_LANDING\"* ]]"
 check "heap 1024 MB" "[[ \"\$out\" == *'heap: 1024 MB'* ]]"
+check "the pool memory budget raised to the default's 256 MB, the one immediate and nothing else of its site, every page its own protection; its line" "has '$RAISED_POOLS' && has 'protect: all restored (RX)' && log_line '\[HeapAdjuster\] Pool memory budget patched: 136 MB -> 256 MB.\$'"
 check "the three patch lines, old -> new bytes" "log_has 'Splash screen patched: 0F 84 85 01 00 00 -> E9 86 01 00 00 90.' && log_has 'Legal screen patched: 0F 84 07 05 00 00 -> 90 90 90 90 90 90.' && log_has 'Landing page patched: 48 89 5C -> 31 C0 C3.'"
 check "no problems" "log_lacks 'PROBLEM'"
 
@@ -38,7 +43,8 @@ check "header: StraightToStoryMode off, the other parts on (the heap); no Straig
 echo "== S5 DRY_RUN=1: found and checked, nothing written"
 fresh_ini; setkey DRY_RUN 1; out=$(game full_game.exe); echo "      $out"
 check "nothing changed" "[[ \"\$out\" == *\"$ORIG_SPLASH\"* && \"\$out\" == *\"$ORIG_LEGAL\"* && \"\$out\" == *\"$ORIG_LANDING\"* ]]"
-check "seven 'would patch' lines - the three screens, the heap, the RPF cache check, the weapon info blob array's size and capacity - with old -> new bytes" "[ \$(count 'DRY_RUN: would patch the') -eq 7 ] && log_has 'would patch the splash screen: 0F 84 85 01 00 00 -> E9 86 01 00 00 90' && log_has 'would patch the RPF cache check: 48 89 -> C3 90' && log_has 'would patch the heap size (648 MB -> 1024 MB): 00 00 80 28 -> 00 00 00 40'"
+check "eight 'would patch' lines - the three screens, the heap, the pool memory budget, the RPF cache check, the weapon info blob array's size and capacity - with old -> new bytes" "[ \$(count 'DRY_RUN: would patch the') -eq 8 ] && log_has 'would patch the splash screen: 0F 84 85 01 00 00 -> E9 86 01 00 00 90' && log_has 'would patch the RPF cache check: 48 89 -> C3 90' && log_has 'would patch the heap size (648 MB -> 1024 MB): 00 00 80 28 -> 00 00 00 40' && log_has 'would patch the pool memory budget (136 MB -> 256 MB): 00 00 80 08 -> 00 00 00 10'"
+check "the pool memory budget as the game holds it, no line of a raise" "has '$GAME_POOLS' && log_lacks '\[HeapAdjuster\] Pool memory budget patched'"
 check "no 'patched' line" "log_lacks ' patched: '"
 
 echo "== S6 DIAGNOSTIC_MODE=1: every pattern and write logged"
@@ -47,6 +53,7 @@ check "three story patterns found once each" "log_has 'Pattern S-E1 found: 0F 85
 check "three writes logged with old -> new bytes" "log_has 'DIAGNOSTIC: splash screen at RVA 0x.*: 0F 84 85 01 00 00 -> E9 86 01 00 00 90' && log_has 'DIAGNOSTIC: legal screen at RVA' && log_has 'DIAGNOSTIC: landing page at RVA 0x.*: 48 89 5C -> 31 C0 C3'"
 check "patterns found once get no per-match lines (only D-E-L12, which matches 7 times, and G-E-G1, twice, get them: A-E-G1, which matches twice, is PedProps', off)" "[ \$(count ' match 1 of ') -eq 2 ] && log_has 'D-E-L12 match 1 of 7 at RVA' && log_has 'G-E-G1 match 1 of 2 at RVA'"
 check "the heap's site logged with the size it holds" "log_has 'HeapAdjuster\] DIAGNOSTIC: heap size at RVA 0x[0-9A-F]* holds 648 MB'"
+check "the pool memory budget's pattern and site, its allocator, its write, word for word" "log_has 'Pattern H-E2 found: 48 8D 0D ? ? ? ? 48 8D 15 ? ? ? ? 41 B8 00 00 01 00 41 B9 ? ? ? ? E8 -> RVA 0x.*, 1 match' && log_line '\[HeapAdjuster\] DIAGNOSTIC: pool memory budget at RVA 0x[0-9A-F]* holds 136 MB, its allocator at RVA 0x[0-9A-F]* (H-E2)\$' && log_line '\[HeapAdjuster\] DIAGNOSTIC: pool memory budget (136 MB -> 256 MB) at RVA 0x[0-9A-F]*: 00 00 80 08 -> 00 00 00 10\$'"
 check "the three screens' sites logged with the bytes they hold, three lines" "[ \$(count 'StraightToStoryMode\] DIAGNOSTIC: .*\(jz\|function\) at RVA') -eq 3 ] && log_has 'DIAGNOSTIC: splash screen jz at RVA 0x[0-9A-F]*: 0F 84 85 01 00 00' &&log_has 'DIAGNOSTIC: legal screen jz at RVA 0x[0-9A-F]*: 0F 84 07 05 00 00' && log_has 'DIAGNOSTIC: landing page function at RVA 0x[0-9A-F]*: 48 89 5C'"
 
 echo "== S7 already patched (an old StraightToStoryMode ran first under another name): skipped quietly"
@@ -102,7 +109,7 @@ check "refused, the value in the reason, nothing patched there" "log_has 'The he
 
 echo "== S15 [HEAP_ADJUSTER] ENABLED=0: the heap is left at the game's own size, the screens are still skipped"
 fresh_ini; setkey ENABLED 0 HEAP_ADJUSTER; out=$(game full_game.exe); echo "      $out"
-check "the heap stays at the game's 648 MB, the three screens skipped" "[[ \"\$out\" == *'heap: 648 MB'* && \"\$out\" == *\"$NEW_SPLASH\"* && \"\$out\" == *\"$NEW_LEGAL\"* && \"\$out\" == *\"$NEW_LANDING\"* ]]"
+check "the heap stays at the game's 648 MB, the pool memory budget at its 136 MB, the three screens skipped" "[[ \"\$out\" == *'heap: 648 MB'* && \"\$out\" == *\"$NEW_SPLASH\"* && \"\$out\" == *\"$NEW_LEGAL\"* && \"\$out\" == *\"$NEW_LANDING\"* ]] && has '$GAME_POOLS'"
 check "header: HeapAdjuster off; no HeapAdjuster lines, no problem" "log_has 'Features: HeapAdjuster off, ' && log_lacks '\[HeapAdjuster\]' && log_lacks 'PROBLEM'"
 
 echo "== S16 S-E3 matches twice (a second copy of the landing page's site): not used, the landing page left alone, the others skipped"
@@ -113,6 +120,109 @@ check "the scanner says why; the problem names the pattern" "log_has 'Scanner\] 
 echo "== S17 HEAP_SIZE=100, below the game's own 648 MB: raised to it and reported, so the start-up summary names the size used"
 fresh_ini; setkey HEAP_SIZE 100; out=$(game full_game.exe); echo "      $out"
 check "the heap stays at the game's 648 MB; the clamp reported for the start-up summary, nothing to patch" "[[ \"\$out\" == *'heap: 648 MB'* ]] && log_has 'PROBLEM: TweaksV.ini: HEAP_SIZE=100 is outside 648..2047 - using 648.' && log_has 'Heap size is 648 MB already (HEAP_SIZE=100) - nothing to patch.' && log_lacks 'Heap size patched'"
+
+echo "== S18 POOL_MEMORY: the file's value, the game's own, and past either limit, which the settings clamp and report"
+fresh_ini; setkey POOL_MEMORY 300; out=$(game full_game.exe); echo "      $out"
+check "POOL_MEMORY=300: 300 MB handed to the constructor, its line" "has 'pool memory: 0x12C00000, 300 MB, the rest as placed, its constructor given 300 MB, 120 blocks, 0 refused |' && log_line '\[HeapAdjuster\] Pool memory budget patched: 136 MB -> 300 MB.\$' && log_has 'HeapAdjuster: HEAP_SIZE=1024 POOL_MEMORY=300'"
+fresh_ini; setkey POOL_MEMORY 136; out=$(game full_game.exe)
+check "POOL_MEMORY=136, the game's own: nothing to patch, logged, no problem" "has '$GAME_POOLS' && log_line '\[HeapAdjuster\] Pool memory budget is 136 MB already (POOL_MEMORY=136) - nothing to patch.\$' && log_lacks '\[HeapAdjuster\] Pool memory budget patched' && log_lacks '\[HeapAdjuster\] PROBLEM'"
+fresh_ini; setkey POOL_MEMORY 100; out=$(game full_game.exe)
+check "POOL_MEMORY=100, below the game's own: reported by the settings, 136 used, nothing to patch" "has '$GAME_POOLS' && log_has 'PROBLEM: TweaksV.ini: \[HEAP_ADJUSTER\] POOL_MEMORY=100 is outside 136..2047 - using 136.' && log_lacks '\[HeapAdjuster\] Pool memory budget patched'"
+fresh_ini; setkey POOL_MEMORY 5000; out=$(game full_game.exe)
+check "POOL_MEMORY=5000: reported by the settings, 2047 used, the most the imm32 holds as a positive int32" "has 'pool memory: 0x7FF00000, 2047 MB, the rest as placed, its constructor given 2047 MB, 120 blocks, 0 refused |' && log_has 'PROBLEM: TweaksV.ini: \[HEAP_ADJUSTER\] POOL_MEMORY=5000 is outside 136..2047 - using 2047.' && log_line '\[HeapAdjuster\] Pool memory budget patched: 136 MB -> 2047 MB.\$'"
+
+echo "== S19 what the budget is for: a load past the game's 136 MB is refused by its allocator there, and fits the default's 256 MB"
+fresh_ini; setkey POOL_MEMORY 136; out=$(game full_game.exe pmheavy); echo "      $out"
+check "at 136 MB the pool past the budget is refused, the allocation the game then writes through" "has 'pool memory: 0x08800000, 136 MB, the rest as placed, its constructor given 136 MB, 120 blocks, 1 refused |'"
+fresh_ini; out=$(game full_game.exe pmheavy)
+check "at the default's 256 MB it fits" "has 'pool memory: 0x10000000, 256 MB, the rest as placed, its constructor given 256 MB, 121 blocks, 0 refused |'"
+
+echo "== S20 another mod ran first (the site holds 200 MB, or no whole number of MB): left as it is, logged, not a problem"
+fresh_ini; setkey POOL_MEMORY 1024; out=$(game full_game.exe pmraised); echo "      $out"
+check "the 200 MB found stays, POOL_MEMORY=1024 not applied, logged, no problem; the heap still patched" "has 'pool memory: 0x0C800000, 200 MB, the rest as placed, its constructor given 200 MB, 120 blocks, 0 refused |' && log_line '\[HeapAdjuster\] The pool memory budget is not changed this session: another mod already set it to 200 MB - left as it is.\$' && log_lacks '\[HeapAdjuster\] Pool memory budget patched' && log_lacks '\[HeapAdjuster\] PROBLEM' && has 'heap: 1024 MB'"
+fresh_ini; out=$(game full_game.exe pmodd); echo "      $out"
+check "a value that is no whole number of MB is another mod's too, its bytes in the line; no problem" "has 'pool memory: 0x0C800001, 200 MB, the rest as placed,' && log_line '\[HeapAdjuster\] The pool memory budget is not changed this session: another mod already set it to 0x0C800001 bytes - left as it is.\$' && log_lacks '\[HeapAdjuster\] Pool memory budget patched' && log_lacks '\[HeapAdjuster\] PROBLEM'"
+
+echo "== S21 each job goes on without the other: H-E2 missing or held twice, H-E1 missing (the test build's keys); the plain game; no code may be changed"
+fresh_ini; addkey TEST_BREAK_PATTERN H-E2; out=$(ASI=TweaksV_test.asi game full_game.exe); echo "      $out"
+check "H-E2 missing: nothing changed at its site, the problem names it; the heap still patched" "has '$GAME_POOLS' && log_has 'TEST BUILD: pattern H-E2 is treated as not found' && log_line '\[HeapAdjuster\] PROBLEM: The pool memory budget is not changed this session: H-E2 was not found.\$' && has 'heap: 1024 MB'"
+fresh_ini; addkey TEST_TWICE_PATTERN H-E2; out=$(ASI=TweaksV_test.asi game full_game.exe)
+check "H-E2 held twice: nothing changed at its site, the problem says so; the heap still patched" "has '$GAME_POOLS' && log_line '\[HeapAdjuster\] PROBLEM: The pool memory budget is not changed this session: the game code holds H-E2 2 or more times, not the expected 1.\$' && has 'heap: 1024 MB'"
+fresh_ini; addkey TEST_BREAK_PATTERN H-E1; out=$(ASI=TweaksV_test.asi game full_game.exe)
+check "H-E1 missing: the heap as the game holds it, the problem names it; the budget still raised" "has 'heap: 648 MB' && log_has 'PROBLEM: The heap size is not changed this session: H-E1 was not found.' && has '$RAISED_POOLS'"
+fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game plain_game.exe)
+check "the plain game: both jobs' problems, the measurement's line, no crash" "grep -q 'loaded' harness.out && log_has 'PROBLEM: The heap size is not changed this session: H-E1 was not found.' && log_line '\[HeapAdjuster\] PROBLEM: The pool memory budget is not changed this session: H-E2 was not found.\$' && log_line '\[HeapAdjuster\] DIAGNOSTIC: the pool memory is not measured: H-E2 was not found.\$'"
+fresh_ini; out=$(game full_game.exe nodyncode); echo "      $out"
+check "no code may be changed: nothing written, each job's problem" "has 'pool memory: 0x08800000, 136 MB, the rest as placed, its constructor given 136 MB,' && has 'heap: 648 MB' && log_line '\[HeapAdjuster\] PROBLEM: The pool memory budget is not changed this session: the game code could not be made writable (details in TweaksV.log).\$' && log_has 'PROBLEM: The heap size is not changed this session: the game code could not be made writable' && has 'protect: all restored (RX)'"
+
+# The measurement's runs, each past its first summary, 10 seconds in, side by side in a folder of its own: pm NAME [INI_CHANGES] -- [OPTION...], in the
+# background; pm_in NAME takes the checks there. The first summary comes 10 s after TweaksV's start, the fake's report 11 s later or more.
+measured=$B
+pm() {
+	local name=$1 change=$2; shift 2
+	B=$measured/pm/$name
+	mkdir -p "$B" && cd "$B" || exit 1
+	cp ../../TweaksV.asi ../../TweaksV_test.asi .
+	fresh_ini; setkey DIAGNOSTIC_MODE 1; eval "$change"
+	game "../../full_game.exe" "$@" > /dev/null
+}
+pm_in() { B=$measured/pm/$1; cd "$B" || exit 1; out=$(tr -d '\r' < harness.out); }
+pm_line() { log_line "\[HeapAdjuster\] $1\$"; }
+
+pm default : wait &
+pm nearly 'setkey POOL_MEMORY 136' wait &
+pm raised : pmraised wait &
+pm odd : pmodd wait &
+pm before : pmbefore wait &
+pm notmade : pmnotmade wait &
+pm nosum : pmnosum wait &
+pm outside : pmoutside &
+pm unaligned : pmunaligned &
+pm unreadable : pmunreadable &
+pm gone : pmgone wait &
+pm dry 'setkey DRY_RUN 1' wait &
+pm off 'setkey ENABLED 0 HEAP_ADJUSTER' wait &
+pm again ':' pmmore &
+pm off2 'setkey DIAGNOSTIC_MODE 0' wait &
+wait
+
+echo "== S22 DIAGNOSTIC_MODE=1: the pool memory measured from the allocator, 10 seconds in"
+pm_in default; echo "      $out"
+check "the announcement, word for word; the thread's first summary, word for word: the load's 134.5 MB of the default's 256, the least room kept, one block given back" "pm_line 'DIAGNOSTIC: the pool memory is measured, through its allocator at RVA 0x[0-9A-F]* (H-E2): its use and its least room so far are logged after 10 seconds, then every minute while they change.' && pm_line 'DIAGNOSTIC: pool memory: 134.5 of 256 MB in use, at least 120.4 MB free so far, 120 blocks (900 ends the game).' && [ \$(count '\[HeapAdjuster\] DIAGNOSTIC: pool memory: ') -eq 1 ]"
+check "no problem of the part's, the game as the part leaves it" "log_lacks '\[HeapAdjuster\] PROBLEM' && has '$RAISED_POOLS'"
+pm_in nearly; echo "      $out"
+check "POOL_MEMORY=136: the same load nearly spends it - a line of the log, no problem, no box" "pm_line 'DIAGNOSTIC: pool memory: 134.5 of 136 MB in use, at least 0.4 MB free so far, 120 blocks (900 ends the game) - nearly spent: a pool made now can crash the game at 0x15A514.' && log_lacks '\[HeapAdjuster\] PROBLEM'"
+pm_in raised
+check "another mod's 200 MB: measured all the same, what it holds" "pm_line 'DIAGNOSTIC: pool memory: 134.5 of 200 MB in use, at least 64.4 MB free so far, 120 blocks (900 ends the game).' && has 'pool memory: 0x0C800000, 200 MB,'"
+pm_in odd
+check "another mod's value of no whole MB: its tenth" "pm_line 'DIAGNOSTIC: pool memory: 134.5 of 200.0 MB in use, at least 64.4 MB free so far, 120 blocks (900 ends the game).'"
+pm_in before
+check "the allocator set up before TweaksV started: the budget it holds said to be not the site's, then its numbers; the raise written all the same" "pm_line 'DIAGNOSTIC: pool memory: its allocator at RVA 0x[0-9A-F]* holds a budget of 136 MB, not the 256 MB its site holds: the game set it up before TweaksV started, or its layout is not as the research found it.' && pm_line 'DIAGNOSTIC: pool memory: 134.5 of 136 MB in use, at least 0.4 MB free so far, 120 blocks (900 ends the game) - nearly spent: a pool made now can crash the game at 0x15A514.'"
+pm_in notmade
+check "the allocator not set up: said so, nothing read past it" "pm_line 'DIAGNOSTIC: no pool memory yet - the game has not set its allocator up.' && [ \$(count '\[HeapAdjuster\] DIAGNOSTIC: pool memory: ') -eq 0 ]"
+pm_in nosum
+check "in use and room that do not add up: said so, then the numbers" "pm_line 'DIAGNOSTIC: pool memory: 135.5 MB in use and 121.5 MB of room do not add up to its budget of 256 MB: the game may have been changing them, or its layout is not as the research found it.' && pm_line 'DIAGNOSTIC: pool memory: 135.5 of 256 MB in use, at least 120.4 MB free so far, 120 blocks (900 ends the game).'"
+pm_in outside
+check "the allocator outside the game: not measured, a line, no problem; the budget raised all the same" "pm_line 'DIAGNOSTIC: the pool memory is not measured: its allocator at 0x[0-9A-F]* (outside the game) is not inside the game (H-E2).' && log_lacks '\[HeapAdjuster\] PROBLEM' && has 'pool memory: 0x10000000, 256 MB,'"
+pm_in unaligned
+check "the allocator not aligned: not measured, a line, no problem" "pm_line 'DIAGNOSTIC: the pool memory is not measured: its allocator at RVA 0x[0-9A-F]* is not aligned to 8 bytes (H-E2).' && log_lacks '\[HeapAdjuster\] PROBLEM'"
+pm_in unreadable
+check "the allocator that cannot be read as TweaksV starts: not measured, a line, no problem" "pm_line 'DIAGNOSTIC: the pool memory is not measured: its allocator at RVA 0x[0-9A-F]* cannot be read (H-E2).' && log_lacks '\[HeapAdjuster\] PROBLEM'"
+pm_in gone
+check "the allocator that cannot be read later: the announcement, then the summary says so, no crash" "pm_line 'DIAGNOSTIC: the pool memory is measured, through its allocator at RVA 0x[0-9A-F]* (H-E2): its use and its least room so far are logged after 10 seconds, then every minute while they change.' && pm_line 'DIAGNOSTIC: pool memory: its allocator at RVA 0x[0-9A-F]* or its site at RVA 0x[0-9A-F]* cannot be read.' && has 'protect: '"
+pm_in dry
+check "DRY_RUN: nothing written; measured all the same, of the game's own budget" "has '$GAME_POOLS' && pm_line 'DRY_RUN: would patch the pool memory budget (136 MB -> 256 MB): 00 00 80 08 -> 00 00 00 10' && pm_line 'DIAGNOSTIC: pool memory: 134.5 of 136 MB in use, at least 0.4 MB free so far, 120 blocks (900 ends the game) - nearly spent: a pool made now can crash the game at 0x15A514.'"
+pm_in off
+check "[HEAP_ADJUSTER] ENABLED=0: a part that is off logs nothing and measures nothing" "has '$GAME_POOLS' && log_lacks '\[HeapAdjuster\]' && log_lacks 'Pattern H-E1'"
+pm_in off2
+check "DIAGNOSTIC_MODE=0: the budget raised, no line of the measurement, no thread's" "has '$RAISED_POOLS' && log_lacks '\[HeapAdjuster\] DIAGNOSTIC' && log_lacks 'pool memory summary'"
+pm_in again
+check "a second summary only when its numbers change: the first, then the block added 11 s in - in the Release build a minute later, so none by the report" "pm_line 'DIAGNOSTIC: pool memory: 134.5 of 256 MB in use, at least 120.4 MB free so far, 120 blocks (900 ends the game).' && [ \$(count '\[HeapAdjuster\] DIAGNOSTIC: pool memory: ') -eq 1 ]"
+B=$measured; cd "$B" && rm -rf pm
+
+echo "== S23 the test build, its summaries every 2 s: again when the numbers change - a pool more 11 s in, then 3 s more - and no more"
+fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(TWEAKSV_TEST_SUMMARY_MS=2000 ASI=TweaksV_test.asi game full_game.exe pmmore); echo "      $out"
+check "the test build's line for this measurement, the first summary and one more, no third" "log_line '\[TweaksV\] TEST BUILD: the pool memory summary comes every 2000 ms after its first (TWEAKSV_TEST_SUMMARY_MS=2000).\$' && log_line '\[HeapAdjuster\] DIAGNOSTIC: pool memory: 134.5 of 256 MB in use, at least 120.4 MB free so far, 120 blocks (900 ends the game).\$' && log_line '\[HeapAdjuster\] DIAGNOSTIC: pool memory: 135.5 of 256 MB in use, at least 120.4 MB free so far, 121 blocks (900 ends the game).\$' && [ \$(count '\[HeapAdjuster\] DIAGNOSTIC: pool memory: ') -eq 2 ]"
 
 echo
 echo "STORY SCENARIOS: $pass passed, $fail failed"

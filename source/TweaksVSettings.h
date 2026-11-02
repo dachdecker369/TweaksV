@@ -50,7 +50,7 @@ namespace TweaksV
 	// carried forward: from kIniFirstLayout on, it gets the keys it lacks and then the current number
 	// written back (TweaksVIni.h). Layout 2 came with TweaksV 2.0.0, layout 3 with the Blips part, layout 4
 	// with the WeaponLimits, PedProps, Resources and RayTracing parts, layout 5 with the SirenSettings and
-	// StaticBounds parts.
+	// StaticBounds parts and POOL_MEMORY.
 	inline constexpr int kIniLayoutVersion = 5;
 	inline constexpr int kIniFirstLayout = 2;		// the first layout with VERSION, the oldest one carried forward
 
@@ -103,6 +103,7 @@ namespace TweaksV
 
 		Switch(kHeapSection, "ENABLED", true),
 		Number(kHeapSection, "HEAP_SIZE", 2000, 1, 2047, "Heap size in MB - Maximum 2047"),
+		Number(kHeapSection, "POOL_MEMORY", 256, 136, 2047, "Memory budget of the game's pools in MB - Maximum 2047"),
 
 		Switch(kModkitSection, "ENABLED", true),
 		Number(kModkitSection, "MODKITARRAY_SIZE", 65536, 1, 65536, "Number of modkit IDs - Maximum 65536"),
@@ -152,7 +153,7 @@ namespace TweaksV
 		Number(kStaticBoundsSection, "STATICBOUNDS_SIZE", 16000, 1, 100000, "Number of static collision bounds - Maximum 100000"),
 	};
 
-	// The keys the default TweaksV.ini holds: layout 5 has 42.
+	// The keys the default TweaksV.ini holds: layout 5 has 43.
 	consteval size_t IniKeyCount()
 	{
 		size_t keys = 0;
@@ -161,7 +162,7 @@ namespace TweaksV
 				keys++;
 		return keys;
 	}
-	static_assert(IniKeyCount() == 42, "TweaksV: layout 5 of TweaksV.ini has 42 keys - a new key means a new layout");
+	static_assert(IniKeyCount() == 43, "TweaksV: layout 5 of TweaksV.ini has 43 keys - a new key means a new layout");
 
 	// The column at which a key's comment starts in the default file, the same for every key.
 	inline constexpr size_t kIniCommentColumn = 28;
@@ -213,6 +214,7 @@ namespace TweaksV
 	inline constexpr const Setting& kTestDumpData = FindSetting(kTweaksVSection, "TEST_DUMP_DATA");
 	inline constexpr const Setting& kTestDumpScript = FindSetting(kTweaksVSection, "TEST_DUMP_SCRIPT");
 	inline constexpr const Setting& kHeapSize = FindSetting(kHeapSection, "HEAP_SIZE");
+	inline constexpr const Setting& kPoolMemory = FindSetting(kHeapSection, "POOL_MEMORY");
 	inline constexpr const Setting& kModkitArraySize = FindSetting(kModkitSection, "MODKITARRAY_SIZE");
 	inline constexpr const Setting& kPackfileArraySize = FindSetting(kPackfileSection, "PACKFILEARRAY_SIZE");
 	inline constexpr const Setting& kTraversalListSize = FindSetting(kBoxStreamerSection, "TRAVERSAL_LIST_SIZE");

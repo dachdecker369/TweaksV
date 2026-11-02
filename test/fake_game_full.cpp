@@ -511,6 +511,19 @@
 //                  O-E-V7, O-E-P6 or O-E-V5 elsewhere, whole, but for where the others have it
 //   popgateedge    with rtjumpunread, whose page it borrows: O-E-P2 so near that page's end that what is read past the match cannot be
 // [ped pool]
+// The pool memory budget (HeapAdjuster, H-E2): its set-up runs once TweaksV has started, as the game's does, and hands its constructor what the
+// site holds; then the game's load, an 8 MB block and 120 pools of 1 MB, one given back, charged as the game's allocator charges them:
+//   pmraised       the site already holds 200 MB (another mod ran first)
+//   pmodd          the site holds a value that is no whole number of MB (another mod ran first)
+//   pmbefore       the set-up and the load run before TweaksV starts
+//   pmnotmade      the set-up never runs
+//   pmheavy        one pool more, of 2 MB, before the one given back, which 136 MB cannot hold
+//   pmnosum        1 MB more in use than was charged, so that in use and room do not add up to the budget
+//   pmmore         11 s in, one more pool, then 3 s more
+//   pmoutside      the site's lea of the allocator leads outside the image: the set-up does not run
+//   pmunaligned    the site's lea of the allocator leads to an address not aligned to 8 bytes: the set-up does not run
+//   pmunreadable   the allocator's page cannot be read while TweaksV starts: the set-up does not run
+//   pmgone         the allocator's page cannot be read from the moment TweaksV has started: the set-up does not run
 // [render queues]
 #include <windows.h>
 #include <winternl.h>
@@ -1227,6 +1240,12 @@ static Site g_popSites[] = { SITE(g_popContext, 0), SITE(g_popPedGetter, 0), SIT
 	SITE(g_popExtraStores, 0), SITE(g_popExtraCall, 0), SITE(g_popTwin, 0) };
 constexpr size_t kPopSites = sizeof(g_popSites) / sizeof(g_popSites[0]);
 // [ped pool]
+// The pool memory budget's set-up in the game's start-up code, run as the game runs it, with room for its call around H-E2's bytes: sub rsp, 28h;
+// lea rcx, [the allocator]; lea rdx, [the heap]; mov r8d, 0x10000; mov r9d, 136 MB; call its constructor; add rsp, 28h; ret.
+constexpr size_t kPoolMemoryMatch = 4, kPoolMemoryAllocatorAt = kPoolMemoryMatch + 3, kPoolMemoryHeapAt = kPoolMemoryMatch + 10, kPoolMemoryBudgetAt = kPoolMemoryMatch + 22,
+	kPoolMemoryCallAt = kPoolMemoryMatch + 27;
+volatile unsigned char g_poolMemorySite[] = { 0x48, 0x83, 0xEC, 0x28, 0x48, 0x8D, 0x0D, 0, 0, 0, 0, 0x48, 0x8D, 0x15, 0, 0, 0, 0, 0x41, 0xB8, 0x00, 0x00, 0x01, 0x00,
+	0x41, 0xB9, 0x00, 0x00, 0x80, 0x08, 0xE8, 0, 0, 0, 0, 0x48, 0x83, 0xC4, 0x28, 0xC3 };
 // [render queues]
 #pragma data_seg()
 
@@ -5511,6 +5530,149 @@ static void PopReport()
 		PopHashOfData() == g_popDataHash ? L"as placed" : L"CHANGED", rva(g_popObject), rva(t.vehicleStory), rva(t.pedStory), rva(g_popSetUp + kPopStart));
 }
 // [ped pool]
+// The allocator a pool's memory comes from, on a page of its own, as the constructor and the allocation of the game's lay it out, and the site as placed.
+static uint32_t Imm32(const Site& site);
+struct PoolMemoryAllocator
+{
+	void* vtable;
+	void* heap;
+	void* blockList;
+	uint64_t threshold;
+	uint64_t budget;
+	uint64_t used;
+	uint64_t room;
+	uint64_t leastRoom;
+	uint16_t blocks;
+	uint8_t flags;
+};
+static_assert(offsetof(PoolMemoryAllocator, threshold) == 0x18 && offsetof(PoolMemoryAllocator, budget) == 0x20 && offsetof(PoolMemoryAllocator, used) == 0x28 &&
+	offsetof(PoolMemoryAllocator, room) == 0x30 && offsetof(PoolMemoryAllocator, leastRoom) == 0x38 && offsetof(PoolMemoryAllocator, blocks) == 0x40 &&
+	offsetof(PoolMemoryAllocator, flags) == 0x42, "the game's allocator layout");
+alignas(4096) static unsigned char g_poolMemoryPage[4096];
+static unsigned char g_poolMemoryHeap[16];
+static unsigned char g_poolMemoryPlaced[sizeof(g_poolMemorySite)];
+static uint64_t g_poolMemoryGiven = 0;		// what the constructor was handed
+static bool g_poolMemoryMade = false;
+static int g_poolMemoryRefused = 0;
+static PoolMemoryAllocator* PoolMemory()
+{
+	return reinterpret_cast<PoolMemoryAllocator*>(g_poolMemoryPage);
+}
+static void PoolMemoryConstructor(PoolMemoryAllocator* allocator, void* heap, uint64_t threshold, uint64_t budget)
+{
+	allocator->heap = heap;
+	allocator->threshold = threshold;
+	allocator->budget = budget;
+	allocator->used = 0;
+	allocator->room = budget;
+	allocator->leastRoom = budget;
+	allocator->blocks = 0;
+	allocator->flags = 1;
+	g_poolMemoryGiven = budget;
+	g_poolMemoryMade = true;
+}
+// A big block's charge: its size rounded up to 64 KB and up to 64 KB more; past the room, null, which the game then writes through.
+static uint64_t PoolMemoryCharge(uint64_t size)
+{
+	return (size + 0x1003F) & ~uint64_t{ 0xFFFF };
+}
+static void PoolMemoryAllocate(uint64_t size)
+{
+	PoolMemoryAllocator* const allocator = PoolMemory();
+	const uint64_t charge = PoolMemoryCharge(size);
+	if (charge > allocator->room)
+	{
+		g_poolMemoryRefused++;
+		return;
+	}
+	allocator->room -= charge;
+	allocator->used += charge;
+	if (allocator->room < allocator->leastRoom)
+		allocator->leastRoom = allocator->room;
+	allocator->blocks++;
+}
+static void PoolMemoryGiveBack(uint64_t size)
+{
+	PoolMemoryAllocator* const allocator = PoolMemory();
+	const uint64_t charge = PoolMemoryCharge(size);
+	allocator->room += charge;
+	allocator->used -= charge;
+	allocator->blocks--;
+}
+// The site run as the game runs it, then the load.
+static bool PoolMemoryDoesNotRun(int argc, wchar_t** argv)
+{
+	return HasOption(argc, argv, L"pmnotmade") || HasOption(argc, argv, L"pmoutside") || HasOption(argc, argv, L"pmunaligned") || HasOption(argc, argv, L"pmunreadable") ||
+		HasOption(argc, argv, L"pmgone");
+}
+static void PoolMemoryRun(int argc, wchar_t** argv)
+{
+	if (PoolMemoryDoesNotRun(argc, argv))
+		return;
+	reinterpret_cast<void (*)()>(const_cast<unsigned char*>(g_poolMemorySite))();
+	PoolMemoryAllocate(8 << 20);
+	for (int i = 0; i < 120; i++)
+		PoolMemoryAllocate(1 << 20);
+	if (HasOption(argc, argv, L"pmheavy"))
+		PoolMemoryAllocate(2 << 20);
+	PoolMemoryGiveBack(1 << 20);
+	if (HasOption(argc, argv, L"pmnosum"))
+		PoolMemory()->used += 1 << 20;
+}
+// Before TweaksV loads: the site as the options ask, then its bytes as placed - and with "pmbefore" the set-up and the load, with "pmunreadable" the allocator's page taken away.
+static void PoolMemorySetUpSite(int argc, wchar_t** argv)
+{
+	const size_t size = sizeof(g_poolMemorySite);
+	const void* allocator = g_poolMemoryPage;
+	if (HasOption(argc, argv, L"pmoutside"))
+		allocator = ImageEnd() + 0x73000;
+	else if (HasOption(argc, argv, L"pmunaligned"))
+		allocator = g_poolMemoryPage + 4;
+	SetRel32({ g_poolMemorySite, static_cast<int>(kPoolMemoryAllocatorAt), size }, allocator);
+	SetRel32({ g_poolMemorySite, static_cast<int>(kPoolMemoryHeapAt), size }, g_poolMemoryHeap);
+	SetRel32({ g_poolMemorySite, static_cast<int>(kPoolMemoryCallAt), size }, reinterpret_cast<const void*>(&PoolMemoryConstructor));
+	if (HasOption(argc, argv, L"pmraised"))
+		SetImm32({ g_poolMemorySite, static_cast<int>(kPoolMemoryBudgetAt), size }, 200u << 20);
+	if (HasOption(argc, argv, L"pmodd"))
+		SetImm32({ g_poolMemorySite, static_cast<int>(kPoolMemoryBudgetAt), size }, (200u << 20) | 1);
+	for (size_t i = 0; i < size; i++)
+		g_poolMemoryPlaced[i] = g_poolMemorySite[i];
+	if (HasOption(argc, argv, L"pmbefore"))
+		PoolMemoryRun(argc, argv);
+	DWORD old = 0;
+	if (HasOption(argc, argv, L"pmunreadable"))
+		VirtualProtect(g_poolMemoryPage, sizeof(g_poolMemoryPage), PAGE_NOACCESS, &old);
+}
+// Once TweaksV has started, as the game does its start-up.
+static void PoolMemoryActions(int argc, wchar_t** argv)
+{
+	DWORD old = 0;
+	if (HasOption(argc, argv, L"pmgone"))
+		VirtualProtect(g_poolMemoryPage, sizeof(g_poolMemoryPage), PAGE_NOACCESS, &old);
+	if (!HasOption(argc, argv, L"pmbefore"))
+		PoolMemoryRun(argc, argv);
+	if (HasOption(argc, argv, L"pmmore"))
+	{
+		Sleep(11000);
+		PoolMemoryAllocate(1 << 20);
+		Sleep(3000);
+	}
+}
+// "pool memory: 256 MB, the rest as placed, its constructor given 256 MB, 120 blocks, 0 refused | " - what the site holds, the rest of the site as
+// placed or changed, and what the game's start-up made of it, or "its constructor not run".
+static void PoolMemoryReport()
+{
+	const size_t size = sizeof(g_poolMemorySite);
+	bool restPlaced = true;
+	for (size_t i = 0; i < size; i++)
+		restPlaced = restPlaced && ((i >= kPoolMemoryBudgetAt && i < kPoolMemoryBudgetAt + 4) || g_poolMemorySite[i] == g_poolMemoryPlaced[i]);
+	const uint32_t held = Imm32({ g_poolMemorySite, static_cast<int>(kPoolMemoryBudgetAt), size });
+	wprintf(L"pool memory: 0x%08X, %u MB, the rest %ls, ", held, held >> 20, restPlaced ? L"as placed" : L"CHANGED");
+	if (g_poolMemoryMade)
+		wprintf(L"its constructor given %llu MB, %d blocks, %d refused | ", static_cast<unsigned long long>(g_poolMemoryGiven >> 20), PoolMemory()->blocks, g_poolMemoryRefused);
+	else
+		wprintf(L"its constructor not run | ");
+}
 // [render queues]
 
 // The game's two tree searches behind the box streamer's four calls: the first and the third call lead
@@ -6001,6 +6163,8 @@ static void ForEachSite(void (*fn)(const Site&))
 	// [population]
 	for (const Site& site : g_popSites) fn(site);
 	// [ped pool]
+	static Site poolMemorySite = SITE(g_poolMemorySite, 0);
+	fn(poolMemorySite);
 	// [render queues]
 }
 
@@ -7592,6 +7756,7 @@ int wmain(int argc, wchar_t** argv)
 	// [population]
 	PopSetUp(argc, argv);
 	// [ped pool]
+	PoolMemorySetUpSite(argc, argv);
 	// [render queues]
 
 	RovSetup(argc, argv);
@@ -7754,6 +7919,7 @@ int wmain(int argc, wchar_t** argv)
 	// [population]
 	PopActions(argc, argv);
 	// [ped pool]
+	PoolMemoryActions(argc, argv);
 	// [render queues]
 	if (HasOption(argc, argv, L"wait"))
 		Sleep(11000);	// TweaksV's UNLOCK_FILES summary comes 10 s after the first open it counts, the OpenFile summary 10 s
@@ -7842,6 +8008,7 @@ int wmain(int argc, wchar_t** argv)
 	// [population]
 	PopReport();
 	// [ped pool]
+	PoolMemoryReport();
 	// [render queues]
 	CheckStub(Rel32Target(g_packCallSite));
 	CheckStub(Rel32Target(g_scriptCallSite));
