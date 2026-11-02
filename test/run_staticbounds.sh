@@ -16,7 +16,9 @@
 # beside Blips' in the start-up summary's box, each of the hook's three patterns missing with the Blips part off, the part's problem
 # alone in the box, the natives' resolution call another mod redirected, each of the two events not made (the test build's
 # TWEAKSV_TEST_STATICBOUNDS_NO_EVENT), in the box, which the Release build, another value and DRY_RUN leave alone, and beside
-# BlipLimitFix.asi only the line, no problem. In every run the sites as placed but for the hooks' jumps, and every page its own
+# BlipLimitFix.asi only the line, no problem; a size above the key's default on a pool memory budget not raised, the HeapAdjuster part
+# off by the key or a plugin or POOL_MEMORY at 136, one problem, the pool raised all the same, and nothing at the default, on a raised
+# budget, in DRY_RUN or with no hook made. In every run the sites as placed but for the hooks' jumps, and every page its own
 # protection. Fake LOCALAPPDATA: the real one is never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 cd "$B" || exit 1
@@ -299,6 +301,33 @@ check "DRY_RUN: no event wanted, nothing reported" "quiet && log_lacks 'event is
 echo "== SB39 BlipLimitFix.asi with the made event not made (test build): no check was to be made, logged - not reported"
 fresh_ini; touch BlipLimitFix.asi; out=$(TWEAKSV_TEST_STATICBOUNDS_NO_EVENT=made ASI=TweaksV_test.asi game full_game.exe); rm -f BlipLimitFix.asi
 check "the line, word for word, no problem of the part; the pool raised all the same" "log_line '$LEFT' && quiet && hooks_made 16000 && has '$RAISED'"
+
+# the problem of a size above the key's default on a budget not raised, word for word, once: may_not_fit SIZE WHY
+PART_OFF='the HeapAdjuster part, which raises that budget, is off. A pool past the budget crashes the game: switch the part on, or lower STATICBOUNDS_SIZE.'
+AT_136='POOL_MEMORY=136 leaves that budget at the game.s own. A pool past the budget crashes the game: raise POOL_MEMORY, or lower STATICBOUNDS_SIZE.'
+may_not_fit() { log_line "${TAG}PROBLEM: The static bounds pool may not fit the pool memory budget this session: STATICBOUNDS_SIZE=$1 is above its default of 16000, and $2\$" && [ $(count 'may not fit the pool memory budget') -eq 1 ]; }
+
+echo "== SB40 STATICBOUNDS_SIZE above its default on a pool memory budget not raised (test build, ERROR_POPUP=1): one problem of the start-up summary, the pool raised all the same"
+fresh_ini; setkey ERROR_POPUP 1; setkey STATICBOUNDS_SIZE 16001; setkey ENABLED 0 HEAP_ADJUSTER; out=$(ASI=TweaksV_test.asi game full_game.exe)
+check "[HEAP_ADJUSTER] ENABLED=0, one above the default: the problem, in the box; the hooks made, the pool raised" "may_not_fit 16001 '$PART_OFF' && boxed 1 && hooks_made 16001 && has '${HOOKED}the pool made once: 16001 slots, 272017 bytes asked, $OTHERS'"
+fresh_ini; setkey ERROR_POPUP 1; setkey STATICBOUNDS_SIZE 100000; setkey POOL_MEMORY 136; out=$(ASI=TweaksV_test.asi game full_game.exe)
+check "POOL_MEMORY=136, the key's maximum: the problem, in the box; the pool raised" "may_not_fit 100000 '$AT_136' && boxed 1 && has '${HOOKED}the pool made once: 100000 slots, 1700000 bytes asked, $OTHERS'"
+for plugin in HeapAdjuster.asi ResourceExtensions.asi; do
+	fresh_ini; setkey STATICBOUNDS_SIZE 100000; touch "$plugin"; out=$(game full_game.exe); rm -f "$plugin"
+	check "$plugin, which switches the HeapAdjuster part off: the conflict check's problem and this one; the pool raised" "log_has 'TweaksV.s HeapAdjuster part is switched off' && may_not_fit 100000 '$PART_OFF' && has '${HOOKED}the pool made once: 100000 slots'"
+done
+
+echo "== SB41 what says nothing of the budget: the default on a budget not raised, a raised budget, nothing raised"
+fresh_ini; setkey ENABLED 0 HEAP_ADJUSTER; out=$(game full_game.exe)
+check "[HEAP_ADJUSTER] ENABLED=0 at the default, where a slot costs 17 bytes: no problem, the pool raised" "quiet && has '$RAISED'"
+fresh_ini; setkey POOL_MEMORY 136; out=$(game full_game.exe)
+check "POOL_MEMORY=136 at the default: no problem, the pool raised" "quiet && has '$RAISED'"
+fresh_ini; setkey STATICBOUNDS_SIZE 100000; setkey POOL_MEMORY 137; out=$(game full_game.exe)
+check "POOL_MEMORY=137, the least raise, at the key's maximum: no problem, the pool raised" "quiet && has '${HOOKED}the pool made once: 100000 slots'"
+fresh_ini; setkey STATICBOUNDS_SIZE 100000; setkey ENABLED 0 HEAP_ADJUSTER; setkey DRY_RUN 1; out=$(game full_game.exe)
+check "DRY_RUN, on a budget not raised: nothing hooked, nothing said" "quiet && kept"
+fresh_ini; setkey STATICBOUNDS_SIZE 100000; setkey ENABLED 0 HEAP_ADJUSTER; out=$(game full_game.exe sbp1noexec)
+check "a hook not made, on a budget not raised: its problem alone, nothing raised" "[ \$(count '${TAG}PROBLEM') -eq 1 ] && log_has '${NOT_RAISED}' && kept"
 
 echo
 echo "STATIC BOUNDS SCENARIOS: $pass passed, $fail failed"

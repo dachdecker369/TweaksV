@@ -21,6 +21,8 @@
 // made the pool before TweaksV started, or makes it another way. While a plugin that does the Blips part's job is
 // installed, whatever TweaksV.ini says, no check is made, logged. A check that cannot be made - its events, the hook or its
 // thread not there - is reported, the hooks staying: nothing else would say when the game does not make the pool.
+// A size above the key's default on a pool memory budget not raised - the HeapAdjuster part off, by TweaksV.ini or a plugin
+// found, or POOL_MEMORY at the game's own - is a problem of the start-up summary, the raise made all the same.
 //   DRY_RUN          nothing is hooked, nothing checked; the line says what would be
 //   DIAGNOSTIC_MODE  the two sites at their RVAs, with what IsFunctionStart says of each, which refuses nothing since
 //                    the patterns pin it; every making of the pool, and its time after the part's start
@@ -331,6 +333,22 @@ namespace TweaksV
 				RaisePool(static_cast<uint8_t*>(pool));
 			return g_allocator(pool, second, third, fourth);
 		}
+
+		// ---- what the raise spends
+
+		// A slot takes 17 bytes of the pool memory budget (PATTERNS.md, "A pool's memory"), which only the HeapAdjuster part raises, and past that
+		// budget the game writes through a null pointer, with nothing on screen. A size above the key's default on a budget not raised is one
+		// problem of the start-up summary, the raise made all the same; at the default nothing, since a box at every start would say little.
+		void CheckBudget()
+		{
+			const bool partOff = !IsFeatureOn(kHeapSection);
+			if (g_size <= kStaticBoundsSize.defaultValue || (!partOff && GetNumber(kPoolMemory) != kPoolMemory.minValue))
+				return;
+			const std::string above = "STATICBOUNDS_SIZE=" + std::to_string(g_size) + " is above its default of " + std::to_string(kStaticBoundsSize.defaultValue) + ", and ";
+			ReportFailure(kTag, "The static bounds pool may not fit the pool memory budget this session: " + above + (partOff ?
+				"the HeapAdjuster part, which raises that budget, is off. A pool past the budget crashes the game: switch the part on, or lower STATICBOUNDS_SIZE." :
+				"POOL_MEMORY=" + std::to_string(kPoolMemory.minValue) + " leaves that budget at the game's own. A pool past the budget crashes the game: raise POOL_MEMORY, or lower STATICBOUNDS_SIZE."));
+		}
 	}
 
 	void InitStaticBounds()
@@ -390,6 +408,7 @@ namespace TweaksV
 		}
 		WriteLog(kTag, Capitalised(where) + " are hooked: the static bounds pool gets at least " + std::to_string(g_size) + " slots (STATICBOUNDS_SIZE) when the "
 			"game makes it, more where the game gives it more.");
+		CheckBudget();
 
 		// 4. the check, from the session's start - the first script program the game places, seen through the script programs'
 		// hook: the part joins the hook the Blips part has made while Blips is on, and makes it itself, the first part to use
