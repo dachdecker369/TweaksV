@@ -12,7 +12,8 @@
 # else, every page's protection its own, the sites run as code; the table moved at its fixed size on the relocation core;
 # the plain game; the part off; DRY_RUN; each check failing on its own and a site another mod changed, a problem with nothing
 # written; the game's init and its load through the redirected call, IDs past 255 kept whole; the drops and moves per file with
-# DIAGNOSTIC_MODE; and a start without the part against one with it. Fake LOCALAPPDATA: the real one is never touched.
+# DIAGNOSTIC_MODE, a file past what the stub of its dedupe keeps, that stub or the hooks not to be made; and a start without the part
+# against one with it. Fake LOCALAPPDATA: the real one is never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 cd "$B" || exit 1
 cp "$R/x64/Release/TweaksV.asi" TweaksV.asi
@@ -269,6 +270,8 @@ check "written, no problem" "written && moved_line && log_lacks 'PROBLEM'"
 echo "== W10 no code may be changed (Windows' dynamic code policy): the part reported, nothing written"
 fresh_ini; out=$(game full_game.exe nodyncode)
 check "the problem, word for word, the stub's reason in the log; the sites and the data as placed" "log_line \"${P}PROBLEM: $JOB the game code could not be changed (details in TweaksV.log).\$\" && has 'siren ids: sites as placed 17 of 17, data as placed' && has 'table not moved'"
+fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe nodyncode)
+check "with DIAGNOSTIC_MODE=1: the stub of a pack's dedupe not made, logged; the part's problem; nothing written, no hook" "lines \"the siren settings dropped and moved are not counted: the stub of a pack's dedupe could not be made read+execute (Windows error [0-9]*.*).\" && log_line \"${P}PROBLEM: $JOB the game code could not be changed (details in TweaksV.log).\$\" && has 'siren ids: sites as placed 17 of 17, data as placed' && has 'table not moved' && log_lacks '${P}.*are hooked'"
 
 echo "== W11 the game's init after TweaksV has started: the table free when the base loader runs, the base files read through the call"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe siload wait)
@@ -294,6 +297,12 @@ check "each pack's line, word for word" "lines \"a pack's carcols, $PACK1, broug
 check "the summary: 31 settings, 31 of 65536 IDs, 4 past 255, 2 dropped, 1 moved; the IDs whole, in their order" "lines 'siren settings loaded: 31 (vehicles can use 255 at most); siren setting IDs in use: 31 of 65536, 4 of them past 255; settings past position 255, which no vehicle can reach: 0; IDs given to more than one setting: 0; settings the game dropped so far: 2, moved: 1.' 'siren setting IDs of settings 0 to 30 of 31: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 300, 1534, 40, 0, 511, 767, 25'"
 check "the callback back with its result and last error each time, every register the dedupe's stub must keep kept, the variations at their settings" "has \"packs 3 of 3 back, dedupe's registers kept 9 of 9, variations 8 of 8\""
 
+echo "== W14b a pack's file of 4,097 settings of one ID, one past the 4,096 IDs the stub of its dedupe keeps: the stub's branch for no room runs on the game's load path"
+fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe siload sibigpack)
+taken=$(printf '6000, %.0s' $(seq 1 16))
+check "the pack's line, word for word: all 4,097 counted, the taken IDs listed up to their cap" "lines \"a pack's carcols, dlcpacks:/sibig/data/carcols.meta, brought 4097 siren settings: 1 added, 4096 dropped, their IDs taken (${taken}...), 0 moved.\""
+check "the callback back with its result and last error; all 4,097 loads through the stub with every register it must keep kept" "has \"packs 1 of 1 back, dedupe's registers kept 4097 of 4097\""
+
 echo "== W15 the same with LARGE_SIREN_IDS=0: the comparison a start without the part gives - IDs cut to their low byte, no hook, nothing written"
 measure_ini; out=$(game full_game.exe siload sipacks wait)
 check "the base game's numbers and IDs the same as W11's, the pack's IDs cut: 300 is 44, 1534 is 254, 40 stays; 300's second drop by 44" "lines 'siren settings loaded: 31 (vehicles can use 255 at most); siren setting IDs in use: 31 of 256; settings past position 255, which no vehicle can reach: 0; IDs given to more than one setting: 0.' 'siren setting IDs of settings 0 to 30 of 31: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 44, 254, 40, 0, 25, 26, 27'"
@@ -308,6 +317,11 @@ fresh_ini; setkey DIAGNOSTIC_MODE 1; setkey ERROR_POPUP 1; addkey TEST_BREAK_PAT
 check "not found: the line, word for word; no box; the part written with a word's load, no hook; the measurement announced" "lines 'the siren settings dropped and moved are not counted: I-E-H1 was not found.' && no_box && written && a_word && measured_wide"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe sibyte0)
 check "no function start: the line, word for word; the part written, no hook" "lines 'the siren settings dropped and moved are not counted: I-E-H1 at $RVA is not where a function starts: no unwind data, byte before it 00.' && written && a_word"
+
+echo "== W17b the hooks an aid: the callback's page not executable while TweaksV starts, so that MinHook refuses it - logged, no problem, the part written, the stub at work"
+fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe siload sipacks sihooknoexec)
+check "the hook's line and the part's, word for word; no problem of the part; no line per pack" "log_line \"${P}A pack's carcols callback could not be hooked (MinHook: MH_ERROR_NOT_EXECUTABLE) - none of the 2 hooks is on.\$\" && lines 'the siren settings dropped and moved are not counted: the two functions could not be hooked (details above).' && log_lacks '${P}PROBLEM' && log_lacks \"${L}a pack's carcols, \""
+check "the part written, a pack's dedupe's load through the stub, no hook; the stub keeps every register; the measurement announced" "written && has \"a pack's dedupe's load through a stub, RX, 0 hooks\" && has \"dedupe's registers kept 9 of 9\" && measured_wide"
 
 echo "== W18 the test build's summary again when the numbers change: past 256 IDs, a pack's 6 settings at 12 s"
 export TWEAKSV_TEST_SUMMARY_MS=500

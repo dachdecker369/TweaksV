@@ -214,6 +214,8 @@
 //   sipacks       with siload: three packs' carcols through the callback's start - IDs past 255, one taken, one twice, one without
 //                 an ID, the low byte 0xFF, none at all - and their variations
 //   siflood       with siload: 20,001 packs' carcols of no settings
+//   sibigpack     with siload: a pack's carcols of 4,097 settings of one ID, one past the IDs the stub of its dedupe keeps
+//   sihooknoexec  the page of a pack's carcols callback not executable while TweaksV starts, so that MinHook refuses to hook it
 //   sibyte0       the byte before the two hooked functions a 00: neither where a function starts
 //   silimit       a base builder's limit 65537, past the table's fixed size
 //   sidisagree    a pack's builder's second limit 512
@@ -2207,7 +2209,7 @@ constexpr size_t kSirenIdsSettingSize = 0x5E8;
 static unsigned char* g_sirenIdsSettings = nullptr;			// the siren settings' array, allocated by SirenIdsSetup
 static size_t g_sirenIdsCapacity = 0;
 static bool g_sirenIdsPack = false, g_sirenIdsNone = false, g_sirenIdsUnreadable = false, g_sirenIdsRegister = false;
-static bool g_sirenIdsLoad = false, g_sirenIdsTwice = false, g_sirenIdsClash = false, g_sirenIdsPacks = false, g_sirenIdsFlood = false;
+static bool g_sirenIdsLoad = false, g_sirenIdsTwice = false, g_sirenIdsClash = false, g_sirenIdsPacks = false, g_sirenIdsFlood = false, g_sirenIdsBigPack = false;
 
 // The sites, each with a hash of its bytes as placed, and one of the data, for the report
 struct SirenIdsSite { volatile unsigned char* bytes; size_t size; uint64_t placed; };
@@ -2441,7 +2443,9 @@ static SirenIdsFile g_sirenIdsFiles[] = {
 	{ "dlcpacks:/sipack2/data/carcols.meta", { 511, 767, 511 }, 3 },
 	{ "dlcpacks:/sipack3/data/carcols.meta", {}, 0 },
 };
-static unsigned char g_sirenIdsFileSettings[8 * kSirenIdsSettingSize];
+static SirenIdsFile g_sirenIdsBigFile = { "dlcpacks:/sibig/data/carcols.meta", { 6000 }, 4097 };	// past eight settings a file's all have its first ID
+static unsigned char g_sirenIdsFileRoom[8 * kSirenIdsSettingSize];
+static unsigned char* g_sirenIdsFileSettings = g_sirenIdsFileRoom;
 
 // The callback's body, behind its prologue in .fakesit: the file read and each setting constructed; the dedupe's load run as
 // code, every register it must keep compared, then its compare loop as code; what is not dropped appended raw; then the
@@ -2453,8 +2457,9 @@ static uint64_t SirenIdsPackBody(void*, const SirenIdsFile* file)
 	{
 		unsigned char* const setting = g_sirenIdsFileSettings + i * kSirenIdsSettingSize;
 		SirenIdsMakeSetting(setting);
-		if (file->ids[i] >= 0)
-			SirenIdsParse(setting, static_cast<unsigned>(file->ids[i]), g_sirenIdsMembers[0]);
+		const int id = file->ids[file->count > 8 ? 0 : i];
+		if (id >= 0)
+			SirenIdsParse(setting, static_cast<unsigned>(id), g_sirenIdsMembers[0]);
 	}
 	const size_t first = SirenIdsCounted();
 	for (size_t i = 0; i < file->count; i++)
@@ -2505,6 +2510,14 @@ static void SirenIdsMountPack(const SirenIdsFile& file)
 	g_sirenIdsPackCalls++;
 	if (result == kSirenIdsResult && GetLastError() == kSirenIdsLastError)
 		g_sirenIdsPackKept++;
+}
+
+// Before TweaksV loads and as soon as it has started: what the option "sihooknoexec" takes away from the callback's page and puts back, before any code of the page runs
+static void SirenIdsHookProtect(int argc, wchar_t** argv, DWORD protection)
+{
+	DWORD old = 0;
+	if (HasOption(argc, argv, L"sihooknoexec"))
+		VirtualProtect(const_cast<unsigned char*>(g_sirenIdsH1), sizeof(g_sirenIdsH1), protection, &old);
 }
 
 // The sites as the game has them, as the options change them, and the data: 24 siren settings with the IDs 1 to 24 (simany: 300,
@@ -2614,6 +2627,7 @@ static void SirenIdsSetup(int argc, wchar_t** argv)
 	g_sirenIdsClash = HasOption(argc, argv, L"siclash");
 	g_sirenIdsPacks = HasOption(argc, argv, L"sipacks");
 	g_sirenIdsFlood = HasOption(argc, argv, L"siflood");
+	g_sirenIdsBigPack = HasOption(argc, argv, L"sibigpack");
 	g_sirenIdsCapacity = many ? 304 : 64;
 	g_sirenIdsSettings = static_cast<unsigned char*>(VirtualAlloc(nullptr, g_sirenIdsCapacity * kSirenIdsSettingSize, MEM_RESERVE | MEM_COMMIT,
 		PAGE_READWRITE));
@@ -2711,6 +2725,12 @@ static void SirenIdsLater()
 		if (g_sirenIdsFlood)
 			for (int i = 0; i < 20001; i++)
 				SirenIdsMountPack(g_sirenIdsFiles[2]);
+		if (g_sirenIdsBigPack)
+		{
+			g_sirenIdsFileSettings = static_cast<unsigned char*>(VirtualAlloc(nullptr, g_sirenIdsBigFile.count * kSirenIdsSettingSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE));
+			if (g_sirenIdsFileSettings)
+				SirenIdsMountPack(g_sirenIdsBigFile);
+		}
 		g_sirenIdsDataPlaced = SirenIdsData();
 	}
 	if (!g_sirenIdsPack && !g_sirenIdsNone)
@@ -9106,6 +9126,7 @@ int wmain(int argc, wchar_t** argv)
 	g_siteProtect = ProtectionOf(g_heapSite);
 	RtTakeAway(argc, argv);
 	StaticBoundsProtect(argc, argv, PAGE_READONLY);
+	SirenIdsHookProtect(argc, argv, PAGE_READONLY);
 	PedPoolTakeAway(argc, argv);
 
 	// the stand-in dstorage.dll, loaded before TweaksV as the game's import is
@@ -9129,6 +9150,7 @@ int wmain(int argc, wchar_t** argv)
 		wprintf(L"LoadLibrary(%ls) failed: %lu\n", asi, GetLastError());
 		return 1;
 	}
+	SirenIdsHookProtect(argc, argv, PAGE_EXECUTE_READ);
 	RovFirstTimeRequest();	// the game asks for the time: RageOpenV's hook runs its one-time start-up
 	Sleep(1500); // the start-up summary thread runs
 	if (HasOption(argc, argv, L"unload"))	// TweaksV pins itself: freed, it must stay, and its hooks with it. One FreeLibrary
