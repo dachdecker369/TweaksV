@@ -9342,6 +9342,7 @@ int wmain(int argc, wchar_t** argv)
 	RqReport(argc, argv);
 	CheckStub(Rel32Target(g_packCallSite));
 	CheckStub(Rel32Target(g_scriptCallSite));
+	CheckStub(Rel32Target(Site{ g_staticBoundsInit, kSbLookupRel, 0 }));
 	for (const Site& site : g_boxCalls)
 		CheckStub(Rel32Target(site));
 	RovForEachCallTarget(CheckStub);

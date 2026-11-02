@@ -84,7 +84,7 @@ check "both tables' lines, word for word, each once: the game's defaults" "pop_l
 check "the vehicles' line and the peds', word for word: 428.7 of 429, past the stop at 427.5; 305.1 of 561, the stop at 553.5 with MaxScenPeds 8" "pop_line '$VEHICLE_AT_180' && pop_line '$PED_AT_180'"
 samples=$(tr -d '\r' < TweaksV.log | sed -n 's/.*vehicle model budget: .*at the stop in \([0-9]*\) of \([0-9]*\) samples.*/\1 \2/p' | head -n 1)
 check "the vehicles at the stop in every sample, about one a second over the first 10 s: $samples" "[ \"\${samples% *}\" = \"\${samples#* }\" ] && [ \"\${samples% *}\" -ge 5 ] && [ \"\${samples% *}\" -le 12 ]"
-check "no problem, no box, nothing written, no call stub of its own (the 12 are the other parts'), every page its own protection" "no_problem && log_lacks 'Start-up summary' && has 'stubs: 13, all RX'"
+check "no problem, no box, nothing written, no call stub of its own (the 13 are the other parts'), every page its own protection" "no_problem && log_lacks 'Start-up summary' && has 'stubs: 13, all RX'"
 
 echo "== O3 DRY_RUN=1 changes nothing here"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; setkey DRY_RUN 1; out=$(game full_game.exe popfill popwait)

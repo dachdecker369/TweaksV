@@ -34,7 +34,7 @@ echo "== C1 DIAGNOSTIC_MODE=0: nothing looked for, the call not redirected, the 
 fresh_ini; out=$(game full_game.exe scdraw); echo "      $out"
 check "no siren count pattern looked for, no SirenSettings line but the siren IDs' two" "log_lacks 'I-E-B' && log_lacks '\[SirenSettings\] DIAGNOSTIC' && [ \$(count '\[SirenSettings\]') -eq 2 ]"
 check "the stand-ins built; 800 passes through the renderer itself, its arguments, result and last error as the game's, no lookup" "has '$BUILT' && has '$UNCOUNTED'"
-check "sites and data as placed, no call stub of its own (the 7 are the other parts'), every page its own protection" "has '$PLACED' && has 'stubs: 8, all RX' && has 'protect: all restored (RX)'"
+check "sites and data as placed, no call stub of its own (the 8 are the other parts'), every page its own protection" "has '$PLACED' && has 'stubs: 8, all RX' && has 'protect: all restored (RX)'"
 
 echo "== C2 DIAGNOSTIC_MODE=1: the four sites found and logged, the call redirected, the models counted and summed up 10 s in"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe scdraw wait); echo "      $out"
@@ -49,7 +49,7 @@ check "the announcement, word for word" "sc_line 'DIAGNOSTIC: the siren lights. 
 check "800 passes through TweaksV's stub: the renderer each time, with the game's arguments, its result and last error back; 64 lookups for each of the 4 models, each after its vehicle's renderer" "has '$BUILT' && has '$COUNTED'"
 check "the summary 10 s in, word for word: 4 models from two threads at once, each counted once - the police car's 20 sirens the most, one past siren20, one losing bones past 127" "sc_line '$SUMMARY' && [ \$(count 'vehicle models with sirens seen') -eq 1 ]"
 check "a line for the model made for 32 sirens and for the one losing bones past 127, word for word, and for no other" "sc_line '$LINE_32' && sc_line '$LINE_LOST' && [ \$(count 'DIAGNOSTIC: vehicle model 0x') -eq 2 ]"
-check "the call stub read+execute, 12 in all (the other parts' 11 and this one), every page its own protection" "has 'stubs: 13, all RX' && has 'protect: all restored (RX)'"
+check "the call stub read+execute, 13 in all (the other parts' 12 and this one), every page its own protection" "has 'stubs: 13, all RX' && has 'protect: all restored (RX)'"
 check "the sites but the redirected call and the models' data as placed" "has '$PLACED'"
 check "no problem, no box" "log_lacks 'PROBLEM' && log_lacks 'Start-up summary'"
 
