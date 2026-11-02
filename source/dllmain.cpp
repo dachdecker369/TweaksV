@@ -10,7 +10,7 @@
 #include <windows.h>
 
 #include "TweaksVConflicts.h"
-#include "TweaksVDump.h"		// test builds: TEST_DUMP_CODE, TEST_DUMP_SCRIPT
+#include "TweaksVDump.h"		// test builds: TEST_DUMP_CODE, TEST_DUMP_DATA, TEST_DUMP_SCRIPT
 #include "TweaksVFeatures.h"
 #include "TweaksVGame.h"
 #include "TweaksVIni.h"
@@ -51,6 +51,7 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
 				TweaksV::OpenConsole();
 #ifdef TWEAKSV_TEST_BUILD
 			TweaksV::StartCodeDump();								//    test builds: before anything is patched,
+			TweaksV::StartDataDump();								//    the windows of the game's data as well,
 			TweaksV::StartScriptDump();								//    then the script programs' hook
 #endif
 

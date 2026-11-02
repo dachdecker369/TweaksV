@@ -10,6 +10,18 @@
 // The file (format version 1, little-endian): a DumpHeader, one DumpSection per section, then the bytes
 // of each section at its fileOffset. Bytes that could not be read are saved as zeros and counted.
 //
+// TEST_DUMP_DATA=<seconds>,<rva>:<bytes>[,<rva>:<bytes>...] saves named windows of the game's .data, which
+// the code dump leaves out, so that static data the game keeps there - the parser's member data - can be
+// read: at most 16 windows of at most 64 KB each, the RVAs and the sizes in hex, each window wholly inside
+// the section the game's section table names .data, else a problem and nothing saved. Each is saved as
+// GameData-<rva>-start.bin, taken before any part of TweaksV changes the game, and as
+// GameData-<rva>-later.bin, taken that many seconds later, the RVA in upper-case hex: both in
+// %LOCALAPPDATA%\TweaksV, never the game folder, and only if they are what their path says. .data as a whole
+// stays out, since it can hold the player's data; a window is named for static data that holds none.
+//
+// The file (format version 1, little-endian): a DataDumpHeader, then the window's bytes. Bytes that could not
+// be read are saved as zeros and counted.
+//
 // TEST_DUMP_SCRIPT=<name> saves one of the game's script programs as the game places it in memory - the
 // archives store the scripts encrypted - so that a script's code can be read: each time the game places the
 // program of that name (1 to 63 letters, digits and _, compared without case), on its resource placement
@@ -51,6 +63,21 @@ namespace TweaksV
 	};
 	static_assert(sizeof(DumpSection) == 32);
 
+	struct DataDumpHeader
+	{
+		char magic[8];				// "TWKVDATA"
+		uint32_t formatVersion;		// 1
+		uint32_t headerSize;		// 48: the window's bytes start here
+		uint64_t imageBase;			// where the game was in memory: what a pointer in the window points into
+		uint32_t imageSize;			// its SizeOfImage
+		uint32_t timeDateStamp;		// its PE timestamp - the game build
+		uint32_t secondsAfterStart;	// 0 for GameData-<rva>-start.bin
+		uint32_t rva;				// where the window lies in the game
+		uint32_t size;				// the window's bytes
+		uint32_t unreadable;		// bytes that could not be read, saved as zeros
+	};
+	static_assert(sizeof(DataDumpHeader) == 48);
+
 	struct ScriptDumpHeader
 	{
 		char magic[8];					// "TWKVSCRP"
@@ -83,6 +110,11 @@ namespace TweaksV
 	// TEST_DUMP_CODE is not set; a value that is not a number of seconds from 1 to 3600 is a problem.
 	// DllMain calls it once, before StartFeatures(). Test builds only.
 	void StartCodeDump();
+
+	// Takes the first copy of every window TEST_DUMP_DATA names and starts the thread that saves them and takes
+	// the second. Does nothing if it is not set; a value that is not a number of seconds from 1 to 3600 and its
+	// windows is a problem, and nothing is saved. DllMain calls it once, after StartCodeDump(). Test builds only.
+	void StartDataDump();
 
 	// Joins the script programs' hook (TweaksVScripts.h) for TEST_DUMP_SCRIPT. Does nothing if it is not
 	// set; a value that is not a script's name, and a hook that cannot be made, are problems, and nothing is

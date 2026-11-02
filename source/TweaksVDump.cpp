@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// TweaksV - TEST_DUMP_CODE and TEST_DUMP_SCRIPT, test builds only (see TweaksVDump.h).
+// TweaksV - TEST_DUMP_CODE, TEST_DUMP_DATA and TEST_DUMP_SCRIPT, test builds only (see TweaksVDump.h).
 
 #include "TweaksVDump.h"
 
@@ -15,6 +15,7 @@
 #include <cstring>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "TweaksVFiles.h"
@@ -70,6 +71,20 @@ namespace TweaksV
 			return name;
 		}
 
+		// A section's bytes in memory, as the game's section table gives them.
+		uint64_t SectionLength(const IMAGE_SECTION_HEADER& section)
+		{
+			return section.Misc.VirtualSize ? section.Misc.VirtualSize : section.SizeOfRawData;
+		}
+
+		// True if text is a number of seconds from 1 to kMaxSeconds, in digits and nothing else.
+		bool ParseSeconds(const std::string& text, unsigned long& seconds)
+		{
+			char* end = nullptr;
+			seconds = strtoul(text.c_str(), &end, 10);
+			return text[0] >= '0' && text[0] <= '9' && *end == '\0' && seconds >= 1 && seconds <= kMaxSeconds;
+		}
+
 		// Copies size bytes of the game from begin to out: what can be read as it is, the rest as zeros.
 		// Returns how many bytes could not be read. A guard page is never touched.
 		uint64_t CopyRange(const uint8_t* begin, size_t size, uint8_t* out)
@@ -111,30 +126,56 @@ namespace TweaksV
 			return dosOk && nt->Signature == IMAGE_NT_SIGNATURE ? nt : nullptr;
 		}
 
-		// A copy of the game as it is now - or nullptr, reported, if its headers in memory are not what
-		// Windows loads. May throw std::bad_alloc.
-		std::unique_ptr<Copy> TakeCopy(uint32_t secondsAfterStart)
+		// The game in memory and its section table, which lies inside its image.
+		struct GameImage
+		{
+			const uint8_t* base = nullptr;
+			uint64_t size = 0;
+			const IMAGE_NT_HEADERS* nt = nullptr;
+			const IMAGE_SECTION_HEADER* sections = nullptr;
+			WORD sectionCount = 0;
+		};
+
+		// Finds the game - or false, reported under key as "... - <what> is not saved.", if it is not in memory
+		// or its headers there are not what Windows loads.
+		bool FindGame(const char* key, const char* what, GameImage& game)
 		{
 			const HMODULE module = GetModuleHandleW(nullptr);
 			MODULEINFO image{};
 			if (!module || !GetModuleInformation(GetCurrentProcess(), module, &image, sizeof(image)))
 			{
-				ReportFailure(kTag, "TEST_DUMP_CODE: the game was not found in memory - its code is not saved.");
-				return nullptr;
+				ReportFailure(kTag, std::string(key) + ": the game was not found in memory - " + what + " is not saved.");
+				return false;
 			}
-			const auto base = static_cast<const uint8_t*>(image.lpBaseOfDll);
-			const uint64_t imageSize = image.SizeOfImage;
+			game.base = static_cast<const uint8_t*>(image.lpBaseOfDll);
+			game.size = image.SizeOfImage;
 
 			// the headers are read only where they lie inside the image
-			const IMAGE_NT_HEADERS* const nt = NtHeaders(base, imageSize);
-			const IMAGE_SECTION_HEADER* sections = nt ? IMAGE_FIRST_SECTION(nt) : nullptr;
-			const WORD count = nt ? nt->FileHeader.NumberOfSections : 0;
-			if (!nt || count == 0 || count > kMaxSections || reinterpret_cast<const uint8_t*>(sections + count) > base + imageSize)
+			game.nt = NtHeaders(game.base, game.size);
+			game.sections = game.nt ? IMAGE_FIRST_SECTION(game.nt) : nullptr;
+			game.sectionCount = game.nt ? game.nt->FileHeader.NumberOfSections : 0;
+			if (!game.nt || game.sectionCount == 0 || game.sectionCount > kMaxSections ||
+				reinterpret_cast<const uint8_t*>(game.sections + game.sectionCount) > game.base + game.size)
 			{
-				ReportFailure(kTag, "TEST_DUMP_CODE: the game's headers in memory are not those of a program Windows "
-					"loads - its code is not saved.");
-				return nullptr;
+				ReportFailure(kTag, std::string(key) + ": the game's headers in memory are not those of a program Windows "
+					"loads - " + what + " is not saved.");
+				return false;
 			}
+			return true;
+		}
+
+		// A copy of the game as it is now - or nullptr, reported, if its headers in memory are not what
+		// Windows loads. May throw std::bad_alloc.
+		std::unique_ptr<Copy> TakeCopy(uint32_t secondsAfterStart)
+		{
+			GameImage game;
+			if (!FindGame("TEST_DUMP_CODE", "its code", game))
+				return nullptr;
+			const uint8_t* const base = game.base;
+			const uint64_t imageSize = game.size;
+			const IMAGE_NT_HEADERS* const nt = game.nt;
+			const IMAGE_SECTION_HEADER* const sections = game.sections;
+			const WORD count = game.sectionCount;
 
 			auto copy = std::make_unique<Copy>();
 			std::vector<Part> parts;
@@ -150,7 +191,7 @@ namespace TweaksV
 					copy->leftOut += " " + name;	// the game's data: never saved
 					continue;
 				}
-				const uint64_t length = section.Misc.VirtualSize ? section.Misc.VirtualSize : section.SizeOfRawData;
+				const uint64_t length = SectionLength(section);
 				if (section.VirtualAddress >= imageSize || length == 0)
 					continue;
 				parts.push_back({ name, section.VirtualAddress,
@@ -489,6 +530,172 @@ namespace TweaksV
 		}
 
 		constexpr Scripts::User kScriptDumper = { kTag, &BeforeResolution, &AfterResolution };
+
+		// ---- TEST_DUMP_DATA
+
+		constexpr char kDataMagic[8] = { 'T', 'W', 'K', 'V', 'D', 'A', 'T', 'A' };
+		constexpr uint32_t kDataFormatVersion = 1;
+		constexpr size_t kMaxWindows = 16;
+		constexpr uint32_t kMaxWindowBytes = 64 * 1024;
+		constexpr size_t kMaxDataValue = 254;	// a key's value is read up to 255 characters: one that long may be cut short
+
+		// One window: its place, and its file - the header and the window's bytes - from the first copy on.
+		struct DataWindow
+		{
+			uint32_t rva = 0;
+			uint32_t size = 0;
+			uint32_t unreadable = 0;
+			std::vector<uint8_t> file;
+		};
+
+		// What the key asks for and what the files say about the game: set before the thread starts.
+		struct DataDump
+		{
+			const uint8_t* base = nullptr;
+			uint32_t imageSize = 0;
+			uint32_t timeDateStamp = 0;
+			uint32_t seconds = 0;
+			std::vector<DataWindow> windows;
+		};
+
+		// True if text is a number in hex of 1 to 8 digits, 0x in front or not.
+		bool ParseHex(std::string_view text, uint32_t& number)
+		{
+			if (text.size() > 2 && text[0] == '0' && (text[1] == 'x' || text[1] == 'X'))
+				text.remove_prefix(2);
+			if (text.empty() || text.size() > 8)
+				return false;
+			number = 0;
+			for (const char c : text)
+			{
+				const int digit = c >= '0' && c <= '9' ? c - '0' : c >= 'a' && c <= 'f' ? c - 'a' + 10 : c >= 'A' && c <= 'F' ? c - 'A' + 10 : -1;
+				if (digit < 0)
+					return false;
+				number = number * 16 + static_cast<uint32_t>(digit);
+			}
+			return true;
+		}
+
+		// Reads the key's seconds and windows into dump - or false, with reason saying why it is not what the key
+		// takes. Where the windows lie is checked afterwards, against the game.
+		bool ParseDataDump(const std::string& value, DataDump& dump, std::string& reason)
+		{
+			if (value.size() > kMaxDataValue)
+			{
+				reason = "it is longer than the " + std::to_string(kMaxDataValue) + " characters a key can hold whole";
+				return false;
+			}
+			const size_t comma = value.find(',');
+			unsigned long seconds = 0;
+			if (!ParseSeconds(value.substr(0, comma), seconds))
+			{
+				reason = "it does not start with a number of seconds from 1 to " + std::to_string(kMaxSeconds);
+				return false;
+			}
+			dump.seconds = seconds;
+			if (comma == std::string::npos)
+			{
+				reason = "it names no window";
+				return false;
+			}
+			for (size_t begin = comma + 1, end = 0; end != std::string::npos; begin = end + 1)
+			{
+				end = value.find(',', begin);
+				const std::string window = value.substr(begin, end == std::string::npos ? end : end - begin);
+				const size_t colon = window.find(':');
+				DataWindow parsed;
+				if (colon == std::string::npos || !ParseHex(std::string_view(window).substr(0, colon), parsed.rva) ||
+					!ParseHex(std::string_view(window).substr(colon + 1), parsed.size))
+				{
+					reason = "\"" + window + "\" is not a window of <rva>:<bytes>, both in hex";
+					return false;
+				}
+				if (dump.windows.size() == kMaxWindows)
+				{
+					reason = "it names more than " + std::to_string(kMaxWindows) + " windows";
+					return false;
+				}
+				if (parsed.size == 0 || parsed.size > kMaxWindowBytes)
+				{
+					reason = "the window " + window + " is not of 1 byte to 64 KB (10000 in hex)";
+					return false;
+				}
+				for (const DataWindow& other : dump.windows)
+					if (other.rva == parsed.rva)
+					{
+						reason = "the window at " + Hex(parsed.rva) + " is named twice, and its files have one name";
+						return false;
+					}
+				dump.windows.push_back(parsed);
+			}
+			return true;
+		}
+
+		// Where the section the game's section table names .data lies; false if it names none.
+		bool FindDataSection(const GameImage& game, uint64_t& begin, uint64_t& end)
+		{
+			for (WORD i = 0; i < game.sectionCount; i++)
+			{
+				const IMAGE_SECTION_HEADER& section = game.sections[i];
+				if (SectionName(section.Name) == ".data" && section.VirtualAddress < game.size)
+				{
+					begin = section.VirtualAddress;
+					end = std::min(begin + SectionLength(section), game.size);
+					return true;
+				}
+			}
+			return false;
+		}
+
+		// The window as it is now, as the whole of its file.
+		void TakeWindow(const DataDump& dump, DataWindow& window, uint32_t secondsAfterStart)
+		{
+			DataDumpHeader header{};
+			memcpy(header.magic, kDataMagic, sizeof(kDataMagic));
+			header.formatVersion = kDataFormatVersion;
+			header.headerSize = sizeof(DataDumpHeader);
+			header.imageBase = reinterpret_cast<uintptr_t>(dump.base);
+			header.imageSize = dump.imageSize;
+			header.timeDateStamp = dump.timeDateStamp;
+			header.secondsAfterStart = secondsAfterStart;
+			header.rva = window.rva;
+			header.size = window.size;
+			window.unreadable = static_cast<uint32_t>(CopyRange(dump.base + window.rva, window.size, window.file.data() + sizeof(header)));
+			header.unreadable = window.unreadable;
+			memcpy(window.file.data(), &header, sizeof(header));
+		}
+
+		// Writes a window's file to %LOCALAPPDATA%\TweaksV; reported if it cannot be.
+		void SaveWindow(const DataWindow& window, const wchar_t* moment, uint32_t secondsAfterStart)
+		{
+			const std::wstring name = L"GameData-" + FromUtf8(Hex(window.rva).substr(2)) + L"-" + moment + L".bin";
+			if (!SaveFile("TEST_DUMP_DATA: " + ToUtf8(name), name.c_str(), window.file))
+				return;
+			WriteLog(kTag, "TEST BUILD: " + ToUtf8(name) + " saved, " + Counted(window.size, "byte") + " of the game's .data at RVA " + Hex(window.rva) +
+				" as they were " + std::to_string(secondsAfterStart) + " s after TweaksV started" +
+				(secondsAfterStart ? std::string() : std::string(", before anything was patched")) + ", in " + ToUtf8(GetFallbackFolder()) + "; " +
+				(window.unreadable ? Counted(window.unreadable, "byte") + " unreadable, saved as zeros" : std::string("none unreadable")) + ".");
+		}
+
+		DWORD WINAPI DataThread(void* parameter)
+		{
+			const std::unique_ptr<DataDump> dump(static_cast<DataDump*>(parameter));
+			try
+			{
+				for (const DataWindow& window : dump->windows)
+					SaveWindow(window, L"start", 0);
+				Sleep(dump->seconds * 1000);
+				for (DataWindow& window : dump->windows)	// the windows at one moment, then the files
+					TakeWindow(*dump, window, dump->seconds);
+				for (const DataWindow& window : dump->windows)
+					SaveWindow(window, L"later", dump->seconds);
+			}
+			catch (...)
+			{
+				ReportFailure(kTag, "TEST_DUMP_DATA: not enough memory for a file of the game's data - not saved.");
+			}
+			return 0;
+		}
 	}
 
 	void StartCodeDump()
@@ -496,9 +703,8 @@ namespace TweaksV
 		const std::string& value = GetText(kTestDumpCode);
 		if (value.empty())
 			return;
-		char* end = nullptr;
-		const unsigned long seconds = strtoul(value.c_str(), &end, 10);
-		if (value[0] < '0' || value[0] > '9' || *end != '\0' || seconds < 1 || seconds > kMaxSeconds)
+		unsigned long seconds = 0;
+		if (!ParseSeconds(value, seconds))
 		{
 			ReportFailure(kTag, "TweaksV.ini: [TWEAKSV] TEST_DUMP_CODE=" + value + " is not a number of seconds from 1 to " +
 				std::to_string(kMaxSeconds) + " - the game's code is not saved.");
@@ -524,6 +730,66 @@ namespace TweaksV
 		catch (...)
 		{
 			ReportFailure(kTag, "TEST_DUMP_CODE: not enough memory for a copy of the game's code - not saved.");
+		}
+	}
+
+	void StartDataDump()
+	{
+		const std::string& value = GetText(kTestDumpData);
+		if (value.empty())
+			return;
+		const auto refuse = [&](const std::string& reason)
+		{
+			ReportFailure(kTag, "TweaksV.ini: [TWEAKSV] TEST_DUMP_DATA=" + value + ": " + reason + " - the game's data is not saved.");
+		};
+		try
+		{
+			auto dump = std::make_unique<DataDump>();
+			std::string reason;
+			if (!ParseDataDump(value, *dump, reason))
+			{
+				refuse(reason);
+				return;
+			}
+			GameImage game;
+			if (!FindGame("TEST_DUMP_DATA", "its data", game))
+				return;
+			uint64_t begin = 0, end = 0;
+			if (!FindDataSection(game, begin, end))
+			{
+				refuse("the game's section table names no .data");
+				return;
+			}
+			for (const DataWindow& window : dump->windows)
+				if (window.rva < begin || uint64_t{ window.rva } + window.size > end)
+				{
+					refuse("the window of " + Hex(window.size) + " bytes at " + Hex(window.rva) + " is not wholly inside the game's .data, " +
+						Hex(begin) + " to " + Hex(end));
+					return;
+				}
+
+			dump->base = game.base;
+			dump->imageSize = static_cast<uint32_t>(game.size);
+			dump->timeDateStamp = game.nt->FileHeader.TimeDateStamp;
+			for (DataWindow& window : dump->windows)	// now: before any part of TweaksV changes the game
+			{
+				window.file.resize(sizeof(DataDumpHeader) + window.size);
+				TakeWindow(*dump, window, 0);
+			}
+			// DllMain does not wait for the thread: it writes these copies, waits and takes the second
+			const HANDLE thread = CreateThread(nullptr, 0, DataThread, dump.get(), 0, nullptr);
+			if (!thread)
+			{
+				ReportFailure(kTag, "TEST_DUMP_DATA: its thread could not be started (" + DescribeError(GetLastError()) +
+					") - the game's data is not saved.");
+				return;
+			}
+			static_cast<void>(dump.release());	// the thread owns it now
+			CloseHandle(thread);
+		}
+		catch (...)
+		{
+			ReportFailure(kTag, "TEST_DUMP_DATA: not enough memory for a copy of the game's data - not saved.");
 		}
 	}
 
