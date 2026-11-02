@@ -88,6 +88,9 @@
       <Filter>TweaksV</Filter>
     </ClCompile>
     <!-- [render queues] -->
+    <ClCompile Include="TweaksVRenderQueues.cpp">
+      <Filter>TweaksV</Filter>
+    </ClCompile>
     <ClCompile Include="TweaksVScanner.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
@@ -220,6 +223,9 @@
       <Filter>TweaksV</Filter>
     </ClInclude>
     <!-- [render queues] -->
+    <ClInclude Include="TweaksVRenderQueues.h">
+      <Filter>TweaksV</Filter>
+    </ClInclude>
     <ClInclude Include="TweaksVRpf.h">
       <Filter>TweaksV</Filter>
     </ClInclude>

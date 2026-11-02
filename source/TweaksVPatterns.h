@@ -317,6 +317,34 @@ namespace TweaksV
 		{ "N-E-D6", "BA BE 10 0E 21 41 B8 55 01 00 00 E8" },
 
 		// [render queues]
+		// The render queues of streamed peds and vehicles, measured first (TweaksVRenderQueues.cpp): each pool's make, which holds what decodes
+		// its pointer and pins it by its stride - the streamed peds' requests (S1) and render data (S2), the props' (P1, P2), the vehicles' (V1, V2) -
+		// each family's add (S3, P3, V3) and init (S4, P4, V6), the vehicles' walk (V4) and their two sizes (V5), the pools' size lookups a raise
+		// redirects (N1 to N6), the frame's calls of the three flips (F1), and the draw list's references, their capacity (D1), index (D2) and manager (D3)
+		{ "U-E-S1", "0F B6 05 ? ? ? ? 48 8B 05 ? ? ? ? 48 C1 C0 ? 48 8B 15 ? ? ? ? 48 31 C2 48 C1 C2 20 24 1F 8D 48 ? 48 89 D5 48 D3 E5 34 3F 89 C1 48 D3 EA 48 09 EA 48 F7 D2 0F B6 05 ? ? ? ? A8 01 B9 00 00 00 00 48 0F 45 CA BA 08 05 00 00 E8" },
+		{ "U-E-S2", "8B 42 28 C1 E0 02 C1 F8 02 39 42 18 7E 61 0F B6 05 ? ? ? ? 48 8B 0D ? ? ? ? 48 C1 C1 ? 48 8B 05 ? ? ? ? 48 31 C8 48 C1 C0 20 80 E1 1F 80 C1 ? 48 D3 C0 48 F7 D0 0F B6 15 ? ? ? ? 31 C9 F6 C2 01 48 0F 45 C8 BA E0 02 00 00 E8" },
+		{ "U-E-S3", "66 41 FF 86 D8 02 00 00 48 63 05 ? ? ? ? 48 C1 E0 04 48 8D 0D ? ? ? ? 48 8B 14 08 0F B7 6C 08 08 8D 5D 01 66 89 5C 08 08 4C 89 34 EA" },
+		{ "U-E-S4", "B9 05 00 00 00 31 D2 E8 ? ? ? ? B9 05 00 00 00 31 D2 E8 ? ? ? ? B9 C0 03 00 00 BA 08 00 00 00 E8 ? ? ? ? 48 89 05 ? ? ? ? 66 C7 05 ? ? ? ? 78 00 B9 C0 03 00 00 BA 08 00 00 00 E8 ? ? ? ? 48 89 05 ? ? ? ? 66 C7 05 ? ? ? ? 78 00 B9 C0 03 00 00 BA 08 00 00 00 E8 ? ? ? ? 48 89 05 ? ? ? ? 66 C7 05 ? ? ? ? 78 00 B9 C0 03 00 00 BA 08 00 00 00 E8 ? ? ? ? 48 89 05 ? ? ? ? 66 C7 05 ? ? ? ? 78 00 80 3D" },
+		{ "U-E-P1", "0F B6 05 ? ? ? ? 48 8B 0D ? ? ? ? 48 C1 C1 ? 48 8B 05 ? ? ? ? 48 31 C8 80 E1 1F 80 C1 ? 48 D3 C0 48 C1 C0 20 48 F7 D0 0F B6 0D ? ? ? ? 45 31 FF F6 C1 01 49 0F 44 C7 BA 80 00 00 00 48 89 C1 E8 ? ? ? ? 49 89 C5 C7 00 FF FF FF FF 66 C7 40 04 00 7F" },
+		{ "U-E-P2", "0F B6 05 ? ? ? ? 48 8B 0D ? ? ? ? 48 C1 C1 ? 48 8B 05 ? ? ? ? 48 31 C8 48 C1 C0 20 80 E1 1F 80 C1 ? 48 D3 C0 48 F7 D0 0F B6 0D ? ? ? ? F6 C1 01 48 0F 44 C7 BA 3C 00 00 00 48 89 C1 E8" },
+		{ "U-E-P3", "66 41 FF 47 38 48 63 05 ? ? ? ? 48 C1 E0 04 48 8D 0D ? ? ? ? 48 8B 14 08 0F B7 5C 08 08 8D 7B 01 66 89 7C 08 08 4C 89 3C DA" },
+		{ "U-E-P4", "B9 05 00 00 00 31 D2 E8 ? ? ? ? B9 05 00 00 00 31 D2 E8 ? ? ? ? B9 C0 03 00 00 BA 08 00 00 00 E8 ? ? ? ? 48 89 05 ? ? ? ? 66 C7 05 ? ? ? ? 78 00 B9 C0 03 00 00 BA 08 00 00 00 E8 ? ? ? ? 48 89 05 ? ? ? ? 66 C7 05 ? ? ? ? 78 00 B9 C0 03 00 00 BA 08 00 00 00 E8 ? ? ? ? 48 89 05 ? ? ? ? 66 C7 05 ? ? ? ? 78 00 B9 C0 03 00 00 BA 08 00 00 00 E8 ? ? ? ? 48 89 05 ? ? ? ? 66 C7 05 ? ? ? ? 78 00 48 83 C4 28 C3" },
+		{ "U-E-V1", "0F B6 05 ? ? ? ? 48 8B 0D ? ? ? ? 48 C1 C1 ? 48 8B 05 ? ? ? ? 48 31 C8 48 C1 C0 20 80 E1 1F 80 C1 ? 48 D3 C0 48 F7 D0 0F B6 15 ? ? ? ? 31 C9 F6 C2 01 48 0F 45 C8 BA C8 01 00 00 E8 ? ? ? ? 48 89 C6 48 89 C7 48 8D 05" },
+		{ "U-E-V2", "0F B6 05 ? ? ? ? 48 8B 0D ? ? ? ? 48 C1 C1 ? 48 8B 05 ? ? ? ? 48 31 C8 80 E1 1F 80 C1 ? 48 D3 C0 48 C1 C0 20 48 F7 D0 0F B6 0D ? ? ? ? 31 D2 F6 C1 01 48 0F 45 D0 8B 42 28 C1 E0 02 C1 F8 02 48 8B 5F 48 39 42 18 7E 6B" },
+		{ "U-E-V3", "66 41 FF 84 24 A8 0B 00 00 48 63 05 ? ? ? ? 48 C1 E0 04 4A 8B 0C 30 42 0F B7 54 30 08 8D 5A 01 66 42 89 5C 30 08 4C 89 24 D1" },
+		{ "U-E-V4", "49 89 CC 48 8D 0D ? ? ? ? E8 ? ? ? ? 48 63 0D ? ? ? ? 48 C1 E1 04 4C 8D 35 ? ? ? ? 42 0F B7 44 31 08 48 85 C0" },
+		{ "U-E-V5", "48 8B 0D ? ? ? ? BA F4 BF D4 90 41 B8 01 00 00 00 E8 ? ? ? ? 89 05 ? ? ? ? 48 8B 0D ? ? ? ? BA 67 52 1D E1 41 B8 01 00 00 00 E8 ? ? ? ? 89 05 ? ? ? ?" },
+		{ "U-E-V6", "48 63 35 ? ? ? ? 48 85 F6 0F 84 ? ? ? ? 48 8D 0C F5 00 00 00 00 BA 08 00 00 00 E8 ? ? ? ? 48 63 3D ? ? ? ? 48 89 05 ? ? ? ? 66 89 35" },
+		{ "U-E-N1", "48 8B 0D ? ? ? ? BA F6 68 B9 0A 41 B8 37 00 00 00 E8" },
+		{ "U-E-N2", "48 8B 0D ? ? ? ? BA 34 0C 37 2D 41 B8 78 00 00 00 E8" },
+		{ "U-E-N3", "48 8B 0D ? ? ? ? BA 2D 46 FB 85 41 B8 32 00 00 00 E8" },
+		{ "U-E-N4", "48 8B 0D ? ? ? ? BA B8 8E 9C 53 41 B8 78 00 00 00 E8" },
+		{ "U-E-N5", "48 8B 0D ? ? ? ? BA 86 3C 75 54 41 89 D8 E8" },
+		{ "U-E-N6", "48 8B 0D ? ? ? ? BA 89 F0 B5 C2 41 89 D8 E8" },
+		{ "U-E-F1", "56 57 48 83 EC 28 89 D6 48 89 CF E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? 48 89 F9 89 F2 48 83 C4 28 5F 5E E9" },
+		{ "U-E-D1", "48 89 86 D0 05 00 00 66 C7 86 DA 05 00 00 80 28 B9 00 88 02 00 BA 08 00 00 00 E8" },
+		{ "U-E-D2", "8B 81 A4 00 00 00 8B 91 AC 00 00 00 FF C0 83 E0 03 89 81 A4 00 00 00 FF C2 83 E2 03 89 91 AC 00 00 00 C3" },
+		{ "U-E-D3", "B9 A0 4B 01 00 E8 ? ? ? ? 48 89 C6 48 89 C1 E8 ? ? ? ? 48 89 35 ? ? ? ?" },
 	};
 
 	// A text the scanner can use: bytes as two hex digits or ?, one space apart, at least one of them

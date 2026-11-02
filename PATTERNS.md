@@ -81,6 +81,11 @@ The second relies on Windows, not on the game: a classic replace-rename reaches 
      A change in any of them leaves the measurement's numbers wrong without an error, or a raise's limits unmet.
    - **A pool's memory:** the allocator's offsets (below, "A pool's memory"), which the pool memory's line reads and only its budget and the sum of its use and room check, and that the pools' proxy leads to that allocator, slot 5 of the master allocator (0x36D90, and 0x13CB90 with slot 5 in the start-up).
    <!-- [render queues] -->
+   - **Render queues:** the pool object's layout (+0x18, +0x1C, +0x28), which the stride read at +0x1C at run time protects; the array's capacity at +0xA, which only the inits pin, the adds pinning the rest of the array.
+     That three of a family's four arrays hold whole frames: the flip as read; if a build reset all of them on a flip the most would read low, not wrong.
+     That the game's own `gameconfig.xml` names the vehicles' two sizes: if not, one vehicle streams and the measurement shows a capacity of 1.
+     The pools' names, the table's labels only: the code matches hashes.
+     Whether streamed models exist in a given load, which is data, not code.
 
 ## HeapAdjuster
 
@@ -846,3 +851,84 @@ From the research of 2026-11-02 on the dumps of 1.0.1158.16, each step read in t
   The pool memory's line gives each boot's least room.
 
 <!-- [render queues] -->
+
+## Render queues
+
+The render queues of streamed peds and vehicles, a limit measured first (SPECIFICATIONS.md, section 11.16), its module `TweaksVRenderQueues`.
+Its letter is `U`.
+The facts, from the research pass in the dumps of 1.0.1158.16 of 2026-10-29 (PLAN.md, D20 and D30), the plugin that gave the idea never read; a pool's name is a hint from memory of the game's `gameconfig.xml`, each backed by its hash at the lookup, since only the hash is in the code:
+
+- **The size lookup,** 0x149060: rcx the config manager [0x2E96FB0], edx the joaat of the name, r8d the default; an entry's value -1 means the default.
+  A flag [0x2E96FA8] would pick the larger of the default and the value; no code writes it, so the value alone stands: `gameconfig.xml` moves a pool both ways (the flag's value a hint: the dump has no `.data`).
+- **A pool,** made by the constructor 0x15A490 and the allocator 0x15A4D0 (`C-E-A1`), these six with an empty name, so the static bounds' set-up does not see them: +0x08 its storage, +0x10 a byte per slot, +0x18 its capacity, an int, +0x1C its stride, an int, +0x20 the first free slot, -1 when full, +0x28 its count in the low 30 bits with 0x40000000 set.
+  A slot is taken at 0x15A7C0 (pool, size): full, or a size above the stride, falls through to the game's fatal trap, INT3 at 0x15A84C, with the stride in edx.
+  A slot is freed at 0x15A930.
+- **A pool's pointer** is not kept plain: three fields, a flag byte at F, a value at F+8, a key at F+0x10, and two constants of its code, r and s: `t = rol64(key, r); x = value ^ t; c = (t & 0x1F) + s; pointer = ~rol64(x, 32 + c)`, null unless the flag's bit 0 is set.
+  The code that encrypts it, 0x1363CB0 and 0x1363E60, runs the same formula backwards.
+- **The six pools:**
+
+| Family | Name (joaat), its lookup | Default | Stride | F | r, s | Where a slot is taken | Full |
+|---|---|---|---|---|---|---|---|
+| Streamed peds, requests | `StreamPed req data` 0x0AB968F6, 0x10E5D58 | 55 | 0x508 | 0x4476148 | 0x1B, 1 | 0x10E888B in 0x10E87C0 | INT3 0x15A84C |
+| Streamed peds, render | `StreamPed render data` 0x2D370C34, 0x10E5E98 | 120 | 0x2E0 | 0x4476160 | 0x1C, 3 | 0x10EAC00 in 0x10EAB60 | INT3 0x10EAC20, tested at 0x10EABBA |
+| Ped props, requests | `PedProp req data` 0x85FB462D, 0x10EFAC8 | 50 | 0x80 | 0x44766A8 | 0x1B, 2 | 0x10F3E52, 0x10F4AE1, 0x10F56CA | INT3 0x15A84C |
+| Ped props, render | `PedProp render data` 0x539C8EB8, 0x10EFBF8 | 120 | 0x3C | 0x44766C0 | 0x1D, 5 | 0x10F8A56 in 0x10F8990 | INT3 0x15A84C |
+| Vehicles, requests | `CVehicleStreamRequestGfx` 0x54753C86, 0x1363CD8; its default `VehicleStreamRequest` 0x90D4BFF4, 0x1364B16 | 1 | 0x1C8 | 0x471F4B8 | 0x1D, 5 | 0x13650BA in 0x1365050 | INT3 0x15A84C |
+| Vehicles, render | `CVehicleStreamRenderGfx` 0xC2B5F089, 0x1363E88; its default `VehicleStreamRender` 0xE11D5267, 0x1364B33 | 1 | 0xBB0 | 0x471F4D0 | 0x1E, 3 | 0x1364676 in 0x13645D0 | the vehicle's mods wiped, no trap |
+
+  The vehicles' default of 1 means the game's own `gameconfig.xml` must name them; their values land at [0x471F5D0] and [0x471F5D4].
+- **The arrays,** three families of four, one per frame, each an atArray of 16 bytes - a pointer, the count, a word at +8, the capacity, a word at +0xA:
+
+| Family | Arrays | Capacity | Index | Lock | Add | Check | Dedupe | Its reference at | Flip |
+|---|---|---|---|---|---|---|---|---|---|
+| Streamed peds | 0x4476630, 640, 650, 660 | a constant 0x78, 0x3C0 bytes (0x10E67F0) | 0x4476670 | 0x4476678 | 0x10EF3C0 | none | none | +0x2D8 | 0x10EF930 |
+| Ped props | 0x44766F0, 700, 710, 720 | a constant 0x78, 0x3C0 bytes (0x10EFEE0) | 0x4476730 | 0x4476738 | 0x10F9D90 | none | none | +0x38 | 0x10F9FE0 |
+| Vehicles | 0x471F560, 570, 580, 590 | [0x471F5D4] entries (0x1364B70) | 0x471F5A0 | 0x471F5A8 | 0x1368EE0 | none | a walk of the current array | +0xBA8 | 0x1369130 |
+
+- **A flip:** the index goes to (index + 1) mod 4, each entry of the array it enters loses its reference, the count goes to 0, then a pool walk frees render gfx with no references and its "in use" byte clear (+0x2DA for peds).
+  So a render gfx outlives its ped by up to four flips, and three of the four arrays always hold a whole past frame's entries.
+  All three flips run from 0x3CD400, slot 0x48 of the draw list manager's vtable 0x25EAC60, called in 0x13FCE60, which counts a frame number at [0x475B740]; that this is once per frame is a hint from its place.
+  The inits run after `DllMain`: the vehicles' from 0xE7778F in 0xE776D0, called at 0xC4EF1B, the peds' and the props' from 0x1B3BB2F and 0x1B3BB34 in 0x1B3BB00, called at 0xC4EF71.
+- **Past them, the peds' and the props' arrays:** nothing is dropped.
+  The add writes the entry at the count with no compare, so entry 121 lies past the block of 0x3C0 bytes, in whatever the heap put next; the count is 16 bits, so at 65,536 it wraps to 0.
+  Each array has one writer of entries, its add, and one reader, its flip.
+- **Past them, the vehicles' arrays:** a render gfx enters a frame once, so entries stay within the pool's capacity, which is the arrays' as long as the two names agree; a `gameconfig.xml` naming `CVehicleStreamRenderGfx` above `VehicleStreamRender` makes the pool larger than its arrays, and the same overflow.
+- **A full pool:** `StreamPed render data` stops the game with INT3 at 0x10EAC20, the other three of the traps at 0x15A84C, where the stride in edx names the pool in a dump.
+  `CVehicleStreamRenderGfx` full, the else branch of 0x13645D0 from 0x1364699, lets the vehicle's current render gfx go and sets its mod state to 0xFF (+0x4F2 to +0x522, +0x533): it draws without its mods, silently.
+  Only two tests of these pools' free room exist: 0x7A6730 returns 0 when the vehicle request pool is full, and the ped clone 0xD4F950 returns 0 for a streamed ped when the free render slots do not exceed the requests in flight.
+- **The draw list's references,** the neighbour on the same path: the manager [0x475B750], 0x14BA0 bytes, made at 0x509330, keeps four arrays at +0x5D0, +0x5E0, +0x5F0, +0x600 of 16-byte entries (module, index), 0x2880 = 10,368 each, with the index at +0xAC and the lock at +0x14AB0.
+  Each add above takes a streaming reference for each asset of the gfx and queues its release there: up to 134 for a ped's render gfx (12 x 7 + 50 slots, those not -1), 52 for a vehicle's; peds pay this per draw, vehicles per frame, and every model drawn pays one too (0x1402640, deduped per frame), so the array is shared with the whole scene.
+  The push is checked, but the reference is taken before the check: past 10,368 the release is never queued, and that asset can never unload.
+- **Who is streamed,** hints: a ped by its model info's byte +0x286 bit 1, set at 0x1343BA1 from the ped definition's bool at +0xC0 (0x13438F0); a vehicle's render gfx when mods are applied through 0x134B600.
+- **The callers of the adds:** peds 0x3A0FC6 in 0x3A0CB0, 0x3C2C49 and 0x3C2CC0 in 0x3C2830, which has 13 callers, the draw commands of 0x3EC490; props 0x3A11CD, 0x3D0511, 0x3D28D5; vehicles 0x399AA8, 0x3A2DE9, 0x3C3F37, 0x3C5766.
+  0x3EC490 allocates one draw command per call and nothing asks whether this ped has been added this frame, so a ped's entries per frame come from the render phases that see it, which only the measurement gives.
+
+The 24 patterns, each matching exactly once in both dumps at the same RVA, none patched between, looked for with `DIAGNOSTIC_MODE=1`.
+Each pool's make holds, at the offsets its row gives, the rel32 of its flag, its key and its value, rip-relative with the next instruction 4 bytes on, and r and s, a byte each, wildcards since a build changes them; the module checks that the value lies at F+8 and the key at F+0x10, and reads the stride at the pool's +0x1C at run time against the table above:
+
+| Label | Pattern | Use | 1.0.1158.16 | RVA |
+|---|---|---|---|---|
+| U-E-S1 | `0F B6 05 ? ? ? ? 48 8B 05 ? ? ? ? 48 C1 C0 ? 48 8B 15 ? ? ? ? 48 31 C2 48 C1 C2 20 24 1F 8D 48 ? 48 89 D5 48 D3 E5 34 3F 89 C1 48 D3 EA 48 09 EA 48 F7 D2 0F B6 05 ? ? ? ? A8 01 B9 00 00 00 00 48 0F 45 CA BA 08 05 00 00 E8` | a slot of `StreamPed req data` taken, 0x508 its stride, the call last: F at +3, the key at +10, r at +17, the value at +21, s at +36 | found, its RVA to check | 0x10E883C |
+| U-E-S2 | `8B 42 28 C1 E0 02 C1 F8 02 39 42 18 7E 61 0F B6 05 ? ? ? ? 48 8B 0D ? ? ? ? 48 C1 C1 ? 48 8B 05 ? ? ? ? 48 31 C8 48 C1 C0 20 80 E1 1F 80 C1 ? 48 D3 C0 48 F7 D0 0F B6 15 ? ? ? ? 31 C9 F6 C2 01 48 0F 45 C8 BA E0 02 00 00 E8` | a slot of `StreamPed render data` taken, 0x2E0 its stride, the call last, after the test of its room: +0 and +9 a pool's count at +0x28 and capacity at +0x18, +12 the jump to the trap, a CC past the match; F at +17, the key at +24, r at +31, the value at +35, s at +51 | found, its RVA to check | 0x10EABB1 |
+| U-E-S3 | `66 41 FF 86 D8 02 00 00 48 63 05 ? ? ? ? 48 C1 E0 04 48 8D 0D ? ? ? ? 48 8B 14 08 0F B7 6C 08 08 8D 5D 01 66 89 5C 08 08 4C 89 34 EA` | the streamed peds' add, from its reference on, which pins that nothing lies between reading the count and writing the entry: the index at +11, the arrays at +22 | found, its RVA to check | 0x10EF8B3 |
+| U-E-S4 | `B9 05 00 00 00 31 D2 E8 ? ? ? ? B9 05 00 00 00 31 D2 E8 ? ? ? ? B9 C0 03 00 00 BA 08 00 00 00 E8 ? ? ? ? 48 89 05 ? ? ? ? 66 C7 05 ? ? ? ? 78 00 B9 C0 03 00 00 BA 08 00 00 00 E8 ? ? ? ? 48 89 05 ? ? ? ? 66 C7 05 ? ? ? ? 78 00 B9 C0 03 00 00 BA 08 00 00 00 E8 ? ? ? ? 48 89 05 ? ? ? ? 66 C7 05 ? ? ? ? 78 00 B9 C0 03 00 00 BA 08 00 00 00 E8 ? ? ? ? 48 89 05 ? ? ? ? 66 C7 05 ? ? ? ? 78 00 80 3D` | the streamed peds' four arrays made: blocks of 31 bytes at +24, +55, +86, +117, each with the size at +1, the array's rel32 at +18, the capacity's rel32 at +25, counted from +31, past its imm16 at +29 | found, its RVA to check | 0x10E67F4 |
+| U-E-P1 | `0F B6 05 ? ? ? ? 48 8B 0D ? ? ? ? 48 C1 C1 ? 48 8B 05 ? ? ? ? 48 31 C8 80 E1 1F 80 C1 ? 48 D3 C0 48 C1 C0 20 48 F7 D0 0F B6 0D ? ? ? ? 45 31 FF F6 C1 01 49 0F 44 C7 BA 80 00 00 00 48 89 C1 E8 ? ? ? ? 49 89 C5 C7 00 FF FF FF FF 66 C7 40 04 00 7F` | a slot of `PedProp req data` taken, 0x80 its stride, one of its three makes: F at +3, the key at +10, r at +17, the value at +21, s at +33 | found, its RVA to check | 0x10F3E0D |
+| U-E-P2 | `0F B6 05 ? ? ? ? 48 8B 0D ? ? ? ? 48 C1 C1 ? 48 8B 05 ? ? ? ? 48 31 C8 48 C1 C0 20 80 E1 1F 80 C1 ? 48 D3 C0 48 F7 D0 0F B6 0D ? ? ? ? F6 C1 01 48 0F 44 C7 BA 3C 00 00 00 48 89 C1 E8` | a slot of `PedProp render data` taken, 0x3C its stride: F at +3, the key at +10, r at +17, the value at +21, s at +37 | found, its RVA to check | 0x10F8A14 |
+| U-E-P3 | `66 41 FF 47 38 48 63 05 ? ? ? ? 48 C1 E0 04 48 8D 0D ? ? ? ? 48 8B 14 08 0F B7 5C 08 08 8D 7B 01 66 89 7C 08 08 4C 89 3C DA` | the ped props' add: the index at +8, the arrays at +19 | found, its RVA to check | 0x10F9F28 |
+| U-E-P4 | `B9 05 00 00 00 31 D2 E8 ? ? ? ? B9 05 00 00 00 31 D2 E8 ? ? ? ? B9 C0 03 00 00 BA 08 00 00 00 E8 ? ? ? ? 48 89 05 ? ? ? ? 66 C7 05 ? ? ? ? 78 00 B9 C0 03 00 00 BA 08 00 00 00 E8 ? ? ? ? 48 89 05 ? ? ? ? 66 C7 05 ? ? ? ? 78 00 B9 C0 03 00 00 BA 08 00 00 00 E8 ? ? ? ? 48 89 05 ? ? ? ? 66 C7 05 ? ? ? ? 78 00 B9 C0 03 00 00 BA 08 00 00 00 E8 ? ? ? ? 48 89 05 ? ? ? ? 66 C7 05 ? ? ? ? 78 00 48 83 C4 28 C3` | the ped props' four arrays made, as `U-E-S4`'s, to the function's end | found, its RVA to check | 0x10EFEE4 |
+| U-E-V1 | `0F B6 05 ? ? ? ? 48 8B 0D ? ? ? ? 48 C1 C1 ? 48 8B 05 ? ? ? ? 48 31 C8 48 C1 C0 20 80 E1 1F 80 C1 ? 48 D3 C0 48 F7 D0 0F B6 15 ? ? ? ? 31 C9 F6 C2 01 48 0F 45 C8 BA C8 01 00 00 E8 ? ? ? ? 48 89 C6 48 89 C7 48 8D 05` | a slot of `CVehicleStreamRequestGfx` taken, 0x1C8 its stride: F at +3, the key at +10, r at +17, the value at +21, s at +37 | found, its RVA to check | 0x1365079 |
+| U-E-V2 | `0F B6 05 ? ? ? ? 48 8B 0D ? ? ? ? 48 C1 C1 ? 48 8B 05 ? ? ? ? 48 31 C8 80 E1 1F 80 C1 ? 48 D3 C0 48 C1 C0 20 48 F7 D0 0F B6 0D ? ? ? ? 31 D2 F6 C1 01 48 0F 45 D0 8B 42 28 C1 E0 02 C1 F8 02 48 8B 5F 48 39 42 18 7E 6B` | the test of `CVehicleStreamRenderGfx`'s room before a slot is taken, its stride 0xBB0 known from the make past the match: F at +3, the key at +10, r at +17, the value at +21, s at +33, +76 the jump a full pool takes, to the branch that wipes the vehicle's mods, inside its function | found, its RVA to check | 0x13645E0 |
+| U-E-V3 | `66 41 FF 84 24 A8 0B 00 00 48 63 05 ? ? ? ? 48 C1 E0 04 4A 8B 0C 30 42 0F B7 54 30 08 8D 5A 01 66 42 89 5C 30 08 4C 89 24 D1` | the streamed vehicles' add: the index at +12, the arrays in r14 from `U-E-V4`'s `lea` | found, its RVA to check | 0x13690E2 |
+| U-E-V4 | `49 89 CC 48 8D 0D ? ? ? ? E8 ? ? ? ? 48 63 0D ? ? ? ? 48 C1 E1 04 4C 8D 35 ? ? ? ? 42 0F B7 44 31 08 48 85 C0` | the head of that add's walk of the current array, its dedupe: the lock at +6, the index at +18, the arrays at +29 | found, its RVA to check | 0x1368EEF |
+| U-E-V5 | `48 8B 0D ? ? ? ? BA F4 BF D4 90 41 B8 01 00 00 00 E8 ? ? ? ? 89 05 ? ? ? ? 48 8B 0D ? ? ? ? BA 67 52 1D E1 41 B8 01 00 00 00 E8 ? ? ? ? 89 05 ? ? ? ?` | the vehicles' two names looked up: the calls at +18 and +47, the stores' rel32 at +25, `VehicleStreamRequest`, and +54, `VehicleStreamRender` | found, its RVA to check | 0x1364B04 |
+| U-E-V6 | `48 63 35 ? ? ? ? 48 85 F6 0F 84 ? ? ? ? 48 8D 0C F5 00 00 00 00 BA 08 00 00 00 E8 ? ? ? ? 48 63 3D ? ? ? ? 48 89 05 ? ? ? ? 66 89 35` | the vehicles' arrays made from that size: the size's rel32 at +3, the first array's store's at +44 | found, its RVA to check | 0x1364B77 |
+| U-E-N1 | `48 8B 0D ? ? ? ? BA F6 68 B9 0A 41 B8 37 00 00 00 E8` | the lookup of `StreamPed req data`, which a raise redirects, the call at +18, its rel32 past the match | found, its RVA to check | 0x10E5D46 |
+| U-E-N2 | `48 8B 0D ? ? ? ? BA 34 0C 37 2D 41 B8 78 00 00 00 E8` | the lookup of `StreamPed render data`, the same | found, its RVA to check | 0x10E5E86 |
+| U-E-N3 | `48 8B 0D ? ? ? ? BA 2D 46 FB 85 41 B8 32 00 00 00 E8` | the lookup of `PedProp req data`, the same | found, its RVA to check | 0x10EFAB6 |
+| U-E-N4 | `48 8B 0D ? ? ? ? BA B8 8E 9C 53 41 B8 78 00 00 00 E8` | the lookup of `PedProp render data`, the same | found, its RVA to check | 0x10EFBE6 |
+| U-E-N5 | `48 8B 0D ? ? ? ? BA 86 3C 75 54 41 89 D8 E8` | the lookup of `CVehicleStreamRequestGfx`, the call at +15, its rel32 past the match | found, its RVA to check | 0x1363CC9 |
+| U-E-N6 | `48 8B 0D ? ? ? ? BA 89 F0 B5 C2 41 89 D8 E8` | the lookup of `CVehicleStreamRenderGfx`, the same | found, its RVA to check | 0x1363E79 |
+| U-E-F1 | `56 57 48 83 EC 28 89 D6 48 89 CF E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? 48 89 F9 89 F2 48 83 C4 28 5F 5E E9` | the frame's three calls of the flips, at +11, +16, +21; each flip does its work 6 or 7 bytes on from its start, `48 8D 0D lock E8 rel 8B 05 index 8D 48 01 8D 50 04 85 C9 0F 49 D1 83 E2 FC F7 DA 44 8D 04 10 41 FF C0`, the mod 4 pinned there (0x10EF936, 0x10F9FE7, 0x1369136) | found, its RVA to check | 0x3CD400 |
+| U-E-D1 | `48 89 86 D0 05 00 00 66 C7 86 DA 05 00 00 80 28 B9 00 88 02 00 BA 08 00 00 00 E8` | the draw list's first array of references at the manager's +0x5D0, its capacity at +0x5DA, the imm16 at +14 | found, its RVA to check | 0x13FF56F |
+| U-E-D2 | `8B 81 A4 00 00 00 8B 91 AC 00 00 00 FF C0 83 E0 03 89 81 A4 00 00 00 FF C2 83 E2 03 89 91 AC 00 00 00 C3` | the draw list's arrays rotated, the whole function: the references' index at the manager's +0xAC | found, its RVA to check | 0x1402F80 |
+| U-E-D3 | `B9 A0 4B 01 00 E8 ? ? ? ? 48 89 C6 48 89 C1 E8 ? ? ? ? 48 89 35 ? ? ? ?` | the draw list manager made, 0x14BA0 bytes at +1, its global's rel32 at +24 | found, its RVA to check | 0x5093EF |

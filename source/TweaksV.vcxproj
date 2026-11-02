@@ -150,6 +150,7 @@
     <ClCompile Include="TweaksVRayTracing.cpp" />
     <ClCompile Include="TweaksVRelocation.cpp" />
     <!-- [render queues] -->
+    <ClCompile Include="TweaksVRenderQueues.cpp" />
     <ClCompile Include="TweaksVScanner.cpp" />
     <ClCompile Include="TweaksVScripts.cpp" />
     <ClCompile Include="TweaksVSettings.cpp" />
@@ -209,6 +210,7 @@
     <ClInclude Include="TweaksVRayTracing.h" />
     <ClInclude Include="TweaksVRelocation.h" />
     <!-- [render queues] -->
+    <ClInclude Include="TweaksVRenderQueues.h" />
     <ClInclude Include="TweaksVRpf.h" />
     <ClInclude Include="TweaksVScanner.h" />
     <ClInclude Include="TweaksVScripts.h" />

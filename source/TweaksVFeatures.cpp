@@ -22,6 +22,7 @@
 #include "TweaksVPopulation.h"
 #include "TweaksVRageOpenV.h"
 #include "TweaksVRayTracing.h"
+#include "TweaksVRenderQueues.h"
 #include "TweaksVSirenCount.h"
 #include "TweaksVSirenIds.h"
 #include "TweaksVStaticBounds.h"
@@ -165,6 +166,7 @@ namespace TweaksV
 			// [ped pool]
 			{ "PedPool", MeasurePedPool },
 			// [render queues]
+			{ "RenderQueues", MeasureRenderQueues },
 			{ "PedProps", MeasurePedPropsWhileOff },
 		};
 	}
