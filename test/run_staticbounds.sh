@@ -175,49 +175,49 @@ check "past the check's time: nothing reported, the pool raised" "log_lacks 'did
 
 echo "== SB23 the pool made before TweaksV loaded, never again (test build, TWEAKSV_TEST_STATICBOUNDS_CHECK=2, ERROR_POPUP=1): reported, with the part's box"
 export TWEAKSV_TEST_STATICBOUNDS_CHECK=2
-fresh_ini; setkey ERROR_POPUP 1; out=$(ASI=TweaksV_test.asi game full_game.exe sbearly script wait)
+fresh_ini; setkey ERROR_POPUP 1; out=$(ASI=TweaksV_test.asi game full_game.exe sbearly script sbwait)
 check "the problem, word for word, once" "log_line '$NOT_MADE' && [ \$(count 'did not make the pool') -eq 1 ]"
 check "shown after the start-up summary, in a box of its own" "log_has 'Showing a problem after the start-up summary (1 problem(s)).' && log_has 'TEST BUILD: message box not shown (TWEAKSV_TEST_NO_BOXES=1): TweaksV: a part stopped working after the start-up:'"
 check "the pool made through the game's functions before TweaksV, the hooks made all the same, no sizes line" "has 'the pool made once: 12000 slots, 204000 bytes asked, $OTHERS' && has 'set-up hooked, allocator hooked' && [ \$(said) -eq 0 ] && log_lacks 'after all, after the check'"
 
 echo "== SB24 the pool never made, the others made (test build, TWEAKSV_TEST_STATICBOUNDS_CHECK=2): reported"
-fresh_ini; out=$(ASI=TweaksV_test.asi game full_game.exe sbnever script wait)
+fresh_ini; out=$(ASI=TweaksV_test.asi game full_game.exe sbnever script sbwait)
 check "the problem, word for word, once; the pool not made, the others left alone" "log_line '$NOT_MADE' && [ \$(count 'did not make the pool') -eq 1 ] && has '${HOOKED}the pool not made, other pools 8 of 8 left alone, set-ups 8 of 8 and allocations 8 of 8 good'"
 
 echo "== SB25 the pool's name on a page of no access (test build, TWEAKSV_TEST_STATICBOUNDS_CHECK=2): it cannot be told, left alone - and reported"
-fresh_ini; out=$(ASI=TweaksV_test.asi game full_game.exe sbnoname script wait)
+fresh_ini; out=$(ASI=TweaksV_test.asi game full_game.exe sbnoname script sbwait)
 check "the problem, word for word, once; the pool at the game's size through the hooks" "log_line '$NOT_MADE' && [ \$(count 'did not make the pool') -eq 1 ] && has '${HOOKED}the pool made once: 12000 slots, 204000 bytes asked, $OTHERS'"
 
 echo "== SB26 the pool set up, never allocated (test build, TWEAKSV_TEST_STATICBOUNDS_CHECK=2): reported as what it is"
-fresh_ini; out=$(ASI=TweaksV_test.asi game full_game.exe sbnoalloc script wait)
+fresh_ini; out=$(ASI=TweaksV_test.asi game full_game.exe sbnoalloc script sbwait)
 check "the problem, word for word, once; no sizes line" "log_line '${NOT_RAISED}the game set the pool up but did not allocate it through the pools. allocator within 2 seconds of the session.s start, and the pool keeps the game.s size.\$' && [ \$(count 'did not allocate it') -eq 1 ] && has 'the pool not made' && [ \$(said) -eq 0 ]"
 
 echo "== SB27 the pool made 4 seconds late, after the check of 2 seconds (test build): reported, then made after all"
-fresh_ini; out=$(ASI=TweaksV_test.asi game full_game.exe sblate script wait)
+fresh_ini; out=$(ASI=TweaksV_test.asi game full_game.exe sblate script)
 check "the problem first, then the line that the game made it after all, then the sizes, each once" "[ \$(count 'did not make the pool') -eq 1 ] && [ \$(count '$AFTER_ALL') -eq 1 ] && [ \$(grep -n 'did not make the pool' TweaksV.log | cut -d: -f1) -lt \$(grep -n 'after all, after the check' TweaksV.log | cut -d: -f1) ] && sizes 12000 'is raised to 16000 (STATICBOUNDS_SIZE).' && [ \$(said) -eq 1 ]"
 check "the pool raised all the same" "has '$RAISED'"
 
 echo "== SB28 [BLIPS] ENABLED=0 (test build, the pool made before TweaksV, a script program placed): the part makes the script programs' hook itself, and the check reports"
-fresh_ini; setkey ENABLED 0 BLIPS; out=$(ASI=TweaksV_test.asi game full_game.exe sbearly script wait)
+fresh_ini; setkey ENABLED 0 BLIPS; out=$(ASI=TweaksV_test.asi game full_game.exe sbearly script sbwait)
 check "the hook made by the part, its line under the part's tag, word for word; the program placed through TweaksV's stub; nothing of the Blips part" "log_line '${TAG}The natives. resolution call at RVA 0x[0-9A-F]* is redirected: every script program the game places passes TweaksV, before and after the game resolves its natives.\$' && has 'script: 1 placed on thread' && has 'through a TweaksV stub' && log_lacks '\[Blips\]'"
 check "the check made, and its problem past its time, word for word, once" "made '2 seconds' && log_line '$NOT_MADE' && [ \$(count 'did not make the pool') -eq 1 ]"
 
 echo "== SB29 no script program placed (test build): the session never starts, so the check never reports"
-fresh_ini; out=$(ASI=TweaksV_test.asi game full_game.exe sbearly wait)
+fresh_ini; out=$(ASI=TweaksV_test.asi game full_game.exe sbearly sbwait)
 unset TWEAKSV_TEST_STATICBOUNDS_CHECK
 check "the check made and waiting, nothing reported past its time" "made '2 seconds' && log_lacks 'did not make the pool' && quiet"
 
 echo "== SB30 nothing hooked, no check (test build, TWEAKSV_TEST_STATICBOUNDS_CHECK=2, the pool made before TweaksV, a script program placed): DRY_RUN, a refused job, a hook not made"
 export TWEAKSV_TEST_STATICBOUNDS_CHECK=2
 for case in dryrun sbp1jump sba1noexec; do
-	fresh_ini; options="sbearly script wait"
+	fresh_ini; options="sbearly script sbwait"
 	if [ "$case" = dryrun ]; then setkey DRY_RUN 1; else options="$options $case"; fi
 	out=$(ASI=TweaksV_test.asi game full_game.exe $options)
 	check "$case: no check - neither its line nor its test build's line nor its problem past its time" "log_lacks 'static bounds check' && log_lacks 'did not make the pool'"
 done
 
 echo "== SB31 a capacity below 0, a script program placed (test build, TWEAKSV_TEST_STATICBOUNDS_CHECK=2): its problem once, and the check not again"
-fresh_ini; out=$(ASI=TweaksV_test.asi game full_game.exe sbnegative script wait)
+fresh_ini; out=$(ASI=TweaksV_test.asi game full_game.exe sbnegative script sbwait)
 unset TWEAKSV_TEST_STATICBOUNDS_CHECK
 check "the capacity reported once, the check made and silent past its time" "[ \$(count 'which is none') -eq 1 ] && made '2 seconds' && log_lacks 'did not make the pool'"
 
@@ -226,14 +226,14 @@ LEFT="${TAG}The static bounds check is not made this session: it starts with the
 
 echo "== SB32 BlipLimitFix.asi in the game folder, the Blips part on in TweaksV.ini (test build, TWEAKSV_TEST_STATICBOUNDS_CHECK=2, the pool made before TweaksV, a script program placed): no check, the line says why"
 export TWEAKSV_TEST_STATICBOUNDS_CHECK=2
-fresh_ini; touch BlipLimitFix.asi; out=$(ASI=TweaksV_test.asi game full_game.exe sbearly script wait); rm -f BlipLimitFix.asi
+fresh_ini; touch BlipLimitFix.asi; out=$(ASI=TweaksV_test.asi game full_game.exe sbearly script sbwait); rm -f BlipLimitFix.asi
 unset TWEAKSV_TEST_STATICBOUNDS_CHECK
 check "the line, word for word; no check, nothing reported past its time; the program placed through the game's own function" "log_line '$LEFT' && log_lacks 'static bounds check comes' && log_lacks 'did not make the pool' && has 'through the game function'"
 check "the hooks made all the same, no problem of the part" "hooks_made 16000 && quiet"
 
 echo "== SB33 [BLIPS] ENABLED=0 with ResourceExtensions.asi in the game folder (test build, TWEAKSV_TEST_STATICBOUNDS_CHECK=2, the pool made before TweaksV, a script program placed): the plugin does the Blips part's job whatever TweaksV.ini says - no hook of the script programs, no check, the line"
 export TWEAKSV_TEST_STATICBOUNDS_CHECK=2
-fresh_ini; setkey ENABLED 0 BLIPS; touch ResourceExtensions.asi; out=$(ASI=TweaksV_test.asi game full_game.exe sbearly script wait); rm -f ResourceExtensions.asi
+fresh_ini; setkey ENABLED 0 BLIPS; touch ResourceExtensions.asi; out=$(ASI=TweaksV_test.asi game full_game.exe sbearly script sbwait); rm -f ResourceExtensions.asi
 unset TWEAKSV_TEST_STATICBOUNDS_CHECK
 check "the conflict check's line and the part's, word for word; no hook of the script programs, no check, nothing reported past its time; the program placed through the game's own function; the hooks made all the same, no problem of the part" "log_line '\[TweaksV\] Conflict check: .*ResourceExtensions.asi is installed; TweaksV.s Blips part is off in TweaksV.ini already.\$' && log_line '$LEFT' && log_lacks 'natives. resolution call' && log_lacks 'static bounds check comes' && log_lacks 'did not make the pool' && has 'through the game function' && hooks_made 16000 && quiet"
 

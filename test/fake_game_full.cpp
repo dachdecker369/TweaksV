@@ -413,6 +413,7 @@
 //   sbnever        the pool never made, the others made
 //   sbearly        every pool made before TweaksV loads, and not again
 //   sblate         every pool made 4 seconds later than the other actions leave it, after the test build's check of 2 seconds
+//   sbwait         the run stays 5 seconds more: past the test build's check of 2 seconds and the box a second after it
 //   sbflood        the pool made 10,001 times
 //   sbnotstart     the byte before each function 48, so that it reads as no function start
 //   sbp1twice, sba1twice
@@ -4028,11 +4029,14 @@ static void StaticBoundsProtect(int argc, wchar_t** argv, DWORD protection)
 static void StaticBoundsActions(int argc, wchar_t** argv)
 {
 	StaticBoundsProtect(argc, argv, PAGE_EXECUTE_READ);
-	if (HasOption(argc, argv, L"sbearly"))
-		return;
-	if (HasOption(argc, argv, L"sblate"))
-		Sleep(4000);
-	StaticBoundsMakePools(argc, argv);
+	if (!HasOption(argc, argv, L"sbearly"))
+	{
+		if (HasOption(argc, argv, L"sblate"))
+			Sleep(4000);
+		StaticBoundsMakePools(argc, argv);
+	}
+	if (HasOption(argc, argv, L"sbwait"))
+		Sleep(5000);
 }
 
 // "static bounds: set-up hooked, allocator hooked, the rest as placed, the pool made once: 16000 slots, 272000 bytes asked, other pools 8 of 8
