@@ -36,6 +36,7 @@ SUITES=(
 	staticbounds
 	sirencount
 	# [light capacity]
+	lightcapacity
 	# [population]
 	# [ped pool]
 	# [render queues]

@@ -52,8 +52,9 @@ wait
 for label in $labels; do
 	expected=1
 	case "$label" in
-		D-E-L12) expected=7 ;;						# the two that must match more than once
+		D-E-L12) expected=7 ;;						# the three that must match more than once
 		A-E-G1) expected=2 ;;
+		G-E-G1) expected=2 ;;
 	esac
 	B=$game_folder/twice/$label
 	cd "$B" || exit 1
