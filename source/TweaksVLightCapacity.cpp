@@ -33,6 +33,7 @@
 #include <atomic>
 #include <cstdint>
 #include <cstring>
+#include <cwchar>
 #include <iterator>
 #include <optional>
 #include <string>
@@ -703,11 +704,31 @@ namespace TweaksV
 			Note("a job's refused lights are not counted: " + why);
 		}
 
+#ifdef TWEAKSV_TEST_BUILD
+		// test builds only: TWEAKSV_TEST_LIGHT_STUB in the environment reaches what comes of a stub or a jump Windows refuses (SPECIFICATIONS 13.1): "no memory" takes
+		// the near memory for none; "left writable" leaves the stub as it is written, unrun, so that under the fake's dynamic code policy the refusal comes at the jump's page.
+		bool StubSwitch(const wchar_t* value, const char* words)
+		{
+			wchar_t text[16]{};
+			if (GetEnvironmentVariableW(L"TWEAKSV_TEST_LIGHT_STUB", text, 16) >= 16 || wcscmp(text, value) != 0)
+				return false;
+			WriteLog(kTag, std::string("TEST BUILD: ") + words + " (TWEAKSV_TEST_LIGHT_STUB).");
+			return true;
+		}
+#endif
+
 		// The stub on the first page of a block near the game, its counter on its second, read/write; the first page read+execute once
 		// written, never writable and executable at once. Null, logged, if it cannot be made.
 		uint8_t* MakeStub(const uint8_t* wayOut, size_t page)
 		{
-			uint8_t* const block = static_cast<uint8_t*>(AllocateNearGame(2 * page));
+			uint8_t* block = static_cast<uint8_t*>(AllocateNearGame(2 * page));
+#ifdef TWEAKSV_TEST_BUILD
+			if (block && StubSwitch(L"no memory", "the near memory is taken for none"))
+			{
+				VirtualFree(block, 0, MEM_RELEASE);
+				block = nullptr;
+			}
+#endif
 			if (!block)
 			{
 				NotCounted("no memory near the game could be had for its stub.");
@@ -718,6 +739,10 @@ namespace TweaksV
 			const uint64_t target = reinterpret_cast<uintptr_t>(wayOut);
 			memcpy(block + kCounterDispAt, &disp, sizeof(disp));
 			memcpy(block + kTargetAt, &target, sizeof(target));
+#ifdef TWEAKSV_TEST_BUILD
+			if (StubSwitch(L"left writable", "the stub is left writable"))
+				return block;
+#endif
 			DWORD old = 0;
 			if (!VirtualProtect(block, page, PAGE_EXECUTE_READ, &old))
 			{
