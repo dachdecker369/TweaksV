@@ -462,7 +462,7 @@ namespace TweaksV
 			if (leftOut)
 				WriteLog(kTag, LeftOutLine(read));
 			const auto partly = [](const std::string& why) { ReportFailure(kTag, "Only part of the mods folder is used this session: " + why); };
-			if (!read.stoppedAt.empty())
+			if (!read.stoppedAt.empty() && read.entries > 0)	// with no name to use, the problem below says all there is
 				partly("the list stopped at " + read.stoppedAt + ".");
 			if (read.tooDeep)
 				partly(Folders(read.tooDeep) + " deeper than " + std::to_string(kMaxModsDepth) + " levels " + (read.tooDeep == 1 ? "was" : "were") +

@@ -231,6 +231,8 @@ check "the 13th name ends the walk: RageOpenV's problem says at what, test/file.
 check "the check stops at the same name, and its last line says so" "log_line 'Packs checked for GTA V Legacy versions: none in the mods folder - the walk stopped at 12 names, most of them too long or not valid Unicode, where RageOpenV.s list stops\.\$'"
 packs_gone; long_names 11; fresh_ini; out=$(TWEAKSV_TEST_MODS_ENTRIES=3 game full_game.exe rovask test/file.txt lpwait)
 check "the Release build keeps the limit of 200000 and 800000 names: nothing stopped" "has '$DONE' && log_lacks 'stopped at' && has 'ask 1 served 8/8 passed 0/8'"
+packs_gone; for n in 1 2 3 4 5; do touch "mods/$n$(printf 'a%.0s' $(seq 1 254))"; done; fresh_ini; out=$(TWEAKSV_TEST_MODS_ENTRIES=1 ASI=TweaksV_test.asi game full_game.exe)
+check "the walk stopped before a name it could use, its 4 names all too long: one problem, that none can be used, and the line it points to right above it; nothing hooked" "log_has 'The mods folder has 0 files and folders\.' && [ \$(count '\[RageOpenV\] PROBLEM') -eq 1 ] && log_has 'PROBLEM: Files in the mods folder are not used this session: none of the 4 names in the mods folder can be used (see the line above)\.' && tr -d '\r' < TweaksV.log | grep '\[RageOpenV\]' | grep -B 1 'none of the 4 names' | head -n 1 | grep -q 'left out of the list: 4 ' && has 'file hooks 0/8'"
 packs_gone
 
 echo
