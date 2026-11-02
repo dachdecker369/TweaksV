@@ -36,6 +36,9 @@ summary() { lines "siren settings loaded: $1 (vehicles can use 255 at most); sir
 summaries() { grep -c -E "${L}(siren settings loaded: |no siren settings loaded yet|the siren settings at .* could not be read)" TweaksV.log; }
 # not_measured WHY: the line, word for word up to WHY's end; no problem, no announcement, no summary
 not_measured() { lines "the siren settings are not measured: $1" && log_lacks 'PROBLEM' && log_lacks 'the settings loaded and the IDs in use are logged' && [ "$(summaries)" -eq 0 ]; }
+# accessor_gives N: the test build's line of SirenSettingsNow, N settings at the array the report names; accessor_nothing: its line when it gives nothing
+accessor_gives() { log_line "\[SirenSettings\] TEST BUILD: the siren settings' accessor gives $1 at $(sed -n 's/.*siren array: \(0x[0-9A-F]*\) .*/\1/p' <<< "$out") (outside the game), 0x5E8 bytes apart\.\$"; }
+accessor_nothing() { log_line "\[SirenSettings\] TEST BUILD: the siren settings' accessor gives nothing\.\$"; }
 # no_box: nothing reported, so no start-up summary and no box (ERROR_POPUP=1, test build)
 no_box() { log_lacks 'Showing the start-up summary' && log_lacks 'TEST BUILD: message box not shown'; }
 
@@ -111,6 +114,7 @@ echo "== I4 the same, the game's base files not read yet at 10 s (the carcols po
 measure_ini; out=$(ASI=TweaksV_test.asi game full_game.exe sinone)
 check "the first summary says so, word for word; the second has the 24 settings - and no more" "lines 'no siren settings loaded yet - the game has not read carcols.ymt.' && summary 24 24 0 0 && [ \$(summaries) -eq 2 ] && grep -m 1 -E 'siren settings loaded' TweaksV.log | grep -q 'no siren settings loaded yet'"
 check "nothing written" "log_lacks 'PROBLEM' && untouched"
+check "the accessor of the siren settings (test build's line): nothing while the pointer is null, then the 24, read that moment" "accessor_nothing && accessor_gives 24"
 unset TWEAKSV_TEST_SUMMARY_MS
 
 echo "== I5 300 settings, given their IDs as the game gives them: the table full, 44 past position 255, the ID 255 to the last 45"
@@ -297,6 +301,26 @@ export TWEAKSV_TEST_SUMMARY_MS=500
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(ASI=TweaksV_test.asi game full_game.exe sipack)
 check "two summaries: 24 of 65536 IDs 10 s in, then 30 - and no more" "lines 'siren settings loaded: 24 (vehicles can use 255 at most); siren setting IDs in use: 24 of 65536, 0 of them past 255; settings past position 255, which no vehicle can reach: 0; IDs given to more than one setting: 0; settings the game dropped so far: 0, moved: 0.' 'siren settings loaded: 30 (vehicles can use 255 at most); siren setting IDs in use: 30 of 65536, 0 of them past 255; settings past position 255, which no vehicle can reach: 0; IDs given to more than one setting: 0; settings the game dropped so far: 0, moved: 0.' && [ \$(summaries) -eq 2 ]"
 unset TWEAKSV_TEST_SUMMARY_MS
+
+echo "== W19 the accessor of the siren settings for another module, whenever the module has looked for its sites (the test build's line)"
+fresh_ini; out=$(ASI=TweaksV_test.asi game full_game.exe)
+check "the part at work: the 24 at their array, 0x5E8 bytes apart" "written && accessor_gives 24"
+fresh_ini; setkey ENABLED 0 SIRENSETTINGS; setkey DIAGNOSTIC_MODE 1; out=$(ASI=TweaksV_test.asi game full_game.exe)
+check "the part off, DIAGNOSTIC_MODE=1: the same, nothing written" "accessor_gives 24 && untouched"
+measure_ini; out=$(ASI=TweaksV_test.asi game full_game.exe)
+check "LARGE_SIREN_IDS=0, DIAGNOSTIC_MODE=1: the same, nothing written" "accessor_gives 24 && untouched"
+measure_ini; out=$(ASI=TweaksV_test.asi game full_game.exe siwidened)
+check "the measurement refused by another site, I-E-T4 found: the same" "lines 'the siren settings are not measured: the siren setting ID load at $RVA holds 0F B7 2C 0F, not 0F B6 2C 0F (I-E-T1).' && accessor_gives 24"
+fresh_ini; addkey TEST_BREAK_PATTERN I-E-D1; out=$(ASI=TweaksV_test.asi game full_game.exe)
+check "the part refused by a pattern after I-E-T4's: the same" "refused 'I-E-D1 was not found.' && accessor_gives 24"
+fresh_ini; addkey TEST_BREAK_PATTERN I-E-T1; out=$(ASI=TweaksV_test.asi game full_game.exe)
+check "the part refused by a pattern before I-E-T4's, which it never looks for then: nothing" "refused 'I-E-T1 was not found.' && accessor_nothing"
+measure_ini; addkey TEST_BREAK_PATTERN I-E-T4; out=$(ASI=TweaksV_test.asi game full_game.exe)
+check "I-E-T4 not found: nothing" "accessor_nothing"
+measure_ini; out=$(ASI=TweaksV_test.asi game full_game.exe siload)
+check "the game's load after TweaksV has started, the carcols pointer null while the module looks: nothing yet" "accessor_nothing"
+measure_ini; out=$(game full_game.exe)
+check "the release build has no such line" "log_lacks 'accessor'"
 
 echo
 echo "SIREN IDS SCENARIOS: $pass passed, $fail failed"

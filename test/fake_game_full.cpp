@@ -2542,6 +2542,7 @@ static void SirenIdsReport()
 	const bool typesWidened = g_sirenIdsMembers[0].type == g_sirenIdsTypesPlaced[0] + 2 && g_sirenIdsMembers[26].type == g_sirenIdsTypesPlaced[1] + 2;
 	wprintf(L"siren ids: sites as placed %d of %d, data %ls | ", asPlaced, static_cast<int>(kSirenIdsSites),
 		SirenIdsData() != g_sirenIdsDataPlaced ? L"NOT as placed" : typesPlaced ? L"as placed" : typesWidened ? L"widened" : L"types CHANGED");
+	wprintf(L"siren array: 0x%llX | ", static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(g_sirenIdsSettings)));
 	SirenIdsReportWrites();
 	SirenIdsReportCode();
 	if (g_sirenIdsLoad)

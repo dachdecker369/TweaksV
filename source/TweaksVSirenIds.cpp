@@ -58,6 +58,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -484,6 +485,16 @@ namespace TweaksV
 			return true;
 		}
 
+		// T4's carcols pointer as soon as T4 is found, for SirenSettingsNow, whatever the other sites hold; the checks log it
+		void KeepCarcolsPointer()
+		{
+			if (!g_matches[kT4])
+				return;
+			const uint8_t* const pointer = Rel32Target(g_matches[kT4] + kCarcolsAtT4);
+			if (IsInsideGameImage(pointer) && IsInsideGameImage(pointer + sizeof(void*) - 1) && IsReadable(pointer, sizeof(void*)))
+				g_carcolsPointer = pointer;
+		}
+
 		// T4's carcols pointer, inside the game - the getter's must be the same
 		bool CheckCarcolsPointer()
 		{
@@ -703,6 +714,16 @@ namespace TweaksV
 
 		bool g_firstSummary = true;	// the measurement's thread alone reads and writes it
 
+#ifdef TWEAKSV_TEST_BUILD
+		// test builds only: what SirenSettingsNow gives, which no code of this module reads, so that a suite sees it
+		void LogAccessor()
+		{
+			const std::optional<SirenSettingsArray> settings = SirenSettingsNow();
+			WriteLog(kTag, settings ? "TEST BUILD: the siren settings' accessor gives " + std::to_string(settings->count) + " at " + DescribeAddress(settings->array) + ", " +
+				Hex(settings->stride) + " bytes apart." : std::string("TEST BUILD: the siren settings' accessor gives nothing."));
+		}
+#endif
+
 		// The IDs in their settings' order, so that a start with the part and one without it can be compared
 		void LogListedIds()
 		{
@@ -740,6 +761,9 @@ namespace TweaksV
 					(g_hooked ? "; settings the game dropped so far: " + std::to_string(g_dropped.load()) + ", moved: " + std::to_string(g_moved.load()) : std::string()) + ".");
 				LogListedIds();
 			}
+#ifdef TWEAKSV_TEST_BUILD
+			LogAccessor();
+#endif
 		}
 
 		// The first summary 10 seconds in, then one a minute while the numbers change.
@@ -760,6 +784,7 @@ namespace TweaksV
 			std::string notFound;
 			for (size_t i = 0; i < kMatchCount; i++)
 				g_matches[i] = Scanner::FindOnce(*kLimitPatterns[i], notFound);
+			KeepCarcolsPointer();
 			if (!notFound.empty())
 			{
 				Note("the siren settings are not measured: " + notFound + ".");
@@ -1150,8 +1175,21 @@ namespace TweaksV
 
 	void MeasureSirenIdsWhileOff()
 	{
-		if (!IsFeatureOn(kSirenSettingsSection) || !IsOn(kLargeSirenIds))
-			Measure();
+		if (IsFeatureOn(kSirenSettingsSection) && IsOn(kLargeSirenIds))
+			return;
+		Measure();
+#ifdef TWEAKSV_TEST_BUILD
+		LogAccessor();
+#endif
+	}
+
+	std::optional<SirenSettingsArray> SirenSettingsNow()
+	{
+		const uint8_t* const carcols = LoadedCarcols();
+		Settings settings{};
+		if (!carcols || !ReadSettings(carcols, settings))
+			return std::nullopt;
+		return SirenSettingsArray{ settings.array, settings.count, kSettingSize };
 	}
 
 	void InitSirenIds()
@@ -1162,9 +1200,20 @@ namespace TweaksV
 			return;
 		}
 
-		// 1. the table, its loads and its limits on the core, every pattern with them
+#ifdef TWEAKSV_TEST_BUILD
+		struct AtTheEnd { ~AtTheEnd() { LogAccessor(); } } atTheEnd;	// whichever way the job ends
+#endif
+
+		// 1. the table, its loads and its limits on the core, every pattern with them - the carcols pointer kept if the core has
+		// come as far as T4's, whatever stops it
 		RelocationPlan plan;
-		if (!FindRelocation(kSpec, plan))
+		const bool found = FindRelocation(kSpec, plan);
+		if (plan.matches[kT4].size() == 1)
+		{
+			g_matches[kT4] = plan.matches[kT4][0];
+			KeepCarcolsPointer();
+		}
+		if (!found)
 			return;
 		for (size_t i = 0; i < kMatchCount; i++)
 			g_matches[i] = plan.matches[i][0];
