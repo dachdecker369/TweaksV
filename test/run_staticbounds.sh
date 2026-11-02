@@ -4,7 +4,7 @@
 # and the allocator (C-E-A1), run as code and hooked, all or none, so that the static bounds pool gets the larger of its size
 # and STATICBOUNDS_SIZE when the fake makes it, said once, and the fake's eight other pools stay as they are: the size below and
 # above the key, the key at its limits and beyond; ENABLED=0 and both old plugins; DRY_RUN; DIAGNOSTIC_MODE with both sites and
-# every making; each check failing on its own - each pattern missing, each held twice, another mod's jump on each function, each
+# every making and every set-up of stride 16 with the first bytes of its name, up to its cap; each check failing on its own - each pattern missing, each held twice, another mod's jump on each function, each
 # hook not made with the other taken back, no code to be changed, the set-up's allocator read from another stack slot - each reported
 # with nothing written; the pool made twice, its address taken by another pool, its stride changed before its allocation, a capacity
 # below 0 and of 0; what IsFunctionStart says, which refuses nothing; the lines' cap; the plain game; the check that the game makes the pool, its clock from the session's start, the
@@ -99,6 +99,10 @@ check "C-E-P1 and C-E-A1 found exactly once each" "[ -n '$setup' ] && [ -n '$all
 check "each site at the RVA of its match, with what IsFunctionStart says, word for word" "log_line '${TAG}DIAGNOSTIC: the pools. set-up at RVA ${setup:-none} (C-E-P1): no unwind data, byte before it 90\$' && log_line '${TAG}DIAGNOSTIC: the pools. allocator at RVA ${alloc:-none} (C-E-A1): no unwind data, byte before it 90\$'"
 check "the making's two lines, once each, word for word, with their times" "log_line '${TAG}DIAGNOSTIC: the static bounds pool at $RVA is set up, [0-9]* ms after the part.s start.\$' && log_line '${TAG}DIAGNOSTIC: the static bounds pool at $RVA is allocated with 16000 slots, the game.s 12000, [0-9]* ms after the part.s start.\$' && [ \$(count 'DIAGNOSTIC: the static bounds pool at') -eq 2 ]"
 check "the hooks and the sizes as without DIAGNOSTIC_MODE, no problem" "hooks_made 16000 && has '$RAISED' && [ \$(said) -eq 1 ] && quiet"
+# name_line WHAT: a set-up of stride 16's line, word for word; name_is BYTES: that of a name the fake holds, a zero a question mark, what follows it any byte
+name_line() { log_line "${TAG}DIAGNOSTIC: a pool of stride 16 at $RVA is set up, $1\$"; }
+name_is() { name_line "the first 13 bytes at its name, $RVA: $1"; }
+check "every set-up of stride 16 said, word for word: the first 13 bytes at its name through the printable filter, or that it cannot be read; other strides not" "name_is InteriorProxy && name_is 'StaticBounds?' && name_is StaticBoundsM && name_is 'StaticBound?.' && name_line 'its name at 0x0 (outside the game) is not readable.' && [ \$(count 'its name at 0x[0-9A-F]* (outside the game) is not readable.') -eq 3 ] && [ \$(count 'DIAGNOSTIC: a pool of stride 16 at') -eq 7 ] && log_lacks '${TAG}DIAGNOSTIC: a pool of stride 64'"
 
 echo "== SB10 TEST_BREAK_PATTERN for each pattern (test build): reported by its label, nothing hooked - the other looked for all the same"
 for label in C-E-P1 C-E-A1; do
@@ -173,6 +177,8 @@ echo "== SB20 the pool made 10,001 times (DIAGNOSTIC_MODE=1): 20,000 lines of th
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe sbflood)
 check "20000 lines, then the cap's line once; the sizes said once" "[ \$(count 'DIAGNOSTIC: the static bounds pool at') -eq 20000 ] && [ \$(count 'DIAGNOSTIC: 20000 lines of the pool.s makings written - from now on they are only counted.') -eq 1 ] && [ \$(said) -eq 1 ]"
 check "every making raised, every call good" "has 'the pool made 10001 times: 16000 and 16000 slots, 272000 and 272000 bytes asked, other pools 8 of 8 left alone, set-ups 10009 of 10009 and allocations 10009 of 10009 good' && quiet"
+fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe sbfloodnames)
+check "another pool of stride 16 made 20,000 times more: 20,000 lines of the names, then the cap's line once, every call good, the pool's two lines apart" "[ \$(count 'DIAGNOSTIC: a pool of stride 16 at') -eq 20000 ] && [ \$(count 'DIAGNOSTIC: 20000 lines of the names of stride 16 written - from now on they are only counted.') -eq 1 ] && has 'the pool made once: 16000 slots, 272000 bytes asked, other pools 20008 of 20008 left alone, set-ups 20009 of 20009 and allocations 20009 of 20009 good' && [ \$(count 'DIAGNOSTIC: the static bounds pool at') -eq 2 ] && quiet"
 
 echo "== SB21 none of the game code present (plain fake game): both patterns looked for, the first one missing reported"
 fresh_ini; out=$(game plain_game.exe)

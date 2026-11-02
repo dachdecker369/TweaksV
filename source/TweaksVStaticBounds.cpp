@@ -25,7 +25,8 @@
 // found, or POOL_MEMORY at the game's own - is a problem of the start-up summary, the raise made all the same.
 //   DRY_RUN          nothing is hooked, nothing checked; the line says what would be
 //   DIAGNOSTIC_MODE  the two sites at their RVAs, with what IsFunctionStart says of each, which refuses nothing since
-//                    the patterns pin it; every making of the pool, and its time after the part's start
+//                    the patterns pin it; every making of the pool, and its time after the part's start; every set-up of
+//                    stride 16 with the first bytes of its name, since nothing but the original's word says the game passes it
 // Written for TweaksV from the Static Bounds Limit Adjuster v1.0.2 by Nochala (3_Washing_Machines), commit 61507bc:
 //   Copyright (C) 2026 Nochala
 //   License: GPL-3.0-or-later - https://github.com/Nochala/StaticboundsLimitAdjuster (THIRD_PARTY_NOTICES.md)
@@ -45,6 +46,7 @@
 #include <cstring>
 #include <cwchar>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "TweaksVConflicts.h"
@@ -108,6 +110,7 @@ namespace TweaksV
 		bool g_diagnostic = false;					// DIAGNOSTIC_MODE, read once at the start: the hooks never read a switch
 		ULONGLONG g_start = 0;						// the part's start, for the time of each making
 		std::atomic<uint64_t> g_makingLines{ 0 };	// the lines of the makings, up to the cap
+		std::atomic<uint64_t> g_nameLines{ 0 };		// the lines of the names of stride 16, up to the cap
 		std::atomic<bool> g_sizesSaid{ false };		// the pool's sizes are said once
 		std::atomic<bool> g_noSizeSaid{ false };	// a capacity below 0 is reported once
 		std::atomic<bool> g_strideSaid{ false };	// a stride that changed is reported once
@@ -242,28 +245,42 @@ namespace TweaksV
 				WriteLog(kTag, "DIAGNOSTIC: " + std::to_string(kMaxLinesPerKind) + " lines of the pool's makings written - from now on they are only counted.");
 		}
 
-		// True if name, wherever the game's second argument leads, is the pool's name, its terminating zero included. It is
-		// copied through CopyMemorySafely, since nothing but the original's word says that the argument is a pointer to a name.
-		bool IsPoolName(const char* name)
+		// A line of a set-up of stride 16 with DIAGNOSTIC_MODE, up to the cap: what the game's second argument leads to, the hook's copy
+		// of it or nullptr, so that a boot shows whether the game passes a name there, as only the original's word says.
+		void NameLine(const void* pool, const char* name, const char* copy)
 		{
-			char copy[sizeof(kName)];
-			return CopyMemorySafely(copy, name, sizeof(copy)) && memcmp(copy, kName, sizeof(copy)) == 0;
+			const uint64_t line = g_nameLines.fetch_add(1, std::memory_order_relaxed) + 1;
+			if (line <= kMaxLinesPerKind)
+				WriteLog(kTag, "DIAGNOSTIC: a pool of stride " + std::to_string(kStride) + " at " + DescribeAddress(pool) + " is set up, " + (copy ? "the first " +
+					std::to_string(sizeof(kName)) + " bytes at its name, " + DescribeAddress(name) + ": " + Printable(std::string_view(copy, sizeof(kName))) :
+					"its name at " + DescribeAddress(name) + " is not readable."));
+			else if (line == kMaxLinesPerKind + 1)
+				WriteLog(kTag, "DIAGNOSTIC: " + std::to_string(kMaxLinesPerKind) + " lines of the names of stride " + std::to_string(kStride) + " written - from now on they are only counted.");
 		}
 
-		// The set-up's hook, on the game's thread, for every pool the game makes: the static bounds pool is noted; a set-up of
-		// anything else at the noted address ends the note, since the address holds another pool from now on. Nothing may
-		// throw out of here, and the set-up's result and the last error are the game's.
+		// The set-up's hook, on the game's thread, for every pool the game makes: the static bounds pool, told by its stride and by
+		// its name, its terminating zero included, is noted; a set-up of anything else at the noted address ends the note, since the
+		// address holds another pool from now on. The name is copied through CopyMemorySafely, since nothing but the original's word
+		// says that the second argument is a pointer to a name. Nothing may throw out of here, and the set-up's result and the last
+		// error are the game's.
 		uintptr_t SetUpHook(void* pool, const char* name, uintptr_t third, uint32_t stride, void* allocator)
 		{
-			if (stride == kStride && IsPoolName(name))
+			bool thePool = false;
+			if (stride == kStride)
 			{
-				g_noted.store(pool, std::memory_order_release);
+				char copy[sizeof(kName)];
+				const bool read = CopyMemorySafely(copy, name, sizeof(copy));
+				thePool = read && memcmp(copy, kName, sizeof(copy)) == 0;
+				if (thePool)
+					g_noted.store(pool, std::memory_order_release);
 				if (g_diagnostic)
 				{
 					const DWORD lastError = GetLastError();
 					try
 					{
-						MakingLine("is set up", pool);
+						NameLine(pool, name, read ? copy : nullptr);
+						if (thePool)
+							MakingLine("is set up", pool);
 					}
 					catch (...)
 					{
@@ -271,7 +288,7 @@ namespace TweaksV
 					SetLastError(lastError);
 				}
 			}
-			else
+			if (!thePool)
 			{
 				void* noted = pool;
 				g_noted.compare_exchange_strong(noted, nullptr, std::memory_order_acq_rel);	// one step: another thread may note a pool meanwhile

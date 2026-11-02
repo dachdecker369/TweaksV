@@ -442,6 +442,7 @@
 //   sblate         every pool made 4 seconds later than the other actions leave it, after the test build's check of 2 seconds
 //   sbwait         the run stays 5 seconds more: past the test build's check of 2 seconds and the box a second after it
 //   sbflood        the pool made 10,001 times
+//   sbfloodnames   another pool of stride 16 made 20,000 times more
 //   sbnotstart     the byte before each function 48, so that it reads as no function start
 //   sbp1twice, sba1twice
 //                  C-E-P1 or C-E-A1 a second time: its match copied to the twin, a site that holds nothing else
@@ -4873,6 +4874,9 @@ static void StaticBoundsMakePools(int argc, wchar_t** argv)
 	if (HasOption(argc, argv, L"sbflood"))
 		for (int i = 0; i < 10000; i++)
 			StaticBoundsMakeThePool(&g_staticBoundsPools[1], "StaticBounds", argc, argv);
+	if (HasOption(argc, argv, L"sbfloodnames"))
+		for (int i = 0; i < 20000; i++)
+			StaticBoundsMakeOther(&other, "InteriorProxy", 16, 500);
 }
 
 // Before TweaksV loads: the options' changes of the sites - then the sites' bytes as placed - and with "sbearly" every pool.
