@@ -209,20 +209,23 @@ Open until my first boot: the game's binary `.ymt` files go through another load
 
 ### StaticBounds
 
-The game keeps the static collision bounds of the map - every building, prop and interior it places, a heavy map mod's MLOs, custom interiors and expansions among them - in one pool, which it makes once from `gameconfig.xml`'s size, or from its own default where the file names no size for it.
-Once the pool is full, the game ends in an access violation: the crash heavy map mods are known for.
+The game keeps the static collision bounds of the map - every building, prop and interior it places, a heavy map mod's MLOs, custom interiors and expansions among them - in one store, whose size it reads once, from `gameconfig.xml`, or from its own default where the file names none.
+Once the store is full, the game ends at a trap: the crash heavy map mods are known for.
 
-`STATICBOUNDS_SIZE` under `[STATICBOUNDS]` (default 16000, 1 to 100000) is the least the pool gets: TweaksV hooks the two functions the game makes its pools through, tells the pool by its name and the size of its slots, and raises its size before the game allocates it, so a `gameconfig.xml` that gives the pool more keeps its size.
-The log says at the start that the part is in place, `The pools' set-up at RVA ... and the pools' allocator at RVA ... are hooked: ...`, and what the pool got once the game has made it: `The size the game gives the static bounds pool, <size>, is raised to 16000 (STATICBOUNDS_SIZE).`, or `... is kept: it is not below STATICBOUNDS_SIZE=16000.` when the game gives more.
-Where TweaksV cannot find or hook the two functions, it changes nothing and says why in the start-up message (`The static bounds pool's size is not raised this session: ...`).
-A `STATICBOUNDS_SIZE` above 16000 spends the memory budget the game's pools draw on, and past that budget the game crashes: while that budget is not raised - `[HEAP_ADJUSTER]` off, in `TweaksV.ini` or because another heap adjuster or Resource Extensions is installed, or `POOL_MEMORY` at 136 - the start-up message says so (`The static bounds pool may not fit the pool memory budget this session: ...`), and the pool is raised all the same.
-The size is raised only if the game makes the pool after TweaksV has started, so TweaksV checks that it did: if the game has not made it a minute after your session starts - it made the pool before TweaksV started, or makes it another way - a message box says so, and the pool has the game's size.
+`STATICBOUNDS_SIZE` under `[STATICBOUNDS]` (default 16000, 1 to 32767) is the least the store gets: TweaksV redirects the one call the game reads that size from, so the store, its name map and everything else that follows the size are made as if `gameconfig.xml` had said so, and a `gameconfig.xml` that gives more keeps it.
+32767 is the most whose every slot is sound; the store costs about 73 bytes a slot.
+The log says at the start that the part is in place, `The static bounds store's size call at RVA ... is redirected: ...`, and what the store got once the game has asked: `The size the game gives the static bounds store, <size>, is raised to 16000 (STATICBOUNDS_SIZE).`, or `... is kept: it is not below STATICBOUNDS_SIZE=16000.` when the game gives more.
+Where TweaksV cannot find or redirect the call, it changes nothing and says why in the start-up message (`The static bounds store's size is not raised this session: ...`).
+A `STATICBOUNDS_SIZE` above 16000 spends the memory budget the game's pools draw on, and past that budget the game crashes: while that budget is not raised - `[HEAP_ADJUSTER]` off, in `TweaksV.ini` or because another heap adjuster or Resource Extensions is installed, or `POOL_MEMORY` at 136 - the start-up message says so (`The static bounds pool may not fit the pool memory budget this session: ...`), and the store is raised all the same.
+The size is raised only if the game asks after TweaksV has started, so TweaksV checks that it did: if the game has not asked a minute after your session starts, a message box says so, and the store has the game's size.
 TweaksV sees the session start, the game placing its script blip_controller, through its hook on the game's script programs, the Blips part's - or the StaticBounds part's own while `[BLIPS]` is off in `TweaksV.ini`; while `BlipLimitFix.asi` or Resource Extensions, which do the Blips part's job, is installed, whatever `[BLIPS]` says, no check is made, and the log says so.
-Where the check cannot be made otherwise - that hook is not there after a game update, say - the start-up message says so (`The check that the game makes the static bounds pool is not done this session: ...`): the hooks stay, but nothing then tells you whether the game made the pool.
-With `DIAGNOSTIC_MODE=1` the log names the two functions at their RVAs, when the session started and the game made the pool, and every pool of the same slot size as it is set up, with the first bytes of its name.
+Where the check cannot be made otherwise - that hook is not there after a game update, say - the start-up message says so (`The check that the game asks for the static bounds store's size is not done this session: ...`).
+At the session's start TweaksV reads the store back, `The static bounds store's read-back: count 16000, pool 16000, ...`: a store whose numbers differ gets a message box, since the load would end at the smallest, and so does a `gameconfig.xml` above 32767 with more than that in use.
+With `DIAGNOSTIC_MODE=1` the log names the call and the store at their RVAs, and when the session started and the game asked.
 
-Rewritten from Nochala's [Static Bounds Limit Adjuster](https://www.gta5-mods.com/scripts/static-bound-limit-adjuster) v1.0.2, GPL-3.0-or-later: its two patterns, its two hooks and its rule, on TweaksV's own code.
+The key's name, its default and its rule, the larger of the two, come from Nochala's [Static Bounds Limit Adjuster](https://www.gta5-mods.com/scripts/static-bound-limit-adjuster) v1.0.2, GPL-3.0-or-later; the route is TweaksV's own.
 With `StaticBoundLimitAdjuster.asi` (or `StaticBoundsLimitAdjuster.asi`) installed, TweaksV switches its own StaticBounds part off.
+
 ### Measured first: the sirens per vehicle, the lighting capacity, the model budgets, the ped pool and the render queues
 
 More limits of the game may be lifted by parts to come ([ROADMAP.md](ROADMAP.md)): the sirens per vehicle by the SirenSettings part, with the lighting capacity's stores, and the model budgets, the ped pool and the render queues if their numbers ask.
@@ -295,7 +298,7 @@ The settings are read once, at start-up: TweaksV's parts patch the game before i
 | `[RESOURCES]` | `VIDEO_MEMORY_BUDGET` | 0 | the video memory in MB the game may stream textures and buffers into; 0 keeps the game's own budgets, 1500 to 16384 raises each budget below it to it (a value below 1500 counts as 1500) |
 | `[RAYTRACING]` | `DYNAMIC_BVH_VERTICES` | 0 | the ray tracing buffer for moving objects in vertices, 4194304 to 26843545; 0 keeps the game's own 4194304, a value below it is raised to it and reported; 20 bytes of video memory a vertex, used or not |
 | `[SIRENSETTINGS]` | `LARGE_SIREN_IDS` | 1 | siren setting IDs up to 65535, on the whole way from the file to the vehicle; 0 keeps the game's 8 bits |
-| `[STATICBOUNDS]` | `STATICBOUNDS_SIZE` | 16000 | the game's static collision bounds, 1 to 100000; a larger number in `gameconfig.xml` is kept; above 16000 it wants `POOL_MEMORY` raised, and a problem says so where it is not |
+| `[STATICBOUNDS]` | `STATICBOUNDS_SIZE` | 16000 | the game's static collision bounds, 1 to 32767; a larger number in `gameconfig.xml` is kept; above 16000 it wants `POOL_MEMORY` raised, and a problem says so where it is not |
 
 **Coming from TweaksV 1.x:** the 1.x file has another layout and is not migrated.
 On the first start, TweaksV renames it to `TweaksV.old.ini`, writes a fresh `TweaksV.ini` with the defaults and says so in the start-up message - set your values again, the old file still holds them.
@@ -387,15 +390,15 @@ Add these switches to the `msbuild` line above:
   So while `onigiri.asi` is installed, TweaksV switches those two parts off and says so in the start-up message; the other thirteen parts work as usual (with `CONFLICT_CHECK=0` TweaksV does not look for it, and the game crashes while those two parts are on).
   Your mods then go where onigiri serves them, in its `onigiri` folder, not in TweaksV's `mods` folder, and which start-up screens are skipped is onigiri's business, set in its `onigiri.ini` under `[PATCHES]`: with NVE's defaults the game went straight into Story Mode on my boots.
   To stop the message, set `ENABLED=0` under `[RAGEOPENV]` and under `[STRAIGHTTOSTORYMODE]` in `TweaksV.ini`.
-- **Static Bounds Limit Adjuster** by Nochala, `StaticBoundLimitAdjuster.asi` (its repository names it `StaticBoundsLimitAdjuster.asi`), is detected as an old plugin: TweaksV switches its StaticBounds part off while it is installed, so the pool's size is not changed twice.
+- **Static Bounds Limit Adjuster** by Nochala, `StaticBoundLimitAdjuster.asi` (its repository names it `StaticBoundsLimitAdjuster.asi`), is detected as an old plugin: TweaksV switches its StaticBounds part off while it is installed, so the store's size is not changed twice.
   Delete it - TweaksV replaces it.
-  `STATICBOUNDS_SIZE` is the original's own key, with its default and its maximum: set the value you used in its `StaticBoundsLimitAdjuster.ini` under `[STATICBOUNDS]` in `TweaksV.ini`.
-  The original reads 0 as its default, 16000; TweaksV takes 1 to 100000, so a 0 carried over is reported in the start-up message and used as 1 - which leaves the game's own size, since the part gives the pool the larger of the two: set 16000 for the original's default.
+  `STATICBOUNDS_SIZE` is the original's own key, with its default: set the value you used in its `StaticBoundsLimitAdjuster.ini` under `[STATICBOUNDS]` in `TweaksV.ini`; a value above 32767 is cut to 32767 and reported.
+  The original reads 0 as its default, 16000; TweaksV takes 1 to 32767, so a 0 carried over is reported in the start-up message and used as 1 - which leaves the game's own size, since the part gives the store the larger of the two: set 16000 for the original's default.
 - **Resource Extensions [Enhanced]** by Koukol, a closed-source plugin that raises many of the game's capacities - the archive count, the story blips' threshold and extra room for the ray tracing of moving geometry among them - asks to remove the heap and packfile adjusters.
   TweaksV leaves those jobs to it: while `ResourceExtensions.asi` is installed, TweaksV's HeapAdjuster, PackfileLimit, Blips and RayTracing parts are off, and the start-up message says so, with the `ENABLED=0` that stops it; the other parts work as usual.
 - **gameconfig.xml:** a gameconfig that raises the archive count has no effect while the Packfile part is on - TweaksV replaces that count with `PACKFILEARRAY_SIZE` when the game reads its configuration, exactly, also when the gameconfig's count is higher.
   Its pool size for the weapon components (`CWeaponComponentInfo`) is replaced by the WeaponLimits part's, and with `VIDEO_MEMORY_BUDGET` set its texture budgets below it are raised to it (see the parts above).
-  Its static bounds pool's size is raised to `STATICBOUNDS_SIZE` where it is lower.
+  Its static bounds store's size is raised to `STATICBOUNDS_SIZE` where it is lower.
   Everything else in a gameconfig works as usual.
 - **Zolika Patch:** the ModkitLimit Extender's author warned that its modkit patch may not be compatible with Zolika Patch's; the same goes for TweaksV's Modkit part.
 - **DecalPatch.asi**, a closed-source plugin that raises the box streamer list and the decal definitions limit for GTA V Enhanced, is detected as an old plugin: TweaksV switches its decal definitions part and its box streamer part off while it is installed, so nothing is patched twice.

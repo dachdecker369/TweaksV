@@ -1,6 +1,6 @@
 # Credits
 
-Five of TweaksV's parts are rewritten from Chiheb-Bacha's plugins below and one, StaticBounds, from Nochala's Static Bounds Limit Adjuster; the other nine - BoxStreamer, Decals, DirectStorage, Blips, WeaponLimits, PedProps, Resources, RayTracing and SirenSettings - are TweaksV's own, from the ideas and the design credited below; the research and the original code are theirs, and what little of their code TweaksV still carries is named in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+Five of TweaksV's parts are rewritten from Chiheb-Bacha's plugins below, and StaticBounds takes its key, default and rule from Nochala's Static Bounds Limit Adjuster, the route its own; the other nine - BoxStreamer, Decals, DirectStorage, Blips, WeaponLimits, PedProps, Resources, RayTracing and SirenSettings - are TweaksV's own, from the ideas and the design credited below; the research and the original code are theirs, and what little of their code TweaksV still carries is named in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 All credit for them goes to their authors.
 
 ## Chiheb-Bacha - https://github.com/Chiheb-Bacha
@@ -18,8 +18,7 @@ Each plugin was taken from its main branch as it was when TweaksV merged it (the
 
 ## Nochala (3_Washing_Machines) - https://github.com/Nochala
 
-- [Static Bounds Limit Adjuster](https://www.gta5-mods.com/scripts/static-bound-limit-adjuster) v1.0.2, "[Legacy & Enhanced]", GPL-3.0-or-later, its source at https://github.com/Nochala/StaticboundsLimitAdjuster (commit 61507bc of 2026-10-09) - the StaticBounds part, rewritten from that source as TweaksV's own in 2.7.0: its two patterns of the game's code, `C-E-P1`, the pools' set-up, and `C-E-A1`, the pools' allocator, its two hooks on them with the pool told by its name and stride, the offsets of the capacity and the stride, its rule, the larger of the game's size and the key's, and its key, `STATICBOUNDS_SIZE`, with its default and its maximum.
-  Its other routes, the size lookup's call and its hook on the lookup, are left out, and so is its taking the two hooks off after the first allocation.
+- [Static Bounds Limit Adjuster](https://www.gta5-mods.com/scripts/static-bound-limit-adjuster) v1.0.2, "[Legacy & Enhanced]", GPL-3.0-or-later, its source at https://github.com/Nochala/StaticboundsLimitAdjuster (commit 61507bc of 2026-10-09) - the StaticBounds part's key, `STATICBOUNDS_SIZE`, with its default, its rule, the larger of the game's size and the key's, and the store's name as what the raise is for. Its two patterns and hooks are gone: the route, the call of the store's init, and the maximum, 32767, are TweaksV's own, from its research in the game's code (PATTERNS.md).
   Its copyright notice is in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 ## The work those plugins build on
 

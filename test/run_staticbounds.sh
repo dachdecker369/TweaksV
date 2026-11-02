@@ -15,7 +15,7 @@
 # default on a pool memory budget not raised, one problem, and nothing at the default, on a raised budget, in DRY_RUN or with nothing redirected.
 # Fake LOCALAPPDATA: the real one is never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
-CHECKS=112
+CHECKS=82
 cd "$B" || exit 1
 cp "$R/x64/Release/TweaksV.asi" TweaksV.asi
 cp "$R/object/Test/Release/TweaksV.asi" TweaksV_test.asi

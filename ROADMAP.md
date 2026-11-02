@@ -26,6 +26,7 @@ So the limit is measured first (SPECIFICATIONS.md, section 11.16.2): with `DIAGN
 My second test (2026-10-30) gave the boot D8 of PLAN.md asked for: three packs' 30- and 32-siren models - the CVPI LSPD pack's, the CHP FPIU and the LVMPD Crown Victoria - with 10 to 12 lights the game never lights, half the CHP FPIU's lightbar dark in the game; the siren IDs had room (33 of 255 settings, none colliding).
 
 It takes 29 patterns and 26 writes, which have not run on the game, and the lighting capacity's 8.1 A and C in the same build.
+With it: every pack's line of the siren IDs' log names its file `?`, as `FileName`'s read of the entry's +0 is not the name on the real game (my proof's start 2), log only.
 
 ## Phase C: the population's limits and the lighting capacity
 
