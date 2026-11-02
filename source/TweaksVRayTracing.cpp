@@ -652,8 +652,9 @@ namespace TweaksV
 				else
 					VirtualFree(block, 0, MEM_RELEASE);	// no jump leads to it: WriteCode wrote nothing
 			}
-			WriteLog(kTag, "DIAGNOSTIC: the ray tracing buffer of moving geometry is measured: the last finished frame's vertices are sampled every 50 ms "
-				"and logged after 10 seconds, then every minute while the most taken or the refusals change.");
+			WriteLog(kTag, g_sampled.load() ? "DIAGNOSTIC: the ray tracing buffer of moving geometry is measured: the last finished frame's vertices are sampled every 50 ms "
+				"and logged after 10 seconds, then every minute while the most taken or the refusals change." :
+				"DIAGNOSTIC: the ray tracing buffer of moving geometry is measured, its frames not sampled: the rest is logged after 10 seconds, then every minute while it changes.");
 		}
 	}
 
