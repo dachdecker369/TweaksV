@@ -163,9 +163,10 @@ namespace TweaksV
 		const size_t limit = ModsEntryLimit();
 		ModsWalk walk;
 		size_t entries = 0;
+		size_t names = 0;	// looked at, handed on or left out
 		std::wstring path;	// the name's, kept from name to name
 		std::string below;
-		while (!todo.empty() && !walk.stopped)
+		while (!todo.empty() && walk.stoppedAt.empty())
 		{
 			const Folder folder = std::move(todo.back());
 			todo.pop_back();
@@ -190,6 +191,11 @@ namespace TweaksV
 				{
 					if (wcscmp(found.cFileName, L".") == 0 || wcscmp(found.cFileName, L"..") == 0)
 						continue;
+					if (++names > limit * kModsNamesPerEntry)
+					{
+						walk.stoppedAt = std::to_string(limit * kModsNamesPerEntry) + " names, most of them too long or not valid Unicode";
+						break;
+					}
 					char name[kMaxModsPath + 1];
 					const int size = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, found.cFileName, -1, name, sizeof(name), nullptr, nullptr);
 					if (size <= 1)
@@ -217,7 +223,7 @@ namespace TweaksV
 					}
 					if (++entries > limit)
 					{
-						walk.stopped = true;
+						walk.stoppedAt = std::to_string(limit) + " files and folders";
 						break;
 					}
 					path.assign(folder.path).append(L"\\").append(found.cFileName);
@@ -227,7 +233,7 @@ namespace TweaksV
 					if (kind == ModsEntryKind::Folder)
 						todo.push_back({ path, below, folder.depth + 1 });
 				} while (NextName(find.handle, found, folder.path));
-				if (!walk.stopped)
+				if (walk.stoppedAt.empty())
 				{
 					// no more names, or a listing that failed half-way, which must not pass for the end of the folder
 					const DWORD error = GetLastError();

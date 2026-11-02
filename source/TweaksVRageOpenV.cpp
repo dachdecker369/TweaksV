@@ -217,7 +217,7 @@ namespace TweaksV
 			size_t unreadable = 0;				// folders that could not be listed, or not to their end
 			DWORD firstError = ERROR_SUCCESS;	// why the first of them, or the mods folder itself, could not be
 			bool rootUnreadable = false;
-			bool full = false;					// the list stopped at kMaxModsEntries
+			std::string stoppedAt;				// the limit that stopped the list, for its problem; empty if none did
 		};
 
 		// A name of the walk: a file or folder goes into the list as the lookups spell it, a name left out and a folder
@@ -255,7 +255,7 @@ namespace TweaksV
 		// UTF-8, as the game asks for its files on every Windows. A name that is not valid Unicode - an unpaired
 		// surrogate, which UTF-8 cannot spell - or whose path is longer than the limit is left out and counted:
 		// the game could not ask for it. A folder at the depth limit, and one that cannot be listed, or not to
-		// its end, is counted and the reading goes on; only the entry limit ends it.
+		// its end, is counted and the reading goes on; only the walk's limits end it.
 		ModsFolderRead ReadModsFolder()
 		{
 			ModsFolderRead read;
@@ -267,7 +267,7 @@ namespace TweaksV
 				read.rootUnreadable = true;
 				read.firstError = walk.rootError;
 			}
-			read.full = walk.stopped;
+			read.stoppedAt = walk.stoppedAt;
 			read.entries = g_modsList->size();
 			return read;
 		}
@@ -462,8 +462,8 @@ namespace TweaksV
 			if (leftOut)
 				WriteLog(kTag, LeftOutLine(read));
 			const auto partly = [](const std::string& why) { ReportFailure(kTag, "Only part of the mods folder is used this session: " + why); };
-			if (read.full)
-				partly("the list stopped at " + std::to_string(ModsEntryLimit()) + " files and folders.");
+			if (!read.stoppedAt.empty())
+				partly("the list stopped at " + read.stoppedAt + ".");
 			if (read.tooDeep)
 				partly(Folders(read.tooDeep) + " deeper than " + std::to_string(kMaxModsDepth) + " levels " + (read.tooDeep == 1 ? "was" : "were") +
 					" skipped.");

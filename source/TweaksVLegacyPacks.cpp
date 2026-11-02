@@ -220,7 +220,7 @@ namespace TweaksV
 			uint64_t foldersNotRead = 0;	// the walk could not list them, or not to their end
 			uint64_t archives = 0;
 			uint64_t tableBytes = 0;
-			bool walkStopped = false;		// at the walk's limit, where RageOpenV's list stops
+			std::string walkStoppedAt;		// the walk's limit that stopped it, where RageOpenV's list stops; empty if none did
 			bool limitReached = false;		// at kMaxTableBytes: every pack from there on is not checked
 			std::vector<std::string> legacyNamed;		// the first kMaxNamed of each, for the problem
 			std::vector<std::string> notCheckedNamed;
@@ -550,8 +550,8 @@ namespace TweaksV
 			}
 			if (check.foldersNotRead > 0)
 				line += ", " + Folders(check.foldersNotRead) + " could not be read";
-			if (check.walkStopped)
-				line += " - the walk stopped at " + std::to_string(ModsEntryLimit()) + " files and folders, where RageOpenV's list stops";
+			if (!check.walkStoppedAt.empty())
+				line += " - the walk stopped at " + check.walkStoppedAt + ", where RageOpenV's list stops";
 			WriteLog(kTag, line + ".");
 		}
 
@@ -568,7 +568,7 @@ namespace TweaksV
 					check.diagnostic = IsDiagnosticMode();
 					const ULONGLONG started = GetTickCount64();
 					const ModsWalk walk = WalkModsFolder(g_root.c_str(), { &check, &PackEntry, &CheckFolderPacks });
-					check.walkStopped = walk.stopped;
+					check.walkStoppedAt = walk.stoppedAt;
 					if (walk.rootError != ERROR_SUCCESS)	// RageOpenV has just listed it, so the check cannot say it found nothing
 						ReportFailure(kTag, "The check for packs made for GTA V Legacy is not done this session: the mods folder could not be read (" +
 							DescribeError(walk.rootError) + ").");

@@ -22,6 +22,7 @@ namespace TweaksV
 	constexpr size_t kMaxModsPath = kMaxPathText - kModsPrefixSize;
 	constexpr size_t kMaxFolded = 3 * kMaxModsPath;	// what the fold can make of kMaxModsPath bytes: 3 bytes of UTF-8 per UTF-16 unit
 	constexpr size_t kMaxModsEntries = 200000;		// files and folders a walk hands on at most (ModsEntryLimit)
+	constexpr size_t kModsNamesPerEntry = 4;		// names a walk looks at at most, handed on or left out, per file or folder it may hand on
 	constexpr size_t kMaxModsDepth = 32;			// folders deep, the mods folder the first
 
 	// The files and folders a walk hands on at most: kMaxModsEntries - in test builds TWEAKSV_TEST_MODS_ENTRIES=<n> in the
@@ -84,14 +85,16 @@ namespace TweaksV
 	struct ModsWalk
 	{
 		DWORD rootError = ERROR_SUCCESS;	// why the folder walked could not be listed: nothing was handed on
-		bool stopped = false;				// the walk stopped at ModsEntryLimit() files and folders
+		std::string stoppedAt;				// the limit that ended the walk, for the lines that say so ("200000 files and folders"); empty if none did
 	};
 
 	// Walks root, kModsRoot unless a test asks otherwise, on the calling thread: a folder's names in the order Windows lists
 	// them, then the folders it holds, each folder listed pushed and the last pushed read next, so that every walk of one
 	// folder comes to its names in one order. A name that is not valid Unicode, whose path below root is longer than
-	// kMaxModsPath bytes or that the fold refuses is left out, not counted: the game cannot ask for it. Every other name
-	// counts, one spelled like an earlier name too, and the first past ModsEntryLimit() ends the walk, not handed on. A
+	// kMaxModsPath bytes or that the fold refuses is left out, not counted against the limit: the game cannot ask for it.
+	// Every other name counts, one spelled like an earlier name too, and the first past ModsEntryLimit() ends the walk, not
+	// handed on. So that the disk does not bound a folder of names left out, every name counts against a second limit,
+	// kModsNamesPerEntry times the first, and the first past it ends the walk the same way. A
 	// folder at depth kMaxModsDepth is handed on, but what it holds is not read; a folder that cannot be listed is handed on
 	// again as such and the walk goes on - only root ends it, in rootError; a folder that holds nothing, not even "."
 	// (ERROR_FILE_NOT_FOUND: a drive's root behind a junction), is empty. A listing that fails half-way, with any error but

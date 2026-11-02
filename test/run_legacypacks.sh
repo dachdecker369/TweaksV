@@ -216,5 +216,18 @@ fresh_ini; out=$(other_game lpwait); for n in 01 02 03 04 05 06 07 08 09 10 11; 
 check "eleven such folders: a line each, the problem names ten and counts the rest, in the plural; the last line counts all" "[ \$(count 'could not be read (Windows error 5, access denied) - $packs_read_later') -eq 11 ] && log_line 'PROBLEM: 11 folders in the mods folder could not be read, so the packs in them were not all checked for GTA V Legacy versions (TweaksV.log says why): .*, and 1 more\.\$' && log_line 'Packs checked for GTA V Legacy versions: none in the folders read, 11 folders could not be read\.\$' && one_box"
 rm -rf other; packs_gone
 
+echo "== L20 names left out count against a second limit, 4 times the walk's, lowered with it by TWEAKSV_TEST_MODS_ENTRIES: 12 names, the 13th ends the walk, for RageOpenV's list and the check alike"
+# the mods folder's names first, the long ones and test, then test's one file: with 3 files and folders the walk may look at
+# 12 names, so 10 long ones leave room for test/file.txt and 11 do not
+long_names() { for n in $(seq -w 1 "$1"); do touch "mods/$n$(printf 'a%.0s' $(seq 1 253))"; done; }
+packs_gone; long_names 10; fresh_ini; out=$(TWEAKSV_TEST_MODS_ENTRIES=3 ASI=TweaksV_test.asi game full_game.exe rovask test/file.txt lpwait)
+check "12 names, 10 of them left out: nothing stopped, the left out counted as before, test/file.txt served" "has '$DONE' && log_has 'The mods folder has 2 files and folders\.' && log_has 'Names in the mods folder left out of the list: 10 whose path is longer than 254 bytes\.' && has 'ask 1 served 8/8 passed 0/8' && log_lacks 'stopped at' && log_line 'Packs checked for GTA V Legacy versions: none in the mods folder\.\$'"
+packs_gone; long_names 11; fresh_ini; out=$(TWEAKSV_TEST_MODS_ENTRIES=3 ASI=TweaksV_test.asi game full_game.exe rovask test/file.txt lpwait)
+check "the 13th name ends the walk: RageOpenV's problem says at what, test/file.txt not served" "has '$DONE' && log_has 'PROBLEM: Only part of the mods folder is used this session: the list stopped at 12 names, most of them too long or not valid Unicode\.' && has 'ask 1 served 0/8 passed 8/8' && log_has 'The mods folder has 1 files and folders\.'"
+check "the check stops at the same name, and its last line says so" "log_line 'Packs checked for GTA V Legacy versions: none in the mods folder - the walk stopped at 12 names, most of them too long or not valid Unicode, where RageOpenV.s list stops\.\$'"
+packs_gone; long_names 11; fresh_ini; out=$(TWEAKSV_TEST_MODS_ENTRIES=3 game full_game.exe rovask test/file.txt lpwait)
+check "the Release build keeps the limit of 200000 and 800000 names: nothing stopped" "has '$DONE' && log_lacks 'stopped at' && has 'ask 1 served 8/8 passed 0/8'"
+packs_gone
+
 echo
 echo "LEGACY PACKS SCENARIOS: $pass passed, $fail failed"
