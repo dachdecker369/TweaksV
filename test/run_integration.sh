@@ -543,5 +543,26 @@ check "the start-up's problem in the summary's box, its heading and last line; t
 fresh_ini; out=$(TWEAKSV_TEST_GUARD_ROOM=1 ASI=TweaksV_test.asi game full_game.exe wcmount)
 check "ERROR_POPUP=0: the finding logged, no box, its line says so" "log_has 'PROBLEM: Weapon component files are refused this session' && log_line 'Finding not shown (ERROR_POPUP=0): 1 finding(s), see above\.\$' && log_lacks 'message box not shown' && log_lacks 'Start-up summary not shown'"
 
+echo "== I20 Windows refuses a new thread, the test build's TWEAKSV_TEST_REFUSE_THREAD: the start-up summary's thread and the late reports' tried again with the next problem"
+SUMMARY_REFUSED='The start-up summary thread could not be started (Windows error 8'
+first_line() { tr -d '\r' < TweaksV.log | grep -n -- "$1" | head -n 1 | cut -d: -f1; }
+late_ini; setkey HEAP_SIZE 5000; out=$(TWEAKSV_TEST_REFUSE_THREAD='1 start-up summary' ASI=TweaksV_test.asi game full_game.exe latefailures 1)
+check "the first start refused, said once; the next problem starts it: one summary of both, in the summary's box, no box of a part that stopped working" "[ \$(count 'TEST BUILD: Windows refuses the first 1 start(s) of the start-up summary thread (TWEAKSV_TEST_REFUSE_THREAD=1 start-up summary)\.') -eq 1 ] && [ \$(count '$SUMMARY_REFUSED') -eq 1 ] && [ \$(count 'Showing the start-up summary (2 problem(s))\.') -eq 1 ] && [ \$(count '$SUMMARY_BOX') -eq 1 ] && log_lacks 'after the start-up summary'"
+check "said as it happened: the refusal, then the next problem, then the summary" "[ \$(first_line '$SUMMARY_REFUSED') -lt \$(first_line '$NOT_SAVED') ] && [ \$(first_line '$NOT_SAVED') -lt \$(first_line 'Showing the start-up summary') ]"
+late_ini; setkey HEAP_SIZE 5000; out=$(TWEAKSV_TEST_REFUSE_THREAD='2 start-up summary' ASI=TweaksV_test.asi game full_game.exe latefailures 2)
+check "refused again with the next problem: said again, the one after it starts it, with all three" "[ \$(count '$SUMMARY_REFUSED') -eq 2 ] && [ \$(count 'Showing the start-up summary (3 problem(s))\.') -eq 1 ] && [ \$(count '$SUMMARY_BOX') -eq 1 ]"
+late_ini; out=$(TWEAKSV_TEST_REFUSE_THREAD='1 start-up summary' ASI=TweaksV_test.asi game full_game.exe latefailures 1)
+check "nothing to report at the start: the next problem alone in the summary's box" "[ \$(count '$SUMMARY_REFUSED') -eq 1 ] && [ \$(count 'Showing the start-up summary (1 problem(s))\.') -eq 1 ] && [ \$(count '$SUMMARY_BOX') -eq 1 ]"
+late_ini; setkey HEAP_SIZE 5000; out=$(TWEAKSV_TEST_REFUSE_THREAD='1 start-up summary' TWEAKSV_TEST_GUARD_ROOM=1 ASI=TweaksV_test.asi game full_game.exe wcmount)
+check "a finding is a next problem too: the summary's thread tried again for the start-up's problem, the finding in a box of its own" "[ \$(count '$SUMMARY_REFUSED') -eq 1 ] && [ \$(count 'Showing the start-up summary (1 problem(s))\.') -eq 1 ] && [ \$(count '$SUMMARY_BOX') -eq 1 ] && [ \$(count '$REFUSED_BOX') -eq 1 ]"
+late_ini; setkey HEAP_SIZE 5000; out=$(TWEAKSV_TEST_REFUSE_THREAD='1 start-up summary' ASI=TweaksV_test.asi game full_game.exe)
+check "no next problem: the start-up's problem stands in the log, which says why no box came" "log_has 'PROBLEM: TweaksV.ini: \[HEAP_ADJUSTER\] HEAP_SIZE=5000' && [ \$(count '$SUMMARY_REFUSED') -eq 1 ] && log_lacks 'Showing the start-up summary' && log_lacks 'message box not shown'"
+late_ini; out=$(TWEAKSV_TEST_REFUSE_THREAD='1 late report' ASI=TweaksV_test.asi game full_game.exe latefailures 2)
+check "the late reports' thread refused: said once; the next problem starts it, with both in its one box" "[ \$(count 'The late report thread could not be started (Windows error 8') -eq 1 ] && [ \$(count 'Showing a problem after the start-up summary (2 problem(s))\.') -eq 1 ] && [ \$(count '$PART_BOX') -eq 1 ]"
+late_ini; setkey HEAP_SIZE 5000; out=$(TWEAKSV_TEST_REFUSE_THREAD='0 start-up summary' ASI=TweaksV_test.asi game full_game.exe)
+check "a number outside 1..9 is not taken: nothing refused, no line, the summary at once" "log_lacks 'TWEAKSV_TEST_REFUSE_THREAD' && log_lacks 'could not be started' && log_has 'Showing the start-up summary (1 problem(s))\.'"
+fresh_ini; setkey HEAP_SIZE 5000; out=$(TWEAKSV_TEST_REFUSE_THREAD='1 start-up summary' game full_game.exe)
+check "the Release build ignores the switch: nothing refused, no line, the summary at once" "log_lacks 'TWEAKSV_TEST_REFUSE_THREAD' && log_lacks 'could not be started' && log_has 'Start-up summary not shown (ERROR_POPUP=0): 1 problem(s), see above\.'"
+
 echo
 echo "INTEGRATION SCENARIOS: $pass passed, $fail failed"

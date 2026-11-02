@@ -33,6 +33,7 @@ namespace TweaksV
 	// and there is something to report. Shown at most once. Never call it from DllMain.
 	void ShowStartupSummary();
 
-	// The same, from a worker thread - safe to start from DllMain.
+	// The same, from a worker thread - safe to start from DllMain. If that thread cannot start, the next problem reported
+	// tries again.
 	void ShowStartupSummaryLater();
 }

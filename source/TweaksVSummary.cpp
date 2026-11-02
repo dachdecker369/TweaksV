@@ -24,6 +24,7 @@ namespace TweaksV
 		std::vector<std::string> g_items;
 		size_t g_dropped = 0;
 		LONG g_shown = 0;
+		bool g_summaryDue = false;		// under g_lock: the summary's thread has been asked for and has not started
 
 		// A report outside the start-up summary, which a thread of its own shows: its box's heading and last line, what the log
 		// calls one and its count, and what waits for its box.
@@ -160,6 +161,18 @@ namespace TweaksV
 			FreeLibraryAndExitThread(static_cast<HMODULE>(module), 0);
 		}
 
+		// The next problem reported, once it is recorded: the start-up summary's thread tried again, if it could not start.
+		void TrySummaryAgain()
+		{
+			bool due = false;
+			{
+				ExclusiveLock lock(g_lock);
+				due = g_summaryDue;
+			}
+			if (due)
+				ShowStartupSummaryLater();
+		}
+
 		// An item for the report's box; LateThread, unless it runs, is started for it. If it cannot start, the item waits for
 		// the next one, which tries again.
 		void AddLate(LateReport& report, const std::string& item)
@@ -180,6 +193,36 @@ namespace TweaksV
 				g_lateThread = false;
 			}
 		}
+
+#ifdef TWEAKSV_TEST_BUILD
+		// test builds only: TWEAKSV_TEST_REFUSE_THREAD=<n> <what> in the environment (n 1..9) has Windows' refusal of a new thread
+		// come for the first n starts of the thread StartModuleThread names what, read once and said once, so that a suite
+		// reaches what comes of a thread that cannot start (SPECIFICATIONS 13.1).
+		bool ThreadRefused(const char* what)
+		{
+			struct Refusal
+			{
+				std::string what;
+				LONG left = 0;
+			};
+			static Refusal refusal = []
+			{
+				wchar_t text[64]{};
+				const DWORD length = GetEnvironmentVariableW(L"TWEAKSV_TEST_REFUSE_THREAD", text, 64);
+				if (length < 3 || length >= 64 || text[0] < L'1' || text[0] > L'9' || text[1] != L' ')
+					return Refusal{};
+				const std::string value = ToUtf8(text);
+				Refusal made{ value.substr(2), text[0] - L'0' };
+				WriteLog("TweaksV", "TEST BUILD: Windows refuses the first " + std::to_string(made.left) + " start(s) of the " + made.what +
+					" thread (TWEAKSV_TEST_REFUSE_THREAD=" + value + ").");
+				return made;
+			}();
+			if (refusal.what != what || InterlockedDecrement(&refusal.left) < 0)
+				return false;
+			SetLastError(ERROR_NOT_ENOUGH_MEMORY);
+			return true;
+		}
+#endif
 	}
 
 	bool StartModuleThread(LPTHREAD_START_ROUTINE thread, const char* what)
@@ -193,7 +236,11 @@ namespace TweaksV
 		}
 		// Allowed inside DllMain as long as DllMain does not wait for the thread: it starts
 		// running once the loader lock is released.
+#ifdef TWEAKSV_TEST_BUILD
+		const HANDLE handle = ThreadRefused(what) ? nullptr : CreateThread(nullptr, 0, thread, module, 0, nullptr);
+#else
 		const HANDLE handle = CreateThread(nullptr, 0, thread, module, 0, nullptr);
+#endif
 		if (!handle)
 		{
 			const DWORD error = GetLastError();
@@ -210,6 +257,7 @@ namespace TweaksV
 		WriteLog(plugin, "PROBLEM: " + what);
 
 		const std::string item = std::string("[") + plugin + "] " + what;	// built outside the lock: it can throw
+		bool late = true;
 		{
 			ExclusiveLock lock(g_lock);
 			if (InterlockedCompareExchange(&g_shown, 0, 0) == 0)	// the start-up summary is still to come
@@ -218,16 +266,19 @@ namespace TweaksV
 					g_items.push_back(item);
 				else
 					++g_dropped;
-				return;
+				late = false;
 			}
 		}
-		AddLate(g_late[kPartStopped], item);
+		if (late)
+			AddLate(g_late[kPartStopped], item);
+		TrySummaryAgain();
 	}
 
 	void ReportFinding(const char* plugin, Finding finding, const std::string& what)
 	{
 		WriteLog(plugin, "PROBLEM: " + what);
 		AddLate(g_late[static_cast<size_t>(finding)], std::string("[") + plugin + "] " + what);
+		TrySummaryAgain();
 	}
 
 	void ShowStartupSummary()
@@ -260,6 +311,14 @@ namespace TweaksV
 
 	void ShowStartupSummaryLater()
 	{
-		StartModuleThread(SummaryThread, "start-up summary");
+		{
+			ExclusiveLock lock(g_lock);
+			g_summaryDue = true;
+		}
+		if (StartModuleThread(SummaryThread, "start-up summary"))
+		{
+			ExclusiveLock lock(g_lock);
+			g_summaryDue = false;
+		}
 	}
 }
