@@ -144,6 +144,7 @@
     <ClCompile Include="TweaksVPackfileLimit.cpp" />
     <ClCompile Include="TweaksVPatch.cpp" />
     <!-- [ped pool] -->
+    <ClCompile Include="TweaksVPedPool.cpp" />
     <ClCompile Include="TweaksVPedProps.cpp" />
     <ClCompile Include="TweaksVRageOpenV.cpp" />
     <ClCompile Include="TweaksVRayTracing.cpp" />
@@ -202,6 +203,7 @@
     <ClInclude Include="TweaksVPatch.h" />
     <ClInclude Include="TweaksVPatterns.h" />
     <!-- [ped pool] -->
+    <ClInclude Include="TweaksVPedPool.h" />
     <ClInclude Include="TweaksVPedProps.h" />
     <ClInclude Include="TweaksVRageOpenV.h" />
     <ClInclude Include="TweaksVRayTracing.h" />

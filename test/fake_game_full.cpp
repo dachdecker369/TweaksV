@@ -511,6 +511,42 @@
 //                  O-E-V7, O-E-P6 or O-E-V5 elsewhere, whole, but for where the others have it
 //   popgateedge    with rtjumpunread, whose page it borrows: O-E-P2 so near that page's end that what is read past the match cannot be
 // [ped pool]
+// The ped pool (TweaksVPedPool): its sites are in every run, read by nothing but TweaksV; the pool itself only as asked:
+//   pprun          the pool made once TweaksV has started, behind the game's obfuscation: 171 peds in use and 165 in the spatial array for 2.5 s, past a
+//                  sample of the module's, then 143 and 139 - 12 mission peds, 4 waiting for reuse, 2 that every loop skips, the free slots' stale bytes misleading
+//   ppfull         with pprun: 256 in use in those 2.5 s
+//   ppspatialover  with pprun: 300 in the spatial array of 300 in those 2.5 s
+//   ppmore         with pprun: 11 s later 150 in use and 140 in the spatial array, then 3 s more
+//   pplate         with pprun: the pool made 11 s later, then 3 s more past its settling
+//   ppnumber       with pprun: the game's number of peds 300, the pool 256
+//   ppstride       with pprun: slots of 0x1000 bytes
+//   ppcountzero, ppcountbig
+//                  with pprun: the pool's count 0, or 20000
+//   ppinusebig     with pprun: more in use than the pool has slots
+//   ppnoflags, ppnopeds
+//                  with pprun: the flags, or the slots, on a page that cannot be read
+//   ppnospatial, ppbadspatial
+//                  with pprun: the spatial array not made, or its count past its capacity
+//   ppfreed, ppgone
+//                  with pprun: the pool's head freed when it settles, or the page of the data that holds its pointer no longer readable
+// A site or a field not as the research found it, each on its own - no fake code runs any of them but the accessor, which these leave alone or the pool is not made:
+//   ppflagout, ppvalueodd, ppkeysno  the accessor's flag outside the image, its value not aligned, its keys on a page that cannot be read
+//   ppproxyout     the maker's proxy outside the image
+//   pplookupout    the pool's lookup call outside the image
+//   ppfilelookup, ppintelligence
+//                  the number's, or PedIntelligence's, lookup call to another function of the game
+//   ppsetterout, ppsetterbytes, ppnumberodd
+//                  the setter's call outside the image, the setter holding other bytes, the number not aligned
+//   ppstore, ppspatialout
+//                  the spatial array's store holding other bytes, its pointer outside the image
+//   ppcountout, ppcapodd
+//                  a count outside the image, a cap not aligned
+//   ppgetterout, ppgetters
+//                  the copy's first getter call outside the image, its two calls to two functions
+//   ppresetout, ppfiller, ppfillerout
+//                  the timeslice list's count outside the image, the reset's call to another function, the filler's call outside the image
+//   pprestore, pppointer
+//                  the priority function's restore holding other bytes, its pointer to another
 // The pool memory budget (HeapAdjuster, H-E2): its set-up runs once TweaksV has started, as the game's does, and hands its constructor what the
 // site holds; then the game's load, an 8 MB block and 120 pools of 1 MB, one given back, charged as the game's allocator charges them:
 //   pmraised       the site already holds 200 MB (another mod ran first)
@@ -1240,6 +1276,28 @@ static Site g_popSites[] = { SITE(g_popContext, 0), SITE(g_popPedGetter, 0), SIT
 	SITE(g_popExtraStores, 0), SITE(g_popExtraCall, 0), SITE(g_popTwin, 0) };
 constexpr size_t kPopSites = sizeof(g_popSites) / sizeof(g_popSites[0]);
 // [ped pool]
+// The ped pool's sites as the game holds them, N-E-A1 to N-E-D6. The accessor has a tail, mov rax, rdx; ret, so that the fake runs it over its own encoding.
+volatile unsigned char g_ppAccessor[] = { 0x0F, 0xB6, 0x05, 0, 0, 0, 0, 0xA8, 0x01, 0x75, 0x03, 0x31, 0xC0, 0xC3, 0x48, 0x8B, 0x0D, 0, 0, 0, 0, 0x48, 0xC1, 0xC1, 0x1E, 0x48, 0x8B, 0x15, 0, 0, 0, 0,
+	0x48, 0x31, 0xCA, 0x48, 0xC1, 0xC2, 0x20, 0x80, 0xE1, 0x1F, 0x80, 0xC1, 0x02, 0x48, 0xD3, 0xC2, 0x48, 0xF7, 0xD2, 0x48, 0x89, 0xD0, 0xC3 };
+volatile unsigned char g_ppMaker[] = { 0x48, 0x8D, 0x05, 0, 0, 0, 0, 0x48, 0x89, 0x44, 0x24, 0x28, 0xC7, 0x44, 0x24, 0x20, 0x80, 0x19, 0x00, 0x00 };
+volatile unsigned char g_ppPoolLookup[] = { 0xBA, 0x17, 0x21, 0xA1, 0x8D, 0x41, 0x89, 0xD8, 0xE8, 0, 0, 0, 0, 0x89, 0xC3 };
+volatile unsigned char g_ppFileValue[] = { 0xBA, 0x17, 0x21, 0xA1, 0x8D, 0x41, 0xB8, 0x01, 0x00, 0x00, 0x00, 0xE8, 0, 0, 0, 0, 0x89, 0xC1, 0xE8, 0, 0, 0, 0 };
+volatile unsigned char g_ppSetter[] = { 0x89, 0x0D, 0, 0, 0, 0, 0xC3 };
+volatile unsigned char g_ppIntelligence[] = { 0xBA, 0x84, 0xC5, 0x4A, 0x39, 0x41, 0x89, 0xD8, 0xE8, 0, 0, 0, 0, 0x89, 0xC3 };
+volatile unsigned char g_ppSpatial[70] = { 0x48, 0x63, 0x72, 0x18, 0x48, 0x83, 0xC6, 0x03, 0x48, 0x83, 0xE6, 0xFC };
+volatile unsigned char g_ppCounters[] = { 0x8B, 0x05, 0, 0, 0, 0, 0x8B, 0x0D, 0, 0, 0, 0, 0x8B, 0x35, 0, 0, 0, 0, 0x8B, 0x3D, 0, 0, 0, 0, 0x44, 0x89, 0x74, 0x24, 0x50 };
+volatile unsigned char g_ppCaps[] = { 0xF3, 0x0F, 0x2C, 0xC2, 0x89, 0x05, 0, 0, 0, 0, 0xF3, 0x0F, 0x59, 0xC1, 0xF3, 0x0F, 0x2C, 0xC0, 0x89, 0x05, 0, 0, 0, 0, 0x66, 0x0F, 0x7E, 0x3D, 0, 0, 0, 0 };
+volatile unsigned char g_ppCopy[] = { 0x8B, 0x3A, 0xE8, 0, 0, 0, 0, 0x39, 0xC7, 0x7D, 0x04, 0x8B, 0x03, 0xEB, 0x05, 0xE8, 0, 0, 0, 0, 0x89, 0x46, 0x10, 0x8B, 0x03, 0x31, 0xFF, 0x85, 0xC0, 0x0F, 0x4F, 0xF8, 0x89, 0x7E, 0x10 };
+volatile unsigned char g_ppReset[] = { 0x66, 0xC7, 0x05, 0, 0, 0, 0, 0x00, 0x00, 0xE8, 0, 0, 0, 0, 0x44, 0x0F, 0xB7, 0x05 };
+volatile unsigned char g_ppFiller[] = { 0x53, 0x55, 0x56, 0x57, 0x90, 0x48, 0x81, 0xEC, 0x28, 0x0C, 0x00, 0x00, 0x48, 0x8D, 0x8C, 0x24, 0x20, 0x08, 0x00, 0x00, 0x48, 0x8D, 0x94, 0x24, 0x20, 0x04, 0x00, 0x00,
+	0x4C, 0x8D, 0x44, 0x24, 0x20, 0xE8, 0, 0, 0, 0 };
+volatile unsigned char g_ppPriority[0x30F] = { 0xB8, 0x48, 0x10, 0x00, 0x00, 0xE8, 0, 0, 0, 0, 0x48, 0x29, 0xC4, 0x48, 0x8B, 0x05, 0, 0, 0, 0, 0x48, 0x63, 0x70, 0x5C };
+volatile unsigned char g_ppDirector[] = { 0xBA, 0x10, 0xD8, 0x5E, 0xCA, 0x41, 0xB8, 0x00, 0x04, 0x00, 0x00, 0xE8 };
+volatile unsigned char g_ppCreature[] = { 0xBA, 0xCA, 0x6C, 0x77, 0x36, 0x41, 0xB8, 0x00, 0x04, 0x00, 0x00, 0xE8 };
+volatile unsigned char g_ppMotionTree[] = { 0xBA, 0x7A, 0xEE, 0xAE, 0xCF, 0x41, 0xB8, 0x55, 0x09, 0x00, 0x00, 0xE8 };
+volatile unsigned char g_ppExpressions[] = { 0xBA, 0x46, 0x99, 0xC5, 0x3C, 0x41, 0xB8, 0xAA, 0x02, 0x00, 0x00, 0xE8 };
+volatile unsigned char g_ppRagDoll[] = { 0xBA, 0x29, 0xBB, 0x69, 0xBF, 0x41, 0xB8, 0x55, 0x01, 0x00, 0x00, 0xE8 };
+volatile unsigned char g_ppFacialRig[] = { 0xBA, 0xBE, 0x10, 0x0E, 0x21, 0x41, 0xB8, 0x55, 0x01, 0x00, 0x00, 0xE8 };
 // The pool memory budget's set-up in the game's start-up code, run as the game runs it, with room for its call around H-E2's bytes: sub rsp, 28h;
 // lea rcx, [the allocator]; lea rdx, [the heap]; mov r8d, 0x10000; mov r9d, 136 MB; call its constructor; add rsp, 28h; ret.
 constexpr size_t kPoolMemoryMatch = 4, kPoolMemoryAllocatorAt = kPoolMemoryMatch + 3, kPoolMemoryHeapAt = kPoolMemoryMatch + 10, kPoolMemoryBudgetAt = kPoolMemoryMatch + 22,
@@ -5530,6 +5588,218 @@ static void PopReport()
 		PopHashOfData() == g_popDataHash ? L"as placed" : L"CHANGED", rva(g_popObject), rva(t.vehicleStory), rva(t.pedStory), rva(g_popSetUp + kPopStart));
 }
 // [ped pool]
+// The ped pool's data, on pages of their own, at the game's layouts, and what the sites' calls lead to, which nothing runs: the pool, its slots and their flag bytes, the spatial
+// array; each ped's type, the flag every loop of the game skips it by, the flag of a ped waiting for reuse.
+struct PedPoolObject
+{
+	void* allocator;
+	unsigned char* slots;
+	unsigned char* flags;
+	int32_t count;
+	int32_t stride;
+	int32_t freeHead;
+	int32_t freeTail;
+	uint32_t inUse;			// the low 30 bits: the fake's top bits show that they are masked
+};
+static_assert(offsetof(PedPoolObject, slots) == 0x08 && offsetof(PedPoolObject, flags) == 0x10 && offsetof(PedPoolObject, count) == 0x18 && offsetof(PedPoolObject, stride) == 0x1C &&
+	offsetof(PedPoolObject, inUse) == 0x28, "the game's pool layout");
+struct PedPoolData
+{
+	uint64_t value;
+	uint64_t keys;
+	uint64_t spatial;
+	uint8_t flag;
+	uint16_t timesliceCount;
+	int32_t number;
+	int32_t ambientCars, ambientFoot, scenarioCars, scenarioFoot;
+	int32_t capFirst, capSecond, capScenario;
+};
+constexpr int32_t kPpSlots = 256, kPpStride = 0x1980;
+constexpr uint64_t kPpKeys = 0x0123456789ABCDEF;
+alignas(4096) static unsigned char g_ppDataPage[4096];
+alignas(4096) static unsigned char g_ppNoAccessPage[4096];
+static unsigned char g_ppAllocatorProxy[16];
+static const Site g_ppSites[] = { SITE(g_ppAccessor, 0), SITE(g_ppMaker, 0), SITE(g_ppPoolLookup, 0), SITE(g_ppFileValue, 0), SITE(g_ppSetter, 0), SITE(g_ppIntelligence, 0), SITE(g_ppSpatial, 0),
+	SITE(g_ppCounters, 0), SITE(g_ppCaps, 0), SITE(g_ppCopy, 0), SITE(g_ppReset, 0), SITE(g_ppFiller, 0), SITE(g_ppPriority, 0), SITE(g_ppDirector, 0), SITE(g_ppCreature, 0), SITE(g_ppMotionTree, 0),
+	SITE(g_ppExpressions, 0), SITE(g_ppRagDoll, 0), SITE(g_ppFacialRig, 0) };
+static unsigned char g_ppPlaced[4096];
+static PedPoolObject* g_ppPool = nullptr;
+static unsigned char* g_ppSlots = nullptr;
+static unsigned char* g_ppFlags = nullptr;
+static unsigned char* g_ppSpatialArray = nullptr;
+static uint64_t g_ppDecoded = 0;
+static PedPoolData* PedPool()
+{
+	return reinterpret_cast<PedPoolData*>(g_ppDataPage);
+}
+static void PedPoolGameFunction()
+{
+	wprintf(L"the ped pool's sites' calls lead here, and nothing runs them | ");
+}
+static void PedPoolSetRel32(volatile unsigned char* site, size_t size, size_t at, const void* target)
+{
+	SetRel32({ site, static_cast<int>(at), size }, target);
+}
+// Before TweaksV loads: the sites' operands as the options ask, then the sites' bytes as placed, and the page that cannot be read as they ask.
+static void PedPoolSetUpSites(int argc, wchar_t** argv)
+{
+	PedPoolData* const data = PedPool();
+	data->number = HasOption(argc, argv, L"ppnumber") ? 300 : kPpSlots;
+	const auto option = [argc, argv](const wchar_t* name) { return HasOption(argc, argv, name); };
+	const auto bytes = reinterpret_cast<const unsigned char*>(data);
+	const unsigned char* const outside = ImageEnd() + 0x77000;
+	const auto game = reinterpret_cast<const unsigned char*>(&PedPoolGameFunction);
+	const unsigned char* const other = game + 1;
+	const void* const flag = &data->flag;
+	const void* const value = &data->value;
+	const void* const keys = &data->keys;
+	const void* const number = &data->number;
+	const void* const spatial = &data->spatial;
+	const void* const scenarioFoot = &data->scenarioFoot;
+	const void* const capScenario = &data->capScenario;
+	const void* const count = &data->timesliceCount;
+
+	PedPoolSetRel32(g_ppAccessor, sizeof(g_ppAccessor), 3, option(L"ppflagout") ? outside : flag);
+	PedPoolSetRel32(g_ppAccessor, sizeof(g_ppAccessor), 17, option(L"ppkeysno") ? g_ppNoAccessPage : keys);
+	PedPoolSetRel32(g_ppAccessor, sizeof(g_ppAccessor), 28, option(L"ppvalueodd") ? bytes + offsetof(PedPoolData, value) + 4 : value);
+	PedPoolSetRel32(g_ppMaker, sizeof(g_ppMaker), 3, option(L"ppproxyout") ? outside : g_ppAllocatorProxy);
+	PedPoolSetRel32(g_ppPoolLookup, sizeof(g_ppPoolLookup), 9, option(L"pplookupout") ? outside : game);
+	PedPoolSetRel32(g_ppFileValue, sizeof(g_ppFileValue), 12, option(L"ppfilelookup") ? other : game);
+	PedPoolSetRel32(g_ppFileValue, sizeof(g_ppFileValue), 19, option(L"ppsetterout") ? outside : const_cast<const unsigned char*>(g_ppSetter));
+	PedPoolSetRel32(g_ppSetter, sizeof(g_ppSetter), 2, option(L"ppnumberodd") ? bytes + offsetof(PedPoolData, number) + 2 : number);
+	if (option(L"ppsetterbytes"))
+		g_ppSetter[sizeof(g_ppSetter) - 1] = 0xCC;
+	PedPoolSetRel32(g_ppIntelligence, sizeof(g_ppIntelligence), 9, option(L"ppintelligence") ? other : game);
+	for (size_t i = 12; i < 63; i++)
+		g_ppSpatial[i] = 0x90;
+	g_ppSpatial[63] = option(L"ppstore") ? 0x4C : 0x48;
+	g_ppSpatial[64] = 0x89;
+	g_ppSpatial[65] = 0x1D;
+	PedPoolSetRel32(g_ppSpatial, sizeof(g_ppSpatial), 66, option(L"ppspatialout") ? outside : spatial);
+	PedPoolSetRel32(g_ppCounters, sizeof(g_ppCounters), 2, &data->ambientCars);
+	PedPoolSetRel32(g_ppCounters, sizeof(g_ppCounters), 8, &data->ambientFoot);
+	PedPoolSetRel32(g_ppCounters, sizeof(g_ppCounters), 14, &data->scenarioCars);
+	PedPoolSetRel32(g_ppCounters, sizeof(g_ppCounters), 20, option(L"ppcountout") ? outside : scenarioFoot);
+	PedPoolSetRel32(g_ppCaps, sizeof(g_ppCaps), 6, &data->capFirst);
+	PedPoolSetRel32(g_ppCaps, sizeof(g_ppCaps), 20, &data->capSecond);
+	PedPoolSetRel32(g_ppCaps, sizeof(g_ppCaps), 28, option(L"ppcapodd") ? bytes + offsetof(PedPoolData, capScenario) + 2 : capScenario);
+	PedPoolSetRel32(g_ppCopy, sizeof(g_ppCopy), 3, option(L"ppgetterout") ? outside : game);
+	PedPoolSetRel32(g_ppCopy, sizeof(g_ppCopy), 16, option(L"ppgetters") ? other : game);
+	// the count's operand ends past its imm16, 2 bytes past the rel32
+	PedPoolSetRel32(g_ppReset, sizeof(g_ppReset), 3, (option(L"ppresetout") ? outside : static_cast<const unsigned char*>(count)) - 2);
+	PedPoolSetRel32(g_ppReset, sizeof(g_ppReset), 10, option(L"ppfiller") ? game : const_cast<const unsigned char*>(g_ppFiller));
+	PedPoolSetRel32(g_ppFiller, sizeof(g_ppFiller), 34, option(L"ppfillerout") ? outside : game);
+	for (size_t i = 24; i < 0x308; i++)
+		g_ppPriority[i] = 0x90;
+	static const unsigned char kRestore[] = { 0x48, 0x81, 0xC4, 0x48, 0x10, 0x00, 0x00 };
+	for (size_t i = 0; i < sizeof(kRestore); i++)
+		g_ppPriority[0x308 + i] = kRestore[i];
+	if (option(L"pprestore"))
+		g_ppPriority[0x30B] = 0x49;
+	PedPoolSetRel32(g_ppPriority, sizeof(g_ppPriority), 6, game);
+	PedPoolSetRel32(g_ppPriority, sizeof(g_ppPriority), 16, option(L"pppointer") ? &data->keys : spatial);
+
+	size_t at = 0;
+	for (const Site& site : g_ppSites)
+		for (size_t i = 0; i < site.size; i++)
+			g_ppPlaced[at++] = site.bytes[i];
+	DWORD old = 0;
+	if (option(L"ppkeysno") || option(L"ppnoflags") || option(L"ppnopeds"))
+		VirtualProtect(g_ppNoAccessPage, sizeof(g_ppNoAccessPage), PAGE_NOACCESS, &old);
+}
+// The peds as the game keeps them: the first 12 mission peds, of whom 2 more that every loop skips; 4 waiting for reuse; every free slot's bytes stale, as a mission ped's waiting for reuse.
+static void PedPoolSetInUse(uint32_t inUse, int32_t spatial, int argc, wchar_t** argv)
+{
+	const uint32_t slots = static_cast<uint32_t>(kPpSlots);
+	for (uint32_t i = 0; i < slots; i++)
+	{
+		unsigned char* const ped = g_ppSlots + static_cast<size_t>(i) * kPpStride;
+		const bool free = i >= inUse;
+		g_ppFlags[i] = free ? 0x8F : 0x0F;
+		const bool mission = free || i < 12;
+		const bool waiting = free || (i >= 12 && i < 16);
+		const bool skipped = !free && (i == 16 || i == 17);
+		ped[0xDA] = mission || i == 16 ? 0xF7 : 0xF9;		// 6 of bits 1 to 3 a mission ped's, the other bits set
+		ped[0x1091] = skipped ? 0xFF : 0xEF;				// bit 4 what every loop skips
+		ped[0x1468] = waiting || i == 17 ? 0xFF : 0xEF;		// bit 4 waiting for reuse
+	}
+	g_ppPool->inUse = (HasOption(argc, argv, L"ppinusebig") ? 257 : inUse) | 0xC0000000;
+	memcpy(g_ppSpatialArray + 0x5C, &spatial, sizeof(spatial));
+}
+static void PedPoolSetSpatialCapacity(int32_t capacity)
+{
+	memcpy(g_ppSpatialArray + 0x58, &capacity, sizeof(capacity));
+}
+// The pool made as the game makes it: its pointer obfuscated in the game's three fields, with the population's counts and caps.
+static void PedPoolMake(int argc, wchar_t** argv)
+{
+	PedPoolData* const data = PedPool();
+	g_ppPool = static_cast<PedPoolObject*>(VirtualAlloc(nullptr, 4096, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE));
+	g_ppSlots = static_cast<unsigned char*>(VirtualAlloc(nullptr, static_cast<size_t>(kPpSlots) * kPpStride, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE));
+	g_ppFlags = static_cast<unsigned char*>(VirtualAlloc(nullptr, kPpSlots, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE));
+	g_ppSpatialArray = static_cast<unsigned char*>(VirtualAlloc(nullptr, 0x60, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE));
+	g_ppPool->slots = HasOption(argc, argv, L"ppnopeds") ? g_ppNoAccessPage : g_ppSlots;
+	g_ppPool->flags = HasOption(argc, argv, L"ppnoflags") ? g_ppNoAccessPage : g_ppFlags;
+	g_ppPool->count = HasOption(argc, argv, L"ppcountzero") ? 0 : HasOption(argc, argv, L"ppcountbig") ? 20000 : kPpSlots;
+	g_ppPool->stride = HasOption(argc, argv, L"ppstride") ? 0x1000 : kPpStride;
+	PedPoolSetSpatialCapacity(HasOption(argc, argv, L"ppspatialover") ? 300 : kPpSlots);
+	data->scenarioFoot = 40;
+	data->scenarioCars = 2;
+	data->capScenario = 40;
+	data->ambientFoot = 61;
+	data->ambientCars = 18;
+	data->capFirst = 64;
+	data->capSecond = 16;
+	if (!HasOption(argc, argv, L"ppnospatial"))
+		data->spatial = reinterpret_cast<uintptr_t>(g_ppSpatialArray);
+	PedPoolSetInUse(HasOption(argc, argv, L"ppfull") ? kPpSlots : 171, HasOption(argc, argv, L"ppspatialover") ? 300 : HasOption(argc, argv, L"ppbadspatial") ? 500 : 165, argc, argv);
+	const uint64_t turned = _rotl64(kPpKeys, 30);
+	const int rotation = 32 + static_cast<int>(turned & 0x1F) + 2;
+	data->keys = kPpKeys;
+	data->value = _rotr64(~reinterpret_cast<uintptr_t>(g_ppPool), rotation) ^ turned;
+	data->flag = 0x81;
+	g_ppDecoded = reinterpret_cast<uint64_t (*)()>(const_cast<unsigned char*>(g_ppAccessor))();
+}
+// Once TweaksV has started, as the game makes the pool when its session starts.
+static void PedPoolActions(int argc, wchar_t** argv)
+{
+	if (!HasOption(argc, argv, L"pprun"))
+		return;
+	if (HasOption(argc, argv, L"pplate"))
+		Sleep(11000);
+	PedPoolMake(argc, argv);
+	Sleep(2500);
+	PedPoolSetInUse(143, HasOption(argc, argv, L"ppbadspatial") ? 500 : 139, argc, argv);
+	if (HasOption(argc, argv, L"ppfreed"))
+		VirtualFree(g_ppPool, 0, MEM_RELEASE);
+	if (HasOption(argc, argv, L"ppgone"))
+	{
+		DWORD old = 0;
+		VirtualProtect(g_ppDataPage, sizeof(g_ppDataPage), PAGE_NOACCESS, &old);
+	}
+	if (HasOption(argc, argv, L"ppmore"))
+	{
+		Sleep(11000);
+		PedPoolSetInUse(150, 140, argc, argv);
+	}
+	if (HasOption(argc, argv, L"ppmore") || HasOption(argc, argv, L"pplate"))
+		Sleep(3000);
+}
+// "ped pool: sites as placed, made, its accessor decodes it | " - the sites, which TweaksV must not change, and the pool, with what the game's own accessor makes of the fake's encoding.
+static void PedPoolReport()
+{
+	bool placed = true;
+	size_t at = 0;
+	for (const Site& site : g_ppSites)
+		for (size_t i = 0; i < site.size; i++)
+			placed = placed && site.bytes[i] == g_ppPlaced[at++];
+	wprintf(L"ped pool: sites %ls, ", placed ? L"as placed" : L"CHANGED");
+	if (g_ppPool)
+		wprintf(L"made, its accessor %ls | ", g_ppDecoded == reinterpret_cast<uintptr_t>(g_ppPool) ? L"decodes it" : L"does NOT decode it");
+	else
+		wprintf(L"not made | ");
+}
+
 // The allocator a pool's memory comes from, on a page of its own, as the constructor and the allocation of the game's lay it out, and the site as placed.
 static uint32_t Imm32(const Site& site);
 struct PoolMemoryAllocator
@@ -6163,6 +6433,7 @@ static void ForEachSite(void (*fn)(const Site&))
 	// [population]
 	for (const Site& site : g_popSites) fn(site);
 	// [ped pool]
+	for (const Site& site : g_ppSites) fn(site);
 	static Site poolMemorySite = SITE(g_poolMemorySite, 0);
 	fn(poolMemorySite);
 	// [render queues]
@@ -7756,6 +8027,7 @@ int wmain(int argc, wchar_t** argv)
 	// [population]
 	PopSetUp(argc, argv);
 	// [ped pool]
+	PedPoolSetUpSites(argc, argv);
 	PoolMemorySetUpSite(argc, argv);
 	// [render queues]
 
@@ -7919,6 +8191,7 @@ int wmain(int argc, wchar_t** argv)
 	// [population]
 	PopActions(argc, argv);
 	// [ped pool]
+	PedPoolActions(argc, argv);
 	PoolMemoryActions(argc, argv);
 	// [render queues]
 	if (HasOption(argc, argv, L"wait"))
@@ -8008,6 +8281,7 @@ int wmain(int argc, wchar_t** argv)
 	// [population]
 	PopReport();
 	// [ped pool]
+	PedPoolReport();
 	PoolMemoryReport();
 	// [render queues]
 	CheckStub(Rel32Target(g_packCallSite));

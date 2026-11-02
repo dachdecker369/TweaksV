@@ -72,6 +72,9 @@
       <Filter>TweaksV</Filter>
     </ClCompile>
     <!-- [ped pool] -->
+    <ClCompile Include="TweaksVPedPool.cpp">
+      <Filter>TweaksV</Filter>
+    </ClCompile>
     <ClCompile Include="TweaksVPedProps.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
@@ -201,6 +204,9 @@
       <Filter>TweaksV</Filter>
     </ClInclude>
     <!-- [ped pool] -->
+    <ClInclude Include="TweaksVPedPool.h">
+      <Filter>TweaksV</Filter>
+    </ClInclude>
     <ClInclude Include="TweaksVPedProps.h">
       <Filter>TweaksV</Filter>
     </ClInclude>

@@ -17,6 +17,7 @@
 #include "TweaksVLog.h"
 #include "TweaksVModkitLimit.h"
 #include "TweaksVPackfileLimit.h"
+#include "TweaksVPedPool.h"
 #include "TweaksVPedProps.h"
 #include "TweaksVPopulation.h"
 #include "TweaksVRageOpenV.h"
@@ -162,6 +163,7 @@ namespace TweaksV
 			// [population]
 			{ "Population", MeasurePopulation },
 			// [ped pool]
+			{ "PedPool", MeasurePedPool },
 			// [render queues]
 			{ "PedProps", MeasurePedPropsWhileOff },
 		};

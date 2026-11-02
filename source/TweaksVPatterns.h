@@ -295,6 +295,27 @@ namespace TweaksV
 		{ "O-E-P7", "69 BB FC 04 00 00 E8 03 00 00 B9 BD C5 AF E3 BA 5C 10 5F F4 E8 ? ? ? ? 48 89 F1 89 C2 41 89 F8 E8 ? ? ? ? 05 60 E3 16 00 89 05" },
 		{ "O-E-P8", "F2 0F 10 86 B4 00 00 00 0F 59 05 ? ? ? ? 0F 58 05 ? ? ? ? F3 0F 10 0D ? ? ? ? 0F 28 D0 0F C2 15 ? ? ? ? 01 66 0F 38 25 D2 66 0F 50 C2 F3 0F 10 15 ? ? ? ? 0F 28 DA A8 01 75 07 0F 28 D9 F3 0F 5D D8 F3 0F 11 1D" },
 		// [ped pool]
+		// The ped pool, measured first (TweaksVPedPool.cpp): for its reads the accessor, the maker, the lookups, the spatial array, the counts and caps; then the
+		// sites its writing half will rely on, the copy and the two frames of a fixed array and the anim director's family's six defaults
+		{ "N-E-A1", "0F B6 05 ? ? ? ? A8 01 75 03 31 C0 C3 48 8B 0D ? ? ? ? 48 C1 C1 1E 48 8B 15 ? ? ? ? 48 31 CA 48 C1 C2 20 80 E1 1F 80 C1 02 48 D3 C2 48 F7 D2" },
+		{ "N-E-M1", "48 8D 05 ? ? ? ? 48 89 44 24 28 C7 44 24 20 80 19 00 00" },
+		{ "N-E-M2", "BA 17 21 A1 8D 41 89 D8 E8 ? ? ? ? 89 C3" },
+		{ "N-E-C1", "BA 17 21 A1 8D 41 B8 01 00 00 00 E8 ? ? ? ? 89 C1 E8 ? ? ? ?" },
+		{ "N-E-I1", "BA 84 C5 4A 39 41 89 D8 E8 ? ? ? ? 89 C3" },
+		{ "N-E-S1", "48 63 72 18 48 83 C6 03 48 83 E6 FC" },
+		{ "N-E-K1", "8B 05 ? ? ? ? 8B 0D ? ? ? ? 8B 35 ? ? ? ? 8B 3D ? ? ? ? 44 89 74 24 50" },
+		{ "N-E-K2", "F3 0F 2C C2 89 05 ? ? ? ? F3 0F 59 C1 F3 0F 2C C0 89 05 ? ? ? ? 66 0F 7E 3D ? ? ? ?" },
+		{ "N-E-R1", "8B 3A E8 ? ? ? ? 39 C7 7D 04 8B 03 EB 05 E8 ? ? ? ? 89 46 10 8B 03 31 FF 85 C0 0F 4F F8 89 7E 10" },
+		{ "N-E-R2", "66 C7 05 ? ? ? ? 00 00 E8 ? ? ? ? 44 0F B7 05" },
+		{ "N-E-R3", "48 81 EC 28 0C 00 00 48 8D 8C 24 20 08 00 00 48 8D 94 24 20 04 00 00 4C 8D 44 24 20 E8" },
+		{ "N-E-R4", "B8 48 10 00 00 E8 ? ? ? ? 48 29 C4 48 8B 05 ? ? ? ? 48 63 70 5C" },
+		{ "N-E-D1", "BA 10 D8 5E CA 41 B8 00 04 00 00 E8" },
+		{ "N-E-D2", "BA CA 6C 77 36 41 B8 00 04 00 00 E8" },
+		{ "N-E-D3", "BA 7A EE AE CF 41 B8 55 09 00 00 E8" },
+		{ "N-E-D4", "BA 46 99 C5 3C 41 B8 AA 02 00 00 E8" },
+		{ "N-E-D5", "BA 29 BB 69 BF 41 B8 55 01 00 00 E8" },
+		{ "N-E-D6", "BA BE 10 0E 21 41 B8 55 01 00 00 E8" },
+
 		// [render queues]
 	};
 

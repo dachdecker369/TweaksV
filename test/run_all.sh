@@ -40,6 +40,7 @@ SUITES=(
 	# [population]
 	population
 	# [ped pool]
+	pedpool
 	# [render queues]
 	integration
 )

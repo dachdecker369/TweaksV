@@ -77,6 +77,8 @@ The second relies on Windows, not on the game: a classic replace-rename reaches 
      Entry 0 of each table, 1,500,000, and the level's first value, 3, in `.data`: the first tables' line and summary show them.
      The floor of 9 models and of 6, the frame gates and the 64 frames: behaviour, which TweaksV does not read.
    <!-- [ped pool] -->
+   - **Ped pool:** the pool's layout and the high 2 bits of its +0x28; the spatial array's offsets, +0x28, +0x30 and +0x38 x, y and z, +0x40 and +0x48 the node's address's parts, +0x50 flags, +0x58 capacity, +0x5C count, set in 0x11682D0; that no other function holds a list by the spatial array's count, so every read of +0x5C after a load of its pointer; the sizes of the fixed arrays, the singleton's offsets in 0x1D90620, +0x20 and +0x1020, the filler's three arrays, 1,024 in the six methods and 0x1164D40; the ped's offsets the measurement reads; that the pool's size never passes the number.
+     A change in any of them leaves the measurement's numbers wrong without an error, or a raise's limits unmet.
    - **A pool's memory:** the allocator's offsets (below, "A pool's memory"), which the pool memory's line reads and only its budget and the sum of its use and room check, and that the pools' proxy leads to that allocator, slot 5 of the master allocator (0x36D90, and 0x13CB90 with slot 5 in the start-up).
    <!-- [render queues] -->
 
@@ -771,6 +773,51 @@ The 16 patterns, looked for only with `DIAGNOSTIC_MODE=1`, each once and at the 
 | O-E-P8 | `F2 0F 10 86 B4 00 00 00 0F 59 05 ? ? ? ? 0F 58 05 ? ? ? ? F3 0F 10 0D ? ? ? ? 0F 28 D0 0F C2 15 ? ? ? ? 01 66 0F 38 25 D2 66 0F 50 C2 F3 0F 10 15 ? ? ? ? 0F 28 DA A8 01 75 07 0F 28 D9 F3 0F 5D D8 F3 0F 11 1D` | the settings' store of the peds' variety, only logged: +11 and +18 the vectors 5.0 and 1.0; +26 the 10.0; +76, past the match, the rel32 of the store, which must be the getter's variety | found, its RVA to check | 0x5004AD |
 
 <!-- [ped pool] -->
+
+## Ped pool
+
+The ped pool is measured first: nothing of it is raised (SPECIFICATIONS.md, section 11.16).
+Its letter is `N`.
+From the research of 2026-11-02 on the dumps of 2026-10-29, each step read in the code but for what is marked a hint; the idea of a larger pool, on a page's words alone, is that of Resource Extensions [Enhanced] by Koukol, whose plugin was not read:
+
+- **The size:** `<PoolName>Peds</PoolName><PoolSize value="256"/>` in `gameconfig.xml`, the hash 0x8DA12117, which the game's own crash log gives as `Peds: 0/256`.
+  The start-up 0x509BF0 looks it up with a default of 1 and hands it to the setter 0xD516F0, which stores the game's number of peds at 0x434AB4C, read by the getter 0xD4EA00; the pool's maker 0xD4E7A0, called once, from the factory's constructor 0xD4EF80, looks it up again with that number as the default, and makes the pool with slots of 0x1980 bytes and the allocator of the pools' proxy.
+  The lookup 0x149060 gives the file's value if the file has the entry, else the default.
+- **The pointer,** kept obfuscated: flag 0x434A920, value 0x434A928, keys 0x434A930, its decode in `N-E-A1`: bit 0 of the flag clear, no pool; else r = rol64(keys, 0x1E), x = rol64(value ^ r, 0x20), x = rol64(x, (r & 0x1F) + 2), the pool = ~x (`DecodePoolPointer`).
+  608 references in the code inline it.
+- **The pool** (as in "StaticBounds"): +0x08 the slots, +0x10 a flag byte per slot with bit 7 set when free, +0x18 the slots' number, +0x1C the stride, +0x28 the slots in use, in its low 30 bits.
+  A ped's handle is (index << 8) | the slot's flag byte.
+- **The ped,** as the crash log's loop at 0x4F6B reads it: +0xDA & 0xE == 6 a mission ped, +0x1091 bit 4 what every loop skips, +0x1468 bit 4 in the reuse pool, bit 5 reused.
+- **What caps the population,** each update, 0xD8CD20: scenario peds = the schedule's byte x `ScenarioPedsMultiplier` / 100 x factors, ambient peds likewise with `AmbientPedsMultiplier`, both scaled down to `MaxTotalPeds` if their sum passes it, 200 at the population slider's top in my file; then 0x4352908 scenario, 0x4352900 ambient x the schedule's percent, 0x4352904 the rest of ambient (a hint: in vehicles, and on foot).
+  The reuse pool evicts one when its count 0x434F520 is 15, so it holds at most 15, and mission peds are counted against neither, which leaves 41 slots or more on my file.
+- **A full pool** is graceful: the one allocation of a ped, 0xD515F0 in 0xD514C0, returns null when the slots are all in use, before the pool's New 0x15A7C0, which would trap, and its three callers pass the null on.
+  The free-room tests of its users are 2, 3, 5, 10, 11 and 15; "128 kept for missions" is the page's number, not the game's.
+- **What the number sizes,** so that a raise reaches it by itself: through the getter PedIntelligence (0xDB0 a slot), CMovePed (0x4C0), fragInstNMGta (0x460), two arrays of the population, new'd by the number at 0xD6A73C and filled by 0xD6D1F0 for every live ped of the pool, so that the pool must never be larger than the number; through the pool's +0x18 the spatial array at 0x4816998, of capacity (size + 3) & ~3, 24 bytes each, and more.
+- **What it does not size,** unchecked, so that a raised `Peds` boots well and past 256 peds alive corrupts memory: a memcpy into a fixed array in `.data` (`N-E-R1`, 0x1D90620), the filler's three stack arrays (0xD94C20 with 0xD95420, `N-E-R2` and `N-E-R3`) and the priority function's (0x12FD0D0, `N-E-R4`); a cap of 1,024 in the spatial array's six search methods and 0x1164D40; and the anim director's family, whose defaults `N-E-D1` to `N-E-D6` hold and whose pools trap when full.
+- **Complete sets,** not scanned by the measurement: the pool's fields, 608 references in 97 functions and 26 fragments; the getter's 7 calls in 0x10460E0, 0x1167CD0 (3), 0x1175470 and 0x1D90620 (2); the spatial array's pointer, 31 references; a ped's allocation, one `mov edx, 0x1980`.
+
+The patterns, each matching exactly once in both dumps at the same RVA, looked for with `DIAGNOSTIC_MODE=1` only; `H-E2` is the HeapAdjuster part's, whose module gives the measurement its address:
+
+| Label | Pattern | Use | 1.0.1158.16 | RVA |
+|---|---|---|---|---|
+| N-E-A1 | `0F B6 05 ? ? ? ? A8 01 75 03 31 C0 C3 48 8B 0D ? ? ? ? 48 C1 C1 1E 48 8B 15 ? ? ? ? 48 31 CA 48 C1 C2 20 80 E1 1F 80 C1 02 48 D3 C2 48 F7 D2` | the pool's accessor: +3 rel32 the flag (ends +7, 0x434A920); +17 rel32 the keys (ends +21, 0x434A930); +28 rel32 the value (ends +32, 0x434A928); the decode pinned | found | 0xD516A0 |
+| N-E-M1 | `48 8D 05 ? ? ? ? 48 89 44 24 28 C7 44 24 20 80 19 00 00` | the maker's call of the pool's constructor: +3 rel32 the pools' proxy (ends +7, 0x286A310); +16 the stride, 0x1980 | found | 0xD4E7F4 |
+| N-E-M2 | `BA 17 21 A1 8D 41 89 D8 E8 ? ? ? ? 89 C3` | the pool's size looked up: +1 the hash; +8 E8 to the lookup, 0x149060 (rel32 at +9, ends +13); its default the number in ebx | found | 0xD4E7C0 |
+| N-E-C1 | `BA 17 21 A1 8D 41 B8 01 00 00 00 E8 ? ? ? ? 89 C1 E8 ? ? ? ?` | the file's value: +11 E8 to the lookup (rel32 at +12, ends +16); +18 E8 to the setter 0xD516F0 (rel32 at +19, ends +23), whose `89 0D rel32 C3` gives the number, 0x434AB4C | found | 0x509F0A |
+| N-E-I1 | `BA 84 C5 4A 39 41 89 D8 E8 ? ? ? ? 89 C3` | PedIntelligence's size looked up, which follows the number: +8 E8 to the lookup | found | 0xD4E8F0 |
+| N-E-S1 | `48 63 72 18 48 83 C6 03 48 83 E6 FC` | the spatial array's capacity from the pool's +0x18; at a fixed +63 `48 89 1D` with its rel32 at +66 (ends +70): the array's pointer, 0x4816998 | found | 0x1B3BB75 |
+| N-E-K1 | `8B 05 ? ? ? ? 8B 0D ? ? ? ? 8B 35 ? ? ? ? 8B 3D ? ? ? ? 44 89 74 24 50` | the crash log's counts: +2 ambient in cars (ends +6, 0x434D19C); +8 ambient on foot (ends +12, 0x434D184); +14 scenario in cars (ends +18, 0x434D1A0); +20 scenario on foot (ends +24, 0x434D188) | found | 0x4FBF |
+| N-E-K2 | `F3 0F 2C C2 89 05 ? ? ? ? F3 0F 59 C1 F3 0F 2C C0 89 05 ? ? ? ? 66 0F 7E 3D ? ? ? ?` | the caps' stores: +6 ambient (ends +10, 0x4352900); +20 ambient (ends +24, 0x4352904); +28 scenario (ends +32, 0x4352908) | found | 0xD8D0F1 |
+| N-E-R1 | `8B 3A E8 ? ? ? ? 39 C7 7D 04 8B 03 EB 05 E8 ? ? ? ? 89 46 10 8B 03 31 FF 85 C0 0F 4F F8 89 7E 10` | a raise's: the copy into a fixed array of 256: +2 and +15 E8 to the number's getter, 0xD4EA00; +23 the 12 bytes that undo the clamp | found | 0x1D90643 |
+| N-E-R2 | `66 C7 05 ? ? ? ? 00 00 E8 ? ? ? ? 44 0F B7 05` | a raise's: the timeslice list's reset: its count, disp at +3, ends +9, 0x4353AE8; +9 E8 to the filler 0xD94C20 (rel32 at +10, ends +14) | found | 0xD93C99 |
+| N-E-R3 | `48 81 EC 28 0C 00 00 48 8D 8C 24 20 08 00 00 48 8D 94 24 20 04 00 00 4C 8D 44 24 20 E8` | a raise's: the filler's frame and three fixed arrays, the function starting 5 bytes before; +28 E8 to 0xD95420 (rel32 at +29, ends +33) | found | 0xD94C25 |
+| N-E-R4 | `B8 48 10 00 00 E8 ? ? ? ? 48 29 C4 48 8B 05 ? ? ? ? 48 63 70 5C` | a raise's: the priority function's frame of a fixed array: +1 the size, 0x1048; +16 rel32 the spatial array's pointer (ends +20); at a fixed +0x308 `48 81 C4 48 10 00 00` | found | 0x12FD0DC |
+| N-E-D1 | `BA 10 D8 5E CA 41 B8 00 04 00 00 E8` | a raise's: fwAnimDirector's default, the imm32 at +7 | found | 0x15CCC2D |
+| N-E-D2 | `BA CA 6C 77 36 41 B8 00 04 00 00 E8` | a raise's: the Creature's | found | 0x15D915D |
+| N-E-D3 | `BA 7A EE AE CF 41 B8 55 09 00 00 E8` | a raise's: the MotionTree's | found | 0x15D88BD |
+| N-E-D4 | `BA 46 99 C5 3C 41 B8 AA 02 00 00 E8` | a raise's: the Expressions' | found | 0x15DA2BD |
+| N-E-D5 | `BA 29 BB 69 BF 41 B8 55 01 00 00 E8` | a raise's: the RagDoll's | found | 0x15DA78D |
+| N-E-D6 | `BA BE 10 0E 21 41 B8 55 01 00 00 E8` | a raise's: the FacialRig's | found | 0x15DF90D |
 
 ## A pool's memory
 
