@@ -33,12 +33,10 @@ SUITES=(
 	texturebudget
 	raytracing
 	sirenids
-	# [static bounds]
 	staticbounds
 	sirencount
 	# [light capacity]
-	# [vehicle model budget]
-	# [ped model budget]
+	# [population]
 	# [ped pool]
 	# [render queues]
 	integration

@@ -151,14 +151,12 @@ namespace TweaksV
 		// measurement, which goes on while that part, which ships off, is off (11.11). A limit leaves the table when
 		// its part is built, or when it is not, so the table may be empty.
 		constexpr std::initializer_list<MeasuredFirst> kMeasuredFirst = {
-			// [siren ids]
 			// the siren IDs' measurement goes on while their job, LARGE_SIREN_IDS, is off, for a start with it and one without (11.14)
 			{ "SirenSettings", MeasureSirenIdsWhileOff },
 			// [siren count]
 			{ "SirenSettings", MeasureSirenCount },
 			// [light capacity]
-			// [vehicle model budget]
-			// [ped model budget]
+			// [population]
 			// [ped pool]
 			// [render queues]
 			{ "PedProps", MeasurePedPropsWhileOff },

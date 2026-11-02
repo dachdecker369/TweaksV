@@ -412,7 +412,6 @@
 //   rtcountersodd  the ropes' check loads its counters from 2 bytes past them: not aligned to the 4 bytes of a counter
 //   rtsetuptwice, rtgeometrytwice, rtropestwice
 //                  T-E-B1, T-E-C1 or T-E-C2 a second time: its site's match copied to the twin, a site that holds nothing else
-// [data window]
 // TEST_DUMP_DATA's window, g_dwWindow, a stretch of this program's own .data:
 //   dwrvas         the report gives its RVA, .data's and what a file's header says about the game, for the suite's key
 //   dwwindow       the same, and the window filled before TweaksV loads, written to dw_start.bin, then, as soon as TweaksV's
@@ -420,7 +419,6 @@
 //                  files; and 2.5 s more at the end, so that a key's 1 s passes well before the program ends
 //   dwnoaccess     with dwwindow: the window's second page cannot be read, from before TweaksV loads; zeros there in both files
 //   dwnodata       the section table in memory names no .data: that section's name changed before TweaksV loads
-// [static bounds]
 // StaticBounds: the two functions the game makes its pools through, the set-up (C-E-P1) and the allocator (C-E-A1), lie in .fakesit
 // as code the fake runs, each on a page of its own, a NOP before it. Once TweaksV has started, the fake makes its pools through them
 // as the game does - the set-up, the capacity, the allocator, whose call of the memory allocator leads to a function of the fake's:
@@ -448,13 +446,11 @@
 //                  the function starts with another mod's jump, to a copy of it with a NOP in it, which no pattern matches
 //   sbp1noexec, sba1noexec
 //                  the function's page not executable while TweaksV starts, so that MinHook refuses to hook it
-// [late boxes]
 // The boxes after the start-up summary (TweaksVSummary):
 //   latefailures N  once everything else has run, the script program placed N times, 2 s apart, with a code length past what
 //                   TEST_DUMP_SCRIPT copies: with that key each placement is a problem, far enough from the next for a box of its own
 // [light capacity]
-// [vehicle model budget]
-// [ped model budget]
+// [population]
 // [ped pool]
 // [render queues]
 #include <windows.h>
@@ -1065,8 +1061,6 @@ static Site g_rtJumps[] = { SITE(g_rtGeometry, 92), SITE(g_rtRopes, 89) };	// th
 static Site g_rtSites[] = { SITE(g_rtSetUp, 0), SITE(g_rtGeometry, 0), SITE(g_rtRopes, 0), SITE(g_rtReset, 0), SITE(g_rtExtra, 0),
 	{ g_rtEdge + kRtEdgeMatchAt, 0, kRtRopesMatch }, SITE(g_rtTwin, 0) };
 constexpr size_t kRtSites = sizeof(g_rtSites) / sizeof(g_rtSites[0]);
-// [data window]
-// [static bounds]
 // The two functions the game makes its pools through, each on a page of its own and a NOP before it, as code the fake runs. The
 // set-up: C-E-P1, the whole function. The allocator: C-E-A1, then "add rsp, 0x28", the pops and "ret", the memory allocator's block in
 // rax. The copies another mod's jump leads to with an option "...jump": the same code with a NOP after the first instruction or the
@@ -1083,10 +1077,8 @@ volatile unsigned char g_staticBoundsOtherAllocator[] = { 0x56, 0x57, 0x90, SB_A
 volatile unsigned char g_staticBoundsTwin[64] = { 0xCC };
 static Site g_staticBoundsSites[] = { SITE(g_staticBoundsSetUp, 0), SITE(g_staticBoundsAllocator, 0), SITE(g_staticBoundsOtherSetUp, 0),
 	SITE(g_staticBoundsOtherAllocator, 0), SITE(g_staticBoundsTwin, 0) };
-// [late boxes]
 // [light capacity]
-// [vehicle model budget]
-// [ped model budget]
+// [population]
 // [ped pool]
 // [render queues]
 #pragma data_seg()
@@ -4295,7 +4287,6 @@ static void RtReport()
 		rva(g_rtObject), rva(g_rtGeometry), rva(g_rtRopes), rva(g_rtSlot), rva(g_rtCounters), rva(g_rtReset), rva(g_rtHole), rva(g_rtEdge));
 }
 
-// [data window]
 // TEST_DUMP_DATA's window: larger than the largest window, 64 KB, and on whole pages, since dwnoaccess takes one away.
 constexpr size_t kDwBytes = 0x12000;
 constexpr size_t kDwPage = 0x1000;			// where the page dwnoaccess takes away starts, and its size
@@ -4392,7 +4383,6 @@ static void DwReport()
 		static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(g_dwWindow) - base), section->VirtualAddress, section->Misc.VirtualSize,
 		static_cast<unsigned long>(base & 0xFFFFFFFFu), static_cast<unsigned long>(base >> 32), nt->OptionalHeader.SizeOfImage, nt->FileHeader.TimeDateStamp);
 }
-// [static bounds]
 // StaticBounds: a pool as the two functions leave it, at the game's offsets. The set-up keeps its fifth argument at +0 and the stride, and
 // sets the capacity to 0; the allocator reads the capacity and the stride, and calls the memory allocator through +0 with the room for
 // them, a byte per slot behind them - its r8 and r9 as the allocator got them and the caller's last error, which the memory allocator
@@ -4631,10 +4621,8 @@ static void StaticBoundsReport()
 		g_staticBoundsSetUpsGood, g_staticBoundsSetUps, g_staticBoundsAllocationsGood, g_staticBoundsAllocations);
 }
 
-// [late boxes]
 // [light capacity]
-// [vehicle model budget]
-// [ped model budget]
+// [population]
 // [ped pool]
 // [render queues]
 
@@ -5120,11 +5108,9 @@ static void ForEachSite(void (*fn)(const Site&))
 		SITE(g_textureBudgetUpdate, 0), SITE(g_textureBudgetWriters, 0), SITE(g_textureBudgetMisread, 0) };
 	for (const Site& site : textureBudgetSites) fn(site);
 	for (const Site& site : g_rtSites) fn(site);
-	// [static bounds]
 	for (const Site& site : g_staticBoundsSites) fn(site);
 	// [light capacity]
-	// [vehicle model budget]
-	// [ped model budget]
+	// [population]
 	// [ped pool]
 	// [render queues]
 }
@@ -6709,15 +6695,11 @@ int wmain(int argc, wchar_t** argv)
 	LpSetup(argc, argv);	// the Legacy packs check's archives, before TweaksV starts
 	// The ray tracing buffer: the set-up's call to the maker, the checks' slot and counters, the reset's lea - as the options ask
 	RtSetUp(argc, argv);
-	// [data window]
 	// TEST_DUMP_DATA's window, filled before TweaksV takes its first copies - as the options ask
 	DwSetUp(argc, argv);
-	// [static bounds]
 	StaticBoundsSetUpSites(argc, argv);
-	// [late boxes]
 	// [light capacity]
-	// [vehicle model budget]
-	// [ped model budget]
+	// [population]
 	// [ped pool]
 	// [render queues]
 
@@ -6861,13 +6843,10 @@ int wmain(int argc, wchar_t** argv)
 	LpWait(argc, argv);
 	// The ray tracing buffer: the game's renderer makes it and its frames take ranges of it - as the options ask, the checks run
 	RtActions(argc, argv);
-	// [data window]
 	// TEST_DUMP_DATA's second copies, a key's 1 s after TweaksV started, are made before the program ends
 	if (g_dwOn)
 		Sleep(2500);
-	// [static bounds]
 	StaticBoundsActions(argc, argv);
-	// [late boxes]
 	for (int i = 2; i + 1 < argc; i++)
 		if (wcscmp(argv[i], L"latefailures") == 0)
 			for (int n = _wtoi(argv[i + 1]); n > 0; n--)
@@ -6880,8 +6859,7 @@ int wmain(int argc, wchar_t** argv)
 				Sleep(2000);
 			}
 	// [light capacity]
-	// [vehicle model budget]
-	// [ped model budget]
+	// [population]
 	// [ped pool]
 	// [render queues]
 	if (HasOption(argc, argv, L"wait"))
@@ -6964,14 +6942,10 @@ int wmain(int argc, wchar_t** argv)
 	}
 	LpReport();
 	RtReport();
-	// [data window]
 	DwReport();
-	// [static bounds]
 	StaticBoundsReport();
-	// [late boxes]
 	// [light capacity]
-	// [vehicle model budget]
-	// [ped model budget]
+	// [population]
 	// [ped pool]
 	// [render queues]
 	CheckStub(Rel32Target(g_packCallSite));

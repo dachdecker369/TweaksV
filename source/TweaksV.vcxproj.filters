@@ -68,7 +68,6 @@
     <ClCompile Include="TweaksVPatch.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
-    <!-- [ped model budget] -->
     <!-- [ped pool] -->
     <ClCompile Include="TweaksVPedProps.cpp">
       <Filter>TweaksV</Filter>
@@ -110,7 +109,7 @@
     <ClCompile Include="TweaksVTextureBudget.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
-    <!-- [vehicle model budget] -->
+    <!-- [population] -->
     <ClCompile Include="TweaksVWeaponComponents.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
@@ -192,7 +191,6 @@
     <ClInclude Include="TweaksVPatterns.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
-    <!-- [ped model budget] -->
     <!-- [ped pool] -->
     <ClInclude Include="TweaksVPedProps.h">
       <Filter>TweaksV</Filter>
@@ -237,7 +235,7 @@
     <ClInclude Include="TweaksVTextureBudget.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
-    <!-- [vehicle model budget] -->
+    <!-- [population] -->
     <ClInclude Include="TweaksVWeaponComponents.h">
       <Filter>TweaksV</Filter>
     </ClInclude>

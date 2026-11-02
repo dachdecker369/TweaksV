@@ -170,7 +170,6 @@ namespace TweaksV
 		{ "W-E-C4", "48 8B 0D ? ? ? ? BA CF 3C E3 BA 41 B8 ? ? ? ? E8 ? ? ? ? 89 C3" },
 		{ "W-E-C5", "49 89 D7 49 89 CE B9 D8 0E 00 00 E8 ? ? ? ? 49 89 C4 41 B8 D8 0E 00 00 48 89 C1 31 D2 E8 ? ? ? ? 0F B7 1D ? ? ? ? 66 3B 1D ? ? ? ? 75 ? 44 0F B7 EB 49 8D 6D 10 48 8B 35 ? ? ? ?" },
 
-		// [siren ids]
 		// SirenSettings, the siren setting IDs (TweaksVSirenIds.cpp): the parser registrations of the siren settings (P1) and the
 		// vehicle variations (P2), whose tables lead to the members that carry an ID, and the simple member's XML reader (P3); the
 		// loaders' four lea of the ID table with the ID's byte loads and stores and the free-ID searches' limits - the base
@@ -242,7 +241,6 @@ namespace TweaksV
 		{ "T-E-C1", "8B 2D ? ? ? ? 31 D2 48 8D 1D ? ? ? ? 41 BA 01 00 00 00 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 8B 3C AB 8D 34 0F 81 FE ? ? ? ? 0F 87" },
 		{ "T-E-C2", "8B 15 ? ? ? ? 31 ED 48 8D 35 ? ? ? ? 41 BA 01 00 00 00 ? ? ? ? ? ? ? ? ? ? ? ? 8B 3C 96 8D 1C 0F 81 FB ? ? ? ? 0F 87" },
 
-		// [static bounds]
 		// StaticBounds (TweaksVStaticBounds.cpp), the patterns of Nochala's Static Bounds Limit Adjuster: the two functions the
 		// game makes its pools through - the set-up, the whole of it down to its ret (P1), and the allocator, from its pushes
 		// on to its call of the memory allocator (A1)
@@ -250,8 +248,7 @@ namespace TweaksV
 		{ "C-E-A1", "56 57 48 83 EC ? 48 89 CE 48 63 51 18 48 63 79 1C 48 0F AF FA 48 83 C7 07 48 83 E7 F8 48 8B 09 48 01 FA 48 8B 01 FF 50 08" },
 
 		// [light capacity]
-		// [vehicle model budget]
-		// [ped model budget]
+		// [population]
 		// [ped pool]
 		// [render queues]
 	};
