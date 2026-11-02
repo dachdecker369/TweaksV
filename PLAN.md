@@ -46,7 +46,7 @@ Each table is in the order of the merge.
 | Static bounds | | long | `source\TweaksVStaticBounds.cpp` and `.h`; `IsPluginInstalledFor` in `source\TweaksVConflicts.cpp` and `.h`; `test\run_staticbounds.sh` | the part and its suite |
 | Siren IDs | | long | `source\TweaksVSirenIds.cpp` and `.h`; the relocation core's fixed size in `source\TweaksVRelocation.cpp` and `.h`; `test\run_sirenids.sh` | the part's IDs and its suite; the core's change, which the move needs first and no other track uses |
 | Sweep: the code | | about as long | T-COPIES' points in their files, but for `TweaksVSirenIds.cpp`'s, `TweaksVPatch.h` and `.cpp` for the one copies; `PackEntry` and the Legacy check's last line in `source\TweaksVLegacyPacks.cpp`; `source\TweaksVModsFolder.cpp` and `.h`; `source\TweaksVSummary.cpp` and `.h`; the report's one call in the guards and the Legacy check; their blocks in the suites | T-COPIES, T-LEGACYWALK, T-NAMES, T-LATEBOX and T-SUMMARY, none an hour's work alone, and the join does not lengthen the round |
-| Sweep: the tests | | shorter | `test\run_all.sh` and `test\common.sh`; `TEST_TWICE_PATTERN` in `source\TweaksVScanner.cpp`; the test build's line in `source\TweaksVLog.cpp`; a real timer's switch in `source\TweaksVMeasure.cpp`; TB16's block in `test\run_texturebudget.sh` and its two writers in `test\fake_game_full.cpp`; its block in `test\run_legacypacks.sh` | the suites made fast (D29) and T-TESTGAPS' four points, none an hour's work alone |
+| Sweep: the tests | | shorter | `test\run_all.sh` and `test\common.sh`; `TEST_TWICE_PATTERN` in `source\TweaksVScanner.cpp`; the test build's line in `source\TweaksVLog.cpp`; TB16's block in `test\run_texturebudget.sh` and its two writers in `test\fake_game_full.cpp`; its block in `test\run_legacypacks.sh` | the suites made fast (D29) and T-TESTGAPS' four points, none an hour's work alone |
 
 **The coding, later,** each once the overview has checked its findings and I have decided on them, each; a module's name may change with its findings:
 
@@ -173,8 +173,9 @@ a pass that finds its limit sharing code with a neighbour's may read the neighbo
   The letters are settled: G the lighting capacity, U the render queues, O the population (the vehicle pass's `V-E-` and the ped pass's `H-E-` rows alike, `O-E-V1`, `O-E-P1`, the shared site once, `H-E-C1`'s longer form), N the ped pool, `H-E2` the budget; the sirens' stay I.
   PATTERNS.md's "Not settled: ... the heap the pool's allocator draws on" goes, with the ped pool's section 3.
   Each pass's review, beside its findings in my research tools' folder, has what its track takes in its "For the coding track".
-- **D-V5, the vehicle budget raised with no code, open:** `VehiclesSP`'s `Level3Kb` at 98,500 in my `gameconfig.xml`, for 600 MB in place of 429 (the vehicle pass's findings, 7.0), untested.
-  Recommended after 2.7.0's boot gives its baseline, with the measurement on, and out again if the lights' peak nears 400.
+- **D-V5, the vehicle budget raised with no code** (2026-11-02): `VehiclesSP`'s `Level3Kb` at 98,500 in my `gameconfig.xml`, for 600 MB in place of 429 (the vehicle pass's findings, 7.0), untested.
+  It comes after 2.7.0's boot gives its baseline, with the measurement on, and goes out again if the lights' peak nears 400.
+  I make the change myself; no session writes in the game folder.
 
 ## The items
 
@@ -223,7 +224,8 @@ Before its report it makes the builds it needs without a warning and runs the su
   The measurement's words past 256 IDs.
   Its own `<cstdio>` out (T-COPIES).
 - **Sweep: the code** (D26): T-COPIES' points, which change no line of a run; T-LEGACYWALK and T-NAMES as their entries say; for T-LATEBOX a heading per late report in `TweaksVSummary`, each saying whether a part stopped working or what it found, the last line fitting it, and the guards' refusals and the Legacy check's finding reported as findings; for T-SUMMARY the summary's thread tried again with the next problem reported.
-- **Sweep: the tests** (D26, D29): `test\run_all.sh` parallel first, each suite in a folder of its own, its output and its result as they are, `SUITES` still one suite a line; a table of which suites a changed file needs; a real timer shortened by a test-build switch where a suite waits on one in a file it owns and the switch proves the same; then T-TESTGAPS' four points.
+- **Sweep: the tests** (D26, D29): `test\run_all.sh` parallel first, each suite in a folder of its own, its output and its result as they are, `SUITES` still one suite a line; a table of which suites a changed file needs; then T-TESTGAPS' four points.
+  No real timer's switch: it would save about 20 of 345 seconds and add a way to flake, so it is not built (2026-11-02).
   It runs the full suite, serial and parallel, and gives both times and the same tally of checks; NOTES.md's count is the merge's, so its line is not this track's to pass.
 - **A measurement** (D25): its findings' section 6, the module and its suite as phase A's.
 
@@ -278,4 +280,4 @@ All six research passes are done and decided (D23, D30, D31): no siren track in 
 then the merge, the review, the proof and my boots.
 The open issues are T-HARDEN, T-DIAG, T-FREEZE and T-PEDPROPS.
 
-the vehicle budget in my `gameconfig.xml` (D-V5), recommended after 2.7.0's boot; the tests' sweep's timer switch, not built since it would save about 20 of 345 seconds and add a way to flake, recommended left out.
+
