@@ -3840,8 +3840,9 @@ static void DwReport()
 // [static bounds]
 // StaticBounds: a pool as the two functions leave it, at the game's offsets. The set-up keeps its fifth argument at +0 and the stride, and
 // sets the capacity to 0; the allocator reads the capacity and the stride, and calls the memory allocator through +0 with the room for
-// them, a byte per slot behind them - its r8 and r9 as the allocator got them, which the memory allocator checks. Each call is checked
-// as it comes back: its result, the last error it leaves - the caller's after the set-up, the memory allocator's after the allocator.
+// them, a byte per slot behind them - its r8 and r9 as the allocator got them and the caller's last error, which the memory allocator
+// checks, so that a hook's line before it cannot hide behind the last error the memory allocator leaves. Each call is checked as it comes
+// back: its result, the last error it leaves - the caller's after the set-up, the memory allocator's after the allocator.
 struct StaticBoundsPool
 {
 	void* memory;			// +0x00
@@ -3864,8 +3865,8 @@ static void* g_staticBoundsGiven = nullptr;
 static bool g_staticBoundsAsHanded = false;
 static void* StaticBoundsMemoryAllocate(void*, size_t size, uintptr_t third, uintptr_t fourth)
 {
+	g_staticBoundsAsHanded = GetLastError() == kSbCallerError && third == kSbThird && fourth == kSbFourth;
 	g_staticBoundsAsked = size;
-	g_staticBoundsAsHanded = third == kSbThird && fourth == kSbFourth;
 	g_staticBoundsGiven = size <= kSbMostAsked ? HeapAlloc(GetProcessHeap(), 0, size) : nullptr;
 	SetLastError(kSbMemoryError);
 	return g_staticBoundsGiven;
