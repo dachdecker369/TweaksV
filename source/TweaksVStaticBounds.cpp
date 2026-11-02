@@ -272,7 +272,7 @@ namespace TweaksV
 			try
 			{
 				if (checked == kReported && !g_afterAllSaid.exchange(true))
-					WriteLog(kTag, "The game asked for the static bounds store's size after all, after the check had reported it missing.");
+					WriteLog(kTag, "The game's lookup of the static bounds store's size came after all, after the check had reported it missing.");
 				if (game < 0)
 				{
 					if (!g_noSizeSaid.exchange(true))
@@ -281,7 +281,7 @@ namespace TweaksV
 				else if (!g_sizesSaid.exchange(true))
 				{
 					if (g_diagnostic)
-						WriteLog(kTag, "DIAGNOSTIC: the game asked for the static bounds store's size " + std::to_string(GetTickCount64() - g_start) + " ms after the part's start.");
+						WriteLog(kTag, "DIAGNOSTIC: the game's lookup of the static bounds store's size came " + std::to_string(GetTickCount64() - g_start) + " ms after the part's start.");
 					if (size != game)
 						WriteLog(kTag, "The size the game gives the static bounds store, " + std::to_string(game) + ", is raised to " + std::to_string(size) +
 							" (STATICBOUNDS_SIZE).");

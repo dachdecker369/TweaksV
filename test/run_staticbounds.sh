@@ -42,7 +42,7 @@ kept() { has "$UNTOUCHED" && has 'protect: all restored (RX)' && log_lacks "${TA
 # time_of SED: what SED's s///p takes from TweaksV.log; session_ms, asked_ms: the session's start and the game's asking, timed
 time_of() { tr -d '\r' < TweaksV.log | sed -n "$1"; }
 session_ms() { time_of "s/.*${TAG}DIAGNOSTIC: the session started \([0-9]*\) ms after the part.s start (blip_controller placed): the static bounds check.s clock runs.\$/\1/p"; }
-asked_ms() { time_of "s/.*${TAG}DIAGNOSTIC: the game asked for the static bounds store.s size \([0-9]*\) ms after the part.s start.\$/\1/p"; }
+asked_ms() { time_of "s/.*${TAG}DIAGNOSTIC: the game.s lookup of the static bounds store.s size came \([0-9]*\) ms after the part.s start.\$/\1/p"; }
 # back_is COUNT POOL BUCKETS NAMES STREAMER WORD USED: the read-back's line, word for word, once
 back_is() { log_line "${TAG}The static bounds store.s read-back: count $1, pool $2, name map $3 buckets with $4 names, streamer $5 (its word $6), $7 slots in use, its streaming base 4242.\$" && [ "$(count 'read-back: count')" -eq 1 ]; }
 no_back() { log_lacks "${TAG}.*read-back: count"; }
@@ -108,7 +108,7 @@ check "the would line, word for word; the store made through the game's lookup, 
 echo "== SB11 DIAGNOSTIC_MODE=1: both patterns found once, the sites at their RVAs, the game's asking timed"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe)
 check "C-E-L1 and C-E-D1 found exactly once each" "[ \$(grep -c -E 'Pattern C-E-(L1|D1) found: .* 1 match,' TweaksV.log) -eq 2 ]"
-check "the call and the store, word for word; the asking, once" "log_line '${TAG}DIAGNOSTIC: the static bounds store.s size call at $RVA -> $RVA (C-E-L1)\$' && log_line '${TAG}DIAGNOSTIC: the static bounds store at $RVA (C-E-D1)\$' && [ \$(count 'DIAGNOSTIC: the game asked for the static bounds') -eq 1 ] && [ -n \"\$(asked_ms)\" ]"
+check "the call and the store, word for word; the asking, once" "log_line '${TAG}DIAGNOSTIC: the static bounds store.s size call at $RVA -> $RVA (C-E-L1)\$' && log_line '${TAG}DIAGNOSTIC: the static bounds store at $RVA (C-E-D1)\$' && [ \$(count 'DIAGNOSTIC: the game.s lookup of the static bounds') -eq 1 ] && [ -n \"\$(asked_ms)\" ]"
 check "the redirect and the sizes as without DIAGNOSTIC_MODE, no problem" "redirected 16000 && has '$RAISED' && [ \$(said) -eq 1 ] && quiet"
 
 echo "== SB12 C-E-L1 missing or held twice, its call another mod's, the redirect not made: reported, nothing written"
@@ -150,7 +150,7 @@ fresh_ini; out=$(game full_game.exe sbfirst script)
 check "the Release build reads back too, every boot; no wait for it, no test build's line" "log_lacks '${TAG}TEST BUILD' && quiet"
 
 NOT_ASKED="${NOT_RAISED}the game did not ask for the store.s size within 2 seconds of the session.s start - it asked before TweaksV started, or makes the store another way, and the store keeps the game.s size.\$"
-AFTER_ALL='The game asked for the static bounds store.s size after all, after the check had reported it missing.'
+AFTER_ALL='The game.s lookup of the static bounds store.s size came after all, after the check had reported it missing.'
 
 echo "== SB15 the check (test build, TWEAKSV_TEST_STATICBOUNDS_CHECK=10, DIAGNOSTIC_MODE=1, a script program placed, past the check's time): the game asks in time - timed, nothing reported"
 export TWEAKSV_TEST_STATICBOUNDS_CHECK=10
