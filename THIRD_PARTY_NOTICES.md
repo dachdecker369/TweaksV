@@ -1,8 +1,13 @@
 # Third-Party Notices
 
-Engine Tweaks and Limits Adjuster (TweaksV) is free software: Copyright (C) dachdecker369, licensed under version 3 of the GNU General Public License only (GPL-3.0-only). It contains the third-party code listed below, each piece used under its own license. All of these licenses are compatible with the GPL-3.0, and TweaksV as a whole is distributed under the GPL-3.0-only.
+Engine Tweaks and Limits Adjuster (TweaksV) is free software: Copyright (C) dachdecker369, licensed under version 3 of the GNU General Public License only (GPL-3.0-only).
+It contains the third-party code listed below, each piece used under its own license.
+All of these licenses are compatible with the GPL-3.0, and TweaksV as a whole is distributed under the GPL-3.0-only.
 
-This file reproduces the copyright notices and license texts that this code requires. It must accompany every copy of TweaksV, in source or binary form. The source of TweaksV is at https://github.com/dachdecker369/engine-tweaks-and-limits-adjuster; a release's notes name the tag it was built from. Everyone whose work TweaksV builds on is credited in [CREDITS.md](CREDITS.md), the projects whose ideas its own parts follow among them: nothing of their code is in TweaksV, so nothing of theirs is listed here.
+This file reproduces the copyright notices and license texts that this code requires.
+It must accompany every copy of TweaksV, in source or binary form.
+The source of TweaksV is at https://github.com/dachdecker369/engine-tweaks-and-limits-adjuster; a release's notes name the tag it was built from.
+Everyone whose work TweaksV builds on is credited in [CREDITS.md](CREDITS.md), the projects whose ideas its own parts follow among them: nothing of their code is in TweaksV, so nothing of theirs is listed here.
 
 ## Components
 
@@ -16,7 +21,9 @@ Everything else in `dllmain.cpp`, `version.rc` and the `TweaksV*` files is Tweak
 
 ## Notes
 
-- **ScriptHookVDotNet:** the pattern parser is an altered version, as the zlib license requires to be stated. It is Chiheb-Bacha's C++ port of ScriptHookVDotNet's `MemScanner.cs`, which came to TweaksV through his plugins, altered again for TweaksV: a malformed token is refused instead of throwing - `??` among them, so that one `?` is the only wildcard - and a miss returns nothing instead of ending the game. The search itself is TweaksV's own.
+- **ScriptHookVDotNet:** the pattern parser is an altered version, as the zlib license requires to be stated.
+  It is Chiheb-Bacha's C++ port of ScriptHookVDotNet's `MemScanner.cs`, which came to TweaksV through his plugins, altered again for TweaksV: a malformed token is refused instead of throwing - `??` among them, so that one `?` is the only wildcard - and a miss returns nothing instead of ending the game.
+  The search itself is TweaksV's own.
 - **RageOpenV:** its license is the GPL-3.0, the same as TweaksV's; the text is [LICENSE](LICENSE), which accompanies every copy.
 
 ## License texts
@@ -127,4 +134,5 @@ applications, and to alter it and redistribute it freely, subject to the followi
 
 ### GNU General Public License, version 3
 
-Applies to TweaksV as a whole and to the console opener from RageOpenV. The text is [LICENSE](LICENSE), next to this file in the repository and in every release.
+Applies to TweaksV as a whole and to the console opener from RageOpenV.
+The text is [LICENSE](LICENSE), next to this file in the repository and in every release.
