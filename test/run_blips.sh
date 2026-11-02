@@ -150,7 +150,7 @@ echo "== L27 the test build with TEST_DUMP_SCRIPT: the switch's copy holds the p
 d=appdata/TweaksV
 fresh_ini; addkey TEST_DUMP_SCRIPT blip_controller; rm -rf $d; rm -f script_placed_*.bin; out=$(ASI=TweaksV_test.asi game full_game.exe script)
 check "after its header the copy is byte for byte what the fake placed - 25 96 0C 06 at 0x402 of the code; the program holds 43 6C 07 0B there" "tail -c +177 $d/Script-blip_controller-1.bin | cmp -s - script_placed_1.bin && [ \"\$(od -An -tx1 -j\$((304 + 0x402)) -N4 $d/Script-blip_controller-1.bin | tr -d ' ')\" = 25960c06 ] && guard_after '$RAISED'"
-check "one hook, made by the switch, which joins first: its line under [TweaksV]; the part raises the guard after it" "log_has '\[TweaksV\] The natives. resolution call at RVA 0x[0-9A-F]* is redirected' && log_lacks '\[Blips\] The natives. resolution call' && raised_line 1 1900 && has 'stubs: 7, all RX' && log_lacks 'PROBLEM'"
+check "one hook, made by the switch, which joins first: its line under [TweaksV]; the part raises the guard after it" "log_has '\[TweaksV\] The natives. resolution call at RVA 0x[0-9A-F]* is redirected' && log_lacks '\[Blips\] The natives. resolution call' && raised_line 1 1900 && has 'stubs: 8, all RX' && log_lacks 'PROBLEM'"
 rm -rf $d; rm -f script_placed_*.bin
 
 echo "== L28 a call from elsewhere into the span: left as placed"

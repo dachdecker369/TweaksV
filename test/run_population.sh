@@ -66,7 +66,7 @@ after_run() { in_folder "$1"; out=$(tr -d '\r' < harness.out); }
 
 echo "== O1 DIAGNOSTIC_MODE=0: nothing looked for, nothing logged, no thread tried (the test build refuses the summary's), however the data stand"
 fresh_ini; out=$(TWEAKSV_TEST_REFUSE_THREAD="1 population summary" ASI=TweaksV_test.asi game full_game.exe popfill)
-check "no O pattern looked for, no line of the part, its thread not tried; the sites and data as placed, no call stub of its own, every page its own protection" "log_lacks 'O-E-' && log_lacks '\[Population\]' && log_lacks 'The population summary thread could not be started' && no_problem && has 'stubs: 7, all RX'"
+check "no O pattern looked for, no line of the part, its thread not tried; the sites and data as placed, no call stub of its own, every page its own protection" "log_lacks 'O-E-' && log_lacks '\[Population\]' && log_lacks 'The population summary thread could not be started' && no_problem && has 'stubs: 8, all RX'"
 
 echo "== O2 DIAGNOSTIC_MODE=1, the data as my boot at 180 s: the sites found and logged, the summary 10 s in, nothing written"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe popfill popwait); echo "      $out"
@@ -84,7 +84,7 @@ check "both tables' lines, word for word, each once: the game's defaults" "pop_l
 check "the vehicles' line and the peds', word for word: 428.7 of 429, past the stop at 427.5; 305.1 of 561, the stop at 553.5 with MaxScenPeds 8" "pop_line '$VEHICLE_AT_180' && pop_line '$PED_AT_180'"
 samples=$(tr -d '\r' < TweaksV.log | sed -n 's/.*vehicle model budget: .*at the stop in \([0-9]*\) of \([0-9]*\) samples.*/\1 \2/p' | head -n 1)
 check "the vehicles at the stop in every sample, about one a second over the first 10 s: $samples" "[ \"\${samples% *}\" = \"\${samples#* }\" ] && [ \"\${samples% *}\" -ge 5 ] && [ \"\${samples% *}\" -le 12 ]"
-check "no problem, no box, nothing written, no call stub of its own (the 12 are the other parts'), every page its own protection" "no_problem && log_lacks 'Start-up summary' && has 'stubs: 12, all RX'"
+check "no problem, no box, nothing written, no call stub of its own (the 12 are the other parts'), every page its own protection" "no_problem && log_lacks 'Start-up summary' && has 'stubs: 13, all RX'"
 
 echo "== O3 DRY_RUN=1 changes nothing here"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; setkey DRY_RUN 1; out=$(game full_game.exe popfill popwait)

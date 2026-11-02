@@ -203,7 +203,7 @@ check "the 17 sites as the part must leave them, byte for byte: the 4 lea to one
 check "the 2 members' types a word's, their page its own, RW; the data's other bytes as placed" "has 'data widened' && has 'types 0x3 and 0x3, member data RW'"
 check "the table outside the game, read/write, the game's 256 entries copied, the rest free" "has \"table moved, RW, the game's 256 copied, the rest 0xFF\""
 check "the sites run as code: every load a word's, every store too, the loop by words, the constructors' defaults; other bytes the same" "has 'siren code: loads and stores 11 words 0 bytes, loop words, constructors 3 words 0 bytes'"
-check "the base loader's call through a stub of its own, read+execute, no stub added to the other parts' count" "has 'base loader call to a stub, RX' && has 'stubs: 7, all RX'"
+check "the base loader's call through a stub of its own, read+execute, no stub added to the other parts' count" "has 'base loader call to a stub, RX' && has 'stubs: 8, all RX'"
 
 echo "== W2 the part off, [SIRENSETTINGS] ENABLED=0: off in the header, nothing of it"
 fresh_ini; setkey ENABLED 0 SIRENSETTINGS; out=$(game full_game.exe)

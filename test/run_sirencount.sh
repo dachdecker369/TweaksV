@@ -34,7 +34,7 @@ echo "== C1 DIAGNOSTIC_MODE=0: nothing looked for, the call not redirected, the 
 fresh_ini; out=$(game full_game.exe scdraw); echo "      $out"
 check "no siren count pattern looked for, no SirenSettings line but the siren IDs' two" "log_lacks 'I-E-B' && log_lacks '\[SirenSettings\] DIAGNOSTIC' && [ \$(count '\[SirenSettings\]') -eq 2 ]"
 check "the stand-ins built; 800 passes through the renderer itself, its arguments, result and last error as the game's, no lookup" "has '$BUILT' && has '$UNCOUNTED'"
-check "sites and data as placed, no call stub of its own (the 7 are the other parts'), every page its own protection" "has '$PLACED' && has 'stubs: 7, all RX' && has 'protect: all restored (RX)'"
+check "sites and data as placed, no call stub of its own (the 7 are the other parts'), every page its own protection" "has '$PLACED' && has 'stubs: 8, all RX' && has 'protect: all restored (RX)'"
 
 echo "== C2 DIAGNOSTIC_MODE=1: the four sites found and logged, the call redirected, the models counted and summed up 10 s in"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe scdraw wait); echo "      $out"
@@ -49,13 +49,13 @@ check "the announcement, word for word" "sc_line 'DIAGNOSTIC: the siren lights. 
 check "800 passes through TweaksV's stub: the renderer each time, with the game's arguments, its result and last error back; 64 lookups for each of the 4 models, each after its vehicle's renderer" "has '$BUILT' && has '$COUNTED'"
 check "the summary 10 s in, word for word: 4 models from two threads at once, each counted once - the police car's 20 sirens the most, one past siren20, one losing bones past 127" "sc_line '$SUMMARY' && [ \$(count 'vehicle models with sirens seen') -eq 1 ]"
 check "a line for the model made for 32 sirens and for the one losing bones past 127, word for word, and for no other" "sc_line '$LINE_32' && sc_line '$LINE_LOST' && [ \$(count 'DIAGNOSTIC: vehicle model 0x') -eq 2 ]"
-check "the call stub read+execute, 12 in all (the other parts' 11 and this one), every page its own protection" "has 'stubs: 12, all RX' && has 'protect: all restored (RX)'"
+check "the call stub read+execute, 12 in all (the other parts' 11 and this one), every page its own protection" "has 'stubs: 13, all RX' && has 'protect: all restored (RX)'"
 check "the sites but the redirected call and the models' data as placed" "has '$PLACED'"
 check "no problem, no box" "log_lacks 'PROBLEM' && log_lacks 'Start-up summary'"
 
 echo "== C2b DIAGNOSTIC_MODE=1 and nothing drawn for 11 s: the call redirected, no summary - its 10 seconds run from the first model counted"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe wait)
-check "the call redirected and announced, its stub read+execute; no model counted, no summary; no problem" "sc_line 'DIAGNOSTIC: the siren lights. renderer call at RVA 0x[0-9A-F]* is redirected (I-E-B1): the vehicle models with sirens on, each counted once with its siren bones looked up by name up to siren32, are logged 10 seconds after the first, then every minute while they change.' && has 'siren draws: none, the call leads to a TweaksV stub |' && has 'stubs: 12, all RX' && log_lacks 'vehicle models with sirens seen' && log_lacks 'PROBLEM'"
+check "the call redirected and announced, its stub read+execute; no model counted, no summary; no problem" "sc_line 'DIAGNOSTIC: the siren lights. renderer call at RVA 0x[0-9A-F]* is redirected (I-E-B1): the vehicle models with sirens on, each counted once with its siren bones looked up by name up to siren32, are logged 10 seconds after the first, then every minute while they change.' && has 'siren draws: none, the call leads to a TweaksV stub |' && has 'stubs: 13, all RX' && log_lacks 'vehicle models with sirens seen' && log_lacks 'PROBLEM'"
 
 echo "== C3 the test build, its summaries every 2 s: again when the models change - two more models 11 s in, then 3 s more"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(TWEAKSV_TEST_SUMMARY_MS=2000 ASI=TweaksV_test.asi game full_game.exe scdraw scmore); echo "      $out"
@@ -86,20 +86,20 @@ echo "== C6 TEST_BREAK_PATTERN (test build): each of the four patterns missing -
 for label in I-E-B1 I-E-B2 I-E-B3 I-E-B4; do
 	more=""; [ "$label" = I-E-B1 ] && more=wait	# once with 11 s more: no summary comes
 	fresh_ini; setkey DIAGNOSTIC_MODE 1; addkey TEST_BREAK_PATTERN $label; out=$(ASI=TweaksV_test.asi game full_game.exe scdraw $more)
-	check "$label: the scanner's test line and the module's, word for word; drawn through the renderer itself, nothing counted, no stub of its own; no problem, no box, no summary" "grep -q 'TEST BUILD: pattern $label is treated as not found' TweaksV.log && sc_line '$NOT_MEASURED $label was not found.' && has '$UNCOUNTED' && has 'stubs: 11, all RX' && log_lacks 'PROBLEM' && log_lacks 'Start-up summary' && log_lacks 'vehicle models with sirens seen'"
+	check "$label: the scanner's test line and the module's, word for word; drawn through the renderer itself, nothing counted, no stub of its own; no problem, no box, no summary" "grep -q 'TEST BUILD: pattern $label is treated as not found' TweaksV.log && sc_line '$NOT_MEASURED $label was not found.' && has '$UNCOUNTED' && has 'stubs: 12, all RX' && log_lacks 'PROBLEM' && log_lacks 'Start-up summary' && log_lacks 'vehicle models with sirens seen'"
 done
 
 echo "== C7 the call of the renderer another mod redirected already: left alone, logged"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe scdraw schooked)
-check "the line, word for word; the other mod's call kept and nothing drawn through it here; no stub of its own; no problem" "sc_line '$NOT_MEASURED the siren lights. renderer call at RVA 0x[0-9A-F]* is not a call into the game (another mod may have hooked it already) (I-E-B1).' && has 'siren draws: none, the call leads to another mod |' && has 'stubs: 11, all RX' && log_lacks 'PROBLEM'"
+check "the line, word for word; the other mod's call kept and nothing drawn through it here; no stub of its own; no problem" "sc_line '$NOT_MEASURED the siren lights. renderer call at RVA 0x[0-9A-F]* is not a call into the game (another mod may have hooked it already) (I-E-B1).' && has 'siren draws: none, the call leads to another mod |' && has 'stubs: 12, all RX' && log_lacks 'PROBLEM'"
 
 echo "== C8 the call of the getter another mod redirected already: logged, nothing redirected"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe scdraw scgetterhooked)
-check "the line, word for word; the renderer's call not redirected; no problem" "sc_line '$NOT_MEASURED the siren settings getter call at RVA 0x[0-9A-F]* is not a call into the game (another mod may have hooked it already) (I-E-B1).' && has '$UNCOUNTED' && has 'stubs: 11, all RX' && log_lacks 'PROBLEM'"
+check "the line, word for word; the renderer's call not redirected; no problem" "sc_line '$NOT_MEASURED the siren settings getter call at RVA 0x[0-9A-F]* is not a call into the game (another mod may have hooked it already) (I-E-B1).' && has '$UNCOUNTED' && has 'stubs: 12, all RX' && log_lacks 'PROBLEM'"
 
 echo "== C9 the renderer's call leads to another function of the game than the one its bone read lies in: logged, nothing redirected"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe scdraw scelsewhere)
-check "the line, word for word, naming the function the unwind data gives; the call as it was; no problem" "sc_line '$NOT_MEASURED I-E-B2 at RVA 0x[0-9A-F]* does not lie in the siren lights. renderer at RVA 0x[0-9A-F]*: the game.s unwind data puts it in the function at RVA 0x[0-9A-F]*.' && has 'siren draws: none, the call leads to another function of the game |' && has 'stubs: 11, all RX' && log_lacks 'PROBLEM'"
+check "the line, word for word, naming the function the unwind data gives; the call as it was; no problem" "sc_line '$NOT_MEASURED I-E-B2 at RVA 0x[0-9A-F]* does not lie in the siren lights. renderer at RVA 0x[0-9A-F]*: the game.s unwind data puts it in the function at RVA 0x[0-9A-F]*.' && has 'siren draws: none, the call leads to another function of the game |' && has 'stubs: 12, all RX' && log_lacks 'PROBLEM'"
 
 echo "== C10 find-bone-by-name's pattern 16 bytes into its function: not a function start - logged, nothing redirected"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe scdraw scnotstart)
@@ -107,7 +107,7 @@ check "its site line and the module's line, word for word, by the unwind data; t
 
 echo "== C10b find-bone-by-name's pattern where no unwind data names a function, CC before it: not a start by the unwind data - logged, nothing redirected"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe scdraw scnounwind)
-check "its site line and the module's line, word for word; the call not redirected; no problem" "sc_line 'DIAGNOSTIC: find-bone-by-name at RVA 0x[0-9A-F]*, no unwind data, bone count offset at RVA 0x[0-9A-F]* holds 0x5E (I-E-B4)' && sc_line '$NOT_MEASURED find-bone-by-name at RVA 0x[0-9A-F]* is not a function start (no unwind data) (I-E-B4).' && has '$UNCOUNTED' && has 'stubs: 11, all RX' && log_lacks 'PROBLEM'"
+check "its site line and the module's line, word for word; the call not redirected; no problem" "sc_line 'DIAGNOSTIC: find-bone-by-name at RVA 0x[0-9A-F]*, no unwind data, bone count offset at RVA 0x[0-9A-F]* holds 0x5E (I-E-B4)' && sc_line '$NOT_MEASURED find-bone-by-name at RVA 0x[0-9A-F]* is not a function start (no unwind data) (I-E-B4).' && has '$UNCOUNTED' && has 'stubs: 12, all RX' && log_lacks 'PROBLEM'"
 
 echo "== C11 none of the game code present (plain fake game): logged, not a problem"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; setkey LARGE_SIREN_IDS 0 SIRENSETTINGS; out=$(game plain_game.exe)
