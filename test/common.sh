@@ -1,12 +1,13 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # Paths and helpers shared by the test suites; every run_*.sh sources this file.
-# T: this folder. R: the repository. B: where the fake game runs, its game folder (run_all.sh deletes it
-# afterwards). AW: the fake LOCALAPPDATA inside B, as a Windows path - the real one is never touched.
-# TW: the fake TEMP and TMP, object\TestTemp next to B, as a Windows path: outside the game folder, as the
+# T: this folder. R: the repository. B: where the fake game runs, its game folder, this suite's own: run_all.sh gives
+# each suite object\TestRun\<suite>\TestRun and deletes it afterwards, and a suite started by hand after a --keep run
+# finds that folder again. AW: the fake LOCALAPPDATA inside B, as a Windows path - the real one is never touched.
+# TW: the fake TEMP and TMP, TestTemp next to B, as a Windows path: outside the game folder, as the
 # real %TEMP% is, which is never touched either (run_all.sh deletes this one too).
 T="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 R="$(cd "$T/.." && pwd)"
-B="${TWEAKSV_TEST_DIR:-$R/object/TestRun}"
+B="${TWEAKSV_TEST_DIR:-$R/object/TestRun/$(basename "$0" .sh | sed 's/^run_//')/TestRun}"
 mkdir -p "$B/appdata" "$(dirname "$B")/TestTemp" || exit 1
 AW="$(cygpath -w "$B/appdata")"
 TW="$(cygpath -w "$(dirname "$B")/TestTemp")"
