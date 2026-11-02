@@ -15,7 +15,7 @@
 // middle of its start to take them off. The set-up's hook tests the stride before it touches the name, the allocator's
 // compares one pointer, and neither touches anything else of a pool that is not the static bounds pool.
 // The hooks raise the pool only if the game makes it after TweaksV's DllMain: a thread of the part checks, 60 seconds
-// after the session's start - the first script program the game places, which the script programs' hook sees: the Blips
+// after the session's start - the game placing blip_controller, which the script programs' hook sees: the Blips
 // part's, which the part joins, or while TweaksV.ini switches Blips off the part's own; the game makes its pools as the
 // session starts - that the game has made the pool, and reports a problem, with the part's box, when it has not: the game
 // made the pool before TweaksV started, or makes it another way. While a plugin that does the Blips part's job is
@@ -117,10 +117,11 @@ namespace TweaksV
 		// the check's end, takes the state - a making after the check has reported is said once, with the sizes
 
 		constexpr DWORD kCheckSeconds = 60;			// the check's time after the session's start, by when the game has made its pools
+		constexpr uint32_t kSessionScript = Scripts::NameHash("blip_controller");	// its placement is the session's start
 		enum : int { kWaiting, kMade, kReported };
 		std::atomic<int> g_check{ kWaiting };
 		HANDLE g_madeEvent = nullptr;				// set at the first allocation of the noted pool, so that the check's thread ends early
-		HANDLE g_sessionEvent = nullptr;			// set at the session's start: the first script program the game places
+		HANDLE g_sessionEvent = nullptr;			// set at the session's start: the game placing blip_controller
 		std::atomic<bool> g_sessionStarted{ false };
 		ULONGLONG g_sessionTick = 0;				// when the session started, written before its event is set
 		DWORD g_checkSeconds = kCheckSeconds;
@@ -178,11 +179,14 @@ namespace TweaksV
 			ReportFailure(kTag, "The check that the game makes the static bounds pool is not done this session: " + why);
 		}
 
-		// The script programs' hook calls this for every program the game places, on the game's thread: the first is the
-		// session's start, which starts the check's clock. Nothing more is done here.
-		void* SessionStarts(uint8_t*, uint32_t)
+		// The script programs' hook calls this for every program the game places, on the game's thread: blip_controller's first
+		// placement, told by its hash as the Blips part reads it, is the session's start, which starts the check's clock. The first
+		// program of all comes some 24 seconds earlier, perhaps before the landing page, where a player may wait as long as they like;
+		// a pool made before blip_controller does no harm, since the first allocation ends the check either way. Nothing more is done here.
+		void* SessionStarts(uint8_t* program, uint32_t)
 		{
-			if (!g_sessionStarted.load(std::memory_order_relaxed) && !g_sessionStarted.exchange(true))
+			if (!g_sessionStarted.load(std::memory_order_relaxed) && IsReadable(program, Scripts::kProgramSize) &&
+				ValueAt<uint32_t>(program, Scripts::kNameHashOffset) == kSessionScript && !g_sessionStarted.exchange(true))
 			{
 				g_sessionTick = GetTickCount64();
 				SetEvent(g_sessionEvent);
@@ -199,8 +203,8 @@ namespace TweaksV
 			try
 			{
 				if (g_diagnostic)
-					WriteLog(kTag, "DIAGNOSTIC: the session started " + std::to_string(g_sessionTick - g_start) + " ms after the part's start (the first script "
-						"program placed): the static bounds check's clock runs.");
+					WriteLog(kTag, "DIAGNOSTIC: the session started " + std::to_string(g_sessionTick - g_start) + " ms after the part's start (blip_controller "
+						"placed): the static bounds check's clock runs.");
 			}
 			catch (...)
 			{
@@ -410,7 +414,7 @@ namespace TweaksV
 			"game makes it, more where the game gives it more.");
 		CheckBudget();
 
-		// 4. the check, from the session's start - the first script program the game places, seen through the script programs'
+		// 4. the check, from the session's start - the game placing blip_controller, seen through the script programs'
 		// hook: the part joins the hook the Blips part has made while Blips is on, and makes it itself, the first part to use
 		// it, while TweaksV.ini switches Blips off. While a plugin that does Blips' job on the same script programs is installed
 		// - BlipLimitFix.asi or Resource Extensions, closed source, as the conflict check found them, whatever TweaksV.ini
@@ -440,7 +444,7 @@ namespace TweaksV
 			CheckNotDone("its thread could not be started (details in TweaksV.log).");
 			return;
 		}
-		WriteLog(kTag, "The static bounds check waits for the session's start - the first script program the game places - and then " +
+		WriteLog(kTag, "The static bounds check waits for the session's start - the game placing blip_controller - and then " +
 			Seconds(g_checkSeconds) + " for the game to make the pool.");
 	}
 }

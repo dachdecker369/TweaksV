@@ -74,6 +74,8 @@
 //                  script_placed_<n>.bin, n counting blip_controller's placements, for the suite to compare with
 //   scripttwice    places it twice, the second time with a native the fake's resolution function does not know
 //   scriptother    places another program, other_script, before it
+//   scriptgap      with scriptother: 3 s between the two placements
+//   scriptotheralone  places other_script alone
 //   scripthash     places a program with blip_controller's hash and another name, blip_imposter, twice instead
 //   scriptpage     the second page of its code cannot be read
 //   scriptmany     places it 17 times
@@ -436,6 +438,7 @@
 //   sbnoalloc      the pool set up, never allocated
 //   sbnever        the pool never made, the others made
 //   sbearly        every pool made before TweaksV loads, and not again
+//   sbfirst        every pool made before the script programs are placed, once TweaksV has started, and not again
 //   sblate         every pool made 4 seconds later than the other actions leave it, after the test build's check of 2 seconds
 //   sbwait         the run stays 5 seconds more: past the test build's check of 2 seconds and the box a second after it
 //   sbflood        the pool made 10,001 times
@@ -4928,7 +4931,7 @@ static void StaticBoundsProtect(int argc, wchar_t** argv, DWORD protection)
 static void StaticBoundsActions(int argc, wchar_t** argv)
 {
 	StaticBoundsProtect(argc, argv, PAGE_EXECUTE_READ);
-	if (!HasOption(argc, argv, L"sbearly"))
+	if (!HasOption(argc, argv, L"sbearly") && !HasOption(argc, argv, L"sbfirst"))
 	{
 		if (HasOption(argc, argv, L"sblate"))
 			Sleep(4000);
@@ -8249,7 +8252,7 @@ static ScriptPlacement g_scriptPlan[20];
 static int g_scriptPlanned = 0;
 static int g_scriptPlaced = 0, g_scriptResolved = 0, g_scriptErrorKept = 0;
 static DWORD g_scriptThread = 0;
-static bool g_scriptPageUnreadable = false;
+static bool g_scriptPageUnreadable = false, g_scriptGap = false;
 static wchar_t g_scriptResult[256];
 
 static void MakeScript(ScriptStorage& script, const char* name, uint32_t hash, unsigned char seed)
@@ -8422,6 +8425,8 @@ static DWORD WINAPI PlaceScripts(void*)
 	int blipPlacements = 0;
 	for (int i = 0; i < g_scriptPlanned; i++)
 	{
+		if (i > 0 && g_scriptGap)
+			Sleep(3000);
 		ScriptStorage& script = *g_scriptPlan[i].script;
 		FakeScriptProgram& p = script.program;
 		// as the game's constructor leaves the program before the call: a new program's code, the natives' hashes in
@@ -8490,7 +8495,10 @@ static void PlaceScriptsAsAsked(int argc, wchar_t** argv)
 	{
 		PlanScript(g_otherScript);
 		PlanScript(g_blipController);
+		g_scriptGap = HasOption(argc, argv, L"scriptgap");
 	}
+	else if (HasOption(argc, argv, L"scriptotheralone"))
+		PlanScript(g_otherScript);
 	else if (HasOption(argc, argv, L"scripttwice"))
 	{
 		PlanScript(g_blipController);
@@ -9131,6 +9139,8 @@ int wmain(int argc, wchar_t** argv)
 		wprintf(L"unload: %ls after %d x FreeLibrary | ", GetModuleHandleW(asi) ? L"still loaded" : L"unloaded", frees);
 	}
 	CallBoxSearches();	// the box streamer searches, as the game would call them
+	if (HasOption(argc, argv, L"sbfirst"))
+		StaticBoundsMakePools(argc, argv);
 	PlaceScriptsAsAsked(argc, argv);	// the script programs, as the game's resource placement thread places them
 	if (dstorage && HasOption(argc, argv, L"dsnofactory"))
 		swprintf(g_dstorageResult, sizeof(g_dstorageResult) / sizeof(g_dstorageResult[0]), L"dstorage: not called | ");
