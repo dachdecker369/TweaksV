@@ -7,6 +7,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <iterator>
 #include <string>
 #include <utility>
@@ -115,5 +116,30 @@ namespace TweaksV
 
 		const auto address = reinterpret_cast<uintptr_t>(p);
 		return address >= image.first && address < image.second;
+	}
+
+	bool IsInsideGameData(const void* p)
+	{
+		static const std::pair<uintptr_t, uintptr_t> data = []
+		{
+			const auto base = reinterpret_cast<const BYTE*>(GetModuleHandleW(nullptr));
+			const auto dos = reinterpret_cast<const IMAGE_DOS_HEADER*>(base);
+			if (!base || dos->e_magic != IMAGE_DOS_SIGNATURE)
+				return std::pair<uintptr_t, uintptr_t>(0, 0);
+			const auto nt = reinterpret_cast<const IMAGE_NT_HEADERS*>(base + dos->e_lfanew);
+			if (nt->Signature != IMAGE_NT_SIGNATURE)
+				return std::pair<uintptr_t, uintptr_t>(0, 0);
+			const IMAGE_SECTION_HEADER* const sections = IMAGE_FIRST_SECTION(nt);
+			for (WORD i = 0; i < nt->FileHeader.NumberOfSections; i++)
+				if (memcmp(sections[i].Name, ".data\0\0", 8) == 0)
+				{
+					const auto start = reinterpret_cast<uintptr_t>(base) + sections[i].VirtualAddress;
+					return std::pair<uintptr_t, uintptr_t>(start, start + sections[i].Misc.VirtualSize);
+				}
+			return std::pair<uintptr_t, uintptr_t>(0, 0);
+		}();
+
+		const auto address = reinterpret_cast<uintptr_t>(p);
+		return address >= data.first && address < data.second;
 	}
 }

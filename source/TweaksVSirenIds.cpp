@@ -443,9 +443,11 @@ namespace TweaksV
 				" at +" + Hex(neighbourOffset) + "; ");
 			if (!g_forThePart)
 				return true;
-			// what the part writes over: a byte's type, and an offset field that is the member's, or not written yet
+			// what the part writes over: a byte's type, in the game's .data, and an offset field that is the member's, or not written yet
 			const uint8_t type = data[kMemberTypeAt];
-			const uint64_t offsetField = ValueAt<uint64_t>(data + kMemberOffsetAt);
+			const uint32_t offsetField = ValueAt<uint32_t>(data + kMemberOffsetAt);
+			if (!IsInsideGameData(data + kMemberTypeAt))
+				return Fail("the " + std::string(r.member) + "'s type at " + DescribeAddress(data + kMemberTypeAt) + " does not lie in the game's .data (" + label + ").");
 			if (type != 0x01 && type != 0x02)
 				return Fail("the " + std::string(r.member) + "'s type at " + DescribeAddress(data + kMemberTypeAt) + " is " + Hex(type) +
 					", not 0x1 or 0x2, which store a byte (another mod may have widened it already) (" + label + ").");
@@ -1209,6 +1211,12 @@ namespace TweaksV
 			g_matches[i] = plan.matches[i][0];
 		g_table = plan.array;
 		g_forThePart = true;
+		if (plan.gameSize != kIds)	// the core has checked that the four agree; the findings have them all say the game's own size
+		{
+			RelocationFailed(kSpec, "the siren setting ID table's limits say " + std::to_string(plan.gameSize) + " entries, not the game's " + std::to_string(kIds) +
+				" (another mod may have raised them already).");
+			return;
+		}
 
 		// 2. every other site, in the order of the patterns; the first that is not as the findings have it leaves the game as it is
 		if (!CheckRegistration(kSirenSetting) || !CheckRegistration(kVariation) || !CheckReader() || !CheckCarcolsPointer() || !CheckSitesOf(kT1) ||

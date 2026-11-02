@@ -27,8 +27,8 @@ namespace TweaksV
 	// The siren settings now, on any thread once StartFeatures has run, through the carcols pointer of I-E-T4 - nothing while
 	// the game has none loaded or they cannot be read this moment, and nothing until this module has looked for its sites:
 	// with LARGE_SIREN_IDS=1 on every boot its part is on, and with DIAGNOSTIC_MODE=1 while the part or the key is off. I-E-T4
-	// found is all it takes, whatever the other sites hold - but the part looks for its patterns in order and stops at the
-	// first missing, so one missing before I-E-T4 leaves nothing here.
+	// found is all it takes, whatever the sites after it hold - but the part goes through its patterns in order and stops at
+	// the first missing or not as the findings have it, so one before I-E-T4 leaves nothing here.
 	std::optional<SirenSettingsArray> SirenSettingsNow();
 
 	// With LARGE_SIREN_IDS=0 or the part off: finds and checks every site of the limit, logs each one and starts the

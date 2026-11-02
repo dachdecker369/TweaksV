@@ -215,6 +215,8 @@
 //   sibyte0       the byte before the two hooked functions a 00: neither where a function starts
 //   silimit       a base builder's limit 65537, past the table's fixed size
 //   sidisagree    a pack's builder's second limit 512
+//   si512         all four limits 512, in agreement (another mod raised them)
+//   silimitop     a base builder's limit not a cmp rsi
 //   sipack        12 s after TweaksV has loaded, a pack's 6 settings appended and their IDs entered; the fake stays to 15 s
 //   sinone        the carcols pointer null - no settings loaded yet - until 12 s after TweaksV has loaded; stays to 15 s
 //   simany        300 settings, given their IDs as the game's builder gives them: the table full, the ID 255 to the last 45
@@ -232,6 +234,12 @@
 //   sifill        the init's last fill stores 16 bytes below the table's last 16
 //   sicallhooked  the base loader call leads outside the game (another mod redirected it)
 //   sicarcols     the getter reads another carcols pointer than a pack's builder
+//   sicarcolsout  a pack's builder's carcols pointer lies outside the game
+//   sitableout    the siren settings' member data table lies outside the game
+//   sioffsetsout  the variations' offsets table lies outside the game
+//   sioffsetfield the siren settings' ID member's offset field 8, not +0
+//   sidatardata   the siren settings' ID member's data lie in the fake's .rdata, not its .data
+//   sibadt2, sibadt3, sibadt4, sibadc1, sibadc2, sibadc3  a site of that match, outside its pattern, not as the findings have it
 // The siren count (SirenSettings): its sites in .fakesit - the vehicle lights' calls of the siren lights' renderer and of the
 // siren settings getter (I-E-B1), a read of a siren's glass bone (I-E-B3) - and the renderer, with its read of a siren's bone
 // (I-E-B2), and find-bone-by-name (I-E-B4) as code the fake's unwind data names; ten vehicle models at the game's offsets, of
@@ -1832,6 +1840,7 @@ static void CheckData(const volatile unsigned char* bytes, size_t size);
 struct SirenIdsMember { uint64_t nameHash; uint64_t offset; unsigned char type; unsigned char rest[15]; };
 static SirenIdsMember g_sirenIdsMembersStorage[28];			// the siren settings' 20, the variations' 7 and an eighth
 static SirenIdsMember* volatile g_sirenIdsMembers = g_sirenIdsMembersStorage;
+static const SirenIdsMember kSirenIdsMemberInRdata = { 0, 0, 0x01, {} };	// sidatardata
 static SirenIdsMember* g_sirenIdsSettingTableStorage[21];	// the siren settings' member data pointers, then null
 static SirenIdsMember** volatile g_sirenIdsSettingTable = g_sirenIdsSettingTableStorage;
 static SirenIdsMember* g_sirenIdsVariationTableStorage[8];	// the variations', then null
@@ -2168,8 +2177,9 @@ static void SirenIdsSetup(int argc, wchar_t** argv)
 	SirenIdsPut(g_sirenIdsT2, 0x29, "40 88 31 C3");
 	SirenIdsPut(g_sirenIdsT2, 0x30, "0F B6 2C 39 C3");
 	SirenIdsPut(g_sirenIdsT2, 0x4B, "0F B6 2C 39 48 81 FD FF 00 00 00 C3");
-	SirenIdsPut(g_sirenIdsT2, 0x85, HasOption(argc, argv, L"silimit") ? "48 81 FE 01 00 01 00" : "48 81 FE 00 01 00 00");
-	SirenIdsPut(g_sirenIdsT2, 0xCD, "48 81 FE 00 01 00 00");
+	const char* const limit = HasOption(argc, argv, L"si512") ? "48 81 FE 00 02 00 00" : "48 81 FE 00 01 00 00";
+	SirenIdsPut(g_sirenIdsT2, 0x85, HasOption(argc, argv, L"silimit") ? "48 81 FE 01 00 01 00" : HasOption(argc, argv, L"silimitop") ? "48 81 FF 00 01 00 00" : limit);
+	SirenIdsPut(g_sirenIdsT2, 0xCD, limit);
 	SirenIdsPut(g_sirenIdsT2, 0xD6, "40 B6 FF");
 	SirenIdsPut(g_sirenIdsT3, 0, "B8 4B 00 00 00 31 C9 4C 8D 05 00 00 00 00 48 8D 2D 00 00 00 00");
 	SirenIdsPut(g_sirenIdsT3, 0x8D, "0F B6 3C 03 48 81 FF FF 00 00 00 C3");
@@ -2178,8 +2188,8 @@ static void SirenIdsSetup(int argc, wchar_t** argv)
 	SirenIdsPut(g_sirenIdsT4, 0x21, "40 88 33 C3");
 	SirenIdsPut(g_sirenIdsT4, 0x28, "0F B6 0C 3B C3");
 	SirenIdsPut(g_sirenIdsT4, 0x42, "0F B6 34 3B 48 81 FE FF 00 00 00 C3");
-	SirenIdsPut(g_sirenIdsT4, 0x81, "48 81 FE 00 01 00 00");
-	SirenIdsPut(g_sirenIdsT4, 0xC9, HasOption(argc, argv, L"sidisagree") ? "48 81 FE 00 02 00 00" : "48 81 FE 00 01 00 00");
+	SirenIdsPut(g_sirenIdsT4, 0x81, limit);
+	SirenIdsPut(g_sirenIdsT4, 0xC9, HasOption(argc, argv, L"sidisagree") ? "48 81 FE 00 02 00 00" : limit);
 	SirenIdsPut(g_sirenIdsT4, 0xD2, "40 B6 FF");
 	SirenIdsPut(g_sirenIdsD1, 0, "4D 8B 6F 48 4D 69 FE E8 05 00 00 43 0F B6 54 3D 00 0F B7 7B 50 80 FA FF 74 00 C3");
 	SirenIdsPut(g_sirenIdsD2, 0, "31 F6 66 2E 0F 1F 84 00 00 00 00 00 38 54 35 00 0F 84 00 00 00 00 48 81 C6 E8 05 00 00 48 39 F3 75 EA");
@@ -2189,6 +2199,18 @@ static void SirenIdsSetup(int argc, wchar_t** argv)
 	SirenIdsPut(g_sirenIdsC1, 0xC9, "89 46 1C 48 83 C4 20 5E C3");
 	SirenIdsPut(g_sirenIdsC2, 0, "C7 41 30 00 00 00 00 48 C7 41 38 00 00 00 00 C7 41 40 00 00 00 00 C7 41 48 00 00 FF FF C3");
 	SirenIdsPut(g_sirenIdsC3, 0, "C7 40 30 00 00 00 00 48 C7 40 38 00 00 00 00 C7 40 40 00 00 00 00 C7 40 48 00 00 FF FF 48 83 C4 28 C3");
+	if (HasOption(argc, argv, L"sibadt2"))
+		g_sirenIdsT2[0x30 + 1] = 0xB7;
+	if (HasOption(argc, argv, L"sibadt3"))
+		g_sirenIdsT3[0x8D + 1] = 0xB7;
+	if (HasOption(argc, argv, L"sibadt4"))
+		g_sirenIdsT4[0x28 + 1] = 0xB7;
+	if (HasOption(argc, argv, L"sibadc1"))
+		g_sirenIdsC1[0xA0 + 2] = 0x00;
+	if (HasOption(argc, argv, L"sibadc2"))
+		g_sirenIdsC2[2] = 0x34;
+	if (HasOption(argc, argv, L"sibadc3"))
+		g_sirenIdsC3[2] = 0x34;
 	SirenIdsPut(g_sirenIdsR1, 0, "66 0F 7F 05 00 00 00 00 E8 00 00 00 00 E8 00 00 00 00 80 3D");
 	SirenIdsPut(g_sirenIdsM1, 0, "0F B6 81 3B 05 00 00 48 85 C0 74 13 48 8B 0D 00 00 00 00 48 69 C0 E8 05 00 00 48 03 41 48 C3");
 	SirenIdsPut(g_sirenIdsLeaExtra, 0, HasOption(argc, argv, L"sififth") ? "48 8D 05 00 00 00 00" : "CC 8D 05 00 00 00 00");
@@ -2231,6 +2253,10 @@ static void SirenIdsSetup(int argc, wchar_t** argv)
 		g_sirenIdsSettingOffsets[2] = 0x8;
 	if (HasOption(argc, argv, L"sidataout"))
 		g_sirenIdsSettingTable[0] = reinterpret_cast<SirenIdsMember*>(const_cast<unsigned char*>(ImageEnd() + 0x73000));
+	if (HasOption(argc, argv, L"sidatardata"))
+		g_sirenIdsSettingTable[0] = const_cast<SirenIdsMember*>(&kSirenIdsMemberInRdata);
+	if (HasOption(argc, argv, L"sioffsetfield"))
+		g_sirenIdsMembers[0].offset = 8;
 	g_sirenIdsTypesPlaced[0] = g_sirenIdsMembers[0].type;
 	g_sirenIdsTypesPlaced[1] = g_sirenIdsMembers[26].type;
 
@@ -2265,17 +2291,17 @@ static void SirenIdsSetup(int argc, wchar_t** argv)
 	g_sirenIdsPointer[1] = g_sirenIdsCarcols;
 
 	// where the sites lead
-	SirenIdsRel32(g_sirenIdsP1, 23, g_sirenIdsSettingTable);
+	SirenIdsRel32(g_sirenIdsP1, 23, HasOption(argc, argv, L"sitableout") ? static_cast<const void*>(ImageEnd() + 0x74000) : g_sirenIdsSettingTable);
 	SirenIdsRel32(g_sirenIdsP1, 37, g_sirenIdsSettingOffsets);
 	SirenIdsRel32(g_sirenIdsP2, 23, g_sirenIdsVariationTable);
-	SirenIdsRel32(g_sirenIdsP2, 37, g_sirenIdsVariationOffsets);
+	SirenIdsRel32(g_sirenIdsP2, 37, HasOption(argc, argv, L"sioffsetsout") ? static_cast<const void*>(ImageEnd() + 0x75000) : g_sirenIdsVariationOffsets);
 	const unsigned char* const table = HasOption(argc, argv, L"simoved") ? ImageEnd() + 0x70000 : g_sirenIdsTable;
 	SirenIdsRel32(g_sirenIdsT1, 10, table);
 	SirenIdsRel32(g_sirenIdsT2, 23, table);
 	SirenIdsRel32(g_sirenIdsT3, 10, table);
 	SirenIdsRel32(g_sirenIdsT4, 16, HasOption(argc, argv, L"sisplit") ? table + 16 : table);
 	SirenIdsRel32(g_sirenIdsLeaExtra, 3, table);
-	SirenIdsRel32(g_sirenIdsT4, 3, &g_sirenIdsPointer[0]);
+	SirenIdsRel32(g_sirenIdsT4, 3, HasOption(argc, argv, L"sicarcolsout") ? static_cast<const void*>(ImageEnd() + 0x76000) : &g_sirenIdsPointer[0]);
 	SirenIdsRel32(g_sirenIdsM1, 15, &g_sirenIdsPointer[HasOption(argc, argv, L"sicarcols") ? 1 : 0]);
 	SirenIdsRel32(g_sirenIdsD2, 18, HasOption(argc, argv, L"sijz") ? ImageEnd() + 0x71000 : const_cast<const unsigned char*>(g_sirenIdsD2 + 37));
 	SirenIdsRel32(g_sirenIdsR1, 4, table + (HasOption(argc, argv, L"sifill") ? 0xE0 : 0xF0));

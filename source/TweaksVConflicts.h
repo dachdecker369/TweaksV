@@ -27,4 +27,7 @@ namespace TweaksV
 	// True if p lies inside GTA5_Enhanced.exe's image. The relocation checks use it: an
 	// array reference outside the image means another mod already relocated the array.
 	bool IsInsideGameImage(const void* p);
+
+	// True if p lies in the section the game's section table names .data.
+	bool IsInsideGameData(const void* p);
 }
