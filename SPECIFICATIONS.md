@@ -241,7 +241,7 @@ A read-only game folder is logged; any other reason for the fallback, and no fil
 `WriteLogHeader()` writes, all tagged `[TweaksV]`:
 
 ```
-TweaksV 2.6.0 (git <hash>)
+TweaksV 2.7.0 (git <hash>)
 TweaksV.asi: <path>
 Game: <path>, file version 1.0.1158.16, PE timestamp 0x6AA45F10 (<UTC date>)
 TweaksV.ini: <path> (<notes, section 5.3>)

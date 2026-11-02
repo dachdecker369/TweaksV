@@ -280,8 +280,8 @@ The next plan, 2.8.0, comes from those numbers.
 **State:** phase C's round runs since 2026-11-02, the split of D29 kept.
 The nine coding tracks and the review's fixes are merged on main and their documents folded: fifteen parts, `TweaksV.ini`'s layout 5 with its 43 keys, 228 patterns, 2408 checks, the full run about 10 minutes side by side.
 All six research passes are done and decided (D23, D30, D31): no siren track in this round, the sirens per vehicle being 2.8.0's.
-2.6.0 stands as the last build, tagged on c6c8854 and pushed.
-Next: the version commit, the proof and my boots.
+2.7.0 is set here, with its proof on the merged tree; 2.6.0 stands as the last tag, on c6c8854 and pushed.
+Next: my boots of 2.7.0's proof, then the tag and one atomic push.
 The open issues are T-HARDEN, T-DIAG, T-FREEZE and T-PEDPROPS.
 
 **Decisions waiting on me:** none.
