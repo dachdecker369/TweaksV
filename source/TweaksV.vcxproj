@@ -136,6 +136,7 @@
     <ClCompile Include="TweaksVIni.cpp" />
     <ClCompile Include="TweaksVLegacyPacks.cpp" />
     <!-- [light capacity] -->
+    <ClCompile Include="TweaksVLightCapacity.cpp" />
     <ClCompile Include="TweaksVLog.cpp" />
     <ClCompile Include="TweaksVMeasure.cpp" />
     <ClCompile Include="TweaksVModkitLimit.cpp" />
@@ -191,6 +192,7 @@
     <ClInclude Include="TweaksVLegacyPacks.h" />
     <ClInclude Include="TweaksVLock.h" />
     <!-- [light capacity] -->
+    <ClInclude Include="TweaksVLightCapacity.h" />
     <ClInclude Include="TweaksVLog.h" />
     <ClInclude Include="TweaksVMeasure.h" />
     <ClInclude Include="TweaksVModkitLimit.h" />

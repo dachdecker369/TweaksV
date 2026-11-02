@@ -248,6 +248,33 @@ namespace TweaksV
 		{ "C-E-A1", "56 57 48 83 EC ? 48 89 CE 48 63 51 18 48 63 79 1C 48 0F AF FA 48 83 C7 07 48 83 E7 F8 48 8B 09 48 01 FA 48 8B 01 FF 50 08" },
 
 		// [light capacity]
+		// LightCapacity, the lighting capacity (TweaksVLightCapacity.cpp): the frame's two stores of vehicle lights, reset (A1) and
+		// drained (A2, A3); a job's 5 vehicles (B1) and its scratch's size in its two kicks (B2, B3); add-to-a-job's-list (C1), the
+		// job's scratch (C2, C3) and its lists' start values (C4); the scene store's check (D1) and its byte index read back (D2),
+		// its two sides (E1, E2), the ray traced lists (E3, F1), their upload (F2) and the reflection lists (F3); the corona store,
+		// twice in one count (G1), and the drain's add to it (G2); the worker's frame (H1) and the job's scratch in it (H2)
+		{ "G-E-A1", "48 8D 05 ? ? ? ? 48 89 05 ? ? ? ? 4C 8D 05 ? ? ? ? 48 8D 15 ? ? ? ? 48 89 15 ? ? ? ? 4C 8D 0D ? ? ? ?" },
+		{ "G-E-A2", "48 8D 1D ? ? ? ? 48 39 1D ? ? ? ? 0F 86" },
+		{ "G-E-A3", "48 8D 35 ? ? ? ? 48 39 35 ? ? ? ? 76 ? 0F 1F 44 00 00 48 89 F1 31 D2 45 31 C0 45 31 C9 E8" },
+		{ "G-E-B1", "69 05 ? ? ? ? CD CC CC CC 05 99 99 99 19 3D 32 33 33 33 77" },
+		{ "G-E-B2", "C7 44 1A 70 80 B1 00 00 F0 FF 05" },
+		{ "G-E-B3", "42 C7 44 0A 70 80 B1 00 00" },
+		{ "G-E-C1", "8B 41 14 3B 41 1C 0F 83 ? ? ? ? 48 89 D7 49 89 CE 48 8B 59 08" },
+		{ "G-E-C2", "4C 8D 48 0F 49 83 E1 F0 4C 89 CA 48 29 C2 49 8D A9 80 25 00 00 BB 00 8C 00 00 48 29 D3 48 81 C2 FF 73 FF FF 45 31 C0 48 81 FA 7F 4E FF FF BE 80 B1 00 00" },
+		{ "G-E-C3", "48 05 00 8C 00 00 48 81 FA 00 8C 00 00" },
+		{ "G-E-C4", "48 89 7C 24 68 0F 28 0D ? ? ? ?" },
+		{ "G-E-D1", "48 63 05 ? ? ? ? 48 3D FF 03 00 00 0F 8F ? ? ? ? 48 63 0D ? ? ? ? 48 8D 15 ? ? ? ? 8D 59 01 89 1D ? ? ? ? 88 04 CA" },
+		{ "G-E-D2", "0F B6 1C C1 F3 0F 11 74 C1 04 4A 8D 14 C1 E8" },
+		{ "G-E-E1", "48 69 C7 00 00 07 00 48 8D 15 ? ? ? ? 48 01 C2 48 89 15 ? ? ? ? 48 8D 05 ? ? ? ? 44 8B 04 B8 44 89 05 ? ? ? ? 48 69 C7 0C 9A 02 00 48 8D 0D ? ? ? ? 48 01 C1 48 89 0D" },
+		{ "G-E-E2", "48 69 C8 00 00 07 00 48 8D 15 ? ? ? ? 48 01 CA 48 89 15 ? ? ? ? 48 8D 0D ? ? ? ? C7 04 81 00 00 00 00 48 69 C8 0C 9A 02 00 48 8D 15" },
+		{ "G-E-E3", "48 69 C8 10 20 07 00 48 8D 15 ? ? ? ? 48 8D 34 0A 48 89 35 ? ? ? ? 8B 04 11" },
+		{ "G-E-F1", "4C 8B 25 ? ? ? ? 45 8B 34 24 41 81 FE FF 03 00 00 0F 8F" },
+		{ "G-E-F2", "44 0F B6 05 ? ? ? ? 48 81 C1 E0 70 00 00 BA 00 02 00 00 E8" },
+		{ "G-E-F3", "4B 63 0C 88 48 81 F9 FF 02 00 00" },
+		{ "G-E-G1", "8B 0D ? ? ? ? 48 81 F9 3F 04 00 00 0F 87" },
+		{ "G-E-G2", "44 8B 81 00 CC 00 00 49 81 F8 3F 04 00 00 0F 87" },
+		{ "G-E-H1", "B8 58 80 01 00 E8 ? ? ? ? 48 29 C4" },
+		{ "G-E-H2", "48 8D 44 24 50 49 89 04 24 4C 89 E1 41 FF 54 24 60" },
 		// [population]
 		// [ped pool]
 		// [render queues]

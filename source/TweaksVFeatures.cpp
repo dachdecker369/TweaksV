@@ -13,6 +13,7 @@
 #include "TweaksVDecals.h"
 #include "TweaksVDirectStorage.h"
 #include "TweaksVHeapAdjuster.h"
+#include "TweaksVLightCapacity.h"
 #include "TweaksVLog.h"
 #include "TweaksVModkitLimit.h"
 #include "TweaksVPackfileLimit.h"
@@ -156,6 +157,7 @@ namespace TweaksV
 			// [siren count]
 			{ "SirenSettings", MeasureSirenCount },
 			// [light capacity]
+			{ "LightCapacity", MeasureLightCapacity },
 			// [population]
 			// [ped pool]
 			// [render queues]

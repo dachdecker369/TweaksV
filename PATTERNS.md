@@ -66,6 +66,9 @@ The second relies on Windows, not on the game: a classic replace-rename reaches 
      That the game sets a pool's capacity between the set-up and the allocator, and keeps no other copy of the size to use later.
      That the game makes the pool after TweaksV's `DllMain`, through these two functions: a build that made it earlier, or another way, leaves it at the game's size, which the part's check reports 60 seconds after the session's start.
    <!-- [light capacity] -->
+   - **Lighting capacity:** a light's record of 0x1C0 bytes and a corona's of 0x30, which the stores' distances rest on; 5 vehicles a job and 60 jobs, in the code's shape and in no one constant (`lea edi, [rax+rax*4]` at RVA 0xDE692E and 0xDE6931, the same in 0xF0104E), and 300 vehicles a frame, the length of four arrays with their counts right behind them, in no instruction at all, since nothing compares with it; the order of the frame, the vehicles' lights last; the sort list's mark, the byte at +4 of its count, read by no pattern's instruction; the siren setting's byte at +0x38 and its lights' flag at +0x45, read through `I-E-T4`'s pointer; a job's scratch handed from the worker's frame to a job whose +0x6E has bit 0 set, the only such call found; the shaders' 512 and 128, in the game's shader files; and the score of the ray traced upload with its 196 m.
+     A change in any of them leaves a number wrong without an error, or a raise's room too small.
+     The function behind `G-E-C1`'s jump is pinned only by what the module compares at run time, the 12 bytes of its way out, which it must find before it redirects the jump.
    <!-- [population] -->
    <!-- [ped pool] -->
    <!-- [render queues] -->
@@ -615,6 +618,81 @@ The two patterns, each matching exactly once in both dumps, looked for on every 
 | C-E-A1 | `56 57 48 83 EC ? 48 89 CE 48 63 51 18 48 63 79 1C 48 0F AF FA 48 83 C7 07 48 83 E7 F8 48 8B 09 48 01 FA 48 8B 01 FF 50 08` | the pools' allocator, from its pushes on, its first byte its start - the part's hook lies there: +6 `mov rsi, rcx`, the pool, its first argument; +9 `movsxd rdx, [rcx+0x18]`, the capacity; +13 `movsxd rdi, [rcx+0x1C]`, the stride; +17 to +25 their product rounded up to 8; +29 `mov rcx, [rcx]`, the memory allocator; +32 the capacity added, the bytes asked in `rdx`; +35 and +38 `call [rax+8]` of its table, with no `r8` or `r9` of its own. The wildcard at +5 is the stack frame's size | found, its RVA to check | 0x15A4D0 |
 
 <!-- [light capacity] -->
+
+## LightCapacity
+
+The lighting capacity (`TweaksVLightCapacity`, SPECIFICATIONS.md section 11.16.3), measured first, nothing raised.
+Its letter is `G`, its tag `LightCapacity`.
+RVAs from the dumps of 2026-10-29, first run by my proof boot of 2.7.0; the idea comes from the page of Resource Extensions [Enhanced], whose plugin was not read (CREDITS.md).
+A frame's lights pass through these layers, sirens' among them:
+
+| Layer | Where (RVA) | Holds | Past it |
+|---|---|---|---|
+| A job's list | 0xE15700, one list per 5 vehicles | 80 real lights, 200 coronas | silently dropped: the job's later vehicles lose lights |
+| The frame's vehicle store | 0x4371B00, 0x4366D00 | 400 real lights, 928 coronas | no check: the jobs write on, over the stores' own write pointers |
+| Vehicles a frame | 0x4362160 and three more arrays, 60 jobs | 300 | no check: the 301st overwrites the count itself |
+| The scene store | 0x3AB0250, two of 1024 x 0x1C0 | 1024 | a farther light is dropped; a nearer one replaces slot (index AND 0xFF), not the farthest: a bug of the game's |
+| The ray traced list | 0x3C53670, two of 1024 | 1024 within 196 m, first come, vehicles last | silently dropped |
+| The ray traced upload | 0x492E13, object +0x70E0 | 512, the largest of range / distance | not in the ray traced passes |
+| The shaders (LuminanceV's FRAME.md) | a culling mask of 16 words | 512 a wave, 128 a pixel | shader-bound, no patch reaches it |
+| Reflection lists | 0x3C00250, three of 768 | 768, used 128 | not fed by vehicles' lights |
+| The corona store | 0x41B4210 | 1088 | silently dropped |
+
+- **The path of a siren's light:** the vehicle's lights function (RVA 0xE15B20) calls the siren lights (RVA 0xE9BCB0) when sirens are on and the vehicle's other lights through six more functions; each ends in add-to-a-job's-list (RVA 0xE15700), seven call sites in six functions, which compares the list's count at +0x14 with its capacity at +0x1C and returns when full.
+  A job's list: +0x00 the coronas, +0x08 the lights, +0x10 and +0x14 the counts, +0x18 and +0x1C the capacities, loaded together from .rdata 0x26399A0, 0, 0, 200, 80; the arrays lie in the job's scratch of 0xB180 bytes, 200 x 0x30 and 80 x 0x1C0.
+  A corona is added inline with its own check.
+  One job holds 5 vehicles (RVA 0xDE6870 registers a vehicle, kicks a job at every fifth; RVA 0xF01040 kicks the last); within a job they run in index order, so when the list fills the later ones lose lights for that frame.
+- **The frame's stores:** at a job's end `xadd` moves a write pointer by what it has and `memcpy` copies, with no capacity anywhere.
+  The pointers, RVA 0x439D700 for coronas and 0x439D708 for lights, are reset once a frame (RVA 0xF00F70) to their stores, 0x4366D00 and 0x4371B00; the coronas' store ends at the lights', the lights' store at the pointers, so the 401st light's record lands on the pointers themselves.
+  What comes next is reasoned, not seen: the next job's `xadd` or its `memcpy`, or the drain's walk, faults; for triage, an access violation in the drain from RVA 0xF01130, in `memcpy` (RVA 0x2479F10) called from RVA 0xE15AE2 or 0xE15ABA, or garbage in RVA 0x3EF140.
+- **The drain** (RVA 0xF010B0): every corona through RVA 0xB3A850 into the corona store, its count at +0xCC00; every light through add-scene-light (RVA 0x3EF140) with a null mask.
+  The frame runs the reset, the vehicles' registration, the other lights, then the drain, so vehicles' lights come last.
+- **The scene store** (RVA 0x3EF140, then 0x3FA7B0): two arrays swapped each frame (RVA 0x3F30A0); its count RVA 0x3D39ECC, the frame's render count RVA 0x3D39ED0, set once a frame by RVA 0x3FB200, stable while that frame draws.
+  Below 1024 a light is appended, its index and distance into the sort list at RVA 0x3D40398, 8 bytes an entry, count RVA 0x3D42398 right behind it, its mark the byte at RVA 0x3D4239C.
+  Past 1024 the list is sorted if marked, a light not nearer than the farthest is dropped, else it takes that entry's slot; but the index is stored as a byte (RVA 0x3FA7F3) and read as one (RVA 0x3FAA40), so the slot overwritten is the index AND 0xFF: one of the frame's first 256 lights, and the farthest stays.
+  The sort moves whole entries and no other code reads the list, so an index of 32 bits would survive it.
+- **The ray traced list** (RVA 0x3FAEF0): when a ray traced effect is on and the light nearer than 196 m, types 1, 2 and 4; two lists at RVA 0x3C53670, 0x72010 bytes each, their counts first, first come, so vehicles last.
+  The upload (RVA 0x492DC0, then 0x3FCEC0) scores up to 1024 records by range over distance and copies the first 512, the room its object has.
+- **The reflection lists** (RVA 0x3FACE0): three lists of 768 at RVA 0x3C00250, two sets 0x29A0C apart; a null mask never feeds them, so vehicles' lights are not in them; their readers take 128 at most.
+- **What a siren adds** (RVA 0xE9BCB0): for each of the 20 lights with a bone and not broken, a corona, and if the light's flag at +0x45 is set and it is lit, then with the setting's byte +0x38 at 0 it joins one of four groups, merged into at most 4 lights a vehicle, and with it not 0 it is a real light of its own.
+  So the byte is what costs: `useRealLights` by the element order of `carcols.meta` (HINT for the name, the behaviour is the code's), which the measurement's numbers will agree with or not.
+- **The stub:** the jump at +6 of `G-E-C1`, RVA 0xE15711, `0F 83 D0 01 00 00`, leads to RVA 0xE158E7, the function's way out: `48 83 C4 20` `add rsp, 0x20`, `5B` `pop rbx`, `5F` `pop rdi`, `5E` `pop rsi`, `41 5E` `pop r14`, `41 5F` `pop r15`, `C3` `ret`.
+  None of the seven reads a flag and the first writes them anew, so a `lock inc` before them changes nothing the game sees; the way that adds a light falls through to the same address from `inc dword [r14+0x14]`, so it can rest on no flags from the jump's `cmp`.
+- **The complete sets,** by scan and references, for a raise: the lights' store's base at RVA 0xF00F85, 0xF011BB and the constructor's 0xF3E27A, which walks it to `cmp rsi, 0x2BC00` at RVA 0xF3E35E; the coronas' at RVA 0xF00F70, 0xF01109 and 0xF3E1B2; both bases also through RVA 0xF00FE0 and 0xF00FE7 into the jobs' parameters +0x30 and +0x38, from the same registers, which the job does not read.
+  The write pointers at RVA 0xF00F77, 0xF00F7E, 0xF00F8C, 0xF00F93, 0xF01110, 0xF011AE, 0xF011C2 and 0xF011E7, no other reader.
+  The vehicles' count at RVA 0x4362AC0 referenced in RVA 0xDE6870, 0xF01040, 0xF010B0 and 0xF3C140 alone, none comparing it with 300; the arrays behind it at RVA 0x4362160 (8 bytes), 0x4362AC8 (4), 0x4362F80 (16) and 0x4364250 (4), their counts right behind them, shared by all jobs through the parameters at RVA 0x4366CA0.
+  A job's scratch: 0x8C00 at RVA 0xE1592B, 0xE15969 and 0xE1596F, in RVA 0xE15933 and 0xE1593D as -0x8C01 and -0xB181; 0x2580 at RVA 0xE15924; 0xB180 at RVA 0xE15944, and at a job's +0x70 at RVA 0xDE6957 and 0xF01090, which the worker does not read; the sixty jobs at RVA 0x4364710, 0xA0 bytes each.
+  The 1024: 0x3FF at RVA 0x3EF6EE, 0x3FA7D0, 0x3FAF08, 0x3FD134 and 0x3FD139; 0x70000 at RVA 0x3F335F, 0x3FB230 and the static loops 0x4B6D4F, 0x4B7785 and 0x4B788A; 0x72010 at RVA 0x3A4947, 0x3F33AE and 0x3FCFA6; 0x29A0C at RVA 0x3F3385 and 0x3FB25A.
+  It also sizes, in `.data`, RVA 0x3D37690 (count 0x3D38690), 0x3D3F0B0, 0x3D400C0, 0x3D401C0, 0x3D40398, 0x3D423A8 and 0x3D463B0; on the heap RVA 0x3D40378, capacity written at RVA 0x3F1329; and the stacks of RVA 0x3F2780 and 0x3FCEC0, so the scene store's 1024 is no constant to raise.
+- **Not settled:** the value of the pointer at RVA 0x2888630; bit 0 of RVA 0x289C098 (HINT: the view and occlusion tests); the name `useRealLights`; whether a job's +0x70 is read anywhere; the size of the vehicle pool; which code adds what to the scene store, 25 callers of RVA 0x3EF140.
+
+The patterns, each matching exactly once in both dumps of 2026-10-29 but `G-E-G1`, which matches exactly twice, both naming one count; looked for only with `DIAGNOSTIC_MODE=1`.
+`G-E-H1` and `G-E-H2`, and `G-E-B2`, `G-E-B3`, `G-E-C2`, `G-E-C3`, `G-E-D2`, are found for the raise a later part will make, which writes there; the measurement reads nothing through them but the constants their bytes pin.
+
+| Label | Pattern | Use | 1.0.1158.16 | RVA |
+|---|---|---|---|---|
+| G-E-A1 | `48 8D 05 ? ? ? ? 48 89 05 ? ? ? ? 4C 8D 05 ? ? ? ? 48 8D 15 ? ? ? ? 48 89 15 ? ? ? ? 4C 8D 0D ? ? ? ?` | the frame's reset (RVA 0xF00F70): +3 the coronas' store (RVA 0x4366D00), +10 their write pointer (RVA 0x439D700), +24 the lights' store (RVA 0x4371B00), +31 their write pointer (RVA 0x439D708); the lights' store 0xAE00 past the coronas', 928 x 0x30, the coronas' pointer 0x2BC00 past the lights' store, 400 x 0x1C0, the lights' pointer right behind it | found | 0xF00F70 |
+| G-E-A2 | `48 8D 1D ? ? ? ? 48 39 1D ? ? ? ? 0F 86` | the drain: +3 the coronas' store, +10 its write pointer, `G-E-A1`'s | found | 0xF01109 |
+| G-E-A3 | `48 8D 35 ? ? ? ? 48 39 35 ? ? ? ? 76 ? 0F 1F 44 00 00 48 89 F1 31 D2 45 31 C0 45 31 C9 E8` | the drain: +3 the lights' store, +10 its write pointer, `G-E-A1`'s; +32 the call of add-scene-light (RVA 0x3EF140) with a null mask, its rel32 past the match | found | 0xF011BB |
+| G-E-B1 | `69 05 ? ? ? ? CD CC CC CC 05 99 99 99 19 3D 32 33 33 33 77` | 5 vehicles a job: `imul eax, [rip+disp32], imm32`, +2 the disp32 of the vehicles' count (RVA 0x4362AC0), counted from past the imm32 at +6; then the test of a multiple of 5 | found | 0xDE68FE |
+| G-E-B2 | `C7 44 1A 70 80 B1 00 00 F0 FF 05` | +4 a job's scratch size, 0xB180, at its +0x70, in the kick | found | 0xDE6957 |
+| G-E-B3 | `42 C7 44 0A 70 80 B1 00 00` | +5 the same in the last kick | found | 0xF01090 |
+| G-E-C1 | `8B 41 14 3B 41 1C 0F 83 ? ? ? ? 48 89 D7 49 89 CE 48 8B 59 08` | add-to-a-job's-list: 11 bytes past the function's start (RVA 0xE15700); +6 the jump when full, `jae rel32`, its rel32 at +8 to the function's way out (RVA 0xE158E7) - with `DIAGNOSTIC_MODE=1` the module's one write, through a counting stub | found | 0xE1570B |
+| G-E-C2 | `4C 8D 48 0F 49 83 E1 F0 4C 89 CA 48 29 C2 49 8D A9 80 25 00 00 BB 00 8C 00 00 48 29 D3 48 81 C2 FF 73 FF FF 45 31 C0 48 81 FA 7F 4E FF FF BE 80 B1 00 00` | a job's scratch laid out: +17 the coronas' bytes, 0x2580; +22 the lights' bytes, 0x8C00; +32 -0x8C01; +42 -0xB181; +47 the sum, 0xB180 | found | 0xE15916 |
+| G-E-C3 | `48 05 00 8C 00 00 48 81 FA 00 8C 00 00` | +2 and +9 the lights' bytes | found | 0xE15969 |
+| G-E-C4 | `48 89 7C 24 68 0F 28 0D ? ? ? ?` | +8 the rel32 of `movaps` to the lists' start values at .rdata 0x26399A0: 0, 0, 200, 80 | found | 0xE159B1 |
+| G-E-D1 | `48 63 05 ? ? ? ? 48 3D FF 03 00 00 0F 8F ? ? ? ? 48 63 0D ? ? ? ? 48 8D 15 ? ? ? ? 8D 59 01 89 1D ? ? ? ? 88 04 CA` | the scene store's add (in RVA 0x3FA7B0): +3 its count (RVA 0x3D39ECC), +9 0x3FF, +22 the sort list's count (RVA 0x3D42398), +29 the sort list (RVA 0x3D40398), +38 the count's store, +42 the index stored as a byte | found | 0x3FA7C9 |
+| G-E-D2 | `0F B6 1C C1 F3 0F 11 74 C1 04 4A 8D 14 C1 E8` | +0 the index read back as a byte | found | 0x3FAA40 |
+| G-E-E1 | `48 69 C7 00 00 07 00 48 8D 15 ? ? ? ? 48 01 C2 48 89 15 ? ? ? ? 48 8D 05 ? ? ? ? 44 8B 04 B8 44 89 05 ? ? ? ? 48 69 C7 0C 9A 02 00 48 8D 0D ? ? ? ? 48 01 C1 48 89 0D` | the scene store's render side (in RVA 0x3FB200): +3 0x70000; +10 the store (RVA 0x3AB0250); +20 the render pointer (RVA 0x2888640); +27 the buffers' counts (RVA 0x3D4A520); +38 the render count (RVA 0x3D39ED0); +45 0x29A0C; +52 the reflection lists (RVA 0x3C00250); +62, past the match, their render pointer | found | 0x3FB230 |
+| G-E-E2 | `48 69 C8 00 00 07 00 48 8D 15 ? ? ? ? 48 01 CA 48 89 15 ? ? ? ? 48 8D 0D ? ? ? ? C7 04 81 00 00 00 00 48 69 C8 0C 9A 02 00 48 8D 15` | its update side (in RVA 0x3F30A0): +3 0x70000; +10 the store, `G-E-E1`'s; +20 the current pointer (RVA 0x2888638); +41 0x29A0C | found | 0x3F335F |
+| G-E-E3 | `48 69 C8 10 20 07 00 48 8D 15 ? ? ? ? 48 8D 34 0A 48 89 35 ? ? ? ? 8B 04 11` | +3 0x72010; +10 the ray traced lists (RVA 0x3C53670), a list's count first; +21 their current pointer (RVA 0x28886C0) | found | 0x3F33AE |
+| G-E-F1 | `4C 8B 25 ? ? ? ? 45 8B 34 24 41 81 FE FF 03 00 00 0F 8F` | the ray traced list's add: +3 the same pointer as `G-E-E3`'s; +14 0x3FF | found | 0x3FAEFD |
+| G-E-F2 | `44 0F B6 05 ? ? ? ? 48 81 C1 E0 70 00 00 BA 00 02 00 00 E8` | the upload: +11 0x70E0, the records in its object; +16 512; +20 the call of the builder (RVA 0x3FCEC0), its rel32 past the match | found | 0x492E04 |
+| G-E-F3 | `4B 63 0C 88 48 81 F9 FF 02 00 00` | the reflection lists' add: +7 0x2FF | found | 0x3FAD63 |
+| G-E-G1 | `8B 0D ? ? ? ? 48 81 F9 3F 04 00 00 0F 87` | the corona store, twice, one count: +2 its count (RVA 0x41C0E10); +9 0x43F; the second match at RVA 0xB6ED70 | found | 0xB3A780 |
+| G-E-G2 | `44 8B 81 00 CC 00 00 49 81 F8 3F 04 00 00 0F 87` | the drain's add to it (in RVA 0xB3A850): +3 0xCC00; +10 0x43F | found | 0xB3A8D0 |
+| G-E-H1 | `B8 58 80 01 00 E8 ? ? ? ? 48 29 C4` | the worker's frame (RVA 0x142760): +1 0x18058 | found | 0x14276C |
+| G-E-H2 | `48 8D 44 24 50 49 89 04 24 4C 89 E1 41 FF 54 24 60` | a job's scratch, rsp+0x50: +4 0x50, right before `call [job+0x60]`; so 0x18008 bytes for it | found | 0x14284B |
 
 <!-- [population] -->
 
