@@ -59,7 +59,9 @@ Each table is in the order of the merge.
 | The ped pool, measured | | `source\TweaksVPedPool.cpp` and `.h`; `test\run_pedpool.sh` | the same |
 | The render queues, measured | | `source\TweaksVRenderQueues.cpp` and `.h`; `test\run_renderqueues.sh` | the same |
 
-The scaffold puts an anchor only where two tracks must write in one table, and each track writes right below its own: `source\TweaksVFeatures.cpp`'s `kMeasuredFirst`, `source\TweaksVPatterns.h`, `source\TweaksVPatch.h` and `.cpp`, `source\TweaksV.vcxproj` and `.vcxproj.filters`, `test\fake_game_full.cpp`, `test\run_all.sh` and `test\run_integration.sh`'s I3, and PATTERNS.md, whose rows the patterns suite pins to the table.
+The scaffold puts an anchor only where two tracks must write in one table, and each track writes right below its own: `source\TweaksVFeatures.cpp`'s `kMeasuredFirst`, `source\TweaksVPatterns.h`, `source\TweaksV.vcxproj` and `.vcxproj.filters`, `test\fake_game_full.cpp`, `test\run_all.sh` and `test\run_integration.sh`'s I3, and PATTERNS.md, whose rows the patterns suite pins to the table.
+`source\TweaksVPatch.h` and `.cpp` need none under this split, since only the code sweep writes there.
+`source\TweaksVSettings.h` and `.cpp` hold the two test keys, the scaffold's (D27), which the tracks read.
 Every other document is the fragments' (D29).
 The counts more than one track changes are the merge's, which takes their sum.
 
@@ -102,6 +104,7 @@ D1 to D18, phases A and B, in short; their full text is in the git history up to
   Its checks are the Release and test builds without a warning and the suites that pin what it changed; the full run waits for the round's proof.
   A patch of the scaffold a cancelled merge wrote for the old split, its builds clean and its full run never finished, is kept locally: the state says where, and the merge takes from it what still fits.
   The order of the sections and the stubs' places are the choices, kept, as D11's were.
+  The test keys are the scaffold's too, a point the overview put to me on 2026-11-02 and I let stand: `TEST_DUMP_DATA` (the data window) and `TEST_TWICE_PATTERN` (the tests' sweep) each need a row of `kSettings`, a named reference and a place in the test build's header line (SPECIFICATIONS.md 4.1 and 6.2), and no track owned those lines, so two tracks would have edited them; the scaffold adds both rows and the line, as shared tables, and the tracks read them.
   The reflow follows in one mechanical commit on line length (D29): NOTES.md, README.md, PATTERNS.md, SPECIFICATIONS.md, PLAN.md, ROADMAP.md, CREDITS.md, THIRD_PARTY_NOTICES.md and SECURITY.md to one sentence per line, tables and headings as they are, each bullet's first sentence on its first line.
   A script proves the rendered text unchanged, comparing each file with its line breaks taken out, and the patterns suite must still pass and the grep `run_all.sh` reads NOTES.md's count with must still find it.
 - **D28, the cleanup:** `work-rtbuffer` went on 2026-11-01 of D19, moved to the Recycle Bin. `work-wcloader` and the dumps stay until the last pass of this phase is done and its measurement booted; then they go with the passes' work folders and the data windows, as my research tools' README has it.
@@ -109,7 +112,7 @@ D1 to D18, phases A and B, in short; their full text is in the git history up to
   My rules for every project changed: the fastest split in place of the finest, plans of about ten lines, tracks that test only what they touch and write no shared document, one scripted merge, one review and one proof on the merged tree, state files of about 5 KB, one sentence per line, a message only when a track is done or blocked.
   The full run alone was the clock: 45 minutes at 1,247 checks, the same beside ten tracks, since it runs its 19 suites one after another on 32 threads.
   So `test\run_all.sh` becomes parallel in this round, each suite in a folder of its own, with a table of which suites a changed file needs: the first half of the tests' sweep; the command for a single suite comes earlier, with the scaffold (D27).
-  The twenty-five tracks this plan first had at the go became eleven: six for the research, as they were, and five for the coding - the data window, static bounds, the siren IDs and two sweeps. That split is the choice of the overview that planned it, recommended, for me to keep.
+  The twenty-five tracks this plan first had at the go became eleven: six for the research, as they were, and five for the coding - the data window, static bounds, the siren IDs and two sweeps. That split is the choice of the overview that planned it, kept.
   This round is also the test of the new rules, with a fresh overview and a fresh merge: what they show goes into my rules afterwards.
 
 ## The items
@@ -182,6 +185,6 @@ fixes in one or two sweep tracks. Then 2.7.0 set - the project's version, the sp
 
 ## Next steps
 
-**State:** phase C planned on 2026-11-01, and its plan brought in line with my new rules for the work the same day (D19 to D29), pushed; nothing of it is built. 2.6.0 stands as the last build, tagged on c6c8854 and pushed with main: thirteen parts, `TweaksV.ini` layout 4 with its 38 keys, 143 patterns, 1247 checks. Next: I start a fresh overview to test the new rules; The open issues are T-HARDEN, T-DIAG, T-SUMMARY, T-FREEZE, T-LATEBOX, T-LEGACYWALK, T-COPIES, T-NAMES, T-TESTGAPS and T-PEDPROPS.
+**State:** phase C's round runs since 2026-11-02, the split of D29 kept. The scaffold (D27) is on main: `TweaksV.ini`'s layout 5 with its 42 keys, the two new parts as stubs, the test keys and the anchors; nothing of the tracks is built. 2.6.0 stands as the last build, tagged on c6c8854 and pushed: thirteen parts, layout 4 with its 38 keys, 143 patterns, 1247 checks. The open issues are T-HARDEN, T-DIAG, T-SUMMARY, T-FREEZE, T-LATEBOX, T-LEGACYWALK, T-COPIES, T-NAMES, T-TESTGAPS and T-PEDPROPS.
 
 

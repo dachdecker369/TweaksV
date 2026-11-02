@@ -150,7 +150,7 @@ namespace TweaksV
 		{ "L-E-P2", "48 89 3B 39 35 ? ? ? ? 7F 09 8D 46 01 89 05" },
 
 		// The parts of the parts' coding round, one group per limit, looked for as SPECIFICATIONS 4.2 says: WeaponLimits (W),
-		// SirenSettings (I), whose two limits are measured first (SPECIFICATIONS 11.14), PedProps (A), Resources (Q)
+		// SirenSettings (I), whose two limits are measured first (SPECIFICATIONS 11.16), PedProps (A), Resources (Q)
 		// and RayTracing (T)
 		// WeaponLimits, the weapon infos (TweaksVWeaponInfos.cpp), looked for on every boot the part is on: the game's
 		// initializer of the weapon info blob array - the number of blobs allocated, the call that allocates them, the
@@ -170,6 +170,7 @@ namespace TweaksV
 		{ "W-E-C4", "48 8B 0D ? ? ? ? BA CF 3C E3 BA 41 B8 ? ? ? ? E8 ? ? ? ? 89 C3" },
 		{ "W-E-C5", "49 89 D7 49 89 CE B9 D8 0E 00 00 E8 ? ? ? ? 49 89 C4 41 B8 D8 0E 00 00 48 89 C1 31 D2 E8 ? ? ? ? 0F B7 1D ? ? ? ? 66 3B 1D ? ? ? ? 75 ? 44 0F B7 EB 49 8D 6D 10 48 8B 35 ? ? ? ?" },
 
+		// [siren ids]
 		// SirenSettings, the siren setting IDs (TweaksVSirenIds.cpp): the parser registrations of the siren settings (P1) and the
 		// vehicle variations (P2), whose tables lead to the members that carry an ID, and the simple member's XML reader (P3); the
 		// loaders' four lea of the ID table with the ID's byte loads and stores and the free-ID searches' limits - the base
@@ -192,6 +193,7 @@ namespace TweaksV
 		{ "I-E-R1", "66 0F 7F 05 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? 80 3D" },
 		{ "I-E-M1", "0F B6 81 3B 05 00 00 48 85 C0 74 13 48 8B 0D ? ? ? ? 48 69 C0 E8 05 00 00 48 03 41 48 C3" },
 
+		// [siren count]
 		// SirenSettings, the siren count (TweaksVSirenCount.cpp): the vehicle lights' calls of the siren lights' renderer, which the
 		// measurement redirects, and of the siren settings getter (B1); the renderer's read of a siren's bone through the model info's
 		// bone structure (B2); a read of a siren's glass bone (B3); the start of find-bone-by-name, which tests the bone count first (B4)
@@ -236,6 +238,13 @@ namespace TweaksV
 		{ "T-E-B1", "C7 44 24 20 89 00 00 00 B9 ? ? ? ? BA 14 00 00 00 41 B0 01 45 31 C9 E8 ? ? ? ? 48 89 05 ? ? ? ?" },
 		{ "T-E-C1", "8B 2D ? ? ? ? 31 D2 48 8D 1D ? ? ? ? 41 BA 01 00 00 00 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 8B 3C AB 8D 34 0F 81 FE ? ? ? ? 0F 87" },
 		{ "T-E-C2", "8B 15 ? ? ? ? 31 ED 48 8D 35 ? ? ? ? 41 BA 01 00 00 00 ? ? ? ? ? ? ? ? ? ? ? ? 8B 3C 96 8D 1C 0F 81 FB ? ? ? ? 0F 87" },
+
+		// [static bounds]
+		// [light capacity]
+		// [vehicle model budget]
+		// [ped model budget]
+		// [ped pool]
+		// [render queues]
 	};
 
 	// A text the scanner can use: bytes as two hex digits or ?, one space apart, at least one of them

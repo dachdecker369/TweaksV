@@ -135,24 +135,30 @@
     <ClCompile Include="TweaksVHeapAdjuster.cpp" />
     <ClCompile Include="TweaksVIni.cpp" />
     <ClCompile Include="TweaksVLegacyPacks.cpp" />
+    <!-- [light capacity] -->
     <ClCompile Include="TweaksVLog.cpp" />
     <ClCompile Include="TweaksVMeasure.cpp" />
     <ClCompile Include="TweaksVModkitLimit.cpp" />
     <ClCompile Include="TweaksVModsFolder.cpp" />
     <ClCompile Include="TweaksVPackfileLimit.cpp" />
     <ClCompile Include="TweaksVPatch.cpp" />
+    <!-- [ped model budget] -->
+    <!-- [ped pool] -->
     <ClCompile Include="TweaksVPedProps.cpp" />
     <ClCompile Include="TweaksVRageOpenV.cpp" />
     <ClCompile Include="TweaksVRayTracing.cpp" />
     <ClCompile Include="TweaksVRelocation.cpp" />
+    <!-- [render queues] -->
     <ClCompile Include="TweaksVScanner.cpp" />
     <ClCompile Include="TweaksVScripts.cpp" />
     <ClCompile Include="TweaksVSettings.cpp" />
     <ClCompile Include="TweaksVSirenCount.cpp" />
     <ClCompile Include="TweaksVSirenIds.cpp" />
+    <ClCompile Include="TweaksVStaticBounds.cpp" />
     <ClCompile Include="TweaksVStraightToStoryMode.cpp" />
     <ClCompile Include="TweaksVSummary.cpp" />
     <ClCompile Include="TweaksVTextureBudget.cpp" />
+    <!-- [vehicle model budget] -->
     <ClCompile Include="TweaksVWeaponComponents.cpp" />
     <ClCompile Include="TweaksVWeaponInfos.cpp" />
     <!-- MinHook v1.3.4, compiled unchanged from vendor\MinHook (x64 only: hde64, not hde32), at warning
@@ -185,6 +191,7 @@
     <ClInclude Include="TweaksVIni.h" />
     <ClInclude Include="TweaksVLegacyPacks.h" />
     <ClInclude Include="TweaksVLock.h" />
+    <!-- [light capacity] -->
     <ClInclude Include="TweaksVLog.h" />
     <ClInclude Include="TweaksVMeasure.h" />
     <ClInclude Include="TweaksVModkitLimit.h" />
@@ -192,19 +199,24 @@
     <ClInclude Include="TweaksVPackfileLimit.h" />
     <ClInclude Include="TweaksVPatch.h" />
     <ClInclude Include="TweaksVPatterns.h" />
+    <!-- [ped model budget] -->
+    <!-- [ped pool] -->
     <ClInclude Include="TweaksVPedProps.h" />
     <ClInclude Include="TweaksVRageOpenV.h" />
     <ClInclude Include="TweaksVRayTracing.h" />
     <ClInclude Include="TweaksVRelocation.h" />
+    <!-- [render queues] -->
     <ClInclude Include="TweaksVRpf.h" />
     <ClInclude Include="TweaksVScanner.h" />
     <ClInclude Include="TweaksVScripts.h" />
     <ClInclude Include="TweaksVSettings.h" />
     <ClInclude Include="TweaksVSirenCount.h" />
     <ClInclude Include="TweaksVSirenIds.h" />
+    <ClInclude Include="TweaksVStaticBounds.h" />
     <ClInclude Include="TweaksVStraightToStoryMode.h" />
     <ClInclude Include="TweaksVSummary.h" />
     <ClInclude Include="TweaksVTextureBudget.h" />
+    <!-- [vehicle model budget] -->
     <ClInclude Include="TweaksVWeaponComponents.h" />
     <ClInclude Include="TweaksVWeaponInfos.h" />
     <ClInclude Include="..\vendor\MinHook\include\MinHook.h" />

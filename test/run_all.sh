@@ -3,16 +3,18 @@
 # Builds TweaksV (Release and the test build) and the fake game programs, runs every suite, and
 # deletes what the run made (object\TestRun, object\TestTemp and object\Test). From Git Bash, in the
 # repository:
-#   bash test/run_all.sh [--no-build] [--keep]
+#   bash test/run_all.sh [--no-build] [--keep] [SUITE...]
 # --no-build tests the TweaksV.asi files already built, so it works after a --keep run (every other run
-# deletes the test build); --keep leaves the run folders for a look. The run fails when a check fails, when
-# a suite stops early, when a build warns, and when the number of checks is not the one NOTES.md gives.
+# deletes the test build); --keep leaves the run folders for a look; a SUITE of the list below runs that suite
+# alone (bash test/run_all.sh blips), and several run in the order given. The run fails when a check fails, when
+# a suite stops early, when a build warns, and in a full run when the number of checks is not the one NOTES.md
+# gives.
 set -u
 T="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 R="$(cd "$T/.." && pwd)"
 export TWEAKSV_TEST_DIR="$R/object/TestRun"
 # the suites, one a line, run in this order: the tables first, the parts in the order of the parts, the parts
-# measured first in the order of SPECIFICATIONS.md 11.14, the whole of TweaksV last
+# measured first in the order of SPECIFICATIONS.md 11.16, the whole of TweaksV last
 SUITES=(
 	patterns
 	ini_default
@@ -31,18 +33,26 @@ SUITES=(
 	texturebudget
 	raytracing
 	sirenids
+	# [static bounds]
 	sirencount
+	# [light capacity]
+	# [vehicle model budget]
+	# [ped model budget]
+	# [ped pool]
+	# [render queues]
 	integration
 )
 
-build=1; keep=0
+build=1; keep=0; only=()
 for a in "$@"; do
 	case "$a" in
 		--no-build) build=0 ;;
 		--keep) keep=1 ;;
-		*) echo "unknown option: $a"; exit 2 ;;
+		-*) echo "unknown option: $a"; exit 2 ;;
+		*) [[ " ${SUITES[*]} " == *" $a "* ]] || { echo "unknown suite: $a"; exit 2; }; only+=("$a") ;;
 	esac
 done
+[ "${#only[@]}" = 0 ] || SUITES=("${only[@]}")
 
 cleanup() {
 	[ "$keep" = 1 ] && { echo "kept: $TWEAKSV_TEST_DIR, $R/object/TestTemp and $R/object/Test"; return; }
@@ -101,7 +111,7 @@ ok=1
 echo; echo "======== RESULTS"
 printf '%s' "$summary"
 echo "  all            $total_pass passed, $total_fail failed"
-if [ "$((total_pass + total_fail))" != "${expected:-none}" ]; then
+if [ "${#only[@]}" = 0 ] && [ "$((total_pass + total_fail))" != "${expected:-none}" ]; then
 	echo "  the count: NOTES.md gives ${expected:-no number of} checks, this run made $((total_pass + total_fail))"; ok=0
 fi
 if [ "$warnings" != 0 ]; then echo "  build warnings: $warnings (listed above)"; ok=0; fi

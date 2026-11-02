@@ -21,6 +21,7 @@
 #include "TweaksVRayTracing.h"
 #include "TweaksVSirenCount.h"
 #include "TweaksVSirenIds.h"
+#include "TweaksVStaticBounds.h"
 #include "TweaksVStraightToStoryMode.h"
 #include "TweaksVSummary.h"
 #include "TweaksVTextureBudget.h"
@@ -45,10 +46,12 @@ namespace TweaksV
 
 		// The five original plugins in the order an ASI loader loaded their .asi files (alphabetical),
 		// TweaksV's own box streamer and decal definitions parts among the limit adjusters, then its
-		// DirectStorage part, its Blips part and the four parts of the parts' coding round. ZHeapAdjuster.asi
+		// DirectStorage part, its Blips part, the four parts of the parts' coding round and the two of phase C. ZHeapAdjuster.asi
 		// is the rename the HeapAdjuster author recommends; OpenRPF.asi and OpenIV.asi do RageOpenV's job,
 		// alloc8or's DirectStorageFix.asi that of the DirectStorage part, rootBrz's BlipLimitFix.asi that of
-		// the Blips part, and the closed-source DecalPatch.asi that of both the box streamer and the decal definitions parts, so it
+		// the Blips part, Nochala's Static Bounds Limit Adjuster - StaticBoundLimitAdjuster.asi on its page,
+		// StaticBoundsLimitAdjuster.asi in its repository - that of the StaticBounds part, and the
+		// closed-source DecalPatch.asi that of both the box streamer and the decal definitions parts, so it
 		// switches both off. WeaponLimits is two modules, each started in turn.
 		constexpr Feature kFeatures[] = {
 			{ &kHeapSection, { L"HeapAdjuster.asi", L"ZHeapAdjuster.asi" }, { &kResourceExtensions },
@@ -119,6 +122,10 @@ namespace TweaksV
 				[] { InitTextureBudget(); return false; } },
 			{ &kRayTracingSection, {}, { &kResourceExtensions },
 				[] { InitRayTracing(); return false; } },
+			{ &kSirenSettingsSection, {}, {},
+				[] { InitSirenIds(); return false; } },
+			{ &kStaticBoundsSection, { L"StaticBoundLimitAdjuster.asi", L"StaticBoundsLimitAdjuster.asi" }, {},
+				[] { InitStaticBounds(); return false; } },
 		};
 
 		// Every section of TweaksV.ini but [TWEAKSV] belongs to a feature, in the same order.
@@ -132,7 +139,7 @@ namespace TweaksV
 		}
 		static_assert(InSectionOrder(), "TweaksV: kFeatures must be in the order of kSections");
 
-		// A limit of a part to come, measured before its part writes anything (SPECIFICATIONS 11.14): with
+		// A limit of a part to come, measured before its part writes anything (SPECIFICATIONS 11.16): with
 		// DIAGNOSTIC_MODE=1 its module finds and checks the sites of the limit and measures it.
 		struct MeasuredFirst
 		{
@@ -140,12 +147,19 @@ namespace TweaksV
 			void (*start)();		// the module's Measure<Limit>()
 		};
 
-		// The parts measured first, one entry per limit in the order of SPECIFICATIONS 11.14, and last the ped props'
+		// The parts measured first, one entry per limit in the order of SPECIFICATIONS 11.16, and last the ped props'
 		// measurement, which goes on while that part, which ships off, is off (11.11). A limit leaves the table when
 		// its part is built, or when it is not, so the table may be empty.
 		constexpr std::initializer_list<MeasuredFirst> kMeasuredFirst = {
+			// [siren ids]
 			{ "SirenSettings", MeasureSirenIds },
+			// [siren count]
 			{ "SirenSettings", MeasureSirenCount },
+			// [light capacity]
+			// [vehicle model budget]
+			// [ped model budget]
+			// [ped pool]
+			// [render queues]
 			{ "PedProps", MeasurePedPropsWhileOff },
 		};
 	}

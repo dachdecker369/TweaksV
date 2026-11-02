@@ -624,4 +624,8 @@ namespace TweaksV
 			kLimitPatterns[kT4]->label + "): the settings loaded and the IDs in use are logged after 10 seconds, then every minute while the numbers change.");
 		StartMeasurement<kMeasurement>();	// one that cannot start is logged
 	}
+
+	void InitSirenIds()
+	{
+	}
 }

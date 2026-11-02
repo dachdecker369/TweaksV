@@ -41,23 +41,23 @@ re_item() { tr -d '\r' < TweaksV.log | grep -c -- "PROBLEM: .*TestRun.ResourceEx
 # features_say [PART...]: the log header's Features: line says off for each PART and on for every other part
 features_say() {
 	local want="Features:" part sep=" "
-	for part in HeapAdjuster ModkitLimit PackfileLimit BoxStreamer Decals RageOpenV StraightToStoryMode DirectStorage Blips WeaponLimits PedProps Resources RayTracing; do
+	for part in HeapAdjuster ModkitLimit PackfileLimit BoxStreamer Decals RageOpenV StraightToStoryMode DirectStorage Blips WeaponLimits PedProps Resources RayTracing SirenSettings StaticBounds; do
 		if [[ " $* " == *" $part "* ]]; then want+="$sep$part off"; else want+="$sep$part on"; fi
 		sep=", "
 	done
 	tr -d '\r' < TweaksV.log | grep -qx -- ".* \[TweaksV\] $want"
 }
 # after_header PATTERN: the first line of TweaksV.log that matches PATTERN stands after the header, whose last line
-# in a release build holds the values of [RAYTRACING]
+# in a release build holds the values of [STATICBOUNDS]
 after_header() {
 	local header line
-	header=$(grep -n -m 1 -- '\[TweaksV\] RayTracing: DYNAMIC_BVH_VERTICES=' TweaksV.log | cut -d: -f1)
+	header=$(grep -n -m 1 -- '\[TweaksV\] StaticBounds: STATICBOUNDS_SIZE=' TweaksV.log | cut -d: -f1)
 	line=$(grep -n -m 1 -- "$1" TweaksV.log | cut -d: -f1)
 	[ -n "$header" ] && [ -n "$line" ] && [ "$line" -gt "$header" ]
 }
 
 echo "== I1 each old plugin on its own: only its part is skipped, and the log header says so"
-for old in HeapAdjuster.asi ZHeapAdjuster.asi ModkitLimitAdjusterEnhanced.asi PackfileLimitAdjusterEnhanced.asi DecalPatch.asi RageOpenV.asi OpenRPF.asi OpenIV.asi StraightToStoryMode.asi DirectStorageFix.asi; do
+for old in HeapAdjuster.asi ZHeapAdjuster.asi ModkitLimitAdjusterEnhanced.asi PackfileLimitAdjusterEnhanced.asi DecalPatch.asi RageOpenV.asi OpenRPF.asi OpenIV.asi StraightToStoryMode.asi DirectStorageFix.asi StaticBoundLimitAdjuster.asi StaticBoundsLimitAdjuster.asi; do
 	fresh_ini; touch "$old"; out=$(game full_game.exe); rm -f "$old"
 	case "$old" in
 		*HeapAdjuster.asi) off=HeapAdjuster; ok="has '$GAME_HEAP' && has '$MODKIT_ON' && has '$PACK_ON' && has '$BOX_ON' && has '$DECAL_ON' && has '$ROV_ON' && has '$STORY_ON'" ;;
@@ -67,6 +67,7 @@ for old in HeapAdjuster.asi ZHeapAdjuster.asi ModkitLimitAdjusterEnhanced.asi Pa
 		RageOpenV.asi|OpenRPF.asi|OpenIV.asi) off=RageOpenV; ok="has '$ALL_ON_HEAP' && has '$MODKIT_ON' && has '$PACK_ON' && has '$ROV_OFF' && has '$STORY_ON'" ;;
 		StraightToStoryMode.asi) off=StraightToStoryMode; ok="has '$ALL_ON_HEAP' && has '$MODKIT_ON' && has '$PACK_ON' && has '$ROV_ON' && has '$STORY_OFF'" ;;
 		DirectStorageFix.asi) off=DirectStorage; ok="has '$ALL_ON_HEAP' && has '$MODKIT_ON' && has '$PACK_ON' && has '$ROV_ON' && has '$STORY_ON' && log_lacks '\[DirectStorage\]'" ;;
+		StaticBound*) off=StaticBounds; ok="has '$ALL_ON_HEAP' && has '$MODKIT_ON' && has '$PACK_ON' && has '$BOX_ON' && has '$DECAL_ON' && has '$ROV_ON' && has '$STORY_ON' && log_lacks '\[StaticBounds\]'" ;;
 	esac
 	check "$old: its part skipped, the rest applied, reported once in the summary" "$ok && log_has 'Old plugin found: .*$old' && summary_once"
 	check "$old: the header's Features: line says off for ${off// /, } and on for the rest, the check's line stands after the header" "features_say $off && after_header 'Old plugin found'"
@@ -152,6 +153,8 @@ check "Q-E-T4 (the texture budget's placement check), VIDEO_MEMORY_BUDGET=6000: 
 	"has 'the call to the next step' && has 'budgets 1500, 1500, 3000 and 3000 MB' && has '$ALL_ON_HEAP' && has '$MODKIT_ON' && has '$PACK_ON' && has '$ROV_ON' && has '$STORY_ON' && log_has 'TEST BUILD - not for release' && grep -qi -- 'TEST BUILD: pattern Q-E-T4 is treated as not found' TweaksV.log && grep -qi -- 'Q-E-T4 was not found[ .]' TweaksV.log && summary_once && has 'protect: all restored'"
 fresh_ini; setkey DYNAMIC_BVH_VERTICES 8388608; addkey TEST_BREAK_PATTERN T-E-C1; out=$(ASI=TweaksV_test.asi game full_game.exe)
 check "T-E-C1 (a check of the ray tracing buffer, with DYNAMIC_BVH_VERTICES=8388608): the buffer untouched, the rest applied" "has 'rt sites: as placed, count 4194304, checks 4194304 and 4194304, jumps to the game and the game' && has '$ALL_ON_HEAP' && has '$MODKIT_ON' && has '$PACK_ON' && has '$ROV_ON' && has '$STORY_ON' && log_has 'TEST BUILD - not for release' && grep -qi -- 'TEST BUILD: pattern T-E-C1 is treated as not found' TweaksV.log && grep -qi -- 'T-E-C1 was not found[ .]' TweaksV.log && summary_once && has 'protect: all restored'"
+# [siren ids]
+# [static bounds]
 breaktest "a label in small letters works too" "h-e1" \
 	"has '$GAME_HEAP' && has '$MODKIT_ON'"
 fresh_ini; addkey TEST_BREAK_PATTERN "H-E1"; out=$(game full_game.exe)

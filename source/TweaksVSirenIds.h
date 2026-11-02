@@ -11,4 +11,8 @@ namespace TweaksV
 	// Finds and checks every site of the limit, logs each one and starts the measurement; writes nothing to the game.
 	// Started once by StartFeatures, with DIAGNOSTIC_MODE=1 only (kMeasuredFirst, TweaksVFeatures.cpp).
 	void MeasureSirenIds();
+
+	// The SirenSettings part's siren setting IDs (SPECIFICATIONS 11.14), started by its entry of the feature table, from
+	// DllMain, while [SIRENSETTINGS] is on. It changes nothing yet.
+	void InitSirenIds();
 }

@@ -98,7 +98,7 @@
 // The blip pool's two sites are always there, the pool with 162 slots in use below its high-water mark, 170, and
 // two beyond it.
 // The parts of the parts' coding round (TweaksV's SPECIFICATIONS.md 11.10 to 11.13), RageOpenV's check for packs made for
-// GTA V Legacy (11.6) and the limits measured first (11.14), one block each: its options, and what is always there.
+// GTA V Legacy (11.6) and the limits measured first (11.16), one block each: its options, and what is always there.
 // The weapon infos (WeaponLimits): the game's initializer of the weapon info blob array - its lea of the array, then
 // W-E-I1: "mov edx, 160", the call to the allocation, the block's store, "mov word [capacity], 160" -, the allocation's
 // first bytes, and the loader, a NOP before its start and W-E-I2 0x18 bytes into it, are always there - the loader real
@@ -388,6 +388,14 @@
 //   rtcountersodd  the ropes' check loads its counters from 2 bytes past them: not aligned to the 4 bytes of a counter
 //   rtsetuptwice, rtgeometrytwice, rtropestwice
 //                  T-E-B1, T-E-C1 or T-E-C2 a second time: its site's match copied to the twin, a site that holds nothing else
+// [data window]
+// [static bounds]
+// [late boxes]
+// [light capacity]
+// [vehicle model budget]
+// [ped model budget]
+// [ped pool]
+// [render queues]
 #include <windows.h>
 #include <winternl.h>
 #include <cstddef>
@@ -985,6 +993,14 @@ static Site g_rtJumps[] = { SITE(g_rtGeometry, 92), SITE(g_rtRopes, 89) };	// th
 static Site g_rtSites[] = { SITE(g_rtSetUp, 0), SITE(g_rtGeometry, 0), SITE(g_rtRopes, 0), SITE(g_rtReset, 0), SITE(g_rtExtra, 0),
 	{ g_rtEdge + kRtEdgeMatchAt, 0, kRtRopesMatch }, SITE(g_rtTwin, 0) };
 constexpr size_t kRtSites = sizeof(g_rtSites) / sizeof(g_rtSites[0]);
+// [data window]
+// [static bounds]
+// [late boxes]
+// [light capacity]
+// [vehicle model budget]
+// [ped model budget]
+// [ped pool]
+// [render queues]
 #pragma data_seg()
 
 // The game's own modkit array (1024 entries of 2 bytes) and packfile array (4500 entries of 8 bytes). The
@@ -3677,6 +3693,15 @@ static void RtReport()
 		rva(g_rtObject), rva(g_rtGeometry), rva(g_rtRopes), rva(g_rtSlot), rva(g_rtCounters), rva(g_rtReset), rva(g_rtHole), rva(g_rtEdge));
 }
 
+// [data window]
+// [static bounds]
+// [late boxes]
+// [light capacity]
+// [vehicle model budget]
+// [ped model budget]
+// [ped pool]
+// [render queues]
+
 // The game's two tree searches behind the box streamer's four calls: the first and the third call lead
 // to the first search, the second and the fourth to the second. Each writes the number of entries the
 // harness asks for - at most 16 short of the capacity it is handed, where the game's searches stop - and
@@ -4159,6 +4184,12 @@ static void ForEachSite(void (*fn)(const Site&))
 		SITE(g_textureBudgetUpdate, 0), SITE(g_textureBudgetWriters, 0), SITE(g_textureBudgetMisread, 0) };
 	for (const Site& site : textureBudgetSites) fn(site);
 	for (const Site& site : g_rtSites) fn(site);
+	// [static bounds]
+	// [light capacity]
+	// [vehicle model budget]
+	// [ped model budget]
+	// [ped pool]
+	// [render queues]
 }
 
 static void MakeSitesReadExecute()
@@ -5741,6 +5772,14 @@ int wmain(int argc, wchar_t** argv)
 	LpSetup(argc, argv);	// the Legacy packs check's archives, before TweaksV starts
 	// The ray tracing buffer: the set-up's call to the maker, the checks' slot and counters, the reset's lea - as the options ask
 	RtSetUp(argc, argv);
+	// [data window]
+	// [static bounds]
+	// [late boxes]
+	// [light capacity]
+	// [vehicle model budget]
+	// [ped model budget]
+	// [ped pool]
+	// [render queues]
 
 	RovSetup(argc, argv);
 	ForEachSite(TouchSite);
@@ -5879,6 +5918,14 @@ int wmain(int argc, wchar_t** argv)
 	LpWait(argc, argv);
 	// The ray tracing buffer: the game's renderer makes it and its frames take ranges of it - as the options ask, the checks run
 	RtActions(argc, argv);
+	// [data window]
+	// [static bounds]
+	// [late boxes]
+	// [light capacity]
+	// [vehicle model budget]
+	// [ped model budget]
+	// [ped pool]
+	// [render queues]
 	if (HasOption(argc, argv, L"wait"))
 		Sleep(11000);	// TweaksV's UNLOCK_FILES summary comes 10 s after the first open it counts, the OpenFile summary 10 s
 						// after the first OpenFile, the interface check 10 s after the request
@@ -5959,6 +6006,14 @@ int wmain(int argc, wchar_t** argv)
 	}
 	LpReport();
 	RtReport();
+	// [data window]
+	// [static bounds]
+	// [late boxes]
+	// [light capacity]
+	// [vehicle model budget]
+	// [ped model budget]
+	// [ped pool]
+	// [render queues]
 	CheckStub(Rel32Target(g_packCallSite));
 	CheckStub(Rel32Target(g_scriptCallSite));
 	for (const Site& site : g_boxCalls)

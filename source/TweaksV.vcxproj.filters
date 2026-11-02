@@ -49,6 +49,7 @@
     <ClCompile Include="TweaksVLegacyPacks.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
+    <!-- [light capacity] -->
     <ClCompile Include="TweaksVLog.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
@@ -67,6 +68,8 @@
     <ClCompile Include="TweaksVPatch.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
+    <!-- [ped model budget] -->
+    <!-- [ped pool] -->
     <ClCompile Include="TweaksVPedProps.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
@@ -79,6 +82,7 @@
     <ClCompile Include="TweaksVRelocation.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
+    <!-- [render queues] -->
     <ClCompile Include="TweaksVScanner.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
@@ -94,6 +98,9 @@
     <ClCompile Include="TweaksVSirenIds.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
+    <ClCompile Include="TweaksVStaticBounds.cpp">
+      <Filter>TweaksV</Filter>
+    </ClCompile>
     <ClCompile Include="TweaksVStraightToStoryMode.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
@@ -103,6 +110,7 @@
     <ClCompile Include="TweaksVTextureBudget.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
+    <!-- [vehicle model budget] -->
     <ClCompile Include="TweaksVWeaponComponents.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
@@ -162,6 +170,7 @@
     <ClInclude Include="TweaksVLock.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
+    <!-- [light capacity] -->
     <ClInclude Include="TweaksVLog.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
@@ -183,6 +192,8 @@
     <ClInclude Include="TweaksVPatterns.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
+    <!-- [ped model budget] -->
+    <!-- [ped pool] -->
     <ClInclude Include="TweaksVPedProps.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
@@ -195,6 +206,7 @@
     <ClInclude Include="TweaksVRelocation.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
+    <!-- [render queues] -->
     <ClInclude Include="TweaksVRpf.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
@@ -213,6 +225,9 @@
     <ClInclude Include="TweaksVSirenIds.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
+    <ClInclude Include="TweaksVStaticBounds.h">
+      <Filter>TweaksV</Filter>
+    </ClInclude>
     <ClInclude Include="TweaksVStraightToStoryMode.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
@@ -222,6 +237,7 @@
     <ClInclude Include="TweaksVTextureBudget.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
+    <!-- [vehicle model budget] -->
     <ClInclude Include="TweaksVWeaponComponents.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
