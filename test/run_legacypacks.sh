@@ -219,6 +219,9 @@ fresh_ini; out=$(other_game $folders lpwait); for n in 01 02 03 04 05 06 07 08 0
 fresh_ini; out=$(other_game lpwait); for n in 01 02 03 04 05 06 07 08 09 10 11; do allow_writes other/d$n; done
 check "eleven such folders: a line each, the problem names ten and counts the rest, in the plural; the last line counts all" "[ \$(count 'could not be read (Windows error 5, access denied) - $packs_read_later') -eq 11 ] && log_line 'PROBLEM: 11 folders in the mods folder could not be read, so the packs in them were not all checked for GTA V Legacy versions (TweaksV.log says why): .*, and 1 more\.\$' && log_line 'Packs checked for GTA V Legacy versions: none in the folders read, 11 folders could not be read\.\$' && one_finding"
 rm -rf other; packs_gone
+fresh_ini; out=$(TWEAKSV_TEST_LEGACY_FOLDER="$OTHER" game full_game.exe lpmake legacy other/open/in.rpf lpwait)
+check "the Release build ignores the switch: no line, that folder's pack not read, the mods folder's last line" "has 'lp: 1 made |' && has '$DONE' && log_lacks '\[RageOpenV\] TEST BUILD' && log_lacks '\[RageOpenV\] .*other.open.in\.rpf' && log_line '\[RageOpenV\] Packs checked for GTA V Legacy versions: none in the mods folder\.\$'"
+rm -rf other; packs_gone
 
 echo "== L20 names left out count against a second limit, 4 times the walk's, lowered with it by TWEAKSV_TEST_MODS_ENTRIES: 12 names, the 13th ends the walk, for RageOpenV's list and the check alike"
 # the mods folder's names first, the long ones and test, then test's one file: with 3 files and folders the walk may look at
