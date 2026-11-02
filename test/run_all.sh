@@ -38,6 +38,7 @@ SUITES=(
 	# [light capacity]
 	lightcapacity
 	# [population]
+	population
 	# [ped pool]
 	# [render queues]
 	integration
