@@ -561,6 +561,34 @@
 //   pmunreadable   the allocator's page cannot be read while TweaksV starts: the set-up does not run
 //   pmgone         the allocator's page cannot be read from the moment TweaksV has started: the set-up does not run
 // [render queues]
+// The render queues (TweaksVRenderQueues), whose sites are code the fake runs only as these ask; its report "render queues: ..." and
+// its other fields only with an option that starts rq:
+//   rqload         as the game does once TweaksV has started: the inits, every pool made through its size lookup, a frame's peak held,
+//                  then the numbers fall to the lines of the findings: 14 and 0, 3 and 0, 5 and 0 in use, the most 31 and 9, 8 and 4, 11 and 3
+//   rqmade         the inits and the pools alone, no slot taken and no frame
+//   rqfull         rqload's frames, every pool at its capacity
+//   rqpast         the peds' array at 130, the props' at 125, and CVehicleStreamRenderGfx named 80 over VehicleStreamRender's 60, so that the
+//                  vehicles' array reaches 70: each past its capacity
+//   rqmany         rqload's frames but the peds' array at 5,000 entries
+//   rqfullrefs     rqload's frames with the draw list's references at their capacity
+//   rqrs           each pool's rol and add other than the findings' table, its fields encrypted by them; the first pool's add stays 1, since its
+//                  code rotates by that alone
+//   rqnomake:I     pool I not made: its flag's bit 0 clear, its other bits, its value and its key set (once per option; I 0 to 5, in kRqStrides' order)
+//   rqnomanager    the draw list manager not made
+//   rqstride       each pool's stride one more than its code hands it
+//   rqstridezero   each pool's stride 0: it is being constructed
+//   rqpoolgone:I   pool I's pointer leads to a page that cannot be read
+//   rqmanagergone  the manager's global leads to a page that cannot be read
+//   rqentriesgone  the peds' array's pointer leads to a page that cannot be read, a vehicles' array's is null, their counts set by hand, and a
+//                  pool's count reads below 0
+//   rqnulls        a props' array of 10 entries, the 5 not yet written 0
+//   rqgone         once the load is done, the peds' render pool's flag cleared, the props' render pool's pointer and the manager's global
+//                  leading to a page that cannot be read: what was read stands
+//   rqdatagone     once the load is done, the page of the game's data the module reads cannot be read any more
+//   rqgrow         a new most of every family after the first summary, waited for in the log
+//   rqlatest       the latest numbers change after the first summary, and no most, for 5 s
+//   rqbad:WHAT:N   the site WHAT, N the pool, the family or the call it asks for, as RqSetUp has them, not as the research found it; no site runs then
+//   rqrvas         the report's "rq rvas: ..." field, with every site's RVA, for the suite to compare with the log
 #include <windows.h>
 #include <winternl.h>
 #include <cstddef>
@@ -1305,6 +1333,80 @@ constexpr size_t kPoolMemoryMatch = 4, kPoolMemoryAllocatorAt = kPoolMemoryMatch
 volatile unsigned char g_poolMemorySite[] = { 0x48, 0x83, 0xEC, 0x28, 0x48, 0x8D, 0x0D, 0, 0, 0, 0, 0x48, 0x8D, 0x15, 0, 0, 0, 0, 0x41, 0xB8, 0x00, 0x00, 0x01, 0x00,
 	0x41, 0xB9, 0x00, 0x00, 0x80, 0x08, 0xE8, 0, 0, 0, 0, 0x48, 0x83, 0xC4, 0x28, 0xC3 };
 // [render queues]
+// The render queues' sites (TweaksVRenderQueues), each with its pattern's bytes as PATTERNS.md has them and around them what makes it
+// run as the fake's code: a prologue, a tail, and the rel32 RqSetUp sets. The make of the vehicles' render pool lies in a carrier,
+// kRqMakeV2 below, since its jump must lie in a function of the fake's unwind data; g_rqEdge's second page cannot be read with
+// "rqbad:edge...", a section of its own, since MakeSitesReadExecute gives .fakesit its protection back after RqSetUp.
+#define RQ_INIT_HEAD 0xB9, 0x05, 0, 0, 0, 0x31, 0xD2, 0xE8, 0, 0, 0, 0, 0xB9, 0x05, 0, 0, 0, 0x31, 0xD2, 0xE8, 0, 0, 0, 0
+#define RQ_INIT_BLOCK 0xB9, 0xC0, 0x03, 0, 0, 0xBA, 0x08, 0, 0, 0, 0xE8, 0, 0, 0, 0, 0x48, 0x89, 0x05, 0, 0, 0, 0, 0x66, 0xC7, 0x05, 0, 0, 0, 0, 0x78, 0x00
+#define RQ_LOOKUP(hash0, hash1, hash2, hash3, value) 0x48, 0x83, 0xEC, 0x28, 0x48, 0x8B, 0x0D, 0, 0, 0, 0, 0xBA, hash0, hash1, hash2, hash3, 0x41, 0xB8, value, 0, 0, 0, 0xE8, 0, 0, 0, 0, \
+	0x48, 0x83, 0xC4, 0x28, 0xC3, 0xCC
+#define RQ_VEHICLE_LOOKUP(hash0, hash1, hash2, hash3) 0x53, 0x48, 0x83, 0xEC, 0x20, 0x89, 0xCB, 0x48, 0x8B, 0x0D, 0, 0, 0, 0, 0xBA, hash0, hash1, hash2, hash3, 0x41, 0x89, 0xD8, 0xE8, 0, 0, 0, 0, \
+	0x48, 0x83, 0xC4, 0x20, 0x5B, 0xC3, 0xCC
+#define RQ_FLIP(...) 0x48, 0x83, 0xEC, 0x28, __VA_ARGS__, 0x48, 0x8D, 0x0D, 0, 0, 0, 0, 0xE8, 0, 0, 0, 0, 0x8B, 0x05, 0, 0, 0, 0, 0x8D, 0x48, 0x01, 0x8D, 0x50, 0x04, 0x85, 0xC9, 0x0F, 0x49, 0xD1, \
+	0x83, 0xE2, 0xFC, 0xF7, 0xDA, 0x44, 0x8D, 0x04, 0x10, 0x41, 0xFF, 0xC0, 0x44, 0x89, 0x05, 0, 0, 0, 0, 0x48, 0x83, 0xC4, 0x28, 0xB9, 0, 0, 0, 0, 0xE9, 0, 0, 0, 0, 0xCC
+volatile unsigned char g_rqMakeS1[] = { 0x55, 0x48, 0x83, 0xEC, 0x20,
+	0x0F, 0xB6, 0x05, 0, 0, 0, 0, 0x48, 0x8B, 0x05, 0, 0, 0, 0, 0x48, 0xC1, 0xC0, 0x1B, 0x48, 0x8B, 0x15, 0, 0, 0, 0, 0x48, 0x31, 0xC2, 0x48, 0xC1, 0xC2, 0x20, 0x24, 0x1F, 0x8D, 0x48, 0x01,
+	0x48, 0x89, 0xD5, 0x48, 0xD3, 0xE5, 0x34, 0x3F, 0x89, 0xC1, 0x48, 0xD3, 0xEA, 0x48, 0x09, 0xEA, 0x48, 0xF7, 0xD2, 0x0F, 0xB6, 0x05, 0, 0, 0, 0, 0xA8, 0x01, 0xB9, 0, 0, 0, 0,
+	0x48, 0x0F, 0x45, 0xCA, 0xBA, 0x08, 0x05, 0, 0, 0xE8, 0, 0, 0, 0, 0x48, 0x83, 0xC4, 0x20, 0x5D, 0xC3, 0xCC };
+constexpr size_t kRqTrapAt = 7 + 111;	// in g_rqMakeS2: where the full pool's jump leads, the trap
+volatile unsigned char g_rqMakeS2[] = { 0x48, 0x83, 0xEC, 0x28, 0x48, 0x89, 0xCA,
+	0x8B, 0x42, 0x28, 0xC1, 0xE0, 0x02, 0xC1, 0xF8, 0x02, 0x39, 0x42, 0x18, 0x7E, 0x61, 0x0F, 0xB6, 0x05, 0, 0, 0, 0, 0x48, 0x8B, 0x0D, 0, 0, 0, 0, 0x48, 0xC1, 0xC1, 0x1C, 0x48, 0x8B, 0x05, 0, 0, 0, 0,
+	0x48, 0x31, 0xC8, 0x48, 0xC1, 0xC0, 0x20, 0x80, 0xE1, 0x1F, 0x80, 0xC1, 0x03, 0x48, 0xD3, 0xC0, 0x48, 0xF7, 0xD0, 0x0F, 0xB6, 0x15, 0, 0, 0, 0, 0x31, 0xC9, 0xF6, 0xC2, 0x01,
+	0x48, 0x0F, 0x45, 0xC8, 0xBA, 0xE0, 0x02, 0, 0, 0xE8, 0, 0, 0, 0, 0x48, 0x83, 0xC4, 0x28, 0xC3,
+	0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC };
+volatile unsigned char g_rqMakeP1[] = { 0x41, 0x55, 0x41, 0x57, 0x48, 0x83, 0xEC, 0x28,
+	0x0F, 0xB6, 0x05, 0, 0, 0, 0, 0x48, 0x8B, 0x0D, 0, 0, 0, 0, 0x48, 0xC1, 0xC1, 0x1B, 0x48, 0x8B, 0x05, 0, 0, 0, 0, 0x48, 0x31, 0xC8, 0x80, 0xE1, 0x1F, 0x80, 0xC1, 0x02, 0x48, 0xD3, 0xC0,
+	0x48, 0xC1, 0xC0, 0x20, 0x48, 0xF7, 0xD0, 0x0F, 0xB6, 0x0D, 0, 0, 0, 0, 0x45, 0x31, 0xFF, 0xF6, 0xC1, 0x01, 0x49, 0x0F, 0x44, 0xC7, 0xBA, 0x80, 0, 0, 0, 0x48, 0x89, 0xC1, 0xE8, 0, 0, 0, 0,
+	0x49, 0x89, 0xC5, 0xC7, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0x66, 0xC7, 0x40, 0x04, 0x00, 0x7F, 0x4C, 0x89, 0xE8, 0x48, 0x83, 0xC4, 0x28, 0x41, 0x5F, 0x41, 0x5D, 0xC3, 0xCC };
+volatile unsigned char g_rqMakeP2[] = { 0x57, 0x48, 0x83, 0xEC, 0x20, 0x31, 0xFF,
+	0x0F, 0xB6, 0x05, 0, 0, 0, 0, 0x48, 0x8B, 0x0D, 0, 0, 0, 0, 0x48, 0xC1, 0xC1, 0x1D, 0x48, 0x8B, 0x05, 0, 0, 0, 0, 0x48, 0x31, 0xC8, 0x48, 0xC1, 0xC0, 0x20, 0x80, 0xE1, 0x1F, 0x80, 0xC1, 0x05,
+	0x48, 0xD3, 0xC0, 0x48, 0xF7, 0xD0, 0x0F, 0xB6, 0x0D, 0, 0, 0, 0, 0xF6, 0xC1, 0x01, 0x48, 0x0F, 0x44, 0xC7, 0xBA, 0x3C, 0, 0, 0, 0x48, 0x89, 0xC1, 0xE8, 0, 0, 0, 0,
+	0x48, 0x83, 0xC4, 0x20, 0x5F, 0xC3, 0xCC };
+volatile unsigned char g_rqMakeV1[] = { 0x56, 0x57, 0x48, 0x83, 0xEC, 0x28,
+	0x0F, 0xB6, 0x05, 0, 0, 0, 0, 0x48, 0x8B, 0x0D, 0, 0, 0, 0, 0x48, 0xC1, 0xC1, 0x1D, 0x48, 0x8B, 0x05, 0, 0, 0, 0, 0x48, 0x31, 0xC8, 0x48, 0xC1, 0xC0, 0x20, 0x80, 0xE1, 0x1F, 0x80, 0xC1, 0x05,
+	0x48, 0xD3, 0xC0, 0x48, 0xF7, 0xD0, 0x0F, 0xB6, 0x15, 0, 0, 0, 0, 0x31, 0xC9, 0xF6, 0xC2, 0x01, 0x48, 0x0F, 0x45, 0xC8, 0xBA, 0xC8, 0x01, 0, 0, 0xE8, 0, 0, 0, 0,
+	0x48, 0x89, 0xC6, 0x48, 0x89, 0xC7, 0x48, 0x8D, 0x05, 0, 0, 0, 0, 0x48, 0x89, 0xF0, 0x48, 0x83, 0xC4, 0x28, 0x5F, 0x5E, 0xC3, 0xCC };
+volatile unsigned char g_rqVehicleSpare[220] = { 0xCC };	// "rqbad:v2nounwind": the make of the vehicles' render pool where no unwind data names a function
+volatile unsigned char g_rqAddPed[] = { 0x41, 0x56, 0x55, 0x53, 0x48, 0x83, 0xEC, 0x20, 0x49, 0x89, 0xCE,
+	0x66, 0x41, 0xFF, 0x86, 0xD8, 0x02, 0, 0, 0x48, 0x63, 0x05, 0, 0, 0, 0, 0x48, 0xC1, 0xE0, 0x04, 0x48, 0x8D, 0x0D, 0, 0, 0, 0, 0x48, 0x8B, 0x14, 0x08, 0x0F, 0xB7, 0x6C, 0x08, 0x08, 0x8D, 0x5D, 0x01,
+	0x66, 0x89, 0x5C, 0x08, 0x08, 0x4C, 0x89, 0x34, 0xEA, 0x48, 0x83, 0xC4, 0x20, 0x5B, 0x5D, 0x41, 0x5E, 0xC3, 0xCC };
+volatile unsigned char g_rqAddProp[] = { 0x41, 0x57, 0x57, 0x53, 0x48, 0x83, 0xEC, 0x20, 0x49, 0x89, 0xCF,
+	0x66, 0x41, 0xFF, 0x47, 0x38, 0x48, 0x63, 0x05, 0, 0, 0, 0, 0x48, 0xC1, 0xE0, 0x04, 0x48, 0x8D, 0x0D, 0, 0, 0, 0, 0x48, 0x8B, 0x14, 0x08, 0x0F, 0xB7, 0x5C, 0x08, 0x08, 0x8D, 0x7B, 0x01,
+	0x66, 0x89, 0x7C, 0x08, 0x08, 0x4C, 0x89, 0x3C, 0xDA, 0x48, 0x83, 0xC4, 0x20, 0x5B, 0x5F, 0x41, 0x5F, 0xC3, 0xCC };
+volatile unsigned char g_rqAddVehicle[] = { 0x41, 0x54, 0x41, 0x56, 0x53, 0x48, 0x83, 0xEC, 0x20,
+	0x49, 0x89, 0xCC, 0x48, 0x8D, 0x0D, 0, 0, 0, 0, 0xE8, 0, 0, 0, 0, 0x48, 0x63, 0x0D, 0, 0, 0, 0, 0x48, 0xC1, 0xE1, 0x04, 0x4C, 0x8D, 0x35, 0, 0, 0, 0, 0x42, 0x0F, 0xB7, 0x44, 0x31, 0x08, 0x48, 0x85, 0xC0,
+	0x66, 0x41, 0xFF, 0x84, 0x24, 0xA8, 0x0B, 0, 0, 0x48, 0x63, 0x05, 0, 0, 0, 0, 0x48, 0xC1, 0xE0, 0x04, 0x4A, 0x8B, 0x0C, 0x30, 0x42, 0x0F, 0xB7, 0x54, 0x30, 0x08, 0x8D, 0x5A, 0x01,
+	0x66, 0x42, 0x89, 0x5C, 0x30, 0x08, 0x4C, 0x89, 0x24, 0xD1, 0x48, 0x83, 0xC4, 0x20, 0x5B, 0x41, 0x5E, 0x41, 0x5C, 0xC3, 0xCC };
+volatile unsigned char g_rqInitPed[] = { 0x48, 0x83, 0xEC, 0x28, RQ_INIT_HEAD, RQ_INIT_BLOCK, RQ_INIT_BLOCK, RQ_INIT_BLOCK, RQ_INIT_BLOCK, 0x80, 0x3D, 0, 0, 0, 0, 0x00, 0x48, 0x83, 0xC4, 0x28, 0xC3, 0xCC };
+volatile unsigned char g_rqInitProp[] = { 0x48, 0x83, 0xEC, 0x28, RQ_INIT_HEAD, RQ_INIT_BLOCK, RQ_INIT_BLOCK, RQ_INIT_BLOCK, RQ_INIT_BLOCK, 0x48, 0x83, 0xC4, 0x28, 0xC3, 0xCC };
+volatile unsigned char g_rqSizes[] = { 0x48, 0x83, 0xEC, 0x28, 0x48, 0x8B, 0x0D, 0, 0, 0, 0, 0xBA, 0xF4, 0xBF, 0xD4, 0x90, 0x41, 0xB8, 0x01, 0, 0, 0, 0xE8, 0, 0, 0, 0, 0x89, 0x05, 0, 0, 0, 0,
+	0x48, 0x8B, 0x0D, 0, 0, 0, 0, 0xBA, 0x67, 0x52, 0x1D, 0xE1, 0x41, 0xB8, 0x01, 0, 0, 0, 0xE8, 0, 0, 0, 0, 0x89, 0x05, 0, 0, 0, 0, 0x48, 0x83, 0xC4, 0x28, 0xC3, 0xCC };
+volatile unsigned char g_rqInitVehicle[] = { 0x56, 0x57, 0x48, 0x83, 0xEC, 0x28, 0x48, 0x63, 0x35, 0, 0, 0, 0, 0x48, 0x85, 0xF6, 0x0F, 0x84, 0x27, 0, 0, 0, 0x48, 0x8D, 0x0C, 0xF5, 0, 0, 0, 0,
+	0xBA, 0x08, 0, 0, 0, 0xE8, 0, 0, 0, 0, 0x48, 0x63, 0x3D, 0, 0, 0, 0, 0x48, 0x89, 0x05, 0, 0, 0, 0, 0x66, 0x89, 0x35, 0, 0, 0, 0, 0x48, 0x83, 0xC4, 0x28, 0x5F, 0x5E, 0xC3, 0xCC };
+volatile unsigned char g_rqLookupN1[] = { RQ_LOOKUP(0xF6, 0x68, 0xB9, 0x0A, 0x37) };
+volatile unsigned char g_rqLookupN2[] = { RQ_LOOKUP(0x34, 0x0C, 0x37, 0x2D, 0x78) };
+volatile unsigned char g_rqLookupN3[] = { RQ_LOOKUP(0x2D, 0x46, 0xFB, 0x85, 0x32) };
+volatile unsigned char g_rqLookupN4[] = { RQ_LOOKUP(0xB8, 0x8E, 0x9C, 0x53, 0x78) };
+volatile unsigned char g_rqLookupN5[] = { RQ_VEHICLE_LOOKUP(0x86, 0x3C, 0x75, 0x54) };
+volatile unsigned char g_rqLookupN6[] = { RQ_VEHICLE_LOOKUP(0x89, 0xF0, 0xB5, 0xC2) };
+volatile unsigned char g_rqFlipsCall[] = { 0x56, 0x57, 0x48, 0x83, 0xEC, 0x28, 0x89, 0xD6, 0x48, 0x89, 0xCF, 0xE8, 0, 0, 0, 0, 0xE8, 0, 0, 0, 0, 0xE8, 0, 0, 0, 0, 0x48, 0x89, 0xF9, 0x89, 0xF2,
+	0x48, 0x83, 0xC4, 0x28, 0x5F, 0x5E, 0xE9, 0, 0, 0, 0, 0xCC };
+volatile unsigned char g_rqFlipPeds[] = { RQ_FLIP(0x90, 0x90) };
+volatile unsigned char g_rqFlipProps[] = { RQ_FLIP(0x90, 0x90, 0x90) };
+volatile unsigned char g_rqFlipVehicles[] = { RQ_FLIP(0x90, 0x90) };
+volatile unsigned char g_rqReferences[] = { 0x56, 0x48, 0x83, 0xEC, 0x20, 0x48, 0x89, 0xCE, 0x48, 0x89, 0xD0,
+	0x48, 0x89, 0x86, 0xD0, 0x05, 0, 0, 0x66, 0xC7, 0x86, 0xDA, 0x05, 0, 0, 0x80, 0x28, 0xB9, 0x00, 0x88, 0x02, 0, 0xBA, 0x08, 0, 0, 0, 0xE8, 0, 0, 0, 0, 0x48, 0x83, 0xC4, 0x20, 0x5E, 0xC3, 0xCC };
+volatile unsigned char g_rqRotation[] = { 0x8B, 0x81, 0xA4, 0, 0, 0, 0x8B, 0x91, 0xAC, 0, 0, 0, 0xFF, 0xC0, 0x83, 0xE0, 0x03, 0x89, 0x81, 0xA4, 0, 0, 0, 0xFF, 0xC2, 0x83, 0xE2, 0x03, 0x89, 0x91, 0xAC, 0, 0, 0, 0xC3, 0xCC };
+volatile unsigned char g_rqManagerMade[] = { 0x56, 0x48, 0x83, 0xEC, 0x20, 0xB9, 0xA0, 0x4B, 0x01, 0, 0xE8, 0, 0, 0, 0, 0x48, 0x89, 0xC6, 0x48, 0x89, 0xC1, 0xE8, 0, 0, 0, 0, 0x48, 0x89, 0x35, 0, 0, 0, 0,
+	0x48, 0x83, 0xC4, 0x20, 0x5E, 0xC3, 0xCC };
+volatile unsigned char g_rqNotData[0x40] = { 0xCC };		// inside the game and readable, and not its .data
+static Site g_rqSites[] = { SITE(g_rqMakeS1, 0), SITE(g_rqMakeS2, 0), SITE(g_rqMakeP1, 0), SITE(g_rqMakeP2, 0), SITE(g_rqMakeV1, 0), SITE(g_rqVehicleSpare, 0), SITE(g_rqAddPed, 0), SITE(g_rqAddProp, 0),
+	SITE(g_rqAddVehicle, 0), SITE(g_rqInitPed, 0), SITE(g_rqInitProp, 0), SITE(g_rqSizes, 0), SITE(g_rqInitVehicle, 0), SITE(g_rqLookupN1, 0), SITE(g_rqLookupN2, 0), SITE(g_rqLookupN3, 0), SITE(g_rqLookupN4, 0),
+	SITE(g_rqLookupN5, 0), SITE(g_rqLookupN6, 0), SITE(g_rqFlipsCall, 0), SITE(g_rqFlipPeds, 0), SITE(g_rqFlipProps, 0), SITE(g_rqFlipVehicles, 0), SITE(g_rqReferences, 0), SITE(g_rqRotation, 0),
+	SITE(g_rqManagerMade, 0), SITE(g_rqNotData, 0) };
+#pragma section(".rqedge", read, execute)
+__declspec(allocate(".rqedge")) volatile unsigned char g_rqEdge[0x2000] = { 0xCC };
 #pragma data_seg()
 
 // The game's own modkit array (1024 entries of 2 bytes) and packfile array (4500 entries of 8 bytes). The
@@ -5944,6 +6046,771 @@ static void PoolMemoryReport()
 		wprintf(L"its constructor not run | ");
 }
 // [render queues]
+// The render queues (TweaksVRenderQueues). What TweaksV reads lies in one page of the fake's .data, and what the pools and the arrays
+// hold in memory of the fake's game allocator: the code RqSetUp points the sites at runs on it as the game's, so that the module's
+// numbers are what the patterns' own bytes wrote and its decoding of a pool's pointer is what the patterns' own bytes decode.
+constexpr int kRqPools = 6, kRqFamilies = 3, kRqArrays = 4;
+enum { kRqPedRequests, kRqPedRender, kRqPropRequests, kRqPropRender, kRqVehicleRequests, kRqVehicleRender };
+enum { kRqPeds, kRqProps, kRqVehicles };
+static const int32_t kRqStrides[kRqPools] = { 0x508, 0x2E0, 0x80, 0x3C, 0x1C8, 0xBB0 };
+static const uint32_t kRqRefAt[kRqFamilies] = { 0x2D8, 0x38, 0xBA8 };		// where a family's gfx counts its references, a word
+static const int kRqRenderPool[kRqFamilies] = { kRqPedRender, kRqPropRender, kRqVehicleRender };
+static const uint64_t kRqKeys[kRqPools] = { 0x0123456789ABCDEFull, 0xFEDCBA9876543210ull, 0x5A5AA5A55A5AA5A7ull, 0x1F2E3D4C5B6A7988ull, 0x8000000000000011ull, 0x7766554433221100ull };
+struct RqPool
+{
+	void* allocator;			// +0x00
+	unsigned char* storage;		// +0x08
+	unsigned char* slotBytes;	// +0x10
+	int32_t capacity;			// +0x18
+	int32_t stride;				// +0x1C
+	int32_t firstFree;			// +0x20
+	int32_t unused;				// +0x24
+	uint32_t count;				// +0x28: its low 30 bits, 0x40000000 set
+	uint32_t unused2;			// +0x2C
+};
+static_assert(sizeof(RqPool) == 0x30 && offsetof(RqPool, capacity) == 0x18 && offsetof(RqPool, stride) == 0x1C && offsetof(RqPool, count) == 0x28, "a pool at the game's offsets");
+struct RqArray
+{
+	uint64_t* entries;			// +0x00
+	uint16_t count;				// +0x08
+	uint16_t capacity;			// +0x0A
+	uint32_t unused;
+};
+struct RqFamily
+{
+	RqArray arrays[kRqArrays];
+	int32_t index;				// +0x40
+	int32_t unused;
+	uint64_t lock;				// +0x48
+	uint64_t unused2[6];
+};
+static_assert(sizeof(RqArray) == 16 && offsetof(RqFamily, index) == 0x40 && offsetof(RqFamily, lock) == 0x48, "a family at the game's offsets");
+struct RqFields
+{
+	uint64_t flag;				// its low byte
+	uint64_t value;
+	uint64_t key;
+};
+struct RqData
+{
+	RqFields fields[kRqPools];
+	RqFamily families[kRqFamilies];
+	int32_t sizes[2];			// the vehicles': what VehicleStreamRequest and VehicleStreamRender came to
+	unsigned char* manager;		// the draw list manager's global
+	void* config;				// the config manager's global
+	uint64_t aByte;				// what the end of an init compares
+};
+static_assert(sizeof(RqData) <= 4096, "the game's data the module reads fits its page");
+alignas(4096) static unsigned char g_rqDataPage[4096];
+static RqData& g_rqData = *reinterpret_cast<RqData*>(g_rqDataPage);
+struct alignas(4096) RqHole { unsigned char bytes[4096]; };
+static RqHole g_rqHole;			// inside the game's .data: no access with "...unread" and "...gone"
+static unsigned char* g_rqGone = nullptr;	// a page of no access outside the game: a pointer that leads nowhere
+static RqPool* g_rqObjects[kRqPools] = {};
+static unsigned char g_rqSpare[0x1000];		// what a make that found no room hands back
+static unsigned char g_rqVehicleThis[0x50];	// the object the vehicles' render pool's make reads, as the game's its +0x48
+static int g_rqVehicleRenderNamed = -1;		// what the fake's configuration names CVehicleStreamRenderGfx
+static LONG g_rqMade = 0, g_rqMadeWrong = 0, g_rqNoRoom = 0, g_rqLookupCalls = 0, g_rqLookupsWrong = 0, g_rqLocks = 0, g_rqFrames = 0, g_rqRefsWrong = 0;
+static wchar_t g_rqBad[24] = L"";
+static int g_rqWhich = 0;
+static bool g_rqAsked = false, g_rqBuilt = false;
+static size_t g_rqV2Room = 0;
+static uint64_t g_rqSitesPlaced = 0, g_rqDataLeft = 0;
+static bool g_rqEntriesGone = false, g_rqDataGone = false, g_rqDataChanged = false;
+
+static bool RqIs(const wchar_t* what)
+{
+	return wcscmp(g_rqBad, what) == 0;
+}
+
+// True if "NAME:I" is among the options for this I.
+static bool RqHasFor(int argc, wchar_t** argv, const wchar_t* name, int i)
+{
+	wchar_t option[32];
+	swprintf(option, sizeof(option) / sizeof(option[0]), L"%ls:%d", name, i);
+	return HasOption(argc, argv, option);
+}
+
+static uint64_t RqRol(uint64_t value, int by)
+{
+	by &= 63;
+	return by ? (value << by) | (value >> (64 - by)) : value;
+}
+
+// The game's stand-ins the sites call. A site's make takes a slot through RqAllocate, which sees the pointer the site's own bytes decoded.
+static __declspec(noinline) void RqNothing()
+{
+	InterlockedIncrement(&g_rqLocks);
+}
+struct RqBlock
+{
+	void* at;
+	SIZE_T size;
+};
+static RqBlock g_rqBlocks[64] = {};
+static size_t g_rqBlockCount = 0;
+static __declspec(noinline) void* RqGameAllocate(uint32_t size, uint32_t)
+{
+	const SIZE_T bytes = size < 0x10000 ? 0x10000 : size;	// room for an array to be written past
+	void* const block = VirtualAlloc(nullptr, bytes, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+	if (g_rqBlockCount < sizeof(g_rqBlocks) / sizeof(g_rqBlocks[0]))
+		g_rqBlocks[g_rqBlockCount++] = { block, bytes };
+	return block;
+}
+// While nothing of the fake's changes them, the game's data and memory are read-only: a write of the module's would fault, whatever it wrote.
+static void RqProtectData(DWORD protection)
+{
+	DWORD old = 0;
+	VirtualProtect(g_rqDataPage, sizeof(g_rqDataPage), protection, &old);
+	for (size_t i = 0; i < g_rqBlockCount; i++)
+		VirtualProtect(g_rqBlocks[i].at, g_rqBlocks[i].size, protection, &old);
+}
+static __declspec(noinline) int32_t RqLookup(void* config, uint32_t hash, int32_t defaultValue)
+{
+	InterlockedIncrement(&g_rqLookupCalls);
+	if (config != &g_rqData.config)
+		InterlockedIncrement(&g_rqLookupsWrong);
+	switch (hash)
+	{
+	case 0x90D4BFF4: return 30;		// VehicleStreamRequest
+	case 0xE11D5267: return 60;		// VehicleStreamRender
+	case 0xC2B5F089: return g_rqVehicleRenderNamed >= 0 ? g_rqVehicleRenderNamed : defaultValue;	// CVehicleStreamRenderGfx
+	default: return defaultValue;
+	}
+}
+static int32_t RqCount(const RqPool& pool)
+{
+	return static_cast<int32_t>(pool.count << 2) >> 2;
+}
+static __declspec(noinline) void* RqAllocate(RqPool* pool, uint32_t size)
+{
+	InterlockedIncrement(&g_rqMade);
+	int which = 0;
+	while (which < kRqPools && static_cast<uint32_t>(kRqStrides[which]) != size)
+		which++;
+	if (which == kRqPools || pool != g_rqObjects[which])
+	{
+		InterlockedIncrement(&g_rqMadeWrong);
+		return g_rqSpare;
+	}
+	const int32_t count = RqCount(*pool);
+	if (count >= pool->capacity)
+	{
+		InterlockedIncrement(&g_rqNoRoom);
+		return g_rqSpare;
+	}
+	pool->count = 0x40000000u | static_cast<uint32_t>(count + 1);
+	return pool->storage + static_cast<size_t>(count) * static_cast<size_t>(pool->stride);
+}
+// What a flip does past its head: each entry of the array it enters loses its reference, and its count goes to 0.
+static __declspec(noinline) void RqFlipDone(int family)
+{
+	RqFamily& f = g_rqData.families[family];
+	RqArray& entered = f.arrays[f.index & 3];
+	for (uint32_t i = 0; i < entered.count; i++)
+	{
+		const auto refs = reinterpret_cast<uint16_t*>(reinterpret_cast<unsigned char*>(static_cast<uintptr_t>(entered.entries[i])) + kRqRefAt[family]);
+		if (*refs == 0)
+			InterlockedIncrement(&g_rqRefsWrong);
+		else
+			(*refs)--;
+	}
+	entered.count = 0;
+}
+static __declspec(noinline) void RqAfterFlips(void*, int)
+{
+	InterlockedIncrement(&g_rqFrames);
+}
+// The draw list manager's constructor: its first array of references through its site, the other three as the game goes on.
+static __declspec(noinline) void RqManagerMade(unsigned char* manager)
+{
+	const auto next = reinterpret_cast<void* (*)(void*, void*)>(const_cast<unsigned char*>(g_rqReferences))(manager, RqGameAllocate(0x28800, 8));
+	for (int i = 1; i < kRqArrays; i++)
+	{
+		RqArray& references = reinterpret_cast<RqArray*>(manager + 0x5D0)[i];
+		references.entries = static_cast<uint64_t*>(i == 1 ? next : RqGameAllocate(0x28800, 8));
+		references.capacity = 0x2880;
+	}
+}
+
+// The carrier of the make of the vehicles' render pool: a function with a frame of its own, so that the fake's unwind data names it, and
+// room for its stand-in: its prologue, its pattern's 78 bytes, its make, and 185 bytes past the match's start the branch of a full pool.
+static __declspec(noinline) void RqVehicleCarrier()
+{
+	volatile int frame[32];
+	for (int i = 0; i < 32; i++)
+		frame[i] = g_sirenCountSink + 7 * i;
+	for (int i = 1; i < 32; i++)
+		frame[i] = frame[i] + (frame[i - 1] ^ 0x5157);
+	for (int i = 2; i < 32; i++)
+		frame[i] = frame[i] - (frame[i - 2] ^ 0x1234);
+	for (int i = 3; i < 32; i++)
+		frame[i] = frame[i] + (frame[i - 3] ^ 0x4321);
+	for (int i = 4; i < 32; i++)
+		frame[i] = frame[i] - (frame[i - 4] ^ 0x7654);
+	for (int i = 5; i < 32; i++)
+		frame[i] = frame[i] + (frame[i - 5] ^ 0x3210);
+	g_sirenCountSink = frame[5] + frame[10] + frame[15] + frame[20] + frame[25] + frame[30];
+}
+constexpr size_t kRqV2Match = 9, kRqV2Branch = kRqV2Match + 185;
+static const unsigned char kRqMakeV2[] = { 0x53, 0x57, 0x48, 0x83, 0xEC, 0x28, 0x48, 0x89, 0xCF,
+	0x0F, 0xB6, 0x05, 0, 0, 0, 0, 0x48, 0x8B, 0x0D, 0, 0, 0, 0, 0x48, 0xC1, 0xC1, 0x1E, 0x48, 0x8B, 0x05, 0, 0, 0, 0, 0x48, 0x31, 0xC8, 0x80, 0xE1, 0x1F, 0x80, 0xC1, 0x03, 0x48, 0xD3, 0xC0,
+	0x48, 0xC1, 0xC0, 0x20, 0x48, 0xF7, 0xD0, 0x0F, 0xB6, 0x0D, 0, 0, 0, 0, 0x31, 0xD2, 0xF6, 0xC1, 0x01, 0x48, 0x0F, 0x45, 0xD0, 0x8B, 0x42, 0x28, 0xC1, 0xE0, 0x02, 0xC1, 0xF8, 0x02,
+	0x48, 0x8B, 0x5F, 0x48, 0x39, 0x42, 0x18, 0x7E, 0x6B,
+	0x48, 0x89, 0xD1, 0xBA, 0xB0, 0x0B, 0, 0, 0xE8, 0, 0, 0, 0, 0x48, 0x83, 0xC4, 0x28, 0x5F, 0x5B, 0xC3 };
+static const unsigned char kRqMakeV2Branch[] = { 0x31, 0xC0, 0x48, 0x83, 0xC4, 0x28, 0x5F, 0x5B, 0xC3 };
+
+// Where each pool's make lies, its match in its site, and from the match its fields' rel32, its two bytes and its make's rel32.
+struct RqMake
+{
+	volatile unsigned char* site;
+	size_t match, flag, key, rol, value, add, flagAgain, allocate;
+};
+static RqMake g_rqMakes[kRqPools] = {
+	{ g_rqMakeS1, 5, 3, 10, 17, 21, 36, 59, 80 }, { g_rqMakeS2, 7, 17, 24, 31, 35, 51, 61, 80 }, { g_rqMakeP1, 8, 3, 10, 17, 21, 33, 47, 70 },
+	{ g_rqMakeP2, 7, 3, 10, 17, 21, 37, 47, 67 }, { g_rqMakeV1, 6, 3, 10, 17, 21, 37, 47, 66 }, { nullptr, kRqV2Match, 3, 10, 17, 21, 33, 47, 87 } };
+// Each flip's match, and each family's first bytes of each site that loads its arrays.
+static volatile unsigned char* const g_rqFlipSites[kRqFamilies] = { g_rqFlipPeds, g_rqFlipProps, g_rqFlipVehicles };
+static const size_t kRqFlipMatch[kRqFamilies] = { 6, 7, 6 };
+static const size_t kRqFlipOrder[kRqFamilies] = { kRqVehicles, kRqPeds, kRqProps };	// the frame's calls, in an order no pattern says
+static volatile unsigned char* const g_rqLookupSites[kRqPools] = { g_rqLookupN1, g_rqLookupN2, g_rqLookupN3, g_rqLookupN4, g_rqLookupN5, g_rqLookupN6 };
+static const size_t kRqLookupMatch[kRqPools] = { 4, 4, 4, 4, 7, 7 }, kRqLookupCall[kRqPools] = { 18, 18, 18, 18, 15, 15 };
+static volatile unsigned char* const g_rqInits[2] = { g_rqInitPed, g_rqInitProp };
+static volatile unsigned char* const g_rqArrayLoads[kRqFamilies] = { g_rqAddPed + 11 + 22, g_rqAddProp + 11 + 19, g_rqAddVehicle + 9 + 29 };
+
+static void RqRel32(volatile unsigned char* at, const volatile void* target)
+{
+	const Site site = { at, 0, 0 };
+	SetRel32(site, const_cast<const void*>(target));
+}
+
+// A pool's pointer as the game keeps it, encrypted by the two bytes its make holds: what DecodePoolPointer and the make's own bytes undo.
+static void RqSetPointer(int pool, const void* pointer)
+{
+	const RqMake& make = g_rqMakes[pool];
+	const volatile unsigned char* const match = make.site + make.match;
+	RqFields& fields = g_rqData.fields[pool];
+	fields.key = kRqKeys[pool];
+	const uint64_t turned = RqRol(fields.key, match[make.rol]);
+	const int by = 32 + static_cast<int>(turned & 0x1F) + match[make.add];
+	fields.value = RqRol(~static_cast<uint64_t>(reinterpret_cast<uintptr_t>(pointer)), 64 - (by & 63)) ^ turned;
+	fields.flag = 0xA5A5A5A5A5A5A501ull;
+}
+
+// The end of .data, from the section table.
+static const unsigned char* RqDataEnd()
+{
+	const unsigned char* const base = ImageBase();
+	const auto nt = reinterpret_cast<const IMAGE_NT_HEADERS*>(base + reinterpret_cast<const IMAGE_DOS_HEADER*>(base)->e_lfanew);
+	const IMAGE_SECTION_HEADER* section = IMAGE_FIRST_SECTION(nt);
+	for (WORD i = 0; i < nt->FileHeader.NumberOfSections; i++, section++)
+		if (memcmp(section->Name, ".data\0\0", 8) == 0)
+			return base + section->VirtualAddress + section->Misc.VirtualSize;
+	return base;
+}
+
+// "rqbad:...": the site not as the research found it, for each of the module's checks, each alone. No site runs in such a run.
+static void RqBreakSite()
+{
+	const unsigned char* const outside = ImageEnd() + 0xC0000;
+	RqFields* const fields = g_rqData.fields;
+	if (RqIs(L"rol0") || RqIs(L"rol64") || RqIs(L"add64") || RqIs(L"value") || RqIs(L"key") || RqIs(L"out") || RqIs(L"end") || RqIs(L"odd") || RqIs(L"unread"))
+	{
+		const RqMake& make = g_rqMakes[g_rqWhich];
+		volatile unsigned char* const match = make.site + make.match;
+		const auto setFields = [&](const unsigned char* at)
+		{
+			RqRel32(match + make.flag, at);
+			RqRel32(match + make.value, at + 8);
+			RqRel32(match + make.key, at + 16);
+		};
+		if (RqIs(L"rol0"))
+			match[make.rol] = 0;
+		if (RqIs(L"rol64"))
+			match[make.rol] = 64;
+		if (RqIs(L"add64"))
+			match[make.add] = 64;
+		if (RqIs(L"value"))
+			RqRel32(match + make.value, &fields[g_rqWhich].key);
+		if (RqIs(L"key"))
+			RqRel32(match + make.key, reinterpret_cast<const unsigned char*>(&fields[g_rqWhich].key) + 8);
+		if (RqIs(L"out"))
+			setFields(const_cast<const unsigned char*>(g_rqNotData));
+		if (RqIs(L"end"))
+			setFields(RqDataEnd() - 8);
+		if (RqIs(L"odd"))
+			setFields(reinterpret_cast<const unsigned char*>(&fields[g_rqWhich]) + 1);
+		if (RqIs(L"unread"))
+			setFields(g_rqHole.bytes);
+	}
+	if (RqIs(L"trap"))
+		g_rqMakeS2[kRqTrapAt] = 0x90;
+	if (RqIs(L"edgetrap") || RqIs(L"edgelookup"))
+	{
+		DWORD old = 0, unused = 0;
+		const bool trap = RqIs(L"edgetrap");
+		const size_t size = trap ? 80 : kRqLookupCall[g_rqWhich] + 1;
+		volatile unsigned char* const from = trap ? g_rqMakeS2 + 7 : g_rqLookupSites[g_rqWhich] + kRqLookupMatch[g_rqWhich];
+		volatile unsigned char* const to = g_rqEdge + 0x1000 - (trap ? 100 : size);
+		VirtualProtect(const_cast<unsigned char*>(g_rqEdge), 0x1000, PAGE_READWRITE, &old);
+		for (size_t i = 0; i < size; i++)
+			to[i] = from[i];
+		VirtualProtect(const_cast<unsigned char*>(g_rqEdge), 0x1000, old, &unused);
+		from[size - 1] = 0x90;		// the pattern's last byte: it matches at the edge alone
+		if (trap)					// the site's fields as the one at the edge has them, each rel32 counted from there
+		{
+			VirtualProtect(const_cast<unsigned char*>(g_rqEdge), 0x1000, PAGE_READWRITE, &old);
+			RqRel32(to + 17, &fields[kRqPedRender]);
+			RqRel32(to + 24, &fields[kRqPedRender].key);
+			RqRel32(to + 35, &fields[kRqPedRender].value);
+			VirtualProtect(const_cast<unsigned char*>(g_rqEdge), 0x1000, old, &unused);
+		}
+		VirtualProtect(const_cast<unsigned char*>(g_rqEdge) + 0x1000, 0x1000, PAGE_NOACCESS, &old);
+	}
+	if (RqIs(L"arraysother") || RqIs(L"arraysout") || RqIs(L"arraysodd") || RqIs(L"arraysunread"))
+	{
+		const unsigned char* const arrays = reinterpret_cast<const unsigned char*>(g_rqData.families[g_rqWhich].arrays);
+		RqRel32(g_rqArrayLoads[g_rqWhich], RqIs(L"arraysother") ? arrays + 16 : RqIs(L"arraysout") ? const_cast<const unsigned char*>(g_rqNotData) :
+			RqIs(L"arraysodd") ? arrays + 1 : g_rqHole.bytes);
+	}
+	if (RqIs(L"initarray") || RqIs(L"initcapacity"))	// N: the family, ten times, and the array, 1 to 3 or for the capacity 0 to 3
+	{
+		const int family = g_rqWhich / 10, i = g_rqWhich % 10;
+		volatile unsigned char* const block = g_rqInits[family] + 4 + 24 + 31 * i;
+		if (RqIs(L"initarray"))
+			RqRel32(block + 18, &g_rqData.families[family].arrays[i] + 1);
+		else
+			RqRel32(block + 25, &g_rqData.families[family].arrays[i].unused);
+	}
+	if (RqIs(L"vehicleindex"))
+		RqRel32(g_rqAddVehicle + 51 + 12, &g_rqData.families[kRqVehicles].lock);
+	if (RqIs(L"vehicleinitarray"))
+		RqRel32(g_rqInitVehicle + 6 + 44, &g_rqData.families[kRqVehicles].arrays[1]);
+	if (RqIs(L"vehiclesize"))
+		RqRel32(g_rqSizes + 4 + 54, &g_rqData.sizes[0]);
+	if (RqIs(L"sizecall"))	// N: VehicleStreamRequest's or VehicleStreamRender's
+		RqRel32(g_rqSizes + 4 + (g_rqWhich == 0 ? 19 : 48), outside);
+	if (RqIs(L"lookupout"))
+		RqRel32(g_rqLookupSites[g_rqWhich] + kRqLookupMatch[g_rqWhich] + kRqLookupCall[g_rqWhich] + 1, outside);
+	if (RqIs(L"lookupother"))
+		RqRel32(g_rqLookupSites[g_rqWhich] + kRqLookupMatch[g_rqWhich] + kRqLookupCall[g_rqWhich] + 1, reinterpret_cast<const void*>(&RqNothing));
+	if (RqIs(L"flipout"))	// N: the call, 0 to 2
+		RqRel32(g_rqFlipsCall + 12 + 5 * g_rqWhich, outside);
+	if (RqIs(L"flipunread"))
+		RqRel32(g_rqFlipsCall + 12 + 5 * g_rqWhich, g_rqHole.bytes);
+	if (RqIs(L"fliphead"))	// N: the family
+		g_rqFlipSites[g_rqWhich][kRqFlipMatch[g_rqWhich] + 31] = 0xF8;
+	if (RqIs(L"flipindex"))
+		RqRel32(g_rqFlipSites[g_rqWhich] + kRqFlipMatch[g_rqWhich] + 14, &g_rqData.sizes[0]);
+	if (RqIs(L"fliplock"))
+		RqRel32(g_rqFlipSites[g_rqWhich] + kRqFlipMatch[g_rqWhich] + 3, &g_rqData.sizes[1]);
+	if (RqIs(L"flipsame"))
+		RqRel32(g_rqFlipsCall + 17, g_rqFlipSites[kRqFlipOrder[0]]);
+	if (RqIs(L"managerout"))
+		RqRel32(g_rqManagerMade + 5 + 24, g_rqNotData);
+	if (RqIs(L"managerodd"))
+		RqRel32(g_rqManagerMade + 5 + 24, reinterpret_cast<const unsigned char*>(&g_rqData.manager) + 4);
+	if (RqIs(L"managerunread"))
+		RqRel32(g_rqManagerMade + 5 + 24, g_rqHole.bytes);
+}
+
+static uint64_t RqSitesHash()
+{
+	uint64_t hash = 0xCBF29CE484222325ull;
+	for (const Site& site : g_rqSites)
+		hash = SirenCountHash(hash, site.bytes, site.size);
+	hash = SirenCountHash(hash, g_rqEdge, 0x1000);
+	return g_rqBuilt ? SirenCountHash(hash, SirenCountCode(&RqVehicleCarrier), g_rqV2Room) : hash;
+}
+
+// All the module reads of the game's: its data, the pools, the arrays' entries and the references.
+static uint64_t RqDataHash()
+{
+	uint64_t hash = SirenCountHash(0xCBF29CE484222325ull, &g_rqData, sizeof(g_rqData));
+	for (const RqPool* const pool : g_rqObjects)
+		if (pool && !g_rqEntriesGone)
+			hash = SirenCountHash(hash, pool, sizeof(RqPool));
+	for (const RqFamily& family : g_rqData.families)
+		for (const RqArray& array : family.arrays)
+			if (array.entries && !g_rqEntriesGone)
+				hash = SirenCountHash(hash, array.entries, array.count * sizeof(uint64_t));
+	if (g_rqData.manager && reinterpret_cast<unsigned char*>(g_rqData.manager) != g_rqGone)
+		hash = SirenCountHash(hash, g_rqData.manager + 0x5D0, kRqArrays * sizeof(RqArray));
+	return hash;
+}
+
+// Before TweaksV loads: every site's rel32 pointed at the game's data and the stand-ins, the options' changes, and then the sites as placed.
+static void RqSetUp(int argc, wchar_t** argv)
+{
+	for (int i = 1; i < argc; i++)
+		if (wcsncmp(argv[i], L"rq", 2) == 0)
+		{
+			g_rqAsked = true;
+			if (wcsncmp(argv[i], L"rqbad:", 6) == 0)
+			{
+				const wchar_t* const colon = wcschr(argv[i] + 6, L':');
+				const size_t length = colon ? static_cast<size_t>(colon - (argv[i] + 6)) : wcslen(argv[i] + 6);
+				if (length < sizeof(g_rqBad) / sizeof(g_rqBad[0]))
+				{
+					wmemcpy(g_rqBad, argv[i] + 6, length);
+					g_rqBad[length] = L'\0';
+				}
+				g_rqWhich = colon ? _wtoi(colon + 1) : 0;
+			}
+		}
+	unsigned char* const carrier = SirenCountCode(&RqVehicleCarrier);
+	g_rqV2Room = SirenCountRoom(carrier, kRqV2Branch + sizeof(kRqMakeV2Branch) + 1);
+	g_rqBuilt = g_rqV2Room != 0;
+	DWORD carrierProtection = 0, unused = 0;
+	if (g_rqBuilt)
+	{
+		const size_t at = RqIs(L"v2short") ? g_rqV2Room - 100 - kRqV2Match : 0;	// its full pool's jump leads past the function's end
+		VirtualProtect(carrier, g_rqV2Room, PAGE_EXECUTE_READWRITE, &carrierProtection);
+		memset(carrier, 0xCC, g_rqV2Room);
+		volatile unsigned char* const v2 = RqIs(L"v2nounwind") ? g_rqVehicleSpare : carrier + at;
+		const size_t room = RqIs(L"v2nounwind") ? sizeof(g_rqVehicleSpare) : g_rqV2Room - at;
+		for (size_t i = 0; i < sizeof(kRqMakeV2) && i < room; i++)
+			v2[i] = kRqMakeV2[i];
+		for (size_t i = 0; i < sizeof(kRqMakeV2Branch) && kRqV2Branch + i < room; i++)
+			v2[kRqV2Branch + i] = kRqMakeV2Branch[i];
+		g_rqMakes[kRqVehicleRender].site = v2;
+	}
+	RqData& data = g_rqData;
+	for (int i = 0; g_rqBuilt && i < kRqPools; i++)
+	{
+		const RqMake& make = g_rqMakes[i];
+		volatile unsigned char* const match = make.site + make.match;
+		RqRel32(match + make.flag, &data.fields[i].flag);
+		RqRel32(match + make.key, &data.fields[i].key);
+		RqRel32(match + make.value, &data.fields[i].value);
+		RqRel32(match + make.flagAgain, &data.fields[i].flag);
+		RqRel32(match + make.allocate, reinterpret_cast<const void*>(&RqAllocate));
+	}
+	RqRel32(g_rqAddPed + 11 + 11, &data.families[kRqPeds].index);
+	RqRel32(g_rqAddPed + 11 + 22, data.families[kRqPeds].arrays);
+	RqRel32(g_rqAddProp + 11 + 8, &data.families[kRqProps].index);
+	RqRel32(g_rqAddProp + 11 + 19, data.families[kRqProps].arrays);
+	RqRel32(g_rqAddVehicle + 9 + 6, &data.families[kRqVehicles].lock);
+	RqRel32(g_rqAddVehicle + 9 + 11, reinterpret_cast<const void*>(&RqNothing));
+	RqRel32(g_rqAddVehicle + 9 + 18, &data.families[kRqVehicles].index);
+	RqRel32(g_rqAddVehicle + 9 + 29, data.families[kRqVehicles].arrays);
+	RqRel32(g_rqAddVehicle + 51 + 12, &data.families[kRqVehicles].index);
+	for (int family = 0; family < 2; family++)
+	{
+		volatile unsigned char* const init = g_rqInits[family] + 4;
+		RqRel32(init + 8, reinterpret_cast<const void*>(&RqNothing));
+		RqRel32(init + 20, reinterpret_cast<const void*>(&RqNothing));
+		for (int i = 0; i < kRqArrays; i++)
+		{
+			volatile unsigned char* const block = init + 24 + 31 * i;
+			RqRel32(block + 11, reinterpret_cast<const void*>(&RqGameAllocate));
+			RqRel32(block + 18, &data.families[family].arrays[i].entries);
+			RqRel32(block + 25, reinterpret_cast<const unsigned char*>(&data.families[family].arrays[i].capacity) - 2);	// counted from past its imm16
+		}
+	}
+	RqRel32(g_rqInitPed + 4 + 150, reinterpret_cast<const unsigned char*>(&data.aByte) - 1);	// counted from past its imm8
+	volatile unsigned char* const sizes = g_rqSizes + 4;
+	RqRel32(sizes + 3, &data.config);
+	RqRel32(sizes + 19, reinterpret_cast<const void*>(&RqLookup));
+	RqRel32(sizes + 25, &data.sizes[0]);
+	RqRel32(sizes + 32, &data.config);
+	RqRel32(sizes + 48, reinterpret_cast<const void*>(&RqLookup));
+	RqRel32(sizes + 54, &data.sizes[1]);
+	volatile unsigned char* const vehicleInit = g_rqInitVehicle + 6;
+	RqRel32(vehicleInit + 3, &data.sizes[1]);
+	RqRel32(vehicleInit + 30, reinterpret_cast<const void*>(&RqGameAllocate));
+	RqRel32(vehicleInit + 37, &data.sizes[0]);
+	RqRel32(vehicleInit + 44, &data.families[kRqVehicles].arrays[0].entries);
+	RqRel32(vehicleInit + 51, &data.families[kRqVehicles].arrays[0].capacity);
+	for (int i = 0; i < kRqPools; i++)
+	{
+		volatile unsigned char* const lookup = g_rqLookupSites[i] + kRqLookupMatch[i];
+		RqRel32(lookup + 3, &data.config);
+		RqRel32(lookup + kRqLookupCall[i] + 1, reinterpret_cast<const void*>(&RqLookup));
+	}
+	for (int i = 0; i < kRqFamilies; i++)
+	{
+		const size_t family = kRqFlipOrder[i];
+		volatile unsigned char* const flip = g_rqFlipSites[family];
+		volatile unsigned char* const head = flip + kRqFlipMatch[family];
+		RqRel32(g_rqFlipsCall + 12 + 5 * i, flip);
+		RqRel32(head + 3, &data.families[family].lock);
+		RqRel32(head + 8, reinterpret_cast<const void*>(&RqNothing));
+		RqRel32(head + 14, &data.families[family].index);
+		RqRel32(head + 44, &data.families[family].index);
+		const uint32_t which = static_cast<uint32_t>(family);
+		for (size_t k = 0; k < sizeof(which); k++)
+			head[53 + k] = reinterpret_cast<const unsigned char*>(&which)[k];
+		RqRel32(head + 58, reinterpret_cast<const void*>(&RqFlipDone));
+	}
+	RqRel32(g_rqFlipsCall + 38, reinterpret_cast<const void*>(&RqAfterFlips));
+	RqRel32(g_rqReferences + 11 + 27, reinterpret_cast<const void*>(&RqGameAllocate));
+	RqRel32(g_rqManagerMade + 5 + 6, reinterpret_cast<const void*>(&RqGameAllocate));
+	RqRel32(g_rqManagerMade + 5 + 17, reinterpret_cast<const void*>(&RqManagerMade));
+	RqRel32(g_rqManagerMade + 5 + 24, &data.manager);
+	data.config = &data.config;
+	if (HasOption(argc, argv, L"rqrs") && g_rqBuilt)
+	{
+		static const unsigned char rols[kRqPools] = { 0x21, 0x0D, 0x2F, 0x07, 0x3F, 0x01 }, adds[kRqPools] = { 1, 9, 0, 17, 63, 31 };
+		for (int i = 0; i < kRqPools; i++)
+		{
+			const RqMake& make = g_rqMakes[i];
+			make.site[make.match + make.rol] = rols[i];
+			make.site[make.match + make.add] = adds[i];
+		}
+	}
+	if (HasOption(argc, argv, L"rqpast"))
+		g_rqVehicleRenderNamed = 80;
+	RqBreakSite();
+	if (carrierProtection)
+	{
+		VirtualProtect(carrier, g_rqV2Room, carrierProtection, &unused);
+		FlushInstructionCache(GetCurrentProcess(), carrier, g_rqV2Room);
+	}
+	g_rqSitesPlaced = RqSitesHash();
+	DWORD old = 0;
+	if (RqIs(L"unread") || RqIs(L"arraysunread") || RqIs(L"flipunread") || RqIs(L"managerunread"))
+		VirtualProtect(g_rqHole.bytes, sizeof(g_rqHole.bytes), PAGE_NOACCESS, &old);
+	g_rqDataLeft = RqDataHash();
+	RqProtectData(PAGE_READONLY);
+}
+
+// Runs a site as a function of one argument: a make, an add.
+static void* RqRun(volatile unsigned char* code, void* argument)
+{
+	return reinterpret_cast<void* (*)(void*)>(const_cast<unsigned char*>(code))(argument);
+}
+static unsigned char* RqMakeSlot(int pool)
+{
+	const RqMake& make = g_rqMakes[pool];
+	return static_cast<unsigned char*>(RqRun(make.site, pool == kRqPedRender ? static_cast<void*>(g_rqObjects[pool]) : pool == kRqVehicleRender ? static_cast<void*>(g_rqVehicleThis) : nullptr));
+}
+static void RqMakeSlots(int pool, int count)
+{
+	for (int i = 0; i < count; i++)
+		RqMakeSlot(pool);
+}
+static unsigned char* RqSlot(int pool, int slot)
+{
+	return g_rqObjects[pool]->storage + static_cast<size_t>(slot) * static_cast<size_t>(g_rqObjects[pool]->stride);
+}
+static void RqFreeSlots(int pool, int count)
+{
+	g_rqObjects[pool]->count = 0x40000000u | static_cast<uint32_t>(RqCount(*g_rqObjects[pool]) - count);
+}
+// The vehicles' add, with its dedupe in the walk the pattern's head begins: a vehicle enters a frame once.
+static void RqAddVehicle(unsigned char* gfx)
+{
+	const RqFamily& family = g_rqData.families[kRqVehicles];
+	const RqArray& array = family.arrays[family.index & 3];
+	for (uint32_t i = 0; i < array.count; i++)
+		if (array.entries[i] == reinterpret_cast<uintptr_t>(gfx))
+			return;
+	RqRun(g_rqAddVehicle, gfx);
+}
+// A frame's flips, the draw list's rotation and the references that frame has.
+static void RqNextFrame(uint16_t references)
+{
+	reinterpret_cast<void (*)(void*, int)>(const_cast<unsigned char*>(g_rqFlipsCall))(g_rqData.manager, 0);
+	if (!g_rqData.manager || g_rqData.manager == g_rqGone)
+		return;
+	reinterpret_cast<void (*)(void*)>(const_cast<unsigned char*>(g_rqRotation))(g_rqData.manager);
+	const int index = *reinterpret_cast<const int*>(g_rqData.manager + 0xAC);
+	reinterpret_cast<RqArray*>(g_rqData.manager + 0x5D0)[index & 3].count = references;
+}
+// A frame: so many peds of the render pool, so many entries each; props with one seen twice; vehicles with three seen again.
+static void RqDrawFrame(int peds, int perPed, int props, int vehicles, uint16_t references)
+{
+	RqNextFrame(references);
+	for (int ped = 0; ped < peds; ped++)
+		for (int entry = 0; entry < perPed; entry++)
+			RqRun(g_rqAddPed, RqSlot(kRqPedRender, ped));
+	for (int prop = 0; prop < props; prop++)
+		RqRun(g_rqAddProp, RqSlot(kRqPropRender, prop));
+	if (props)
+		RqRun(g_rqAddProp, RqSlot(kRqPropRender, 0));
+	for (int vehicle = 0; vehicle < vehicles; vehicle++)
+		RqAddVehicle(RqSlot(kRqVehicleRender, vehicle));
+	for (int vehicle = 0; vehicle < 3 && vehicle < vehicles; vehicle++)
+		RqAddVehicle(RqSlot(kRqVehicleRender, vehicle));
+}
+
+// The inits, as the game runs them once TweaksV has started, and every pool made through its size lookup, but as the options ask.
+static void RqMakeAll(int argc, wchar_t** argv)
+{
+	using Run = int32_t (*)(int32_t);
+	RqRun(g_rqInitPed, nullptr);
+	RqRun(g_rqInitProp, nullptr);
+	RqRun(g_rqSizes, nullptr);
+	RqRun(g_rqInitVehicle, nullptr);
+	RqArray* const vehicles = g_rqData.families[kRqVehicles].arrays;
+	for (int i = 1; i < kRqArrays; i++)	// as the game goes on past its pattern
+	{
+		vehicles[i].entries = static_cast<uint64_t*>(RqGameAllocate(static_cast<uint32_t>(g_rqData.sizes[1]) * 8, 8));
+		vehicles[i].capacity = static_cast<uint16_t>(g_rqData.sizes[1]);
+	}
+	if (!HasOption(argc, argv, L"rqnomanager"))
+		RqRun(g_rqManagerMade, nullptr);
+	for (int i = 0; i < kRqPools; i++)
+	{
+		const int32_t capacity = reinterpret_cast<Run>(const_cast<unsigned char*>(g_rqLookupSites[i]))(i == kRqVehicleRequests ? g_rqData.sizes[0] : g_rqData.sizes[1]);
+		if (RqHasFor(argc, argv, L"rqnomake", i))
+		{
+			g_rqData.fields[i] = { 0xA5A5A5A5A5A5A5FEull, 0x1111111111111111ull, 0x2222222222222222ull };
+			continue;
+		}
+		const auto pool = static_cast<RqPool*>(RqGameAllocate(sizeof(RqPool), 8));
+		pool->capacity = capacity;
+		pool->stride = HasOption(argc, argv, L"rqstride") ? kRqStrides[i] + 1 : HasOption(argc, argv, L"rqstridezero") ? 0 : kRqStrides[i];
+		pool->firstFree = 0;
+		pool->count = 0x40000000u;
+		pool->storage = static_cast<unsigned char*>(RqGameAllocate(static_cast<uint32_t>(capacity) * static_cast<uint32_t>(kRqStrides[i]), 8));
+		g_rqObjects[i] = pool;
+		RqSetPointer(i, RqHasFor(argc, argv, L"rqpoolgone", i) ? static_cast<const void*>(g_rqGone) : pool);
+	}
+}
+
+// Once TweaksV has started: the game's work, as the options ask, held long enough for the module's samples to see it.
+static void RqActions(int argc, wchar_t** argv)
+{
+	if (!g_rqBuilt)
+		return;
+	if (RqDataHash() != g_rqDataLeft)
+		g_rqDataChanged = true;
+	RqProtectData(PAGE_READWRITE);
+	g_rqGone = static_cast<unsigned char*>(VirtualAlloc(nullptr, 0x10000, MEM_COMMIT | MEM_RESERVE, PAGE_NOACCESS));
+	const bool full = HasOption(argc, argv, L"rqfull"), past = HasOption(argc, argv, L"rqpast"), many = HasOption(argc, argv, L"rqmany"), refsFull = HasOption(argc, argv, L"rqfullrefs");
+	const bool load = HasOption(argc, argv, L"rqload") || full || past || many || refsFull;
+	if (load || HasOption(argc, argv, L"rqmade"))
+		RqMakeAll(argc, argv);
+	if (HasOption(argc, argv, L"rqmanagergone") && g_rqData.manager)
+		g_rqData.manager = g_rqGone;
+	if (HasOption(argc, argv, L"rqentriesgone"))
+	{
+		g_rqEntriesGone = true;
+		g_rqData.families[kRqPeds].arrays[1].entries = reinterpret_cast<uint64_t*>(g_rqGone);
+		g_rqData.families[kRqPeds].arrays[1].count = 40;
+		g_rqData.families[kRqVehicles].arrays[2].entries = nullptr;
+		g_rqData.families[kRqVehicles].arrays[2].count = 7;
+		g_rqObjects[kRqPedRequests]->count = 0x7FFFFFFFu;
+	}
+	else if (HasOption(argc, argv, L"rqnulls"))
+	{
+		RqArray& array = g_rqData.families[kRqProps].arrays[2];
+		for (int i = 0; i < 5; i++)
+			array.entries[i] = reinterpret_cast<uintptr_t>(RqSlot(kRqPropRender, i));
+		array.count = 10;
+	}
+	else if (load)
+	{
+		const bool made[kRqPools] = { !RqHasFor(argc, argv, L"rqnomake", 0) && !RqHasFor(argc, argv, L"rqpoolgone", 0), !RqHasFor(argc, argv, L"rqnomake", 1) && !RqHasFor(argc, argv, L"rqpoolgone", 1),
+			!RqHasFor(argc, argv, L"rqnomake", 2) && !RqHasFor(argc, argv, L"rqpoolgone", 2), !RqHasFor(argc, argv, L"rqnomake", 3) && !RqHasFor(argc, argv, L"rqpoolgone", 3),
+			!RqHasFor(argc, argv, L"rqnomake", 4) && !RqHasFor(argc, argv, L"rqpoolgone", 4), !RqHasFor(argc, argv, L"rqnomake", 5) && !RqHasFor(argc, argv, L"rqpoolgone", 5) };
+		const int peak[kRqPools] = { 9, 31, 4, 8, 3, 11 }, latest[kRqPools] = { 0, 14, 0, 3, 0, 5 };
+		for (int i = 0; i < kRqPools; i++)
+			if (made[i])
+				RqMakeSlots(i, full ? g_rqObjects[i]->capacity : past && (i == kRqPedRender || i == kRqPropRender || i == kRqVehicleRender) ? g_rqObjects[i]->capacity : peak[i]);
+		const uint16_t references = refsFull ? 10368 : 4210;
+		if (many)
+		{
+			RqNextFrame(references);
+			for (int entry = 0; entry < 5000; entry++)
+				RqRun(g_rqAddPed, RqSlot(kRqPedRender, entry % 31));
+		}
+		else if (past)
+		{
+			RqNextFrame(references);
+			for (int entry = 0; entry < 130; entry++)
+				RqRun(g_rqAddPed, RqSlot(kRqPedRender, entry % 65));
+			for (int entry = 0; entry < 125; entry++)
+				RqRun(g_rqAddProp, RqSlot(kRqPropRender, entry % 100));
+			for (int entry = 0; entry < 70; entry++)
+				RqAddVehicle(RqSlot(kRqVehicleRender, entry));
+		}
+		else
+			RqDrawFrame(made[kRqPedRender] ? 21 : 0, 3, made[kRqPropRender] ? 8 : 0, made[kRqVehicleRender] ? 9 : 0, references);
+		Sleep(1000);	// the most: long enough for a sample on a loaded machine, and well inside the first summary's 10 seconds
+		if (!full && !past)
+		{
+			for (int i = 0; i < kRqPools; i++)
+				if (made[i])
+					RqFreeSlots(i, peak[i] - latest[i]);
+			RqDrawFrame(made[kRqPedRender] ? 14 : 0, 2, made[kRqPropRender] ? 3 : 0, made[kRqVehicleRender] ? 5 : 0, 2000);
+			Sleep(100);
+			RqDrawFrame(made[kRqPedRender] ? 14 : 0, 2, made[kRqPropRender] ? 3 : 0, made[kRqVehicleRender] ? 5 : 0, 1500);
+			Sleep(100);
+		}
+	}
+	if (HasOption(argc, argv, L"rqgone"))
+	{
+		g_rqData.fields[kRqPedRender].flag = 0;
+		RqSetPointer(kRqPropRender, g_rqGone);
+		g_rqData.manager = g_rqGone;
+	}
+	g_rqDataLeft = RqDataHash();
+	if (HasOption(argc, argv, L"rqgrow"))
+	{
+		if (RtWaitFor("DIAGNOSTIC: the draw list's references: ", 25000))
+		{
+			RqMakeSlots(kRqPedRender, 18);
+			RqMakeSlots(kRqPropRequests, 1);
+			RqMakeSlots(kRqVehicleRender, 6);
+			RqDrawFrame(25, 3, 12, 12, 5000);
+			RtWaitFor("the draw list's references: at most 5000 of 10368", 10000);
+		}
+		g_rqDataLeft = RqDataHash();
+	}
+	if (HasOption(argc, argv, L"rqlatest"))
+	{
+		if (RtWaitFor("DIAGNOSTIC: the draw list's references: ", 25000))
+		{
+			RqMakeSlots(kRqPedRender, 2);
+			Sleep(5000);
+		}
+		g_rqDataLeft = RqDataHash();
+	}
+	RqProtectData(PAGE_READONLY);
+	if (HasOption(argc, argv, L"rqdatagone"))
+	{
+		DWORD old = 0;
+		g_rqDataGone = true;
+		VirtualProtect(g_rqDataPage, sizeof(g_rqDataPage), PAGE_NOACCESS, &old);
+	}
+}
+
+// "render queues: built, sites as placed, data as left | render queues load: 66 slots through the decoding of their sites, 0 wrong, no room for 0, 8 size lookups, 0 wrong, 3
+// frames, 0 references wrong | " and with "rqrvas" the RVAs for the suite: "rq rvas: S1=0x... | ".
+static void RqReport(int argc, wchar_t** argv)
+{
+	if (!g_rqAsked)
+		return;
+	if (g_rqDataGone)
+	{
+		DWORD old = 0;
+		VirtualProtect(g_rqDataPage, sizeof(g_rqDataPage), PAGE_READONLY, &old);
+	}
+	wprintf(L"render queues: %ls, sites %ls, data %ls | ", g_rqBuilt ? L"built" : L"NOT BUILT", RqSitesHash() == g_rqSitesPlaced ? L"as placed" : L"CHANGED",
+		!g_rqDataChanged && RqDataHash() == g_rqDataLeft ? L"as left" : L"CHANGED");
+	wprintf(L"render queues load: %ld slots through the decoding of their sites, %ld wrong, no room for %ld, %ld size lookups, %ld wrong, %ld frames, %ld references wrong | ",
+		g_rqMade, g_rqMadeWrong, g_rqNoRoom, g_rqLookupCalls, g_rqLookupsWrong, g_rqFrames, g_rqRefsWrong);
+	if (!HasOption(argc, argv, L"rqrvas"))
+		return;
+	const auto rva = [](const volatile void* at) { return static_cast<unsigned long long>(static_cast<const volatile unsigned char*>(at) - ImageBase()); };
+	static const wchar_t* const makes[kRqPools] = { L"S1", L"S2", L"P1", L"P2", L"V1", L"V2" };
+	wprintf(L"rq rvas:");
+	for (int i = 0; i < kRqPools; i++)
+		wprintf(L" %ls=0x%llX F%d=0x%llX C%d=0x%llX", makes[i], rva(g_rqMakes[i].site + g_rqMakes[i].match), i, rva(&g_rqData.fields[i]), i, rva(g_rqLookupSites[i] + kRqLookupMatch[i] + kRqLookupCall[i]));
+	const RqFamily* const families = g_rqData.families;
+	wprintf(L" TJ=0x%llX T=0x%llX VJ=0x%llX VB=0x%llX VF=0x%llX", rva(g_rqMakeS2 + 7 + 12), rva(g_rqMakeS2 + kRqTrapAt), rva(g_rqMakes[5].site + kRqV2Match + 76), rva(g_rqMakes[5].site + kRqV2Branch), rva(g_rqMakes[5].site));
+	wprintf(L" S3=0x%llX S4=0x%llX P3=0x%llX P4=0x%llX V3=0x%llX V4=0x%llX V5=0x%llX V6=0x%llX", rva(g_rqAddPed + 11), rva(g_rqInitPed + 4), rva(g_rqAddProp + 11), rva(g_rqInitProp + 4), rva(g_rqAddVehicle + 51),
+		rva(g_rqAddVehicle + 9), rva(g_rqSizes + 4), rva(g_rqInitVehicle + 6));
+	for (int i = 0; i < kRqFamilies; i++)
+		wprintf(L" A%d=0x%llX I%d=0x%llX L%d=0x%llX", i, rva(families[i].arrays), i, rva(&families[i].index), i, rva(&families[i].lock));
+	wprintf(L" ZR=0x%llX ZV=0x%llX CA=0x%llX CB=0x%llX LK=0x%llX", rva(&g_rqData.sizes[0]), rva(&g_rqData.sizes[1]), rva(g_rqSizes + 4 + 18), rva(g_rqSizes + 4 + 47), rva(reinterpret_cast<const void*>(&RqLookup)));
+	for (int i = 0; i < kRqFamilies; i++)
+		wprintf(L" K%d=0x%llX FF%d=0x%llX H%d=0x%llX", i, rva(g_rqFlipsCall + 11 + 5 * i), i, rva(g_rqFlipSites[kRqFlipOrder[i]]), i, rva(g_rqFlipSites[kRqFlipOrder[i]] + kRqFlipMatch[kRqFlipOrder[i]]));
+	wprintf(L" D1=0x%llX D2=0x%llX D3=0x%llX MG=0x%llX | ", rva(g_rqReferences + 11), rva(g_rqRotation), rva(g_rqManagerMade + 5), rva(&g_rqData.manager));
+}
 
 // The game's two tree searches behind the box streamer's four calls: the first and the third call lead
 // to the first search, the second and the fourth to the second. Each writes the number of entries the
@@ -6437,6 +7304,7 @@ static void ForEachSite(void (*fn)(const Site&))
 	static Site poolMemorySite = SITE(g_poolMemorySite, 0);
 	fn(poolMemorySite);
 	// [render queues]
+	for (const Site& site : g_rqSites) fn(site);
 }
 
 static void MakeSitesReadExecute()
@@ -8030,6 +8898,7 @@ int wmain(int argc, wchar_t** argv)
 	PedPoolSetUpSites(argc, argv);
 	PoolMemorySetUpSite(argc, argv);
 	// [render queues]
+	RqSetUp(argc, argv);
 
 	RovSetup(argc, argv);
 	ForEachSite(TouchSite);
@@ -8194,6 +9063,7 @@ int wmain(int argc, wchar_t** argv)
 	PedPoolActions(argc, argv);
 	PoolMemoryActions(argc, argv);
 	// [render queues]
+	RqActions(argc, argv);
 	if (HasOption(argc, argv, L"wait"))
 		Sleep(11000);	// TweaksV's UNLOCK_FILES summary comes 10 s after the first open it counts, the OpenFile summary 10 s
 						// after the first OpenFile, the interface check 10 s after the request
@@ -8284,6 +9154,7 @@ int wmain(int argc, wchar_t** argv)
 	PedPoolReport();
 	PoolMemoryReport();
 	// [render queues]
+	RqReport(argc, argv);
 	CheckStub(Rel32Target(g_packCallSite));
 	CheckStub(Rel32Target(g_scriptCallSite));
 	for (const Site& site : g_boxCalls)

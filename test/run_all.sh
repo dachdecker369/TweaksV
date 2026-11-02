@@ -42,6 +42,7 @@ SUITES=(
 	# [ped pool]
 	pedpool
 	# [render queues]
+	renderqueues
 	integration
 )
 
