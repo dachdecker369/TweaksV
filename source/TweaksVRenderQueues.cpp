@@ -164,7 +164,8 @@ namespace TweaksV
 					!PatternHolds(init, block + kBlockCapacityAt - 3, { 0x66, 0xC7, 0x05 }) || !PatternHolds(init, block + kBlockEntriesAt, { 0x78, 0x00 }))
 					return false;
 			}
-			return 0x3C0 == 0x78 * sizeof(uint64_t);
+			static_assert(0x3C0 == 0x78 * sizeof(uint64_t));
+			return true;
 		}
 		static_assert(InitAsPinned(kPedInit) && InitAsPinned(kPropInit), "TweaksV: U-E-S4 and U-E-P4 hold four blocks of 31 bytes from +24, 120 entries of 8 bytes each");
 

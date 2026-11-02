@@ -326,19 +326,9 @@ namespace TweaksV
 				return;
 			}
 			const uint8_t* const allocator = Rel32Target(match + kAllocatorAt);
-			if (!IsInsideGameImage(allocator) || !IsInsideGameImage(allocator + kBlocksAt + sizeof(uint16_t) - 1))
+			if (const std::string fault = DataFault(allocator, kBlocksAt + sizeof(uint16_t), sizeof(uint64_t)); !fault.empty())
 			{
-				WriteLog(kTag, kNotMeasured + ("its allocator at " + DescribeAddress(allocator) + " is not inside the game") + At(kBudgetSetUp) + ".");
-				return;
-			}
-			if (reinterpret_cast<uintptr_t>(allocator) % sizeof(uint64_t) != 0)
-			{
-				WriteLog(kTag, kNotMeasured + ("its allocator at " + DescribeAddress(allocator) + " is not aligned to 8 bytes") + At(kBudgetSetUp) + ".");
-				return;
-			}
-			if (!IsReadable(allocator, kBlocksAt + sizeof(uint16_t)))
-			{
-				WriteLog(kTag, kNotMeasured + ("its allocator at " + DescribeAddress(allocator) + " cannot be read") + At(kBudgetSetUp) + ".");
+				WriteLog(kTag, kNotMeasured + ("its allocator at " + DescribeAddress(allocator) + " " + fault) + At(kBudgetSetUp) + ".");
 				return;
 			}
 			g_budgetSite = match + kBudgetAt;

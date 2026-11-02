@@ -645,7 +645,8 @@ namespace TweaksV
 		// The settings loaded, the IDs in use, those past 255 and the IDs given to more than one setting - or why they cannot be
 		// counted. The game's pointer and table after IsReadable; the settings through CopyMemorySafely, their ID a byte
 		// each or, once the part has written, a word, and read again afterwards: an array the game grew meanwhile is not
-		// counted this time. Nothing is allocated: the IDs seen go into two bitmaps on the stack.
+		// counted this time. Nothing is allocated: the IDs seen go into two bitmaps of its own, too large for a stack and safe
+		// so, since the measurement's one thread alone comes here.
 		uint64_t SettingsNumbers()
 		{
 			if (!IsReadable(g_carcolsPointer, sizeof(void*)))
@@ -662,7 +663,9 @@ namespace TweaksV
 				g_unreadable = carcols + kSettingsAt;
 				return Numbers(State::Unreadable);
 			}
-			uint64_t seen[kWideIds / 64] = {}, twice[kWideIds / 64] = {};
+			static uint64_t seen[kWideIds / 64], twice[kWideIds / 64];
+			memset(seen, 0, sizeof(seen));
+			memset(twice, 0, sizeof(twice));
 			for (size_t i = 0; i < settings.count; i++)
 			{
 				uint16_t id = 0;
