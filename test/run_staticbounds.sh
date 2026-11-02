@@ -15,7 +15,8 @@
 # pool raised all the same, no check and no hook of the script programs made: Y-E-H1 missing with the Blips part on, the part's problem
 # beside Blips' in the start-up summary's box, each of the hook's three patterns missing with the Blips part off, the part's problem
 # alone in the box, the natives' resolution call another mod redirected, each of the two events not made (the test build's
-# TWEAKSV_TEST_STATICBOUNDS_NO_EVENT), in the box, which the Release build, another value and DRY_RUN leave alone, and beside
+# TWEAKSV_TEST_STATICBOUNDS_NO_EVENT), in the box, which the Release build, another value and DRY_RUN leave alone, its thread refused
+# (TWEAKSV_TEST_REFUSE_THREAD), and beside
 # BlipLimitFix.asi only the line, no problem; a size above the key's default on a pool memory budget not raised, the HeapAdjuster part
 # off by the key or a plugin or POOL_MEMORY at 136, one problem, the pool raised all the same, and nothing at the default, on a raised
 # budget, in DRY_RUN or with no hook made. In every run the sites as placed but for the hooks' jumps, and every page its own
@@ -314,6 +315,15 @@ fresh_ini; out=$(TWEAKSV_TEST_STATICBOUNDS_NO_EVENT=other ASI=TweaksV_test.asi g
 check "another value: the check made, no problem" "made '60 seconds' && quiet && log_lacks 'event is not made'"
 fresh_ini; setkey DRY_RUN 1; out=$(TWEAKSV_TEST_STATICBOUNDS_NO_EVENT=made ASI=TweaksV_test.asi game full_game.exe)
 check "DRY_RUN: no event wanted, nothing reported" "quiet && log_lacks 'event is not made' && kept"
+
+echo "== SB38b Windows refuses the check's thread (test build's TWEAKSV_TEST_REFUSE_THREAD, ERROR_POPUP=1, a script program placed): the problem, the pool raised all the same"
+fresh_ini; setkey ERROR_POPUP 1; out=$(TWEAKSV_TEST_REFUSE_THREAD='1 static bounds check' ASI=TweaksV_test.asi game full_game.exe script)
+check "the thread's line and the problem, word for word, once, in the start-up summary's box" "log_line '\[TweaksV\] The static bounds check thread could not be started (Windows error [0-9]*.*)\.\$' && not_checked 'its thread could not be started (details in TweaksV.log).' && boxed 1"
+check "the hooks made, the pool raised, said once; no check made, the program placed through the hook Blips made" "hooks_made 16000 && has '$RAISED' && [ \$(said) -eq 1 ] && unchecked && has 'through a TweaksV stub'"
+
+echo "== SB38c the Release build given TWEAKSV_TEST_STATICBOUNDS_CHECK=2 (the pool made before TweaksV, a script program placed, past those 2 seconds): the check stays 60 seconds, nothing said, nothing reported"
+fresh_ini; out=$(TWEAKSV_TEST_STATICBOUNDS_CHECK=2 game full_game.exe sbearly script sbwait)
+check "the check's line says 60 seconds, the test build's line is not there, nothing reported past the 2 seconds" "made '60 seconds' && log_lacks '${TAG}TEST BUILD' && log_lacks 'did not make the pool' && quiet"
 
 echo "== SB39 BlipLimitFix.asi with the made event not made (test build): no check was to be made, logged - not reported"
 fresh_ini; touch BlipLimitFix.asi; out=$(TWEAKSV_TEST_STATICBOUNDS_NO_EVENT=made ASI=TweaksV_test.asi game full_game.exe); rm -f BlipLimitFix.asi
