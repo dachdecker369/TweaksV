@@ -165,6 +165,21 @@ namespace TweaksV
 			{ "RenderQueues", MeasureRenderQueues },
 			{ "PedProps", MeasurePedPropsWhileOff },
 		};
+
+#ifdef TWEAKSV_TEST_BUILD
+		// test builds only: TWEAKSV_TEST_THROWS=<what> in the environment makes what it names throw in place of starting, so that a
+		// suite reaches the catch-all around it: a part by its tag (RageOpenV), a measurement by its part's tag after "measurement "
+		// (measurement LightCapacity; SirenSettings names its two), and the start of them all by "start-up", which only DllMain's catches.
+		void ThrowIfNamed(const std::string& what, const char* tag)
+		{
+			wchar_t named[64]{};
+			const DWORD length = GetEnvironmentVariableW(L"TWEAKSV_TEST_THROWS", named, 64);
+			if (length == 0 || length >= 64 || ToUtf8(named) != what)
+				return;
+			WriteLog(tag, "TEST BUILD: " + what + " throws in place of starting (TWEAKSV_TEST_THROWS=" + what + ").");
+			throw 1;
+		}
+#endif
 	}
 
 	std::span<const Feature> Features()
@@ -174,6 +189,9 @@ namespace TweaksV
 
 	bool StartFeatures()
 	{
+#ifdef TWEAKSV_TEST_BUILD
+		ThrowIfNamed("start-up", "TweaksV");
+#endif
 		bool summaryLater = false;
 		for (const Feature& feature : kFeatures)
 		{
@@ -181,6 +199,9 @@ namespace TweaksV
 				continue;
 			try
 			{
+#ifdef TWEAKSV_TEST_BUILD
+				ThrowIfNamed(feature.section->feature, feature.section->feature);
+#endif
 				if (feature.start())
 					summaryLater = true;
 			}
@@ -196,6 +217,9 @@ namespace TweaksV
 			{
 				try
 				{
+#ifdef TWEAKSV_TEST_BUILD
+					ThrowIfNamed(std::string("measurement ") + measured.feature, measured.feature);
+#endif
 					measured.start();
 				}
 				catch (...)
