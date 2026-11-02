@@ -397,6 +397,30 @@
 //   dwnoaccess     with dwwindow: the window's second page cannot be read, from before TweaksV loads; zeros there in both files
 //   dwnodata       the section table in memory names no .data: that section's name changed before TweaksV loads
 // [static bounds]
+// StaticBounds: the two functions the game makes its pools through, the set-up (C-E-P1) and the allocator (C-E-A1), lie in .fakesit
+// as code the fake runs, each on a page of its own, a NOP before it. Once TweaksV has started, the fake makes its pools through them
+// as the game does - the set-up, the capacity, the allocator, whose call of the memory allocator leads to a function of the fake's:
+// eight others, which must stay as they are - stride 64; stride 16 under another name, a longer one and a shorter one; the pool's
+// name with stride 24; stride 16 with no name, with a name on a page of no access, and with the pool's twelve letters right before
+// such a page - and the static bounds pool, stride 16, named StaticBounds, with the 12000 slots the fake's configuration gives it.
+//   sbbig          the configuration gives the pool 24500, more than STATICBOUNDS_SIZE's default
+//   sbnegative     the game gives the pool -1
+//   sbtwice        the pool made a second time, at another address
+//   sbreuse        after the pool, another pool of stride 16 set up and allocated at the pool's address
+//   sbstride       the pool's stride becomes 24 between its set-up and its allocation
+//   sbnoname       the pool's name lies on a page of no access
+//   sbnoalloc      the pool set up, never allocated
+//   sbnever        the pool never made, the others made
+//   sbearly        every pool made before TweaksV loads, and not again
+//   sblate         every pool made 4 seconds later than the other actions leave it, after the test build's check of 2 seconds
+//   sbflood        the pool made 10,001 times
+//   sbnotstart     the byte before each function 48, so that it reads as no function start
+//   sbp1twice, sba1twice
+//                  C-E-P1 or C-E-A1 a second time: its match copied to the twin, a site that holds nothing else
+//   sbp1jump, sba1jump
+//                  the function starts with another mod's jump, to a copy of it with a NOP in it, which no pattern matches
+//   sbp1noexec, sba1noexec
+//                  the function's page not executable while TweaksV starts, so that MinHook refuses to hook it
 // [late boxes]
 // [light capacity]
 // [vehicle model budget]
@@ -1002,6 +1026,22 @@ static Site g_rtSites[] = { SITE(g_rtSetUp, 0), SITE(g_rtGeometry, 0), SITE(g_rt
 constexpr size_t kRtSites = sizeof(g_rtSites) / sizeof(g_rtSites[0]);
 // [data window]
 // [static bounds]
+// The two functions the game makes its pools through, each on a page of its own and a NOP before it, as code the fake runs. The
+// set-up: C-E-P1, the whole function. The allocator: C-E-A1, then "add rsp, 0x28", the pops and "ret", the memory allocator's block in
+// rax. The copies another mod's jump leads to with an option "...jump": the same code with a NOP after the first instruction or the
+// pushes, which no pattern matches. The twin: CC, but with an option "...twice" a second match of a pattern.
+#define SB_SET_UP_REST 0x48, 0x8B, 0x4C, 0x24, 0x28, 0x48, 0x89, 0x08, 0x44, 0x89, 0x48, 0x1C, 0x0F, 0x57, 0xC0, 0x0F, 0x11, 0x40, 0x08, \
+	0xC7, 0x40, 0x18, 0x00, 0x00, 0x00, 0x00, 0x81, 0x60, 0x28, 0x00, 0x00, 0x00, 0xC0, 0xC3
+#define SB_ALLOCATOR_REST 0x48, 0x83, 0xEC, 0x28, 0x48, 0x89, 0xCE, 0x48, 0x63, 0x51, 0x18, 0x48, 0x63, 0x79, 0x1C, 0x48, 0x0F, 0xAF, 0xFA, \
+	0x48, 0x83, 0xC7, 0x07, 0x48, 0x83, 0xE7, 0xF8, 0x48, 0x8B, 0x09, 0x48, 0x01, 0xFA, 0x48, 0x8B, 0x01, 0xFF, 0x50, 0x08
+constexpr size_t kSbPage = 0x1000, kSbSetUpMatch = 37, kSbAllocatorMatch = 41;
+alignas(4096) volatile unsigned char g_staticBoundsSetUp[kSbPage] = { 0x90, 0x48, 0x89, 0xC8, SB_SET_UP_REST, 0xCC };
+alignas(4096) volatile unsigned char g_staticBoundsAllocator[kSbPage] = { 0x90, 0x56, 0x57, SB_ALLOCATOR_REST, 0x48, 0x83, 0xC4, 0x28, 0x5F, 0x5E, 0xC3, 0xCC };
+volatile unsigned char g_staticBoundsOtherSetUp[] = { 0x48, 0x89, 0xC8, 0x90, SB_SET_UP_REST, 0xCC };
+volatile unsigned char g_staticBoundsOtherAllocator[] = { 0x56, 0x57, 0x90, SB_ALLOCATOR_REST, 0x48, 0x83, 0xC4, 0x28, 0x5F, 0x5E, 0xC3, 0xCC };
+volatile unsigned char g_staticBoundsTwin[64] = { 0xCC };
+static Site g_staticBoundsSites[] = { SITE(g_staticBoundsSetUp, 0), SITE(g_staticBoundsAllocator, 0), SITE(g_staticBoundsOtherSetUp, 0),
+	SITE(g_staticBoundsOtherAllocator, 0), SITE(g_staticBoundsTwin, 0) };
 // [late boxes]
 // [light capacity]
 // [vehicle model budget]
@@ -3798,6 +3838,236 @@ static void DwReport()
 		static_cast<unsigned long>(base & 0xFFFFFFFFu), static_cast<unsigned long>(base >> 32), nt->OptionalHeader.SizeOfImage, nt->FileHeader.TimeDateStamp);
 }
 // [static bounds]
+// StaticBounds: a pool as the two functions leave it, at the game's offsets. The set-up keeps its fifth argument at +0 and the stride, and
+// sets the capacity to 0; the allocator reads the capacity and the stride, and calls the memory allocator through +0 with the room for
+// them, a byte per slot behind them - its r8 and r9 as the allocator got them, which the memory allocator checks. Each call is checked
+// as it comes back: its result, the last error it leaves - the caller's after the set-up, the memory allocator's after the allocator.
+struct StaticBoundsPool
+{
+	void* memory;			// +0x00
+	void* block;			// +0x08
+	void* flags;			// +0x10
+	int32_t capacity;		// +0x18
+	int32_t stride;			// +0x1C
+	uint64_t used;			// +0x20
+	uint32_t bits;			// +0x28, of which the set-up keeps the top two
+	uint32_t padding;
+};
+static_assert(offsetof(StaticBoundsPool, capacity) == 0x18 && offsetof(StaticBoundsPool, stride) == 0x1C && offsetof(StaticBoundsPool, bits) == 0x28, "the game's offsets");
+constexpr uintptr_t kSbSecond = 0x2222222222222222, kSbThird = 0x3333333333333333, kSbFourth = 0x4444444444444444;
+constexpr DWORD kSbCallerError = 0x5B4, kSbMemoryError = 0x5B5;
+constexpr size_t kSbMostAsked = 16u << 20;	// a capacity below 0 asks for far more: the fake's memory allocator gives nothing then
+using StaticBoundsSetUpFn = void* (*)(void* pool, const char* name, uintptr_t third, uint32_t stride, void* memory);
+using StaticBoundsAllocatorFn = void* (*)(void* pool, uintptr_t second, uintptr_t third, uintptr_t fourth);
+static size_t g_staticBoundsAsked = 0;			// the memory allocator's last call: the bytes asked, its block, its arguments as handed
+static void* g_staticBoundsGiven = nullptr;
+static bool g_staticBoundsAsHanded = false;
+static void* StaticBoundsMemoryAllocate(void*, size_t size, uintptr_t third, uintptr_t fourth)
+{
+	g_staticBoundsAsked = size;
+	g_staticBoundsAsHanded = third == kSbThird && fourth == kSbFourth;
+	g_staticBoundsGiven = size <= kSbMostAsked ? HeapAlloc(GetProcessHeap(), 0, size) : nullptr;
+	SetLastError(kSbMemoryError);
+	return g_staticBoundsGiven;
+}
+static void* const g_staticBoundsMemoryTable[2] = { nullptr, reinterpret_cast<void*>(&StaticBoundsMemoryAllocate) };
+static void* const* g_staticBoundsMemoryObject = g_staticBoundsMemoryTable;
+
+static int g_staticBoundsSetUps = 0, g_staticBoundsSetUpsGood = 0, g_staticBoundsAllocations = 0, g_staticBoundsAllocationsGood = 0;
+static void StaticBoundsSetUpPool(StaticBoundsPool* pool, const char* name, int32_t stride)
+{
+	memset(pool, 0xAB, sizeof(*pool));
+	SetLastError(kSbCallerError);
+	const auto setUp = reinterpret_cast<StaticBoundsSetUpFn>(const_cast<unsigned char*>(g_staticBoundsSetUp + 1));
+	void* const result = setUp(pool, name, kSbThird, static_cast<uint32_t>(stride), &g_staticBoundsMemoryObject);
+	const bool lastErrorKept = GetLastError() == kSbCallerError;
+	g_staticBoundsSetUps++;
+	if (result == pool && lastErrorKept && pool->memory == &g_staticBoundsMemoryObject && !pool->block && !pool->flags && pool->capacity == 0 &&
+		pool->stride == stride && pool->bits == 0x80000000u)
+		g_staticBoundsSetUpsGood++;
+}
+
+// The room a capacity and a stride ask for, as the allocator's code computes it.
+static size_t StaticBoundsRoom(int64_t capacity, int64_t stride)
+{
+	return static_cast<size_t>(capacity + (((capacity * stride) + 7) & ~int64_t{ 7 }));
+}
+
+// The pool's allocation, its block used to its last byte and given back: the bytes asked.
+static size_t StaticBoundsAllocatePool(StaticBoundsPool* pool)
+{
+	SetLastError(kSbCallerError);
+	const auto allocator = reinterpret_cast<StaticBoundsAllocatorFn>(const_cast<unsigned char*>(g_staticBoundsAllocator + 1));
+	void* const block = allocator(pool, kSbSecond, kSbThird, kSbFourth);
+	const bool lastErrorKept = GetLastError() == kSbMemoryError;
+	g_staticBoundsAllocations++;
+	if (block == g_staticBoundsGiven && lastErrorKept && g_staticBoundsAsHanded && g_staticBoundsAsked == StaticBoundsRoom(pool->capacity, pool->stride))
+		g_staticBoundsAllocationsGood++;
+	if (block)
+	{
+		static_cast<unsigned char*>(block)[g_staticBoundsAsked - 1] = 1;
+		HeapFree(GetProcessHeap(), 0, block);
+	}
+	return g_staticBoundsAsked;
+}
+
+// A pool that is not the static bounds pool: it must come through as the game made it.
+static int g_staticBoundsOthers = 0, g_staticBoundsOthersAlone = 0;
+static void StaticBoundsMakeOther(StaticBoundsPool* pool, const char* name, int32_t stride, int32_t capacity)
+{
+	StaticBoundsSetUpPool(pool, name, stride);
+	pool->capacity = capacity;
+	const size_t asked = StaticBoundsAllocatePool(pool);
+	g_staticBoundsOthers++;
+	if (pool->capacity == capacity && pool->stride == stride && asked == StaticBoundsRoom(capacity, stride))
+		g_staticBoundsOthersAlone++;
+}
+
+// The static bounds pool, as many times as the options say: the slots and the bytes asked of its first making and its last.
+static StaticBoundsPool g_staticBoundsPools[2];
+static int32_t g_staticBoundsConfigured = 12000;
+static int g_staticBoundsMade = 0;
+static int32_t g_staticBoundsSlots[2] = {};
+static size_t g_staticBoundsBytes[2] = {};
+static void StaticBoundsMakeThePool(StaticBoundsPool* pool, const char* name, int argc, wchar_t** argv)
+{
+	StaticBoundsSetUpPool(pool, name, 16);
+	pool->capacity = g_staticBoundsConfigured;
+	if (HasOption(argc, argv, L"sbstride"))
+		pool->stride = 24;
+	if (HasOption(argc, argv, L"sbnoalloc"))
+		return;
+	const size_t asked = StaticBoundsAllocatePool(pool);
+	const int slot = g_staticBoundsMade == 0 ? 0 : 1;
+	g_staticBoundsSlots[slot] = pool->capacity;
+	g_staticBoundsBytes[slot] = asked;
+	g_staticBoundsMade++;
+}
+
+// Every pool, in the game's way, the static bounds pool among the others. The names that cannot be read lie around a page of no access.
+static void StaticBoundsMakePools(int argc, wchar_t** argv)
+{
+	static StaticBoundsPool other;
+	const auto pages = static_cast<char*>(VirtualAlloc(nullptr, 2 * kSbPage, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE));
+	DWORD old = 0;
+	if (!pages || !VirtualProtect(pages + kSbPage, kSbPage, PAGE_NOACCESS, &old))
+		return;
+	char* const twelve = pages + kSbPage - 12;	// "StaticBounds" without its terminating zero, right before the page of no access
+	memcpy(twelve, "StaticBounds", 12);
+	StaticBoundsMakeOther(&other, "Buildings", 64, 1000);
+	StaticBoundsMakeOther(&other, "InteriorProxy", 16, 500);
+	if (!HasOption(argc, argv, L"sbnever"))
+		StaticBoundsMakeThePool(&g_staticBoundsPools[0], HasOption(argc, argv, L"sbnoname") ? pages + kSbPage : "StaticBounds", argc, argv);
+	StaticBoundsMakeOther(&other, "StaticBounds", 24, 700);
+	StaticBoundsMakeOther(&other, "StaticBoundsMore", 16, 400);
+	StaticBoundsMakeOther(&other, "StaticBound", 16, 300);
+	StaticBoundsMakeOther(&other, nullptr, 16, 200);
+	StaticBoundsMakeOther(&other, pages + kSbPage, 16, 100);
+	StaticBoundsMakeOther(&other, twelve, 16, 90);
+	if (HasOption(argc, argv, L"sbreuse"))
+		StaticBoundsMakeOther(&g_staticBoundsPools[0], "InteriorProxy", 16, 600);
+	if (HasOption(argc, argv, L"sbtwice"))
+		StaticBoundsMakeThePool(&g_staticBoundsPools[1], "StaticBounds", argc, argv);
+	if (HasOption(argc, argv, L"sbflood"))
+		for (int i = 0; i < 10000; i++)
+			StaticBoundsMakeThePool(&g_staticBoundsPools[1], "StaticBounds", argc, argv);
+}
+
+// Before TweaksV loads: the options' changes of the sites - then the sites' bytes as placed - and with "sbearly" every pool.
+static unsigned char g_staticBoundsPlaced[2][kSbPage];
+static unsigned char g_staticBoundsOtherPlaced[256];
+static void StaticBoundsPlaceJump(volatile unsigned char* function, const void* target)
+{
+	function[1] = 0xE9;
+	const Site rel32 = { function, 2, 5 };
+	SetRel32(rel32, target);
+}
+static void StaticBoundsSetUpSites(int argc, wchar_t** argv)
+{
+	g_staticBoundsConfigured = HasOption(argc, argv, L"sbbig") ? 24500 : HasOption(argc, argv, L"sbnegative") ? -1 : 12000;
+	if (HasOption(argc, argv, L"sbnotstart"))
+	{
+		g_staticBoundsSetUp[0] = 0x48;
+		g_staticBoundsAllocator[0] = 0x48;
+	}
+	if (HasOption(argc, argv, L"sbp1twice"))
+		for (size_t i = 0; i < kSbSetUpMatch; i++)
+			g_staticBoundsTwin[i] = g_staticBoundsSetUp[1 + i];
+	if (HasOption(argc, argv, L"sba1twice"))
+		for (size_t i = 0; i < kSbAllocatorMatch; i++)
+			g_staticBoundsTwin[i] = g_staticBoundsAllocator[1 + i];
+	if (HasOption(argc, argv, L"sbp1jump"))
+		StaticBoundsPlaceJump(g_staticBoundsSetUp, const_cast<const unsigned char*>(g_staticBoundsOtherSetUp));
+	if (HasOption(argc, argv, L"sba1jump"))
+		StaticBoundsPlaceJump(g_staticBoundsAllocator, const_cast<const unsigned char*>(g_staticBoundsOtherAllocator));
+	for (size_t i = 0; i < kSbPage; i++)
+	{
+		g_staticBoundsPlaced[0][i] = g_staticBoundsSetUp[i];
+		g_staticBoundsPlaced[1][i] = g_staticBoundsAllocator[i];
+	}
+	size_t at = 0;
+	for (size_t site = 2; site < sizeof(g_staticBoundsSites) / sizeof(g_staticBoundsSites[0]); site++)
+		for (size_t i = 0; i < g_staticBoundsSites[site].size; i++)
+			g_staticBoundsOtherPlaced[at++] = g_staticBoundsSites[site].bytes[i];
+	if (HasOption(argc, argv, L"sbearly"))
+		StaticBoundsMakePools(argc, argv);
+}
+
+// Once the whole of .fakesit is read+execute, before TweaksV loads: what the options "...noexec" take away, and put back once TweaksV has started.
+static void StaticBoundsProtect(int argc, wchar_t** argv, DWORD protection)
+{
+	DWORD old = 0;
+	if (HasOption(argc, argv, L"sbp1noexec"))
+		VirtualProtect(const_cast<unsigned char*>(g_staticBoundsSetUp), kSbPage, protection, &old);
+	if (HasOption(argc, argv, L"sba1noexec"))
+		VirtualProtect(const_cast<unsigned char*>(g_staticBoundsAllocator), kSbPage, protection, &old);
+}
+
+// Once TweaksV has started, as the game does as its session starts - with "sblate" 4 s later, with "sbearly" not again.
+static void StaticBoundsActions(int argc, wchar_t** argv)
+{
+	StaticBoundsProtect(argc, argv, PAGE_EXECUTE_READ);
+	if (HasOption(argc, argv, L"sbearly"))
+		return;
+	if (HasOption(argc, argv, L"sblate"))
+		Sleep(4000);
+	StaticBoundsMakePools(argc, argv);
+}
+
+// "static bounds: set-up hooked, allocator hooked, the rest as placed, the pool made once: 16000 slots, 272000 bytes asked, other pools 8 of 8
+// left alone, set-ups 9 of 9 and allocations 9 of 9 good | " - each function as placed, hooked - a jump in place of its first five bytes
+// and nothing else - or changed; the sites around them as placed; the pool, or "the pool not made", with its first and its last making when
+// there are more; the others; and the calls as the checks above found them.
+static const wchar_t* StaticBoundsSiteState(size_t site)
+{
+	bool same = true, onlyJump = true;
+	for (size_t i = 0; i < kSbPage; i++)
+		if (g_staticBoundsSites[site].bytes[i] != g_staticBoundsPlaced[site][i])
+		{
+			same = false;
+			onlyJump = onlyJump && i >= 1 && i < 6;
+		}
+	return same ? L"as placed" : onlyJump && g_staticBoundsSites[site].bytes[1] == 0xE9 ? L"hooked" : L"CHANGED";
+}
+static void StaticBoundsReport()
+{
+	bool restPlaced = true;
+	size_t at = 0;
+	for (size_t site = 2; site < sizeof(g_staticBoundsSites) / sizeof(g_staticBoundsSites[0]); site++)
+		for (size_t i = 0; i < g_staticBoundsSites[site].size; i++)
+			restPlaced = restPlaced && g_staticBoundsSites[site].bytes[i] == g_staticBoundsOtherPlaced[at++];
+	wprintf(L"static bounds: set-up %ls, allocator %ls, the rest %ls, ", StaticBoundsSiteState(0), StaticBoundsSiteState(1), restPlaced ? L"as placed" : L"CHANGED");
+	if (g_staticBoundsMade == 0)
+		wprintf(L"the pool not made, ");
+	else if (g_staticBoundsMade == 1)
+		wprintf(L"the pool made once: %d slots, %llu bytes asked, ", g_staticBoundsSlots[0], static_cast<unsigned long long>(g_staticBoundsBytes[0]));
+	else
+		wprintf(L"the pool made %d times: %d and %d slots, %llu and %llu bytes asked, ", g_staticBoundsMade, g_staticBoundsSlots[0], g_staticBoundsSlots[1],
+			static_cast<unsigned long long>(g_staticBoundsBytes[0]), static_cast<unsigned long long>(g_staticBoundsBytes[1]));
+	wprintf(L"other pools %d of %d left alone, set-ups %d of %d and allocations %d of %d good | ", g_staticBoundsOthersAlone, g_staticBoundsOthers,
+		g_staticBoundsSetUpsGood, g_staticBoundsSetUps, g_staticBoundsAllocationsGood, g_staticBoundsAllocations);
+}
+
 // [late boxes]
 // [light capacity]
 // [vehicle model budget]
@@ -4288,6 +4558,7 @@ static void ForEachSite(void (*fn)(const Site&))
 	for (const Site& site : textureBudgetSites) fn(site);
 	for (const Site& site : g_rtSites) fn(site);
 	// [static bounds]
+	for (const Site& site : g_staticBoundsSites) fn(site);
 	// [light capacity]
 	// [vehicle model budget]
 	// [ped model budget]
@@ -5879,6 +6150,7 @@ int wmain(int argc, wchar_t** argv)
 	// TEST_DUMP_DATA's window, filled before TweaksV takes its first copies - as the options ask
 	DwSetUp(argc, argv);
 	// [static bounds]
+	StaticBoundsSetUpSites(argc, argv);
 	// [late boxes]
 	// [light capacity]
 	// [vehicle model budget]
@@ -5892,6 +6164,7 @@ int wmain(int argc, wchar_t** argv)
 	MakeSitesReadExecute();
 	g_siteProtect = ProtectionOf(g_heapSite);
 	RtTakeAway(argc, argv);
+	StaticBoundsProtect(argc, argv, PAGE_READONLY);
 
 	// the stand-in dstorage.dll, loaded before TweaksV as the game's import is
 	const HMODULE dstorage = HasOption(argc, argv, L"dstorage") ? LoadLibraryW(L"dstorage.dll") : nullptr;
@@ -6028,6 +6301,7 @@ int wmain(int argc, wchar_t** argv)
 	if (g_dwOn)
 		Sleep(2500);
 	// [static bounds]
+	StaticBoundsActions(argc, argv);
 	// [late boxes]
 	// [light capacity]
 	// [vehicle model budget]
@@ -6117,6 +6391,7 @@ int wmain(int argc, wchar_t** argv)
 	// [data window]
 	DwReport();
 	// [static bounds]
+	StaticBoundsReport();
 	// [late boxes]
 	// [light capacity]
 	// [vehicle model budget]

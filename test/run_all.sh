@@ -34,6 +34,7 @@ SUITES=(
 	raytracing
 	sirenids
 	# [static bounds]
+	staticbounds
 	sirencount
 	# [light capacity]
 	# [vehicle model budget]
