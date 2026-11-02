@@ -60,14 +60,15 @@ cleanup() {
 	rm -rf -- "${RUN:?}" "${R:?}/object/Test"
 }
 
-# check_warnings LOG: the warnings a build log holds are printed, with the log's last lines, and counted
+# check_warnings LOG: the warnings a build log holds, by their codes - "warning C4100", "warning LNK4075", and "cl : Command
+# line warning D9025" has no ": warning " - are printed, with the log's last lines, and counted
 warnings=0
 check_warnings() {
 	local found
-	found=$(tr -d '\r' < "$1" | grep -c ': warning ')
+	found=$(tr -d '\r' < "$1" | grep -cE 'warning [A-Z]+[0-9]+')
 	[ "$found" -gt 0 ] || return 0
 	echo "== $found warning(s) in $(basename "$1"):"
-	tr -d '\r' < "$1" | grep ': warning ' | head -n 20
+	tr -d '\r' < "$1" | grep -E 'warning [A-Z]+[0-9]+' | head -n 20
 	echo "   the last lines of $(basename "$1"):"
 	tr -d '\r' < "$1" | tail -n 5
 	warnings=$((warnings + found))
