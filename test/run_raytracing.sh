@@ -38,7 +38,7 @@ REFUSED="1210 geometries refused (5324359445 vertices in all), 10 of them ropes$
 # reset, hole, edge), plus PLUS
 rva() {
 	local at
-	at=$(sed -nE "s/.*rt rvas:.*[ ,]$1 (0x[0-9A-F]+)[ ,|].*/\1/p" <<< "$out" | head -n 1)
+	at=$(sed -nE "s/.*rt rvas:[^|]*[ ,]$1 (0x[0-9A-F]+)[ ,|].*/\1/p" <<< "$out" | head -n 1)
 	[ -n "$at" ] || { echo "RVA-of-$1-not-reported"; return; }
 	printf 'RVA 0x%X' $(( at + ${2:-0} ))
 }
