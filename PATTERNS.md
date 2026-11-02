@@ -65,11 +65,9 @@ The second relies on Windows, not on the game: a classic replace-rename reaches 
      That the static bounds pool's stride is 16.
      That the game sets a pool's capacity between the set-up and the allocator, and keeps no other copy of the size to use later.
      That the game makes the pool after TweaksV's `DllMain`, through these two functions: a build that made it earlier, or another way, leaves it at the game's size, which the part's check reports 60 seconds after the session's start.
-   <!-- [light capacity] -->
    - **Lighting capacity:** a light's record of 0x1C0 bytes and a corona's of 0x30, which the stores' distances rest on; 5 vehicles a job and 60 jobs, in the code's shape and in no one constant (`lea edi, [rax+rax*4]` at RVA 0xDE692E and 0xDE6931, the same in 0xF0104E), and 300 vehicles a frame, the length of four arrays with their counts right behind them, in no instruction at all, since nothing compares with it; the order of the frame, the vehicles' lights last; the sort list's mark, the byte at +4 of its count, read by no pattern's instruction; the siren setting's byte at +0x38 and its lights' flag at +0x45, read through `I-E-T4`'s pointer; a job's scratch handed from the worker's frame to a job whose +0x6E has bit 0 set, the only such call found; the shaders' 512 and 128, in the game's shader files; and the score of the ray traced upload with its 196 m.
      A change in any of them leaves a number wrong without an error, or a raise's room too small.
      The function behind `G-E-C1`'s jump is pinned only by what the module compares at run time, the 12 bytes of its way out, which it must find before it redirects the jump.
-   <!-- [population] -->
    - **Population:** the object's fields no pattern pins - the vehicles' excess, lists, requests in flight and shares, the peds' excess - and the list's format, 256 dwords ended by 0xFFFF or a value not below the model count; the module only logs them, so a wrong one is a wrong number, never harm, and its line then says something odd, without an error.
      The model info's +0x286 bit 1, the streamed flag (a hint of the render queues' pass), and its +0x9D's kinds.
      The variety's formula, 5, 1 and the clamp at 0.05 and 10: `O-E-P8`'s line logs the 5, the 1 and the 10 as it reads them, not the 0.05, and a raise's cap rests on the 10.
@@ -77,11 +75,9 @@ The second relies on Windows, not on the game: a classic replace-rename reaches 
      The constructor's defaults, 54,000, 72,000 and 92,000 for the peds and 32,000, 56,000 and 70,000 for the vehicles, which the tables' line compares with and which nothing pins: an update that changes them reads there as `not the defaults of 1.0.1158.16`, and the module's two arrays are read again.
      Entry 0 of each table, 1,500,000, and the level's first value, 3, in `.data`: the first tables' line and summary show them.
      The floor of 9 vehicle models, the frame gates and the 64 frames: behaviour, which TweaksV does not read; the floor of 6 ped models only as the bytes `O-E-P2`'s check compares at +0xEA, which an update that changes it stops the measurement at.
-   <!-- [ped pool] -->
    - **Ped pool:** the pool's layout and the high 2 bits of its +0x28; the spatial array's offsets, +0x28, +0x30 and +0x38 x, y and z, +0x40 and +0x48 the node's address's parts, +0x50 flags, +0x58 capacity, +0x5C count, set in 0x11682D0; that no other function holds a list by the spatial array's count, so every read of +0x5C after a load of its pointer; the sizes of the fixed arrays, the singleton's offsets in 0x1D90620, +0x20 and +0x1020, the filler's three arrays, 1,024 in the six methods and 0x1164D40; the ped's offsets the measurement reads; that the pool's size never passes the number.
      A change in any of them leaves the measurement's numbers wrong without an error, or a raise's limits unmet.
    - **A pool's memory:** the allocator's offsets (below, "A pool's memory"), which the pool memory's line reads and only its budget and the sum of its use and room check, and that the pools' proxy leads to that allocator, slot 5 of the master allocator (0x36D90, and 0x13CB90 with slot 5 in the start-up).
-   <!-- [render queues] -->
    - **Render queues:** the pool object's layout (+0x18, +0x1C, +0x28), which the stride read at +0x1C at run time protects; the array's capacity at +0xA, which only the inits pin, the adds pinning the rest of the array.
      That three of a family's four arrays hold whole frames: the flip as read; if a build reset all of them on a flip the most would read low, not wrong.
      That the game's own `gameconfig.xml` names the vehicles' two sizes: if not, one vehicle streams and the measurement shows a capacity of 1.
@@ -633,8 +629,6 @@ The two patterns, each matching exactly once in both dumps, looked for on every 
 | C-E-P1 | `48 89 C8 48 8B 4C 24 ? 48 89 08 44 89 48 1C 0F 57 C0 0F 11 40 08 C7 40 18 00 00 00 00 81 60 28 00 00 00 C0 C3` | the pools' set-up, the whole function, its first byte its start - the part's hook lies there: +0 `mov rax, rcx`, the pool, its first argument and its result; +3 `mov rcx, [rsp+?]`, its fifth argument, the memory allocator, kept at the pool's +0x00 (+8); +11 `mov [rax+0x1C], r9d`, its fourth argument, the stride; +15 and +18 the pool's +0x08 to +0x17 zeroed; +22 `mov dword [rax+0x18], 0`, the capacity; +29 `and dword [rax+0x28], 0xC0000000`; +36 `ret`. The wildcard at +7 is the fifth argument's offset, 0x28 on 1.0.1158.16, which the part checks, since its hook hands on five arguments | found, its RVA to check | 0x15A3F0 |
 | C-E-A1 | `56 57 48 83 EC ? 48 89 CE 48 63 51 18 48 63 79 1C 48 0F AF FA 48 83 C7 07 48 83 E7 F8 48 8B 09 48 01 FA 48 8B 01 FF 50 08` | the pools' allocator, from its pushes on, its first byte its start - the part's hook lies there: +6 `mov rsi, rcx`, the pool, its first argument; +9 `movsxd rdx, [rcx+0x18]`, the capacity; +13 `movsxd rdi, [rcx+0x1C]`, the stride; +17 to +25 their product rounded up to 8; +29 `mov rcx, [rcx]`, the memory allocator; +32 the capacity added, the bytes asked in `rdx`; +35 and +38 `call [rax+8]` of its table, with no `r8` or `r9` of its own. The wildcard at +5 is the stack frame's size | found, its RVA to check | 0x15A4D0 |
 
-<!-- [light capacity] -->
-
 ## LightCapacity
 
 The lighting capacity (`TweaksVLightCapacity`, SPECIFICATIONS.md section 11.16.3), measured first, nothing raised.
@@ -710,8 +704,6 @@ The patterns, each matching exactly once in both dumps of 2026-10-29 but `G-E-G1
 | G-E-H1 | `B8 58 80 01 00 E8 ? ? ? ? 48 29 C4` | the worker's frame (RVA 0x142760): +1 0x18058 | found | 0x14276C |
 | G-E-H2 | `48 8D 44 24 50 49 89 04 24 4C 89 E1 41 FF 54 24 60` | a job's scratch, rsp+0x50: +4 0x50, right before `call [job+0x60]`; so 0x18008 bytes for it | found | 0x14284B |
 
-<!-- [population] -->
-
 ## Population
 
 The two model budgets (`TweaksVPopulation`, SPECIFICATIONS.md section 11.16.4), one module, since they share an object, a set-up and the crash context's line that leads to them.
@@ -777,8 +769,6 @@ The 16 patterns, looked for only with `DIAGNOSTIC_MODE=1`, each once and at the 
 | O-E-P6 | `69 BB F8 04 00 00 E8 03 00 00 B9 BD C5 AF E3 BA D0 3C 99 0A E8 ? ? ? ? 48 89 F1 89 C2 41 89 F8 E8 ? ? ? ? 05 60 E3 16 00 89 05` | the same for level 2, the story table + 8 | found, its RVA to check | 0x4BD7F1 |
 | O-E-P7 | `69 BB FC 04 00 00 E8 03 00 00 B9 BD C5 AF E3 BA 5C 10 5F F4 E8 ? ? ? ? 48 89 F1 89 C2 41 89 F8 E8 ? ? ? ? 05 60 E3 16 00 89 05` | the same for level 3, the story table + 12 | found, its RVA to check | 0x4BD829 |
 | O-E-P8 | `F2 0F 10 86 B4 00 00 00 0F 59 05 ? ? ? ? 0F 58 05 ? ? ? ? F3 0F 10 0D ? ? ? ? 0F 28 D0 0F C2 15 ? ? ? ? 01 66 0F 38 25 D2 66 0F 50 C2 F3 0F 10 15 ? ? ? ? 0F 28 DA A8 01 75 07 0F 28 D9 F3 0F 5D D8 F3 0F 11 1D` | the settings' store of the peds' variety, only logged: +11 and +18 the vectors 5.0 and 1.0; +26 the 10.0; +76, past the match, the rel32 of the store, which must be the getter's variety | found, its RVA to check | 0x5004AD |
-
-<!-- [ped pool] -->
 
 ## Ped pool
 
@@ -850,8 +840,6 @@ From the research of 2026-11-02 on the dumps of 1.0.1158.16, each step read in t
   That the budget ran out and not `VirtualAlloc` is by elimination: that log has 46 GB of memory free, and `VirtualAlloc`'s failure makes a call the stack does not show.
 - **Not settled:** why the same load passes one time and fails another: at that crash no other thread stands in an allocator of it or in a pool's maker.
   The pool memory's line gives each boot's least room.
-
-<!-- [render queues] -->
 
 ## Render queues
 

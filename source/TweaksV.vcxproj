@@ -135,7 +135,6 @@
     <ClCompile Include="TweaksVHeapAdjuster.cpp" />
     <ClCompile Include="TweaksVIni.cpp" />
     <ClCompile Include="TweaksVLegacyPacks.cpp" />
-    <!-- [light capacity] -->
     <ClCompile Include="TweaksVLightCapacity.cpp" />
     <ClCompile Include="TweaksVLog.cpp" />
     <ClCompile Include="TweaksVMeasure.cpp" />
@@ -143,13 +142,11 @@
     <ClCompile Include="TweaksVModsFolder.cpp" />
     <ClCompile Include="TweaksVPackfileLimit.cpp" />
     <ClCompile Include="TweaksVPatch.cpp" />
-    <!-- [ped pool] -->
     <ClCompile Include="TweaksVPedPool.cpp" />
     <ClCompile Include="TweaksVPedProps.cpp" />
     <ClCompile Include="TweaksVRageOpenV.cpp" />
     <ClCompile Include="TweaksVRayTracing.cpp" />
     <ClCompile Include="TweaksVRelocation.cpp" />
-    <!-- [render queues] -->
     <ClCompile Include="TweaksVRenderQueues.cpp" />
     <ClCompile Include="TweaksVScanner.cpp" />
     <ClCompile Include="TweaksVScripts.cpp" />
@@ -160,7 +157,6 @@
     <ClCompile Include="TweaksVStraightToStoryMode.cpp" />
     <ClCompile Include="TweaksVSummary.cpp" />
     <ClCompile Include="TweaksVTextureBudget.cpp" />
-    <!-- [population] -->
     <ClCompile Include="TweaksVPopulation.cpp" />
     <ClCompile Include="TweaksVWeaponComponents.cpp" />
     <ClCompile Include="TweaksVWeaponInfos.cpp" />
@@ -194,7 +190,6 @@
     <ClInclude Include="TweaksVIni.h" />
     <ClInclude Include="TweaksVLegacyPacks.h" />
     <ClInclude Include="TweaksVLock.h" />
-    <!-- [light capacity] -->
     <ClInclude Include="TweaksVLightCapacity.h" />
     <ClInclude Include="TweaksVLog.h" />
     <ClInclude Include="TweaksVMeasure.h" />
@@ -203,13 +198,11 @@
     <ClInclude Include="TweaksVPackfileLimit.h" />
     <ClInclude Include="TweaksVPatch.h" />
     <ClInclude Include="TweaksVPatterns.h" />
-    <!-- [ped pool] -->
     <ClInclude Include="TweaksVPedPool.h" />
     <ClInclude Include="TweaksVPedProps.h" />
     <ClInclude Include="TweaksVRageOpenV.h" />
     <ClInclude Include="TweaksVRayTracing.h" />
     <ClInclude Include="TweaksVRelocation.h" />
-    <!-- [render queues] -->
     <ClInclude Include="TweaksVRenderQueues.h" />
     <ClInclude Include="TweaksVRpf.h" />
     <ClInclude Include="TweaksVScanner.h" />
@@ -221,7 +214,6 @@
     <ClInclude Include="TweaksVStraightToStoryMode.h" />
     <ClInclude Include="TweaksVSummary.h" />
     <ClInclude Include="TweaksVTextureBudget.h" />
-    <!-- [population] -->
     <ClInclude Include="TweaksVPopulation.h" />
     <ClInclude Include="TweaksVWeaponComponents.h" />
     <ClInclude Include="TweaksVWeaponInfos.h" />

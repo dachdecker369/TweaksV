@@ -159,13 +159,9 @@ namespace TweaksV
 			{ "SirenSettings", MeasureSirenIdsWhileOff },
 			// [siren count]
 			{ "SirenSettings", MeasureSirenCount },
-			// [light capacity]
 			{ "LightCapacity", MeasureLightCapacity },
-			// [population]
 			{ "Population", MeasurePopulation },
-			// [ped pool]
 			{ "PedPool", MeasurePedPool },
-			// [render queues]
 			{ "RenderQueues", MeasureRenderQueues },
 			{ "PedProps", MeasurePedPropsWhileOff },
 		};

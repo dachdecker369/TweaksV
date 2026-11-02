@@ -35,13 +35,9 @@ SUITES=(
 	sirenids
 	staticbounds
 	sirencount
-	# [light capacity]
 	lightcapacity
-	# [population]
 	population
-	# [ped pool]
 	pedpool
-	# [render queues]
 	renderqueues
 	integration
 )

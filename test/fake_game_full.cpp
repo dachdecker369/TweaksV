@@ -449,7 +449,6 @@
 // The boxes after the start-up summary (TweaksVSummary):
 //   latefailures N  once everything else has run, the script program placed N times, 2 s apart, with a code length past what
 //                   TEST_DUMP_SCRIPT copies: with that key each placement is a problem, far enough from the next for a box of its own
-// [light capacity]
 // The lighting capacity (TweaksVLightCapacity): its 22 sites as the patterns match them, add-to-a-job's-list as code the fake runs,
 // and its counters in the fake's data at the game's distances, all 0 until an option sets them once TweaksV has started:
 //   lcnumbers      the counters as a frame leaves them from before TweaksV loads, so that every sample sees them, the larger of each two
@@ -479,7 +478,6 @@
 //   lcnoctor       the constructor's two leas not as the scan sees one: their first bytes CC
 //   lcg1once       G-E-G1 only once
 //   lcg1thrice     G-E-G1 a third time, in the twin
-// [population]
 // The two model budgets (Population): their sites in .fakesit, none of them run, and their data in this program's own. With no option
 // the data are as at the game's start: the tables' first values, level 3, variety 1, the object zeros.
 //   popfill        the data as my boot at 180 s: the tables filled, variety 6, level 3; vehicles 428,679,168 bytes, 94 models
@@ -521,7 +519,6 @@
 //   popvmoved, poppmoved, popambientmoved
 //                  O-E-V7, O-E-P6 or O-E-V5 elsewhere, whole, but for where the others have it
 //   popgateedge    with rtjumpunread, whose page it borrows: O-E-P2 so near that page's end that what is read past the match cannot be
-// [ped pool]
 // The ped pool (TweaksVPedPool): its sites are in every run, read by nothing but TweaksV; the pool itself only as asked:
 //   pprun          the pool made once TweaksV has started, behind the game's obfuscation: 171 peds in use and 165 in the spatial array for 2.5 s, past a
 //                  sample of the module's, then 143 and 139 - 12 mission peds, 4 waiting for reuse, 2 that every loop skips, the free slots' stale bytes misleading
@@ -576,7 +573,6 @@
 //   pmcallunread   H-E2 at the end of a page and its call's rel32 on the next, which cannot be read: the set-up does not run
 //   pmfield        the allocator's budget holds another value than the site's while TweaksV starts, which the set-up then overwrites
 //   pmgone         the allocator's page cannot be read from the moment TweaksV has started: the set-up does not run
-// [render queues]
 // The render queues (TweaksVRenderQueues), whose sites are code the fake runs only as these ask; its report "render queues: ..." and
 // its other fields only with an option that starts rq:
 //   rqload         as the game does once TweaksV has started: the inits, every pool made through its size lookup, a frame's peak held,
@@ -1233,7 +1229,6 @@ volatile unsigned char g_staticBoundsOtherAllocator[] = { 0x56, 0x57, 0x90, SB_A
 volatile unsigned char g_staticBoundsTwin[64] = { 0xCC };
 static Site g_staticBoundsSites[] = { SITE(g_staticBoundsSetUp, 0), SITE(g_staticBoundsAllocator, 0), SITE(g_staticBoundsOtherSetUp, 0),
 	SITE(g_staticBoundsOtherAllocator, 0), SITE(g_staticBoundsTwin, 0) };
-// [light capacity]
 // The lighting capacity's sites, in the order of the patterns, a rel32 past a match kept and CC after each. The one the fake runs,
 // add-to-a-job's-list: its prologue, G-E-C1 at +11 - its jae at +17, its rel32 at +19 to the way out - "inc dword [r14+0x14]" at +33 in
 // place of the game's copy of a record, the way out at +37. The twin: CC, but a third match of G-E-G1 with lcg1thrice.
@@ -1277,7 +1272,6 @@ static Site g_lcSites[] = { SITE(g_lcReset, 0), SITE(g_lcDrainCoronas, 0), SITE(
 	SITE(g_lcCoronaAdd, 0), SITE(g_lcWorkerFrame, 0), SITE(g_lcWorkerCall, 0), SITE(g_lcConstructor, 0), SITE(g_lcExtra, 0), SITE(g_lcTwin, 0) };
 constexpr size_t kLcSites = sizeof(g_lcSites) / sizeof(g_lcSites[0]);
 static Site g_lcJumpRel = SITE(g_lcAddToList, 19);	// the rel32 of the jump when full, the one thing TweaksV may write
-// [population]
 // The two model budgets (Population), none of it run: the crash context's read of the ambient cars, O-E-V5, whose last two bytes begin
 // its line, O-E-C1; the two getters; the check before a vehicle model's request, O-E-V1 and O-E-V2; the release's test of VehicleStruct,
 // O-E-V3; the tables' set-up's call, O-E-V6; the ped memory's sum, O-E-P1; the gate, O-E-P2, the rest of whose bytes PopSetUp places; the
@@ -1326,7 +1320,6 @@ static Site g_popSites[] = { SITE(g_popContext, 0), SITE(g_popPedGetter, 0), SIT
 	SITE(g_popSetUp, 0), SITE(g_popSetUpCall, 0), SITE(g_popPedSum, 0), SITE(g_popGate, 0), SITE(g_popPedLists, 0), SITE(g_popPedsOfModel, 0), SITE(g_popVariety, 0),
 	SITE(g_popExtraStores, 0), SITE(g_popExtraCall, 0), SITE(g_popTwin, 0) };
 constexpr size_t kPopSites = sizeof(g_popSites) / sizeof(g_popSites[0]);
-// [ped pool]
 // The ped pool's sites as the game holds them, N-E-A1 to N-E-D6. The accessor has a tail, mov rax, rdx; ret, so that the fake runs it over its own encoding.
 volatile unsigned char g_ppAccessor[] = { 0x0F, 0xB6, 0x05, 0, 0, 0, 0, 0xA8, 0x01, 0x75, 0x03, 0x31, 0xC0, 0xC3, 0x48, 0x8B, 0x0D, 0, 0, 0, 0, 0x48, 0xC1, 0xC1, 0x1E, 0x48, 0x8B, 0x15, 0, 0, 0, 0,
 	0x48, 0x31, 0xCA, 0x48, 0xC1, 0xC2, 0x20, 0x80, 0xE1, 0x1F, 0x80, 0xC1, 0x02, 0x48, 0xD3, 0xC2, 0x48, 0xF7, 0xD2, 0x48, 0x89, 0xD0, 0xC3 };
@@ -1359,7 +1352,6 @@ constexpr size_t kPoolMemoryMatch = 4, kPoolMemoryAllocatorAt = kPoolMemoryMatch
 	kPoolMemoryCallAt = kPoolMemoryMatch + 27;
 volatile unsigned char g_poolMemorySite[] = { 0x48, 0x83, 0xEC, 0x28, 0x48, 0x8D, 0x0D, 0, 0, 0, 0, 0x48, 0x8D, 0x15, 0, 0, 0, 0, 0x41, 0xB8, 0x00, 0x00, 0x01, 0x00,
 	0x41, 0xB9, 0x00, 0x00, 0x80, 0x08, 0xE8, 0, 0, 0, 0, 0x48, 0x83, 0xC4, 0x28, 0xC3 };
-// [render queues]
 // The render queues' sites (TweaksVRenderQueues), each with its pattern's bytes as PATTERNS.md has them and around them what makes it
 // run as the fake's code: a prologue, a tail, and the rel32 RqSetUp sets. The make of the vehicles' render pool lies in a carrier,
 // kRqMakeV2 below, since its jump must lie in a function of the fake's unwind data; g_rqEdge's second page cannot be read with
@@ -4974,7 +4966,6 @@ static void StaticBoundsReport()
 		g_staticBoundsSetUpsGood, g_staticBoundsSetUps, g_staticBoundsAllocationsGood, g_staticBoundsAllocations);
 }
 
-// [light capacity]
 // The lighting capacity's data, in the fake's data at the game's distances and reached only through a pointer: the frame's two stores
 // with their write pointers right behind them, the sort list with its count and mark, the counters, what the sites name and nothing
 // reads, the lists' start values, the two ray traced lists and the two sets of reflection lists, each with its counts first; a page
@@ -5341,7 +5332,6 @@ static void LcReport()
 		rva(&data.rayPointer), rva(g_lcRayCheck), rva(g_lcUpload), rva(g_lcReflections), rva(g_lcCoronaCheck), rva(g_lcCoronaCheckToo), rva(&data.coronas), rva(g_lcCoronaAdd), rva(g_lcWorkerFrame),
 		rva(g_lcWorkerCall), rva(g_lcConstructor));
 }
-// [population]
 // The two model budgets: the data the sites lead to, reached through pointers, so that no store of this program's own code counts as a
 // writer of a table; the object on whole pages, since popgone takes one away, and the hole a page of its own.
 struct PopTables
@@ -5789,7 +5779,6 @@ static void PopReport()
 	wprintf(L"pop sites: %ls | pop data: %ls | pop rvas: object 0x%llX, vehicle story 0x%llX, ped story 0x%llX, set-up 0x%llX | ", placed ? L"as placed" : L"CHANGED",
 		PopHashOfData() == g_popDataHash ? L"as placed" : L"CHANGED", rva(g_popObject), rva(t.vehicleStory), rva(t.pedStory), rva(g_popSetUp + kPopStart));
 }
-// [ped pool]
 // The ped pool's data, on pages of their own, at the game's layouts, and what the sites' calls lead to, which nothing runs: the pool, its slots and their flag bytes, the spatial
 // array; each ped's type, the flag every loop of the game skips it by, the flag of a ped waiting for reuse.
 struct PedPoolObject
@@ -6191,7 +6180,6 @@ static void PoolMemoryReport()
 	else
 		wprintf(L"its constructor not run | ");
 }
-// [render queues]
 // The render queues (TweaksVRenderQueues). What TweaksV reads lies in one page of the fake's .data, and what the pools and the arrays
 // hold in memory of the fake's game allocator: the code RqSetUp points the sites at runs on it as the game's, so that the module's
 // numbers are what the patterns' own bytes wrote and its decoding of a pool's pointer is what the patterns' own bytes decode.
@@ -7472,15 +7460,11 @@ static void ForEachSite(void (*fn)(const Site&))
 	for (const Site& site : textureBudgetSites) fn(site);
 	for (const Site& site : g_rtSites) fn(site);
 	for (const Site& site : g_staticBoundsSites) fn(site);
-	// [light capacity]
 	for (const Site& site : g_lcSites) fn(site);
-	// [population]
 	for (const Site& site : g_popSites) fn(site);
-	// [ped pool]
 	for (const Site& site : g_ppSites) fn(site);
 	static Site poolMemorySite = SITE(g_poolMemorySite, 0);
 	fn(poolMemorySite);
-	// [render queues]
 	for (const Site& site : g_rqSites) fn(site);
 }
 
@@ -9067,14 +9051,10 @@ int wmain(int argc, wchar_t** argv)
 	// TEST_DUMP_DATA's window, filled before TweaksV takes its first copies - as the options ask
 	DwSetUp(argc, argv);
 	StaticBoundsSetUpSites(argc, argv);
-	// [light capacity]
 	LcSetUp(argc, argv);
-	// [population]
 	PopSetUp(argc, argv);
-	// [ped pool]
 	PedPoolSetUpSites(argc, argv);
 	PoolMemorySetUpSite(argc, argv);
-	// [render queues]
 	RqSetUp(argc, argv);
 
 	RovSetup(argc, argv);
@@ -9233,14 +9213,10 @@ int wmain(int argc, wchar_t** argv)
 				reinterpret_cast<Resolve>(const_cast<unsigned char*>(Rel32Target(g_scriptCallSite)))(reinterpret_cast<unsigned char*>(&g_blipController.program));
 				Sleep(2000);
 			}
-	// [light capacity]
 	LcActions(argc, argv);
-	// [population]
 	PopActions(argc, argv);
-	// [ped pool]
 	PedPoolActions(argc, argv);
 	PoolMemoryActions(argc, argv);
-	// [render queues]
 	RqActions(argc, argv);
 	if (HasOption(argc, argv, L"wait"))
 		Sleep(11000);	// TweaksV's UNLOCK_FILES summary comes 10 s after the first open it counts, the OpenFile summary 10 s
@@ -9324,14 +9300,10 @@ int wmain(int argc, wchar_t** argv)
 	RtReport();
 	DwReport();
 	StaticBoundsReport();
-	// [light capacity]
 	LcReport();
-	// [population]
 	PopReport();
-	// [ped pool]
 	PedPoolReport();
 	PoolMemoryReport();
-	// [render queues]
 	RqReport(argc, argv);
 	CheckStub(Rel32Target(g_packCallSite));
 	CheckStub(Rel32Target(g_scriptCallSite));

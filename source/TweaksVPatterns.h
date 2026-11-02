@@ -14,7 +14,7 @@ namespace TweaksV
 {
 	struct GamePattern
 	{
-		const char* label;	// as in PATTERNS.md: H- Heap, M- Modkit, P- Packfile, B- BoxStreamer, D- Decals, R- RageOpenV, S- StraightToStoryMode, Y- the script programs, L- Blips, W- WeaponLimits, I- SirenSettings, A- PedProps, Q- Resources, T- RayTracing, C- StaticBounds
+		const char* label;	// as in PATTERNS.md: H- Heap, M- Modkit, P- Packfile, B- BoxStreamer, D- Decals, R- RageOpenV, S- StraightToStoryMode, Y- the script programs, L- Blips, W- WeaponLimits, I- SirenSettings, A- PedProps, Q- Resources, T- RayTracing, C- StaticBounds, G- LightCapacity, O- Population, N- PedPool, U- RenderQueues
 		const char* text;	// the bytes in hex, one space apart; ? matches any byte
 	};
 
@@ -248,7 +248,6 @@ namespace TweaksV
 		{ "C-E-P1", "48 89 C8 48 8B 4C 24 ? 48 89 08 44 89 48 1C 0F 57 C0 0F 11 40 08 C7 40 18 00 00 00 00 81 60 28 00 00 00 C0 C3" },
 		{ "C-E-A1", "56 57 48 83 EC ? 48 89 CE 48 63 51 18 48 63 79 1C 48 0F AF FA 48 83 C7 07 48 83 E7 F8 48 8B 09 48 01 FA 48 8B 01 FF 50 08" },
 
-		// [light capacity]
 		// LightCapacity, the lighting capacity (TweaksVLightCapacity.cpp): the frame's two stores of vehicle lights, reset (A1) and
 		// drained (A2, A3); a job's 5 vehicles (B1) and its scratch's size in its two kicks (B2, B3); add-to-a-job's-list (C1), the
 		// job's scratch (C2, C3) and its lists' start values (C4); the scene store's check (D1) and its byte index read back (D2),
@@ -276,7 +275,6 @@ namespace TweaksV
 		{ "G-E-G2", "44 8B 81 00 CC 00 00 49 81 F8 3F 04 00 00 0F 87" },
 		{ "G-E-H1", "B8 58 80 01 00 E8 ? ? ? ? 48 29 C4" },
 		{ "G-E-H2", "48 8D 44 24 50 49 89 04 24 4C 89 E1 41 FF 54 24 60" },
-		// [population]
 		// The two model budgets (TweaksVPopulation.cpp), measured first: the crash context's line, which leads to the population object and both getters (C1); the vehicle pass's sites, the check before a request (V1, V2), the pool's test (V3), the tables' set-up's head (V4), the ambient cars (V5), and a writing half's call and stores (V6, V7); the ped pass's, the sum, the gate, the lists, a model's peds (P1 to P4), and a writing half's stores and the variety's store (P5 to P8)
 		{ "O-E-C1", "8B 35 ? ? ? ? C1 FE 14 8B 3D ? ? ? ? C1 FF 14 48 8D 1D ? ? ? ? 48 89 D9 E8 ? ? ? ? 89 C5 C1 FD 14 48 89 D9 E8 ? ? ? ? 89 C3 C1 FB 14 48 8D 0D" },
 		{ "O-E-V1", "8B 05 ? ? ? ? 0F B6 0D ? ? ? ? 4C 8D 35 ? ? ? ? 48 8D 1D ? ? ? ? EB" },
@@ -294,7 +292,6 @@ namespace TweaksV
 		{ "O-E-P6", "69 BB F8 04 00 00 E8 03 00 00 B9 BD C5 AF E3 BA D0 3C 99 0A E8 ? ? ? ? 48 89 F1 89 C2 41 89 F8 E8 ? ? ? ? 05 60 E3 16 00 89 05" },
 		{ "O-E-P7", "69 BB FC 04 00 00 E8 03 00 00 B9 BD C5 AF E3 BA 5C 10 5F F4 E8 ? ? ? ? 48 89 F1 89 C2 41 89 F8 E8 ? ? ? ? 05 60 E3 16 00 89 05" },
 		{ "O-E-P8", "F2 0F 10 86 B4 00 00 00 0F 59 05 ? ? ? ? 0F 58 05 ? ? ? ? F3 0F 10 0D ? ? ? ? 0F 28 D0 0F C2 15 ? ? ? ? 01 66 0F 38 25 D2 66 0F 50 C2 F3 0F 10 15 ? ? ? ? 0F 28 DA A8 01 75 07 0F 28 D9 F3 0F 5D D8 F3 0F 11 1D" },
-		// [ped pool]
 		// The ped pool, measured first (TweaksVPedPool.cpp): for its reads the accessor, the maker, the lookups, the spatial array, the counts and caps; then the
 		// sites its writing half will rely on, the copy and the two frames of a fixed array and the anim director's family's six defaults
 		{ "N-E-A1", "0F B6 05 ? ? ? ? A8 01 75 03 31 C0 C3 48 8B 0D ? ? ? ? 48 C1 C1 1E 48 8B 15 ? ? ? ? 48 31 CA 48 C1 C2 20 80 E1 1F 80 C1 02 48 D3 C2 48 F7 D2" },
@@ -316,7 +313,6 @@ namespace TweaksV
 		{ "N-E-D5", "BA 29 BB 69 BF 41 B8 55 01 00 00 E8" },
 		{ "N-E-D6", "BA BE 10 0E 21 41 B8 55 01 00 00 E8" },
 
-		// [render queues]
 		// The render queues of streamed peds and vehicles, measured first (TweaksVRenderQueues.cpp): each pool's make, which holds what decodes
 		// its pointer and pins it by its stride - the streamed peds' requests (S1) and render data (S2), the props' (P1, P2), the vehicles' (V1, V2) -
 		// each family's add (S3, P3, V3) and init (S4, P4, V6), the vehicles' walk (V4) and their two sizes (V5), the pools' size lookups a raise
