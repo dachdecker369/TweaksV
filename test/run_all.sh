@@ -107,9 +107,10 @@ run_suite() {
 }
 
 # As many suites at a time as the machine has threads, one with --serial; each one's output and result come out whole,
-# in the list's order, whichever finishes first.
+# in the list's order, whichever finishes first. A suite that goes side by side itself asks TWEAKSV_TEST_JOBS how far.
 most=${NUMBER_OF_PROCESSORS:-4}
 [ "$serial" = 0 ] || most=1
+export TWEAKSV_TEST_JOBS=$most
 total_pass=0; total_fail=0; summary=""; pids=(); started=0; n=${#SUITES[@]}
 for ((shown = 0; shown < n; shown++)); do
 	while [ "$started" -lt "$n" ] && [ "$((started - shown))" -lt "$most" ]; do

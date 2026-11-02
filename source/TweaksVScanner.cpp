@@ -344,6 +344,15 @@ namespace TweaksV
 				const std::string& broken = GetText(kTestBreakPattern);
 				return !broken.empty() && _stricmp(broken.c_str(), pattern.label) == 0;
 			}
+
+			// TEST_TWICE_PATTERN names one the same way, which is then treated as held once more than the game
+			// code holds it - twice, for a pattern that must match once - to see the part refuse it in the
+			// words of NotAsOften. The match is handed on twice: no part writes to a pattern held too often.
+			bool IsTwiceForTest(const GamePattern& pattern)
+			{
+				const std::string& twice = GetText(kTestTwicePattern);
+				return !twice.empty() && _stricmp(twice.c_str(), pattern.label) == 0;
+			}
 #endif
 		}
 
@@ -398,6 +407,13 @@ namespace TweaksV
 			if (IsDiagnosticMode())
 				LogPatternDiagnostics(gamePattern, pattern, code, found[0]);
 
+#ifdef TWEAKSV_TEST_BUILD
+			if (IsTwiceForTest(gamePattern) && found.size() < limit)
+			{
+				WriteLog(kTag, "TEST BUILD: pattern " + label + " is treated as held once more than the game code holds it (TEST_TWICE_PATTERN).");
+				found.push_back(found[0]);
+			}
+#endif
 			return found;
 		}
 
