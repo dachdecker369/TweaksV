@@ -109,7 +109,7 @@ run_suite() {
 most=${NUMBER_OF_PROCESSORS:-4}
 [ "$serial" = 0 ] || most=1
 export TWEAKSV_TEST_JOBS=$most
-total_pass=0; total_fail=0; summary=""; pids=(); started=0; n=${#SUITES[@]}
+total_pass=0; total_fail=0; total_skipped=0; summary=""; pids=(); started=0; n=${#SUITES[@]}
 for ((shown = 0; shown < n; shown++)); do
 	while [ "$started" -lt "$n" ] && [ "$((started - shown))" -lt "$most" ]; do
 		run_suite "${SUITES[started]}" &
@@ -123,10 +123,11 @@ for ((shown = 0; shown < n; shown++)); do
 	line=$(grep -E '[0-9]+ passed, [0-9]+ failed' "$RUN/$s.out" | tail -n 1)
 	p=$(sed -nE 's/.* ([0-9]+) passed, ([0-9]+) failed.*/\1/p' <<< "$line")
 	f=$(sed -nE 's/.* ([0-9]+) passed, ([0-9]+) failed.*/\2/p' <<< "$line")
+	skipped=$(grep -c '^SKIP' "$RUN/$s.out")	# among the passed (common.sh): said, so that a green run names the checks it did not make
 	stopped=""
 	if [ -z "$p" ]; then p=0; f=1; stopped=" - no result line (the suite stopped early)"; fi
-	total_pass=$((total_pass + p)); total_fail=$((total_fail + f))
-	summary+="  $(printf '%-16s' "$s") $p passed, $f failed$stopped"$'\n'
+	total_pass=$((total_pass + p)); total_fail=$((total_fail + f)); total_skipped=$((total_skipped + skipped))
+	summary+="  $(printf '%-16s' "$s") $p passed, $f failed, $skipped skipped$stopped"$'\n'
 done
 
 # the number of checks NOTES.md's "Tests:" bullet gives ("(N checks)") - that bullet's, not the first number
@@ -136,7 +137,7 @@ ok=1
 [ "$total_fail" = 0 ] || ok=0
 echo; echo "======== RESULTS"
 printf '%s' "$summary"
-echo "  all            $total_pass passed, $total_fail failed"
+echo "  all            $total_pass passed, $total_fail failed, $total_skipped skipped"
 echo "  time           $SECONDS s; the slowest: $(cat "$RUN"/*.seconds | sort -rn | head -n 3 | sed -E 's/(.*) (.*)/\2 \1 s/' | paste -sd, | sed 's/,/, /g')"
 if [ "${#only[@]}" = 0 ] && [ "$((total_pass + total_fail))" != "${expected:-none}" ]; then
 	echo "  the count: NOTES.md gives ${expected:-no number of} checks, this run made $((total_pass + total_fail))"; ok=0
