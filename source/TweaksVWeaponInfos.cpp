@@ -482,10 +482,8 @@ namespace TweaksV
 			const std::string where = DescribeAddress(start) + " (" + kLoaderPattern.label + " - " + Hex(kLoaderStart) + ")";
 			if (!IsInsideGameImage(start) || !IsReadable(start, 2))	// the two bytes StartsWithJump reads
 				return "the loader at " + where + " is not readable game code.";
-			DWORD64 imageBase = 0;
-			if (const PRUNTIME_FUNCTION entry = RtlLookupFunctionEntry(reinterpret_cast<DWORD64>(sites.loader), &imageBase, nullptr))
+			if (const uint8_t* const begin = FunctionStartOf(sites.loader))
 			{
-				const auto begin = reinterpret_cast<const uint8_t*>(imageBase + entry->BeginAddress);
 				Diagnostic("the loader at " + where + ": " + (begin == start ? std::string("a function start (unwind data)") :
 					"inside the function at " + DescribeAddress(begin) + " (unwind data)"));
 				if (begin != start)

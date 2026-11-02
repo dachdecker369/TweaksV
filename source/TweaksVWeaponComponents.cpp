@@ -554,12 +554,10 @@ namespace TweaksV
 			const std::string where = DescribeAddress(head) + " (" + kLoaderPattern.label + " - 0x13)";
 			std::string detail = "not readable game code";
 			bool start = IsInsideGameImage(head) && IsReadable(head, kLoaderHead);
-			DWORD64 imageBase = 0;
 			if (start)
 			{
-				if (const PRUNTIME_FUNCTION function = RtlLookupFunctionEntry(reinterpret_cast<DWORD64>(match), &imageBase, nullptr))
+				if (const uint8_t* const begin = FunctionStartOf(match))
 				{
-					const auto begin = reinterpret_cast<const uint8_t*>(imageBase + function->BeginAddress);
 					start = begin == head;
 					detail = start ? std::string("a function start (unwind data)") : std::string(kLoaderPattern.label) + " lies in the function at " +
 						DescribeAddress(begin) + " (unwind data)";
