@@ -18,9 +18,9 @@ rm -f "$B/harness.state"	# no run of this suite yet
 export TWEAKSV_TEST_NO_BOXES=1
 
 # check DESCRIPTION CONDITION: CONDITION is evaluated, the result printed and counted - unless the last run
-# of a fake (run_fake) was stopped or printed no report: then every check after it fails, printed as
-# TIMEOUT or NO REPORT, until the next run. skip DESCRIPTION: a check this machine cannot make, printed as
-# SKIP and counted as passed, so that the number of checks is the same on every machine.
+# of a fake (run_fake) was stopped, printed no report or crashed after its report: then every check after it
+# fails, printed as TIMEOUT, NO REPORT or CRASH AT EXIT, until the next run. skip DESCRIPTION: a check this machine
+# cannot make, printed as SKIP and counted as passed, so that the number of checks is the same on every machine.
 pass=0; fail=0
 check() {
 	local state=""
@@ -28,6 +28,7 @@ check() {
 	case "$state" in
 		timeout) echo "TIMEOUT  $1"; fail=$((fail+1)); return ;;
 		noreport*) echo "NO REPORT  $1 (exit status ${state#noreport })"; fail=$((fail+1)); return ;;
+		crashed*) echo "CRASH AT EXIT  $1 (exit status ${state#crashed })"; fail=$((fail+1)); return ;;
 	esac
 	if eval "$2"; then echo "PASS  $1"; pass=$((pass+1)); else echo "FAIL  $1"; fail=$((fail+1)); fi
 }
@@ -51,7 +52,8 @@ addkey() { sed -b -i "/^\[TWEAKSV\]\r\$/a $1=$2\r" TweaksV.ini; }
 # LOCALAPPDATA (or $FAKE_APPDATA), TEMP and TMP, for RUN_TIMEOUT seconds at most; what it prints goes to
 # harness.out here. How the run ended goes to harness.state, which check reads: "timeout" when it was
 # stopped (status 124), "noreport STATUS" when it printed no report (the full game's last field is
-# "protect: ...", the plain game's "harness: ..."), else "ok STATUS".
+# "protect: ...", the plain game's "harness: ..."), "crashed STATUS" when a status other than 0 came after
+# the report, which no fake's own way out gives, so that a fault in TweaksV at the fake's exit shows, else "ok".
 RUN_TIMEOUT=60
 run_fake() {
 	local dir=. status
@@ -61,7 +63,8 @@ run_fake() {
 	status=$?
 	if [ "$status" = 124 ]; then echo timeout
 	elif ! grep -qE '(protect|harness): ' harness.out; then echo "noreport $status"
-	else echo "ok $status"; fi > "$B/harness.state"
+	elif [ "$status" != 0 ]; then echo "crashed $status"
+	else echo ok; fi > "$B/harness.state"
 }
 
 # game EXE [OPTION...]: EXE, one of the fake game programs, runs as GTA5_Enhanced.exe and loads

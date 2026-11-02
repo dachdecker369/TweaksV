@@ -562,5 +562,13 @@ check "a number outside 1..9 is not taken: nothing refused, no line, the summary
 fresh_ini; setkey HEAP_SIZE 5000; out=$(TWEAKSV_TEST_REFUSE_THREAD='1 start-up summary' game full_game.exe)
 check "the Release build ignores the switch: nothing refused, no line, the summary at once" "log_lacks 'TWEAKSV_TEST_REFUSE_THREAD' && log_lacks 'could not be started' && log_has 'Start-up summary not shown (ERROR_POPUP=0): 1 problem(s), see above\.'"
 
+echo "== I21 the harness itself: a status other than 0 after a fake's report fails the checks after it, as a run without a report does"
+# ends.sh STATUS: a fake of three lines that prints a report and ends with STATUS; each check said runs in a subshell, so that it counts for nothing
+printf '#!/bin/sh\necho "harness: a report"\nexit "$1"\n' > ends.sh
+run_fake ends.sh 5; after_five=$(check 'the check after it' true)
+run_fake ends.sh 0; after_none=$(check 'the check after it' true)
+rm -f ends.sh "$B/harness.state"
+check "status 5: the check after it fails, its line names the crash and the status; status 0: it runs" "[ \"\$after_five\" = 'CRASH AT EXIT  the check after it (exit status 5)' ] && [ \"\$after_none\" = 'PASS  the check after it' ]"
+
 echo
 echo "INTEGRATION SCENARIOS: $pass passed, $fail failed"
