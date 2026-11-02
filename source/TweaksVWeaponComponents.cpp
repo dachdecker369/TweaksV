@@ -22,7 +22,7 @@
 //                    still, and a load the game's protected code put back is reported, once
 // The guard (D12): the loader of one weaponcomponents.meta (W-E-C5) is hooked at its head, and a file that comes once
 // the definitions already loaded - the sum of the files' blobs, read bounded - have reached the room is refused before
-// the game makes any of its definitions, as is a file of a name refused before; the first refusal is a problem, in a
+// the game makes any of its definitions, as is a file of a name refused before; the first refusal is a finding, in a
 // box, the others are logged. The pool gets the room and 470 more, the most one file brings, and the list room for
 // 16384 + 470, so that the last file let in always fits. A read of the blobs that does not add up lets the file
 // through and switches the guard off for the session, reported. Definitions loaded while the game has never asked the
@@ -452,7 +452,7 @@ namespace TweaksV
 				if (g_testRoom)
 					room = ", the test build's (TWEAKSV_TEST_GUARD_ROOM=1)";
 #endif
-				ReportFailure(kTag, std::string("Weapon component files are refused this session: ") + file + ", the first, came once " + std::to_string(sum) +
+				ReportFinding(kTag, Finding::RefusedFiles, std::string("Weapon component files are refused this session: ") + file + ", the first, came once " + std::to_string(sum) +
 					" definitions were loaded, the room being " + std::to_string(g_room) + room + " - the weapon components of the files refused are missing in the game. " +
 					(g_testRoom || most ? std::string("The log names every file refused.") : "Raise WEAPON_COMPONENTS_SIZE in TweaksV.ini (at most " +
 					std::to_string(kWeaponComponentsSize.maxValue) + "); the log names every file refused."));

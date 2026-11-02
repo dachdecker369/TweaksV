@@ -57,10 +57,10 @@ guarded() { log_line "$W The weapon info blob limit is guarded: the weapon info 
 field() { has "weapon infos: limits $1, loader $2, the rest as laid, array $3, files ${4:-0 passed 0 refused, 0 of 0 as expected} |"; }
 # The weapon components' half writes and reports under the same tag, so the checks below match this half's lines and
 # problems by their words, never every line of the tag, a box's count of problems or every problem of a run.
-# boxed: the start-up summary shown, its box kept off the screen by the test build; late: one box of its own after the
-# start-up summary; quiet: no problem of this half - its two jobs' and its report's
+# boxed: the start-up summary shown, its box kept off the screen by the test build; late: the guard's finding, one box of
+# its own; quiet: no problem of this half - its two jobs' and its report's
 boxed() { log_has 'Showing the start-up summary (' && log_has 'TEST BUILD: message box not shown (TWEAKSV_TEST_NO_BOXES=1): TweaksV could not apply everything:'; }
-late() { [ "$(count 'Showing a problem after the start-up summary (')" -eq 1 ] && log_has 'TEST BUILD: message box not shown (TWEAKSV_TEST_NO_BOXES=1): TweaksV: a part stopped working after the start-up:'; }
+late() { [ "$(count 'Showing a finding (')" -eq 1 ] && log_line 'TEST BUILD: message box not shown (TWEAKSV_TEST_NO_BOXES=1): TweaksV: WeaponLimits refused files the game has no room for: \.\.\. The game continues without the files refused\.$'; }
 quiet() { log_lacks "$W PROBLEM: The weapon info blob limit" && log_lacks "$W PROBLEM: The weapons.meta file"; }
 # failing: TweaksV.ini for a run of the test build with DIAGNOSTIC_MODE=1 and ERROR_POPUP=1; run_test OPTION...: that run
 failing() { fresh_ini; setkey DIAGNOSTIC_MODE 1; setkey ERROR_POPUP 1; }
@@ -97,7 +97,7 @@ fresh_ini; setkey ERROR_POPUP 1; run_test wifill wifew
 check "the count at the room, 1024; the 14 refused, the game's loader not called for them, each given 0 with its last error kept" "field '1024 1024' hooked '1024 of 1024' '872 passed 14 refused, 886 of 886 as expected'"
 check "the report 10 s after the first refusal, once, word for word: the first file's name, 13 more, the room and what to set" "problem 'The weapons.meta file dlc_wi01:/common/data/ai/weapons.meta and 13 more were not loaded: the game.s room for weapons.meta files, 1024, is full - raise WEAPON_INFO_FILES in TweaksV.ini above 1024 (at most 16384).' && [ \$(count 'PROBLEM: The weapons.meta file') -eq 1 ]"
 check "the first refusal's line at once, word for word, once" "[ \$(count 'is refused: the game.s room for weapons.meta files') -eq 1 ] && log_line '$W The weapons.meta file dlc_wi01:/common/data/ai/weapons.meta is refused: the game.s room for weapons.meta files, 1024, is full - the files refused are reported 10 seconds after this first one.\$'"
-check "in a box of its own after the start-up summary; no line per file without DIAGNOSTIC_MODE" "late && log_lacks 'weapons.meta file 1'"
+check "in a box of its own, its heading and last line those of a guard's refusal; no line per file without DIAGNOSTIC_MODE" "late && log_lacks 'weapons.meta file 1'"
 
 echo "== WI4 the guards' test switch (test build, TWEAKSV_TEST_GUARD_ROOM=1, TWEAKSV_TEST_SUMMARY_MS=1000, DIAGNOSTIC_MODE=1): the game's own room, 14 files, then 3 more"
 failing; out=$(TWEAKSV_TEST_GUARD_ROOM=1 TWEAKSV_TEST_SUMMARY_MS=1000 ASI=TweaksV_test.asi game full_game.exe wifew wilater)
@@ -105,7 +105,7 @@ check "the switch said once, the game's own room in the place of the part's, whi
 check "8 files to the guard's room, 6 refused, then 3 more - each refused given 0, every last error kept" "field '1024 1024' hooked '160 of 1024' '8 passed 9 refused, 17 of 17 as expected'"
 check "a line per file: 160 the last loaded, then 161 refused 9 times - the 140-character name cut at 127, the byte that is no printable ASCII a ?" "file 160 'dlc_wi08:/common/data/ai/weapons.meta' && file '161 refused (the room, 160, is full)' '$LONG' && file '161 refused (the room, 160, is full)' 'dlc_wi10:/common/data/ai/weap?ons.meta' && [ \$(count '$D weapons.meta file 161 refused (the room, 160, is full): ') -eq 9 ]"
 check "the report once, word for word: the first refused file's name cut at 127, 5 more, the guard's room, named as the test build's - no key to raise" "problem 'The weapons.meta file $LONG and 5 more were not loaded: the game.s room for weapons.meta files, 160, is full - the test build.s room (TWEAKSV_TEST_GUARD_ROOM=1).'"
-check "one box of its own after the start-up summary; the 3 later a line, not a second problem: 9 in all" "late && [ \$(count 'PROBLEM: The weapons.meta file') -eq 1 ] && log_line '$W 9 weapons.meta files in all were not loaded this session: the game.s room for weapons.meta files, 160, is full.\$'"
+check "one box of its own; the 3 later a line, not a second problem: 9 in all" "late && [ \$(count 'PROBLEM: The weapons.meta file') -eq 1 ] && log_line '$W 9 weapons.meta files in all were not loaded this session: the game.s room for weapons.meta files, 160, is full.\$'"
 check "the summaries, word for word: the guard's room full with 6 refused, then with 9, and no third while nothing changes" '[ "$(summaries)" = "$S_SWITCH" ]'
 check "the test build's line said once for each of the half's two threads" "[ \$(count 'TEST BUILD: the weapon infos summary comes every 1000 ms after its first (TWEAKSV_TEST_SUMMARY_MS=1000).') -eq 1 ] && [ \$(count 'TEST BUILD: the weapon infos guard report comes every 1000 ms after its first (TWEAKSV_TEST_SUMMARY_MS=1000).') -eq 1 ]"
 
@@ -151,7 +151,7 @@ check "WEAPON_INFO_FILES=4096, above them: raised from 2048 to 4096" "log_line '
 echo "== WI12 the array gets room for 512 after TweaksV's raise (another mod), 170 files and 872 more: the guard keeps to the array's own room"
 fresh_ini; out=$(game full_game.exe wiraised wifill)
 check "342 files to the array's 512, 530 refused - the array not overflowed" "field '1024 1024' hooked '512 of 512' '342 passed 530 refused, 872 of 872 as expected'"
-check "the report, word for word: the array's room, less than the part gave it; with ERROR_POPUP=0 not shown" "problem 'The weapons.meta file dlc_fill343:/common/data/ai/weapons.meta and 529 more were not loaded: the game.s room for weapons.meta files, 512, is full - the array has less room than the 1024 TweaksV gave it (another mod may have changed its limit after TweaksV).' && log_has 'Problem after the start-up summary not shown (ERROR_POPUP=0): '"
+check "the report, word for word: the array's room, less than the part gave it; with ERROR_POPUP=0 not shown" "problem 'The weapons.meta file dlc_fill343:/common/data/ai/weapons.meta and 529 more were not loaded: the game.s room for weapons.meta files, 512, is full - the array has less room than the 1024 TweaksV gave it (another mod may have changed its limit after TweaksV).' && log_has 'Finding not shown (ERROR_POPUP=0): '"
 
 echo "== WI13 no code may be changed (Windows' dynamic code policy; test build, ERROR_POPUP=1): both jobs reported, nothing written"
 fresh_ini; setkey ERROR_POPUP 1; run_test nodyncode

@@ -527,5 +527,21 @@ check "the weapon infos' half done, the immediates raised and the loader hooked;
 fresh_ini; out=$(TWEAKSV_TEST_WEAPON_HALF_THROWS=1 game full_game.exe)
 check "the release build ignores TWEAKSV_TEST_WEAPON_HALF_THROWS: both halves started, no TEST BUILD line, no problem" "has 'weapon infos: limits 1024 1024, loader hooked' && has 'wc: loads 17 moved 0 game 0 other' && parts_after && log_lacks 'TEST BUILD' && log_lacks 'PROBLEM'"
 
+echo "== I19 the reports after the start-up summary, test build, ERROR_POPUP=1: a heading and a last line per report, each in a box of its own, 3 boxes each at most"
+# late_ini: TweaksV.ini for the test build's boxes, with TEST_DUMP_SCRIPT, so that each placement of the fake's latefailures is a problem
+late_ini() { fresh_ini; setkey ERROR_POPUP 1; setkey ENABLED 0 BLIPS; addkey TEST_DUMP_SCRIPT blip_controller; }
+NO_BOX='TEST BUILD: message box not shown (TWEAKSV_TEST_NO_BOXES=1): '
+PART_BOX="${NO_BOX}TweaksV: a part stopped working after the start-up: \.\.\. The game continues without the affected parts\."
+REFUSED_BOX="${NO_BOX}TweaksV: WeaponLimits refused files the game has no room for: \.\.\. The game continues without the files refused\."
+SUMMARY_BOX="${NO_BOX}TweaksV could not apply everything: \.\.\. The game continues without the affected parts\."
+NOT_SAVED='PROBLEM: TEST_DUMP_SCRIPT: Script-blip_controller-[0-9]*.bin was not saved: its code length'
+late_ini; out=$(TWEAKSV_TEST_GUARD_ROOM=1 ASI=TweaksV_test.asi game full_game.exe wcmount latefailures 5)
+check "a guard's refusal: a box of its own, with its own heading and last line, its finding not counted as a problem" "[ \$(count '$REFUSED_BOX') -eq 1 ] && [ \$(count 'Showing a finding (1 finding(s))\.') -eq 1 ]"
+check "then 5 problems, 2 s apart: 3 boxes all the same, each of a part that stopped working, then lines, none shown" "[ \$(count '$NOT_SAVED') -eq 5 ] && [ \$(count 'Showing a problem after the start-up summary (1 problem(s))\.') -eq 3 ] && [ \$(count '$PART_BOX') -eq 3 ] && [ \$(count 'Problem after the start-up summary not shown: 3 message boxes were shown already this session\.') -eq 2 ]"
+late_ini; setkey HEAP_SIZE 5000; out=$(TWEAKSV_TEST_GUARD_ROOM=1 ASI=TweaksV_test.asi game full_game.exe wcmount)
+check "the start-up's problem in the summary's box, its heading and last line; the guard's finding not among them" "log_has 'Showing the start-up summary (1 problem(s))\.' && [ \$(count '$SUMMARY_BOX') -eq 1 ] && [ \$(count '$REFUSED_BOX') -eq 1 ]"
+fresh_ini; out=$(TWEAKSV_TEST_GUARD_ROOM=1 ASI=TweaksV_test.asi game full_game.exe wcmount)
+check "ERROR_POPUP=0: the finding logged, no box, its line says so" "log_has 'PROBLEM: Weapon component files are refused this session' && log_line 'Finding not shown (ERROR_POPUP=0): 1 finding(s), see above\.\$' && log_lacks 'message box not shown' && log_lacks 'Start-up summary not shown'"
+
 echo
 echo "INTEGRATION SCENARIOS: $pass passed, $fail failed"

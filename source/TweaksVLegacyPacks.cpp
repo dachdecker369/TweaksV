@@ -528,7 +528,7 @@ namespace TweaksV
 				problem += " (TweaksV.log says why): " + Named(check.foldersNamed, check.foldersNotRead) + ".";
 			}
 			if (!problem.empty())
-				ReportFailure(kTag, problem);
+				ReportFinding(kTag, Finding::LegacyPacks, problem);
 			if (check.diagnostic)
 			{
 				char numbers[96];

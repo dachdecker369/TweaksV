@@ -356,7 +356,7 @@
 //   lpbadname          makes mods\lpbad<U+D800>.rpf, a legacy archive whose name is not valid UTF-16 (an unpaired surrogate), before
 //                      TweaksV starts, and keeps it open with delete on close, so it goes when the fake ends - however it ends
 //   lpwait             waits up to 40 s for the check's last line in TweaksV.log, or its problem that it is not done, then 1.5 s
-//                      for the box of a problem after the start-up summary; reported as "legacy packs: done" or "legacy packs: no
+//                      for the box of its problem; reported as "legacy packs: done" or "legacy packs: no
 //                      last line in 40 s"
 //   lpfree             once lpwait has waited, each pack lpmake and lpmany made, and the folder it lies in, opened without sharing,
 //                      which fails while any handle is open on it - the check's on a pack, a walk's on a folder; reported as "lp: all
@@ -437,6 +437,9 @@
 //   sbp1noexec, sba1noexec
 //                  the function's page not executable while TweaksV starts, so that MinHook refuses to hook it
 // [late boxes]
+// The boxes after the start-up summary (TweaksVSummary):
+//   latefailures N  once everything else has run, the script program placed N times, 2 s apart, with a code length past what
+//                   TEST_DUMP_SCRIPT copies: with that key each placement is a problem, far enough from the next for a box of its own
 // [light capacity]
 // [vehicle model budget]
 // [ped model budget]
@@ -1306,7 +1309,7 @@ static void WeaponInfosLoadAsAsked(int argc, wchar_t** argv)
 			WeaponInfosLoadNamed(name);
 		}
 	if (g_weaponInfosRefused == 0 || !WeaponInfosAwait(" not loaded: the game's room for weapons.meta files, ", 1, 20000) ||
-		!WeaponInfosAwait("after the start-up summary", 1, 5000) || !HasOption(argc, argv, L"wilater"))
+		!WeaponInfosAwait(" finding(s)", 1, 5000) || !HasOption(argc, argv, L"wilater"))
 		return;
 	for (int i = 1; i <= 3; i++)
 	{
@@ -3815,8 +3818,7 @@ static void LpSetup(int argc, wchar_t** argv)
 }
 
 // lpwait: the check's last line in TweaksV.log - or its problem that it is not done - read as TweaksV writes it, every 20 ms, on from
-// where the last read ended, for 40 s at most; then 1.5 s for the box of a problem after the start-up summary, which comes a second
-// after the problem.
+// where the last read ended, for 40 s at most; then 1.5 s for the box of its problem, which comes a second after the problem.
 static bool LpFound(const char* bytes, size_t size, const char* text)
 {
 	const size_t length = strlen(text);
@@ -6778,8 +6780,10 @@ int wmain(int argc, wchar_t** argv)
 		if (!HasOption(argc, argv, L"wcearly") && !HasOption(argc, argv, L"wcempty"))
 			WeaponComponentsMakePool();
 		WeaponComponentsMountPacks(argc, argv);
-		if (g_weaponComponentsLoaded < g_weaponComponentsMounted || HasOption(argc, argv, L"wcearly"))	// a file refused, or the pool made
-			WeaponComponentsAwait("start-up summary", 1, 3000);	// without the redirect: up to 3 s for the box, or the line that it is not shown
+		if (g_weaponComponentsLoaded < g_weaponComponentsMounted)	// a file refused: up to 3 s for the box, or the line that it is not shown
+			WeaponComponentsAwait(" finding(s)", 1, 3000);
+		else if (HasOption(argc, argv, L"wcearly"))	// the pool made without the redirect: the same for its problem
+			WeaponComponentsAwait("start-up summary", 1, 3000);
 	}
 	SirenIdsLater();
 	if (HasOption(argc, argv, L"scdraw"))
@@ -6822,6 +6826,17 @@ int wmain(int argc, wchar_t** argv)
 	// [static bounds]
 	StaticBoundsActions(argc, argv);
 	// [late boxes]
+	for (int i = 2; i + 1 < argc; i++)
+		if (wcscmp(argv[i], L"latefailures") == 0)
+			for (int n = _wtoi(argv[i + 1]); n > 0; n--)
+			{
+				using Resolve = unsigned char (*)(unsigned char*);
+				for (size_t k = 0; k < kFakeNatives; k++)
+					g_blipController.natives[k] = g_fakeNatives[k].hash;
+				g_blipController.program.codeLength = (16u << 20) + 1;
+				reinterpret_cast<Resolve>(const_cast<unsigned char*>(Rel32Target(g_scriptCallSite)))(reinterpret_cast<unsigned char*>(&g_blipController.program));
+				Sleep(2000);
+			}
 	// [light capacity]
 	// [vehicle model budget]
 	// [ped model budget]

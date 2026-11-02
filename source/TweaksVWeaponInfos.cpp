@@ -25,7 +25,7 @@
 //     count has reached the room - the room the part gave the array, or the array's own while that is less - is
 //     refused: the game's loader is not called, so nothing is written past the block. The refusals are counted and
 //     the first refused file's name is kept, read bounded; 10 seconds after the first, off the game's thread, they
-//     are reported once - in the start-up summary or in a box of their own (TweaksVSummary) - and later ones are
+//     are reported once, a finding in a box of its own (TweaksVSummary), and later ones are
 //     logged. A test build gives the guard the game's own room instead, with TWEAKSV_TEST_GUARD_ROOM=1 (GuardRoom);
 //   - with DIAGNOSTIC_MODE=1 every site and every write is logged, the guard writes a line per file, before the
 //     game's loader runs, and a measurement reads the count and the capacity back - after IsReadable, 16 bits each,
@@ -439,7 +439,7 @@ namespace TweaksV
 		}
 
 		// The report, on a thread of its own 10 seconds after the first refusal and then every minute while more come:
-		// the first time a problem - the start-up summary's, or a box of its own after it - and then a line. The thread
+		// the first time a finding, in a box of its own, and then a line. The thread
 		// waits for the event the first refusal sets, after it kept the file's name and its room.
 		uint64_t Refusals()
 		{
@@ -456,7 +456,7 @@ namespace TweaksV
 				g_reported = true;
 				const std::string advice = g_refusedRoom < g_room ? " - the array has less room than the " + std::to_string(g_room) +
 					" TweaksV gave it (another mod may have changed its limit after TweaksV)." : g_advice;
-				ReportFailure(kTag, std::string("The weapons.meta file ") + g_firstRefused +
+				ReportFinding(kTag, Finding::RefusedFiles, std::string("The weapons.meta file ") + g_firstRefused +
 					(refused == 1 ? " was" : " and " + std::to_string(refused - 1) + " more were") + " not loaded: " + room + advice);
 				return;
 			}
