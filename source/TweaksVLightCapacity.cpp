@@ -9,13 +9,14 @@
 // of these layers a mod load reaches:
 //   DIAGNOSTIC_MODE  the measurement, and nothing is looked for without it: a thread reads the game's counters every 10 ms,
 //                    aligned values of its .data, and keeps each one's most, of the minute and of the session; the jump a
-//                    job's full list takes leads through a counting stub, the module's one write; 10 seconds in, and then
-//                    every minute while the numbers change, the log says how far each layer filled, how many lights the jobs
-//                    refused and what the siren settings ask for. A number seen past its room is a line of its own at once
+//                    job's full list takes leads through a counting stub, the module's one write, unless the game's frames have
+//                    begun and its threads may run it; 10 seconds in, and then every minute while the numbers change, the log says
+//                    how far each layer filled, how many lights the jobs refused and what the siren settings ask for. A number
+//                    seen past its room is a line of its own at once
 //   DRY_RUN          everything found and checked and the sampling as ever; the jump left as it is, so the refused lights are
 //                    not counted
 // All 22 patterns are found first, those a raise will use with them, and every site checked as a writing half would: the stores'
-// and the lists' distances, each site naming what the others name, every address inside the game, every value read aligned and
+// and the lists' distances, the stores' references by a scan, each site naming what the others name, every address inside the game, every value read aligned and
 // readable; the constants the patterns pin are compared when TweaksV is compiled. A pattern missing, a site not as expected, a
 // thread that cannot start or a stub that cannot be made is logged, not reported - the measurement is an aid (NOTES.md, T-DIAG).
 // The stub runs on the game's worker threads, so it counts with a lock instruction into a 64-bit counter, keeps every register,
@@ -66,6 +67,7 @@ namespace TweaksV
 			return *kSitePatterns[site];
 		}
 		constexpr size_t kG1Matches = 2;	// the corona store's check, in two functions
+		constexpr size_t kStoreReferences = 3;	// the places that load each of the frame's two stores: the reset, the drain and the constructor
 
 		// What a light and a corona take, and the room in each layer. The stores' come from A1's distances, which the module checks;
 		// the vehicles' 300 is in no pattern: arrays of that length, each with its count right behind it (PATTERNS.md).
@@ -98,7 +100,7 @@ namespace TweaksV
 		constexpr size_t kCheckedPointerAt = 3, kRayTracedLimitAt = 14;											// F1
 		constexpr size_t kUploadRecordsImmAt = 11, kUploadImmAt = 16, kUploadCallAt = 20;						// F2
 		constexpr size_t kReflectionLimitAt = 7;																// F3
-		constexpr size_t kCoronaCountRead = 2, kCoronaLimitAt = 9;												// G1
+		constexpr size_t kCoronaCountRead = 2, kCoronaLimitAt = 9, kCoronaAddLimitAt = 10;						// G1; G2 the limit
 
 		// Every constant the measurement counts by is the one its pattern pins.
 		static_assert(PatternHolds(P(kB1), 0, { 0x69, 0x05 }) && PatternHolds(P(kB1), kVehiclesAt + 4, { 0xCD, 0xCC, 0xCC, 0xCC, 0x05, 0x99, 0x99, 0x99, 0x19, 0x3D, 0x32, 0x33, 0x33, 0x33, 0x77 }),
@@ -118,7 +120,7 @@ namespace TweaksV
 		static_assert(kSceneBuffer == kSceneRoom * kLightBytes, "TweaksV: a scene store's buffer holds 1024 lights");
 		static_assert(PatternImm32(P(kF1), kRayTracedLimitAt) == kRayTracedRoom - 1 && PatternImm32(P(kF2), kUploadRecordsImmAt) == kUploadRecordsAt && PatternImm32(P(kF2), kUploadImmAt) == kUploadRoom &&
 			PatternImm32(P(kF3), kReflectionLimitAt) == kReflectionRoom - 1, "TweaksV: G-E-F1 checks against 1023, G-E-F2 uploads 512 at +0x70E0, G-E-F3 checks against 767");
-		static_assert(PatternImm32(P(kG1), kCoronaLimitAt) == kCoronaRoom - 1 && PatternImm32(P(kG2), 3) == kCoronaCountAt && PatternImm32(P(kG2), 10) == kCoronaRoom - 1 &&
+		static_assert(PatternImm32(P(kG1), kCoronaLimitAt) == kCoronaRoom - 1 && PatternImm32(P(kG2), 3) == kCoronaCountAt && PatternImm32(P(kG2), kCoronaAddLimitAt) == kCoronaRoom - 1 &&
 			kCoronaCountAt == kCoronaRoom * kCoronaBytes, "TweaksV: G-E-G1 and G-E-G2 check the corona store against 1087, its count right behind its 1088 coronas");
 		static_assert(PatternImm32(P(kH1), 1) == kWorkerFrame && PatternByte(P(kH2), 4) == kScratchAt && kJobBytes <= kWorkerFrame - kScratchAt,
 			"TweaksV: G-E-H1 and G-E-H2 give a job's scratch the worker's frame from +0x50, which holds it");
@@ -145,7 +147,7 @@ namespace TweaksV
 			const uint8_t* lightPointer = nullptr;		// a qword: where the jobs write the next lights
 			const uint8_t* sceneCount = nullptr;		// a dword: the scene store being filled
 			const uint8_t* renderCount = nullptr;		// a dword: the one the frame draws
-			const uint8_t* sortMark = nullptr;			// a byte: the sort list marked, once the store has passed its room
+			const uint8_t* sortMark = nullptr;			// a byte the store's add sorts its list by; who sets it, and when, the research does not say
 			const uint8_t* rayTraced = nullptr;			// a dword each, kRayTracedList bytes apart: the two ray traced lists' counts
 			const uint8_t* reflections = nullptr;		// three dwords each, kReflectionBuffer bytes apart: the reflection lists' counts
 			const uint8_t* coronas = nullptr;			// a dword: the corona store's count
@@ -203,12 +205,35 @@ namespace TweaksV
 			return target;
 		}
 
+		// "the scene store's limit at RVA ... holds 1023 (N-1, G-E-D1) -> game size 1024", as the relocation core logs a limit (SPECIFICATIONS 6.3).
+		std::string LimitLine(const char* what, const uint8_t* at, uint32_t room, Site site)
+		{
+			return std::string(what) + " at " + DescribeAddress(at) + " holds " + std::to_string(room - 1) + " (N-1, " + P(site).label + ") -> game size " + std::to_string(room);
+		}
+
 		// The sites' matches, as FindAll and FindOnce found them.
 		struct Matches
 		{
 			uint8_t* at[kSites] = {};
 			const uint8_t* secondG1 = nullptr;
 		};
+
+		// True unless the game's code loads a store from a fourth place: the frame's reset, the drain and the constructor are all the research
+		// found. The scan sees a lea or a store of a pointer: fewer than three is a fact for the boot and refuses nothing, since the research
+		// gives the constructor's two by their addresses, not their instructions.
+		bool CheckStoreReferences(const char* what, const uint8_t* store)
+		{
+			const std::vector<uint8_t*> references = Scanner::FindRipRelativeReferences(store, kStoreReferences + 1);
+			const std::string places = references.size() > kStoreReferences ? std::to_string(kStoreReferences + 1) + " places or more" : std::to_string(references.size()) + " places";
+			std::string list;
+			for (size_t i = 0; i < references.size(); i++)
+				list += (i == 0 ? "" : i + 1 == references.size() ? " and " : ", ") + DescribeAddress(references[i]);
+			Note(std::string("the ") + what + " at " + DescribeAddress(store) + " is referenced in " + places + " of the game's code: " + list);
+			if (references.size() <= kStoreReferences)
+				return true;
+			return Fail(std::string("the game's code references the ") + what + " at " + DescribeAddress(store) + " in " + places + ", not " + std::to_string(kStoreReferences) +
+				" - the frame's reset, the drain and the constructor, as the research found them.");
+		}
 
 		// A1, A2, A3: the frame's two stores and their write pointers, as the reset sets them and the drain reads them; the stores' sizes
 		// are their distances, the write pointers lying right behind the lights' store.
@@ -254,7 +279,7 @@ namespace TweaksV
 			if (lightStore != g_reads.lightStore || lightPointer != g_reads.lightPointer)
 				return Fail("the drain's lights name the store at " + DescribeAddress(lightStore) + " and the write pointer at " + DescribeAddress(lightPointer) +
 					", not those of the frame's reset" + At(P(kA3)) + ".");
-			return true;
+			return CheckStoreReferences("vehicle coronas' store", g_reads.coronaStore) && CheckStoreReferences("vehicle lights' store", g_reads.lightStore);
 		}
 
 		// B1, B2, B3: a job's 5 vehicles, and the size each kick gives its scratch.
@@ -317,9 +342,9 @@ namespace TweaksV
 			const uint8_t* const sortList = Rel32Target(store + kSortListAt);
 			const uint8_t* const sortStore = Rel32Target(store + kSortStoreAt);
 			g_reads.sortMark = sortCount + sizeof(uint32_t);
-			Note("the scene store's limit at " + DescribeAddress(store + kSceneLimitAt) + " holds " + std::to_string(kSceneRoom - 1) + " (N-1) -> game size " + std::to_string(kSceneRoom) + ": its count at " +
+			Note(LimitLine("the scene store's limit", store + kSceneLimitAt, kSceneRoom, kD1) + ": its count at " +
 				DescribeAddress(g_reads.sceneCount) + ", its sort list at " + DescribeAddress(sortList) + ", the sort list's count at " + DescribeAddress(sortCount) + ", its mark at " +
-				DescribeAddress(g_reads.sortMark) + ", an index stored as a byte at " + DescribeAddress(store + kByteStoreAt) + ": 88 04 CA" + At(P(kD1)));
+				DescribeAddress(g_reads.sortMark) + ", an index stored as a byte at " + DescribeAddress(store + kByteStoreAt) + ": 88 04 CA");
 			if (!DataOf<uint32_t>("scene store's count", g_reads.sceneCount, 1, kD1) || !InsideGame("scene store's sort list", sortList, kSortEntries * kSortEntryBytes, kD1) ||
 				!DataOf<uint8_t>("scene store's sort mark", g_reads.sortMark, 1, kD1))
 				return false;
@@ -374,8 +399,7 @@ namespace TweaksV
 
 			const uint8_t* const checked = m.at[kF1];
 			const uint8_t* const checkedPointer = Rel32Target(checked + kCheckedPointerAt);
-			Note("the ray traced list's limit at " + DescribeAddress(checked + kRayTracedLimitAt) + " holds " + std::to_string(kRayTracedRoom - 1) + " (N-1) -> game size " + std::to_string(kRayTracedRoom) +
-				", its current pointer at " + DescribeAddress(checkedPointer) + At(P(kF1)));
+			Note(LimitLine("the ray traced list's limit", checked + kRayTracedLimitAt, kRayTracedRoom, kF1) + ", its current pointer at " + DescribeAddress(checkedPointer));
 			if (checkedPointer != listPointer)
 				return Fail("the ray traced list's check reads the current pointer at " + DescribeAddress(checkedPointer) + ", not the one at " + DescribeAddress(listPointer) + At(P(kF1)) + ".");
 
@@ -385,7 +409,7 @@ namespace TweaksV
 				return false;
 			Note("the ray traced upload at " + DescribeAddress(upload) + ": " + std::to_string(kUploadRoom) + " lights at " + Hex(kUploadRecordsAt) + " of its object, the builder's call at " +
 				DescribeAddress(upload + kUploadCallAt) + " -> " + DescribeAddress(builder) + At(P(kF2)));
-			Note("the reflection lists' limit at " + DescribeAddress(m.at[kF3] + kReflectionLimitAt) + " holds " + std::to_string(kReflectionRoom - 1) + " (N-1) -> game size " + std::to_string(kReflectionRoom) + At(P(kF3)));
+			Note(LimitLine("the reflection lists' limit", m.at[kF3] + kReflectionLimitAt, kReflectionRoom, kF3));
 			return true;
 		}
 
@@ -395,13 +419,13 @@ namespace TweaksV
 		{
 			g_reads.coronas = Rel32Target(m.at[kG1] + kCoronaCountRead);
 			const uint8_t* const second = Rel32Target(m.secondG1 + kCoronaCountRead);
-			Note("the corona store's two limits at " + DescribeAddress(m.at[kG1] + kCoronaLimitAt) + " and " + DescribeAddress(m.secondG1 + kCoronaLimitAt) + " hold " + std::to_string(kCoronaRoom - 1) + " (N-1) -> game size " +
-				std::to_string(kCoronaRoom) + ", their counts at " + DescribeAddress(g_reads.coronas) + " and " + DescribeAddress(second) + At(P(kG1)));
+			Note("the corona store's two limits at " + DescribeAddress(m.at[kG1] + kCoronaLimitAt) + " and " + DescribeAddress(m.secondG1 + kCoronaLimitAt) + " hold " + std::to_string(kCoronaRoom - 1) + " (N-1, " + P(kG1).label + ") -> game size " +
+				std::to_string(kCoronaRoom) + ", their counts at " + DescribeAddress(g_reads.coronas) + " and " + DescribeAddress(second));
 			if (second != g_reads.coronas)
 				return Fail("the corona store's two checks read different counts: " + DescribeAddress(g_reads.coronas) + " and " + DescribeAddress(second) + At(P(kG1)) + ".");
 			if (!DataOf<uint32_t>("corona store's count", g_reads.coronas, 1, kG1))
 				return false;
-			Note("the drain's add to the corona store at " + DescribeAddress(m.at[kG2]) + ": its count at " + Hex(kCoronaCountAt) + " of the store, its limit " + std::to_string(kCoronaRoom - 1) + " (N-1)" + At(P(kG2)));
+			Note("the drain's add to the corona store at " + DescribeAddress(m.at[kG2]) + ": its count at " + Hex(kCoronaCountAt) + " of the store, " + LimitLine("its limit", m.at[kG2] + kCoronaAddLimitAt, kCoronaRoom, kG2));
 			Note("the worker's frame at " + DescribeAddress(m.at[kH1]) + " holds " + Hex(kWorkerFrame) + At(P(kH1)));
 			Note("a job's scratch from the worker's rsp+" + Hex(kScratchAt) + " at " + DescribeAddress(m.at[kH2]) + At(P(kH2)));
 			return true;
@@ -421,7 +445,7 @@ namespace TweaksV
 		{
 			std::atomic<uint32_t> most[kNumbers] = {};
 			std::atomic<uint64_t> samples{ 0 };
-			std::atomic<uint64_t> sortMarked{ 0 };		// samples with the sort list marked
+			std::atomic<uint64_t> markedAtRoom{ 0 };	// samples with the scene store at its room and the sort list marked: true whatever sets the mark
 			std::atomic<uint64_t> pastUpload{ 0 };		// samples with the ray traced list past what its upload takes
 		};
 		Sampled g_sampled;
@@ -483,7 +507,8 @@ namespace TweaksV
 			Keep(kVehicles, Load<uint32_t>(reads.vehicles));
 			KeepPointer(kVehicleLights, reads.lightPointer, reads.lightStore, kLightBytes, "vehicle lights'");
 			KeepPointer(kVehicleCoronas, reads.coronaPointer, reads.coronaStore, kCoronaBytes, "vehicle coronas'");
-			Keep(kSceneLights, std::max(Load<uint32_t>(reads.renderCount), Load<uint32_t>(reads.sceneCount)));
+			const uint32_t scene = std::max(Load<uint32_t>(reads.renderCount), Load<uint32_t>(reads.sceneCount));
+			Keep(kSceneLights, scene);
 			const uint32_t rayTraced = std::max(Load<uint32_t>(reads.rayTraced), Load<uint32_t>(reads.rayTraced + kRayTracedList));
 			Keep(kRayTraced, rayTraced);
 			uint32_t reflections = 0;
@@ -491,11 +516,11 @@ namespace TweaksV
 				reflections = std::max({ reflections, Load<uint32_t>(reads.reflections + i * sizeof(uint32_t)), Load<uint32_t>(reads.reflections + kReflectionBuffer + i * sizeof(uint32_t)) });
 			Keep(kReflections, reflections);
 			Keep(kCoronas, Load<uint32_t>(reads.coronas));
-			if (Load<uint8_t>(reads.sortMark) != 0)
-				g_sampled.sortMarked.fetch_add(1, std::memory_order_relaxed);
+			g_sampled.samples.fetch_add(1, std::memory_order_relaxed);	// first, and read last, so that a reading's others hold no more samples than it says
+			if (scene == kSceneRoom && Load<uint8_t>(reads.sortMark) != 0)
+				g_sampled.markedAtRoom.fetch_add(1, std::memory_order_relaxed);
 			if (rayTraced > kUploadRoom && rayTraced <= kRayTracedRoom)
 				g_sampled.pastUpload.fetch_add(1, std::memory_order_relaxed);
-			g_sampled.samples.fetch_add(1, std::memory_order_relaxed);
 		}
 
 		// The sampling thread: a sample every 10 ms, and a line of its own at the first light a job refused, so that the moment shows.
@@ -526,7 +551,7 @@ namespace TweaksV
 		{
 			uint32_t most[kNumbers] = {};
 			uint64_t samples = 0;
-			uint64_t sortMarked = 0;
+			uint64_t markedAtRoom = 0;
 			uint64_t pastUpload = 0;
 			uint64_t refused = 0;
 		};
@@ -582,20 +607,20 @@ namespace TweaksV
 
 		bool SameNews(const Marks& a, const Marks& b)
 		{
-			return memcmp(a.most, b.most, sizeof(a.most)) == 0 && (a.sortMarked != 0) == (b.sortMarked != 0) && (a.pastUpload != 0) == (b.pastUpload != 0) && a.refused == b.refused;
+			return memcmp(a.most, b.most, sizeof(a.most)) == 0 && (a.markedAtRoom != 0) == (b.markedAtRoom != 0) && (a.pastUpload != 0) == (b.pastUpload != 0) && a.refused == b.refused;
 		}
 
 		// Changes with every reading that has something new to say: the first; a most of the minute or of the session other than the
-		// last; lights refused; the sort list marked or the upload passed where they were not; the settings read anew. How many samples
+		// last; lights refused; the store marked at its room or the upload passed where they were not; the settings read anew. How many samples
 		// saw what is no news by itself.
 		uint64_t Numbers()
 		{
 			Marks minute;
 			for (size_t i = 0; i < kNumbers; i++)
 				minute.most[i] = g_sampled.most[i].exchange(0, std::memory_order_relaxed);
-			minute.samples = g_sampled.samples.exchange(0, std::memory_order_relaxed);
-			minute.sortMarked = g_sampled.sortMarked.exchange(0, std::memory_order_relaxed);
+			minute.markedAtRoom = g_sampled.markedAtRoom.exchange(0, std::memory_order_relaxed);
 			minute.pastUpload = g_sampled.pastUpload.exchange(0, std::memory_order_relaxed);
+			minute.samples = g_sampled.samples.exchange(0, std::memory_order_relaxed);
 			const uint64_t refused = ReadRefused();
 			minute.refused = refused - g_session.refused;
 
@@ -603,7 +628,7 @@ namespace TweaksV
 			for (size_t i = 0; i < kNumbers; i++)
 				session.most[i] = std::max(session.most[i], minute.most[i]);
 			session.samples += minute.samples;
-			session.sortMarked += minute.sortMarked;
+			session.markedAtRoom += minute.markedAtRoom;
 			session.pastUpload += minute.pastUpload;
 			session.refused = refused;
 
@@ -629,8 +654,8 @@ namespace TweaksV
 				return std::string(kNames[which]) + " " + std::to_string(marks.most[which]) + " of " + std::to_string(kRoom[which]);
 			};
 			const uint32_t rayTraced = marks.most[kRayTraced];
-			return number(kVehicles) + ", " + number(kVehicleLights) + ", " + number(kVehicleCoronas) + ", " + number(kSceneLights) + " (a wrong slot replaced in " +
-				std::to_string(marks.sortMarked) + " of " + std::to_string(marks.samples) + " samples), " + number(kRayTraced) + " (past " + std::to_string(kUploadRoom) + " in " +
+			return number(kVehicles) + ", " + number(kVehicleLights) + ", " + number(kVehicleCoronas) + ", " + number(kSceneLights) + " (at its room with the sort list marked in " +
+				std::to_string(marks.markedAtRoom) + " of " + std::to_string(marks.samples) + " samples), " + number(kRayTraced) + " (past " + std::to_string(kUploadRoom) + " in " +
 				std::to_string(marks.pastUpload) + " samples" + (rayTraced > kUploadRoom ? ", by " + std::to_string(rayTraced - kUploadRoom) + " at most" : std::string()) + "), " +
 				number(kReflections) + ", " + number(kCoronas) + ", ";
 		}
@@ -705,7 +730,7 @@ namespace TweaksV
 			return block;
 		}
 
-		// The jump pointed at the stub. In DllMain: no other thread of the game runs it yet.
+		// The jump pointed at the stub. In DllMain, and with the game's frames not begun (MeasureLightCapacity): none of its threads runs it yet.
 		bool RedirectJump(uint8_t* jump, const uint8_t* block)
 		{
 			const intptr_t distance = reinterpret_cast<intptr_t>(block) - reinterpret_cast<intptr_t>(jump + kJumpSize);
@@ -761,10 +786,12 @@ namespace TweaksV
 			return;
 
 		// 3. the stub made, the summary's thread and the sampling thread started, then the jump redirected: a measurement that cannot sum
-		// up redirects nothing. A dry run redirects nothing, and the numbers are read all the same.
+		// up redirects nothing. A dry run or frames already running redirect nothing, and the numbers are read all the same.
 		uint8_t* block = nullptr;
 		const std::string site = DescribeAddress(jump) + At(P(kC1));
-		if (IsDryRun())
+		if (Load<uint64_t>(g_reads.coronaPointer) != 0)	// the reset has run: the game's worker threads may run the jump, and a rel32 being written can be read half written
+			NotCounted("the game's frames run already - its threads may run the jump while it is rewritten.");
+		else if (IsDryRun())
 		{
 			g_counting = Counting::DryRun;
 			WriteLog(kTag, "DRY_RUN: would redirect the jump at " + site + " to a counting stub - a job's refused lights are not counted.");
@@ -793,6 +820,7 @@ namespace TweaksV
 			else
 				VirtualFree(block, 0, MEM_RELEASE);	// no jump leads to it: WriteCode wrote nothing
 		}
-		Note("the lighting capacity is measured: its numbers are sampled every 10 ms and logged after 10 seconds, then every minute while they change.");
+		Note(g_sampling.load() ? "the lighting capacity is measured: its numbers are sampled every 10 ms and logged after 10 seconds, then every minute while they change." :
+			"the lighting capacity is measured, its numbers not sampled: the rest is logged after 10 seconds, then every minute while it changes.");
 	}
 }

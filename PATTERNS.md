@@ -679,10 +679,10 @@ A frame's lights pass through these layers, sirens' among them:
   A job's scratch: 0x8C00 at RVA 0xE1592B, 0xE15969 and 0xE1596F, in RVA 0xE15933 and 0xE1593D as -0x8C01 and -0xB181; 0x2580 at RVA 0xE15924; 0xB180 at RVA 0xE15944, and at a job's +0x70 at RVA 0xDE6957 and 0xF01090, which the worker does not read; the sixty jobs at RVA 0x4364710, 0xA0 bytes each.
   The 1024: 0x3FF at RVA 0x3EF6EE, 0x3FA7D0, 0x3FAF08, 0x3FD134 and 0x3FD139; 0x70000 at RVA 0x3F335F, 0x3FB230 and the static loops 0x4B6D4F, 0x4B7785 and 0x4B788A; 0x72010 at RVA 0x3A4947, 0x3F33AE and 0x3FCFA6; 0x29A0C at RVA 0x3F3385 and 0x3FB25A.
   It also sizes, in `.data`, RVA 0x3D37690 (count 0x3D38690), 0x3D3F0B0, 0x3D400C0, 0x3D401C0, 0x3D40398, 0x3D423A8 and 0x3D463B0; on the heap RVA 0x3D40378, capacity written at RVA 0x3F1329; and the stacks of RVA 0x3F2780 and 0x3FCEC0, so the scene store's 1024 is no constant to raise.
-- **Not settled:** the value of the pointer at RVA 0x2888630; bit 0 of RVA 0x289C098 (HINT: the view and occlusion tests); the name `useRealLights`; whether a job's +0x70 is read anywhere; the size of the vehicle pool; which code adds what to the scene store, 25 callers of RVA 0x3EF140.
+- **Not settled:** who sets the sort list's mark at RVA 0x3D4239C, and when: the code sorts the list past 1024 if it is set, so it may mark a list sorted or one that needs a sort, which the measurement counts only with the store at its room; the instructions of the constructor's two references to the stores, known by their addresses alone; the value of the pointer at RVA 0x2888630; bit 0 of RVA 0x289C098 (HINT: the view and occlusion tests); the name `useRealLights`; whether a job's +0x70 is read anywhere; the size of the vehicle pool; which code adds what to the scene store, 25 callers of RVA 0x3EF140.
 
 The patterns, each matching exactly once in both dumps of 2026-10-29 but `G-E-G1`, which matches exactly twice, both naming one count; looked for only with `DIAGNOSTIC_MODE=1`.
-`G-E-H1` and `G-E-H2`, and `G-E-B2`, `G-E-B3`, `G-E-C2`, `G-E-C3`, `G-E-D2`, are found for the raise a later part will make, which writes there; the measurement reads nothing through them but the constants their bytes pin.
+`G-E-H1` and `G-E-H2`, and `G-E-B2`, `G-E-B3`, `G-E-C2`, `G-E-C3`, `G-E-D2`, are found for the raise a later part will make, which writes or checks there; the measurement reads nothing through them but the constants their bytes pin.
 
 | Label | Pattern | Use | 1.0.1158.16 | RVA |
 |---|---|---|---|---|

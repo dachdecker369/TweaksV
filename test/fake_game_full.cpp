@@ -452,9 +452,11 @@
 // [light capacity]
 // The lighting capacity (TweaksVLightCapacity): its 22 sites as the patterns match them, add-to-a-job's-list as code the fake runs,
 // and its counters in the fake's data at the game's distances, all 0 until an option sets them once TweaksV has started:
-//   lcnumbers      the counters as a frame leaves them, in the first of each two buffers' but where the second's is smaller
+//   lcnumbers      the counters as a frame leaves them from before TweaksV loads, so that every sample sees them, the larger of each two
+//                  buffers' in the first and the sort list marked below the store's room; the write pointers once TweaksV has started
 //   lcsteps        those, and once the first summary is in the log other numbers, some lower, the larger of each two in the second
-//                  buffer and the sort list marked, held 3 s
+//                  buffer and the sort list marked with the store at its room, held 3 s
+//   lcrunning      the write pointers set before TweaksV loads, as the game's frames leave them once they run
 //   lcfull         every counter at its room, the write pointers at their stores' ends
 //   lcpast         every counter one past its room, the write pointers one record past their stores' ends: held until the log has
 //                  the lights' pointer's line and every number's line, or 10 s
@@ -472,6 +474,9 @@
 //   lcedge NAME    with rtjumpunread: the site whose match ends where this rel32 starts copied to the end of g_rtEdge's first page and the
 //                  rel32 on the page rtjumpunread takes away, the site's first byte a NOP
 //   lcstartvalues  the lists' start values not 0, 0, 200, 80
+//   lcfourthcoronas, lcfourthlights
+//                  a fourth lea of that store, its first byte 48 only then
+//   lcnoctor       the constructor's two leas not as the scan sees one: their first bytes CC
 //   lcg1once       G-E-G1 only once
 //   lcg1thrice     G-E-G1 a third time, in the twin
 // [population]
@@ -1248,11 +1253,13 @@ volatile unsigned char g_lcCoronaCheckToo[] = { 0x8B, 0x0D, 0, 0, 0, 0, 0x48, 0x
 volatile unsigned char g_lcCoronaAdd[] = { 0x44, 0x8B, 0x81, 0x00, 0xCC, 0x00, 0x00, 0x49, 0x81, 0xF8, 0x3F, 0x04, 0x00, 0x00, 0x0F, 0x87, 0, 0, 0, 0, 0xCC };
 volatile unsigned char g_lcWorkerFrame[] = { 0xB8, 0x58, 0x80, 0x01, 0x00, 0xE8, 0, 0, 0, 0, 0x48, 0x29, 0xC4, 0xCC };
 volatile unsigned char g_lcWorkerCall[] = { 0x48, 0x8D, 0x44, 0x24, 0x50, 0x49, 0x89, 0x04, 0x24, 0x4C, 0x89, 0xE1, 0x41, 0xFF, 0x54, 0x24, 0x60, 0xCC };
+volatile unsigned char g_lcConstructor[] = { 0x48, 0x8D, 0x1D, 0, 0, 0, 0, 0x48, 0x8D, 0x35, 0, 0, 0, 0, 0xCC };
+volatile unsigned char g_lcExtra[] = { 0xCC, 0x8D, 0x1D, 0, 0, 0, 0, 0xCC, 0x8D, 0x35, 0, 0, 0, 0, 0xCC };
 volatile unsigned char g_lcTwin[32] = { 0xCC };
 static Site g_lcSites[] = { SITE(g_lcReset, 0), SITE(g_lcDrainCoronas, 0), SITE(g_lcDrainLights, 0), SITE(g_lcJobTest, 0), SITE(g_lcKick, 0), SITE(g_lcLastKick, 0),
 	SITE(g_lcAddToList, 0), SITE(g_lcScratch, 0), SITE(g_lcScratchLights, 0), SITE(g_lcStartValuesLoad, 0), SITE(g_lcSceneAdd, 0), SITE(g_lcByteRead, 0), SITE(g_lcRender, 0),
 	SITE(g_lcUpdate, 0), SITE(g_lcRayLists, 0), SITE(g_lcRayCheck, 0), SITE(g_lcUpload, 0), SITE(g_lcReflections, 0), SITE(g_lcCoronaCheck, 0), SITE(g_lcCoronaCheckToo, 0),
-	SITE(g_lcCoronaAdd, 0), SITE(g_lcWorkerFrame, 0), SITE(g_lcWorkerCall, 0), SITE(g_lcTwin, 0) };
+	SITE(g_lcCoronaAdd, 0), SITE(g_lcWorkerFrame, 0), SITE(g_lcWorkerCall, 0), SITE(g_lcConstructor, 0), SITE(g_lcExtra, 0), SITE(g_lcTwin, 0) };
 constexpr size_t kLcSites = sizeof(g_lcSites) / sizeof(g_lcSites[0]);
 static Site g_lcJumpRel = SITE(g_lcAddToList, 19);	// the rel32 of the jump when full, the one thing TweaksV may write
 // [population]
@@ -5017,7 +5024,41 @@ static const unsigned char* LcTarget(int argc, wchar_t** argv, const LcRef& ref)
 	return target;
 }
 
-// Before TweaksV loads: every rel32 as the game has it, but where an option asks otherwise; the sites' bytes as placed.
+// The counters as asked: each store's number by its write pointer, each list's in its two buffers.
+struct LcNumbers
+{
+	uint32_t vehicles, lights, vehicleCoronas, render, scene, ray[2], reflections[2][3], coronas;
+	uint8_t mark;
+};
+static const LcNumbers kLcFirst = { 87, 143, 512, 811, 700, { 640, 200 }, { { 10, 212, 5 }, { 100, 3, 7 } }, 900, 1 };
+static void LcSetCounts(const LcNumbers& numbers)
+{
+	LcData& data = *g_lcData;
+	data.vehicles = numbers.vehicles;
+	data.renderCount = numbers.render;
+	data.sceneCount = numbers.scene;
+	for (size_t i = 0; i < 2; i++)
+	{
+		memcpy(data.rayTraced[i], &numbers.ray[i], sizeof(uint32_t));
+		memcpy(data.reflections[i], numbers.reflections[i], sizeof(numbers.reflections[i]));
+	}
+	data.coronas = numbers.coronas;
+	data.sortMark = numbers.mark;
+}
+static void LcSetPointers(const LcNumbers& numbers)
+{
+	LcData& data = *g_lcData;
+	data.lightPointer = reinterpret_cast<uintptr_t>(data.lightStore) + uint64_t{ numbers.lights } * 0x1C0;
+	data.coronaPointer = reinterpret_cast<uintptr_t>(data.coronaStore) + uint64_t{ numbers.vehicleCoronas } * 0x30;
+}
+static void LcSet(const LcNumbers& numbers)
+{
+	LcSetCounts(numbers);
+	LcSetPointers(numbers);
+}
+
+// Before TweaksV loads: every rel32 as the game has it, but where an option asks otherwise, the first numbers but the write pointers, which say the frames run; the sites'
+// bytes as placed.
 static void LcSetUp(int argc, wchar_t** argv)
 {
 	LcData& data = *g_lcData;
@@ -5058,6 +5099,10 @@ static void LcSetUp(int argc, wchar_t** argv)
 		{ L"f2call", SITE(g_lcUpload, 21), called, 0 },
 		{ L"g1first", SITE(g_lcCoronaCheck, 2), &data.coronas, 0 },
 		{ L"g1second", SITE(g_lcCoronaCheckToo, 2), &data.coronas, 0 },
+		{ L"ctorcoronas", SITE(g_lcConstructor, 3), data.coronaStore, 0 },
+		{ L"ctorlights", SITE(g_lcConstructor, 10), data.lightStore, 0 },
+		{ L"extracoronas", SITE(g_lcExtra, 3), data.coronaStore, 0 },
+		{ L"extralights", SITE(g_lcExtra, 10), data.lightStore, 0 },
 	};
 	for (const LcRef& ref : refs)
 		SetRel32(ref.site, LcTarget(argc, argv, ref) - ref.past);
@@ -5075,6 +5120,16 @@ static void LcSetUp(int argc, wchar_t** argv)
 					SetRel32({ g_rtEdge, static_cast<int>(at) + ref.site.offset, sizeof(g_rtEdge) }, LcTarget(argc, argv, ref));
 			edge.site[0] = 0x90;
 		}
+	if (HasOption(argc, argv, L"lcfourthcoronas"))
+		g_lcExtra[0] = 0x48;
+	if (HasOption(argc, argv, L"lcfourthlights"))
+		g_lcExtra[7] = 0x48;
+	if (HasOption(argc, argv, L"lcnoctor"))
+		g_lcConstructor[0] = g_lcConstructor[7] = 0xCC;
+	if (HasOption(argc, argv, L"lcnumbers") || HasOption(argc, argv, L"lcsteps"))
+		LcSetCounts(kLcFirst);
+	if (HasOption(argc, argv, L"lcrunning"))
+		LcSetPointers(kLcFirst);
 	if (HasOption(argc, argv, L"lcg1once"))
 		g_lcCoronaCheckToo[0] = 0xCC;
 	if (HasOption(argc, argv, L"lcg1thrice"))
@@ -5092,29 +5147,6 @@ static void LcSetUp(int argc, wchar_t** argv)
 		for (size_t at = 0; at < g_lcSites[i].size && at < sizeof(g_lcPlaced[i]); at++)
 			g_lcPlaced[i][at] = g_lcSites[i].bytes[at];
 	g_lcJumpPlaced = static_cast<int32_t>(Imm32(g_lcJumpRel));
-}
-
-// The counters as asked: each store's number by its write pointer, each list's in its two buffers.
-struct LcNumbers
-{
-	uint32_t vehicles, lights, vehicleCoronas, render, scene, ray[2], reflections[2][3], coronas;
-	uint8_t mark;
-};
-static void LcSet(const LcNumbers& numbers)
-{
-	LcData& data = *g_lcData;
-	data.vehicles = numbers.vehicles;
-	data.lightPointer = reinterpret_cast<uintptr_t>(data.lightStore) + uint64_t{ numbers.lights } * 0x1C0;
-	data.coronaPointer = reinterpret_cast<uintptr_t>(data.coronaStore) + uint64_t{ numbers.vehicleCoronas } * 0x30;
-	data.renderCount = numbers.render;
-	data.sceneCount = numbers.scene;
-	for (size_t i = 0; i < 2; i++)
-	{
-		memcpy(data.rayTraced[i], &numbers.ray[i], sizeof(uint32_t));
-		memcpy(data.reflections[i], numbers.reflections[i], sizeof(numbers.reflections[i]));
-	}
-	data.coronas = numbers.coronas;
-	data.sortMark = numbers.mark;
 }
 
 // A job's list as add-to-a-job's-list reads it, and one thread's calls of it on a list of its own: 80 fit, the rest take the jump when full.
@@ -5168,12 +5200,11 @@ static wchar_t g_lcSteps[96] = L"";
 static void LcActions(int argc, wchar_t** argv)
 {
 	const size_t jobsSize = sizeof(g_lcJobs) / sizeof(g_lcJobs[0]), stepsSize = sizeof(g_lcSteps) / sizeof(g_lcSteps[0]);
-	const LcNumbers first = { 87, 143, 512, 811, 700, { 640, 200 }, { { 10, 212, 5 }, { 100, 3, 7 } }, 900, 0 };
-	const LcNumbers later = { 20, 200, 100, 811, 900, { 200, 700 }, { { 1, 2, 3 }, { 4, 5, 300 } }, 950, 1 };
+	const LcNumbers later = { 20, 200, 100, 811, 1024, { 200, 700 }, { { 1, 2, 3 }, { 4, 5, 300 } }, 950, 1 };
 	const LcNumbers full = { 300, 400, 928, 1024, 1024, { 1024, 1024 }, { { 768, 768, 768 }, { 768, 768, 768 } }, 1088, 0 };
 	const LcNumbers past = { 301, 401, 929, 1025, 1, { 1025, 0 }, { { 769, 0, 0 }, { 0, 0, 0 } }, 1089, 0 };
 	if (HasOption(argc, argv, L"lcnumbers") || HasOption(argc, argv, L"lcsteps"))
-		LcSet(first);
+		LcSetPointers(kLcFirst);
 	if (HasOption(argc, argv, L"lcfull"))
 		LcSet(full);
 	if (HasOption(argc, argv, L"lcpast"))
@@ -5282,13 +5313,13 @@ static void LcReport()
 		L"job test 0x%llX, vehicles 0x%llX, kick 0x%llX, last kick 0x%llX, add 0x%llX, scratch 0x%llX, scratch lights 0x%llX, start values 0x%llX, scene add 0x%llX, scene count 0x%llX, sort list 0x%llX, "
 		L"sort count 0x%llX, sort mark 0x%llX, byte read 0x%llX, render 0x%llX, store 0x%llX, render pointer 0x%llX, buffer counts 0x%llX, render count 0x%llX, reflections 0x%llX, reflection pointer 0x%llX, "
 		L"update 0x%llX, current pointer 0x%llX, ray lists 0x%llX, ray pointer 0x%llX, ray check 0x%llX, upload 0x%llX, reflection check 0x%llX, corona check 0x%llX, corona check too 0x%llX, corona count 0x%llX, "
-		L"corona add 0x%llX, worker frame 0x%llX, worker call 0x%llX | ",
+		L"corona add 0x%llX, worker frame 0x%llX, worker call 0x%llX, constructor 0x%llX | ",
 		g_lcJobs, g_lcSteps, rva(g_lcReset), rva(data.coronaStore), rva(&data.coronaPointer), rva(data.lightStore), rva(&data.lightPointer), rva(g_lcDrainCoronas), rva(g_lcDrainLights),
 		rva(reinterpret_cast<const void*>(&LcCalled)), rva(g_lcJobTest), rva(&data.vehicles), rva(g_lcKick), rva(g_lcLastKick), rva(g_lcAddToList), rva(g_lcScratch), rva(g_lcScratchLights),
 		rva(data.startValues), rva(g_lcSceneAdd), rva(&data.sceneCount), rva(data.sortList), rva(&data.sortCount), rva(&data.sortMark), rva(g_lcByteRead), rva(g_lcRender), rva(data.rayTraced),
 		rva(&data.renderPointer), rva(data.bufferCounts), rva(&data.renderCount), rva(data.reflections), rva(&data.reflectionPointer), rva(g_lcUpdate), rva(&data.currentPointer), rva(g_lcRayLists),
 		rva(&data.rayPointer), rva(g_lcRayCheck), rva(g_lcUpload), rva(g_lcReflections), rva(g_lcCoronaCheck), rva(g_lcCoronaCheckToo), rva(&data.coronas), rva(g_lcCoronaAdd), rva(g_lcWorkerFrame),
-		rva(g_lcWorkerCall));
+		rva(g_lcWorkerCall), rva(g_lcConstructor));
 }
 // [population]
 // The two model budgets: the data the sites lead to, reached through pointers, so that no store of this program's own code counts as a
