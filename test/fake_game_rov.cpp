@@ -60,7 +60,8 @@ static __declspec(noinline) bool FakeFindEncryption(uint32_t) { return false; }
 static __declspec(noinline) void FakeDecryptHeader(uint32_t, char*, int) { g_decryptCalls++; }
 static __declspec(noinline) void FakeDecryptHeader2(uint32_t, uint32_t, char*, int) { g_decrypt2Calls++; }
 static __declspec(noinline) void FakeDecryptHeader2Other(uint32_t, uint32_t, char*, int) { g_decrypt2Calls += 100; }
-static __declspec(noinline) bool FakeParseHeader(void*, const char*, bool, void*) { g_parseCalls++; return true; }
+constexpr DWORD kParseLastError = 0x5A5B;	// the game's, which the hook around ParseHeader must leave as it is
+static __declspec(noinline) bool FakeParseHeader(void*, const char*, bool, void*) { g_parseCalls++; SetLastError(kParseLastError); return true; }
 
 // Call sites: only rewritten, never run. They live in the executable section of the other game code
 // copies (fake_game_full.cpp), because TweaksV only searches the game's code.
@@ -455,7 +456,7 @@ void RovReport()
 		memcpy(packfile + 0x20 + 8, &table2, 8);
 		memcpy(packfile + 0x28 + 8, &count, 4);
 		findEncryption(0x4E45504F);
-		ok = ok && parse(packfile, "test.rpf", true, nullptr) && g_parseCalls == 1;
+		ok = ok && parse(packfile, "test.rpf", true, nullptr) && g_parseCalls == 1 && GetLastError() == kParseLastError;
 		uint32_t enc1 = 0, enc2 = 0, enc3 = 0, offset = 0;
 		memcpy(&enc1, entries[1] + 12, 4); memcpy(&enc2, entries[2] + 12, 4); memcpy(&enc3, entries[3] + 12, 4);
 		memcpy(&offset, packfile + 0xB4 + 8, 4);

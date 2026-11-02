@@ -222,8 +222,8 @@ fresh_ini; out=$(game full_game.exe rovopenfail); echo "      $out"
 check "the failure and the game's last error returned, the mods path the only one asked for; every hook redirects" "has 'refusal ok' && has '$FILES_OK' && has 'spellings ok, folder ok, outside ok' && has '$OPEN_OK'"
 check "each one logged without DIAGNOSTIC_MODE, by the hook that could not open it" "[ \$(count 'RageOpenV\] OpenBulk 1 could not open mods/') -eq 5 ] && [ \$(count 'RageOpenV\] OpenBulk 2 could not open mods/') -eq 2 ] && log_has 'OpenBulk 1 could not open mods/test/file.txt - the game gets that failure, not its own file.'"
 check "the first one reported, once, as a problem after the start-up summary" "[ \$(count 'PROBLEM: A file in the mods folder could not be opened - the game gets that failure, not its own file: mods/test/file.txt.') -eq 1 ] && log_has 'Problem after the start-up summary not shown (ERROR_POPUP=0): 1 problem'"
-fresh_ini; out=$(ASI=TweaksV_test.asi game full_game.exe rovopenfail)
-check "the test build, whose every line leaves a last error of its own: the failure and the game's last error returned all the same" "has 'refusal ok'"
+fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(ASI=TweaksV_test.asi game full_game.exe rovopenfail)
+check "the test build, whose every line leaves a last error of its own, with the lines of DIAGNOSTIC_MODE: the failure and the game's last error returned all the same, ParseHeader's too" "has 'refusal ok' && has '$OPEN_OK'"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe rovopenfail)
 check "DIAGNOSTIC_MODE: the same lines, none of them as served; the other functions' files served" "[ \$(count 'RageOpenV\] OpenBulk [12] could not open mods/') -eq 7 ] && log_lacks 'OpenBulk [12] served' && log_has 'DIAGNOSTIC: GetFileTime 1 served mods/test/file.txt'"
 fresh_ini; out=$(game full_game.exe rovopenfail rovflood)
