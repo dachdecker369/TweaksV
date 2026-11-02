@@ -580,7 +580,8 @@
 // The render queues (TweaksVRenderQueues), whose sites are code the fake runs only as these ask; its report "render queues: ..." and
 // its other fields only with an option that starts rq:
 //   rqload         as the game does once TweaksV has started: the inits, every pool made through its size lookup, a frame's peak held,
-//                  then the numbers fall to the lines of the findings: 14 and 0, 3 and 0, 5 and 0 in use, the most 31 and 9, 8 and 4, 11 and 3
+//                  then the numbers fall to the lines of the findings: 14 and 0, 3 and 0, 5 and 0 in use, the most 31 and 9, 8 and 4, 11 and 3;
+//                  five frames, so that the fifth flip comes back to the peak's array and its entries let their references go
 //   rqmade         the inits and the pools alone, no slot taken and no frame
 //   rqfull         rqload's frames, every pool at its capacity
 //   rqpast         the peds' array at 130, the props' at 125, and CVehicleStreamRenderGfx named 80 over VehicleStreamRender's 60, so that the
@@ -592,7 +593,10 @@
 //   rqnomake:I     pool I not made: its flag's bit 0 clear, its other bits, its value and its key set (once per option; I 0 to 5, in kRqStrides' order)
 //   rqnomanager    the draw list manager not made
 //   rqstride       each pool's stride one more than its code hands it
-//   rqstridezero   each pool's stride 0: it is being constructed
+//   rqstridezero   each pool's stride 0
+//   rqstridebrief  each pool's stride wrong for 500 ms, four times, right for 300 ms between them: more than 50 samples in all, at 31 ms each
+//                  as well as at 20, never 50 in a row
+//   rqpoolimage:I  pool I's pointer leads inside the game's .data, to memory of 0
 //   rqpoolgone:I   pool I's pointer leads to a page that cannot be read
 //   rqmanagergone  the manager's global leads to a page that cannot be read
 //   rqentriesgone  the peds' array's pointer leads to a page that cannot be read, a vehicles' array's is null, their counts set by hand, and a
@@ -601,7 +605,7 @@
 //   rqgone         once the load is done, the peds' render pool's flag cleared, the props' render pool's pointer and the manager's global
 //                  leading to a page that cannot be read: what was read stands
 //   rqdatagone     once the load is done, the page of the game's data the module reads cannot be read any more
-//   rqgrow         a new most of every family after the first summary, waited for in the log
+//   rqgrow         a new most of every family after the first summary, waited for in the log, in the last of the four arrays
 //   rqlatest       the latest numbers change after the first summary, and no most, for 5 s
 //   rqbad:WHAT:N   the site WHAT, N the pool, the family or the call it asks for, as RqSetUp has them, not as the research found it; no site runs then
 //   rqrvas         the report's "rq rvas: ..." field, with every site's RVA, for the suite to compare with the log
@@ -6252,7 +6256,8 @@ static RqPool* g_rqObjects[kRqPools] = {};
 static unsigned char g_rqSpare[0x1000];		// what a make that found no room hands back
 static unsigned char g_rqVehicleThis[0x50];	// the object the vehicles' render pool's make reads, as the game's its +0x48
 static int g_rqVehicleRenderNamed = -1;		// what the fake's configuration names CVehicleStreamRenderGfx
-static LONG g_rqMade = 0, g_rqMadeWrong = 0, g_rqNoRoom = 0, g_rqLookupCalls = 0, g_rqLookupsWrong = 0, g_rqLocks = 0, g_rqFrames = 0, g_rqRefsWrong = 0;
+static LONG g_rqMade = 0, g_rqMadeWrong = 0, g_rqNoRoom = 0, g_rqLookupCalls = 0, g_rqLookupsWrong = 0, g_rqLocks = 0, g_rqFrames = 0, g_rqRefsLetGo = 0, g_rqRefsWrong = 0;
+static LONG g_rqFaults = 0;		// the first-chance access violations the module's reads have cost, on the pages an option takes away
 static wchar_t g_rqBad[24] = L"";
 static int g_rqWhich = 0;
 static bool g_rqAsked = false, g_rqBuilt = false;
@@ -6352,6 +6357,7 @@ static __declspec(noinline) void RqFlipDone(int family)
 	for (uint32_t i = 0; i < entered.count; i++)
 	{
 		const auto refs = reinterpret_cast<uint16_t*>(reinterpret_cast<unsigned char*>(static_cast<uintptr_t>(entered.entries[i])) + kRqRefAt[family]);
+		InterlockedIncrement(&g_rqRefsLetGo);
 		if (*refs == 0)
 			InterlockedIncrement(&g_rqRefsWrong);
 		else
@@ -6456,7 +6462,7 @@ static void RqBreakSite()
 {
 	const unsigned char* const outside = ImageEnd() + 0xC0000;
 	RqFields* const fields = g_rqData.fields;
-	if (RqIs(L"rol0") || RqIs(L"rol64") || RqIs(L"add64") || RqIs(L"value") || RqIs(L"key") || RqIs(L"out") || RqIs(L"end") || RqIs(L"odd") || RqIs(L"unread"))
+	if (RqIs(L"rol0") || RqIs(L"rol64") || RqIs(L"add64") || RqIs(L"add2") || RqIs(L"value") || RqIs(L"key") || RqIs(L"out") || RqIs(L"end") || RqIs(L"odd") || RqIs(L"unread"))
 	{
 		const RqMake& make = g_rqMakes[g_rqWhich];
 		volatile unsigned char* const match = make.site + make.match;
@@ -6472,6 +6478,8 @@ static void RqBreakSite()
 			match[make.rol] = 64;
 		if (RqIs(L"add64"))
 			match[make.add] = 64;
+		if (RqIs(L"add2"))
+			match[make.add] = 2;
 		if (RqIs(L"value"))
 			RqRel32(match + make.value, &fields[g_rqWhich].key);
 		if (RqIs(L"key"))
@@ -6581,6 +6589,19 @@ static uint64_t RqDataHash()
 	return hash;
 }
 
+// A vectored handler, as any in the process: what a first-chance access violation on those pages reaches, each counted.
+static LONG CALLBACK RqCountFaults(EXCEPTION_POINTERS* info)
+{
+	const EXCEPTION_RECORD& record = *info->ExceptionRecord;
+	if (record.ExceptionCode == EXCEPTION_ACCESS_VIOLATION && record.NumberParameters >= 2)
+	{
+		const auto at = reinterpret_cast<const unsigned char*>(record.ExceptionInformation[1]);
+		if ((g_rqGone && at >= g_rqGone && at < g_rqGone + 0x10000) || (at >= g_rqDataPage && at < g_rqDataPage + sizeof(g_rqDataPage)))
+			InterlockedIncrement(&g_rqFaults);
+	}
+	return EXCEPTION_CONTINUE_SEARCH;
+}
+
 // Before TweaksV loads: every site's rel32 pointed at the game's data and the stand-ins, the options' changes, and then the sites as placed.
 static void RqSetUp(int argc, wchar_t** argv)
 {
@@ -6600,6 +6621,8 @@ static void RqSetUp(int argc, wchar_t** argv)
 				g_rqWhich = colon ? _wtoi(colon + 1) : 0;
 			}
 		}
+	if (g_rqAsked)
+		AddVectoredExceptionHandler(1, &RqCountFaults);
 	unsigned char* const carrier = SirenCountCode(&RqVehicleCarrier);
 	g_rqV2Room = SirenCountRoom(carrier, kRqV2Branch + sizeof(kRqMakeV2Branch) + 1);
 	g_rqBuilt = g_rqV2Room != 0;
@@ -6791,7 +6814,9 @@ static void RqMakeAll(int argc, wchar_t** argv)
 		vehicles[i].entries = static_cast<uint64_t*>(RqGameAllocate(static_cast<uint32_t>(g_rqData.sizes[1]) * 8, 8));
 		vehicles[i].capacity = static_cast<uint16_t>(g_rqData.sizes[1]);
 	}
-	if (!HasOption(argc, argv, L"rqnomanager"))
+	if (HasOption(argc, argv, L"rqmanagergone"))
+		g_rqData.manager = g_rqGone;
+	else if (!HasOption(argc, argv, L"rqnomanager"))
 		RqRun(g_rqManagerMade, nullptr);
 	for (int i = 0; i < kRqPools; i++)
 	{
@@ -6808,7 +6833,7 @@ static void RqMakeAll(int argc, wchar_t** argv)
 		pool->count = 0x40000000u;
 		pool->storage = static_cast<unsigned char*>(RqGameAllocate(static_cast<uint32_t>(capacity) * static_cast<uint32_t>(kRqStrides[i]), 8));
 		g_rqObjects[i] = pool;
-		RqSetPointer(i, RqHasFor(argc, argv, L"rqpoolgone", i) ? static_cast<const void*>(g_rqGone) : pool);
+		RqSetPointer(i, RqHasFor(argc, argv, L"rqpoolgone", i) ? static_cast<const void*>(g_rqGone) : RqHasFor(argc, argv, L"rqpoolimage", i) ? static_cast<const void*>(g_rqSpare) : pool);
 	}
 }
 
@@ -6825,8 +6850,16 @@ static void RqActions(int argc, wchar_t** argv)
 	const bool load = HasOption(argc, argv, L"rqload") || full || past || many || refsFull;
 	if (load || HasOption(argc, argv, L"rqmade"))
 		RqMakeAll(argc, argv);
-	if (HasOption(argc, argv, L"rqmanagergone") && g_rqData.manager)
-		g_rqData.manager = g_rqGone;
+	if (HasOption(argc, argv, L"rqstridebrief"))
+		for (int spell = 0; spell < 4; spell++)
+		{
+			for (int i = 0; i < kRqPools; i++)
+				g_rqObjects[i]->stride = kRqStrides[i] + 1;
+			Sleep(500);
+			for (int i = 0; i < kRqPools; i++)
+				g_rqObjects[i]->stride = kRqStrides[i];
+			Sleep(300);
+		}
 	if (HasOption(argc, argv, L"rqentriesgone"))
 	{
 		g_rqEntriesGone = true;
@@ -6877,10 +6910,11 @@ static void RqActions(int argc, wchar_t** argv)
 			for (int i = 0; i < kRqPools; i++)
 				if (made[i])
 					RqFreeSlots(i, peak[i] - latest[i]);
-			RqDrawFrame(made[kRqPedRender] ? 14 : 0, 2, made[kRqPropRender] ? 3 : 0, made[kRqVehicleRender] ? 5 : 0, 2000);
-			Sleep(100);
-			RqDrawFrame(made[kRqPedRender] ? 14 : 0, 2, made[kRqPropRender] ? 3 : 0, made[kRqVehicleRender] ? 5 : 0, 1500);
-			Sleep(100);
+			for (int frame = 0; frame < 4; frame++)		// the last of them, the fifth, comes back to the peak's array
+			{
+				RqDrawFrame(made[kRqPedRender] ? 14 : 0, 2, made[kRqPropRender] ? 3 : 0, made[kRqVehicleRender] ? 5 : 0, static_cast<uint16_t>(2000 - 100 * frame));
+				Sleep(100);
+			}
 		}
 	}
 	if (HasOption(argc, argv, L"rqgone"))
@@ -6897,7 +6931,8 @@ static void RqActions(int argc, wchar_t** argv)
 			RqMakeSlots(kRqPedRender, 18);
 			RqMakeSlots(kRqPropRequests, 1);
 			RqMakeSlots(kRqVehicleRender, 6);
-			RqDrawFrame(25, 3, 12, 12, 5000);
+			RqDrawFrame(1, 1, 1, 1, 100);		// the index on, past the five frames' second array to its third,
+			RqDrawFrame(25, 3, 12, 12, 5000);	// and the new most in its fourth, the last the module reads
 			RtWaitFor("the draw list's references: at most 5000 of 10368", 10000);
 		}
 		g_rqDataLeft = RqDataHash();
@@ -6920,8 +6955,8 @@ static void RqActions(int argc, wchar_t** argv)
 	}
 }
 
-// "render queues: built, sites as placed, data as left | render queues load: 66 slots through the decoding of their sites, 0 wrong, no room for 0, 8 size lookups, 0 wrong, 3
-// frames, 0 references wrong | " and with "rqrvas" the RVAs for the suite: "rq rvas: S1=0x... | ".
+// "render queues: built, sites as placed, data as left | render queues load: 66 slots through the decoding of their sites, 0 wrong, no room for 0, 8 size lookups, 0 wrong, 5
+// frames, 81 references let go, 0 wrong | render queues faults: 0 | " and with "rqrvas" the RVAs for the suite: "rq rvas: S1=0x... | ".
 static void RqReport(int argc, wchar_t** argv)
 {
 	if (!g_rqAsked)
@@ -6933,8 +6968,8 @@ static void RqReport(int argc, wchar_t** argv)
 	}
 	wprintf(L"render queues: %ls, sites %ls, data %ls | ", g_rqBuilt ? L"built" : L"NOT BUILT", RqSitesHash() == g_rqSitesPlaced ? L"as placed" : L"CHANGED",
 		!g_rqDataChanged && RqDataHash() == g_rqDataLeft ? L"as left" : L"CHANGED");
-	wprintf(L"render queues load: %ld slots through the decoding of their sites, %ld wrong, no room for %ld, %ld size lookups, %ld wrong, %ld frames, %ld references wrong | ",
-		g_rqMade, g_rqMadeWrong, g_rqNoRoom, g_rqLookupCalls, g_rqLookupsWrong, g_rqFrames, g_rqRefsWrong);
+	wprintf(L"render queues load: %ld slots through the decoding of their sites, %ld wrong, no room for %ld, %ld size lookups, %ld wrong, %ld frames, %ld references let go, %ld wrong | render queues faults: %ld | ",
+		g_rqMade, g_rqMadeWrong, g_rqNoRoom, g_rqLookupCalls, g_rqLookupsWrong, g_rqFrames, g_rqRefsLetGo, g_rqRefsWrong, g_rqFaults);
 	if (!HasOption(argc, argv, L"rqrvas"))
 		return;
 	const auto rva = [](const volatile void* at) { return static_cast<unsigned long long>(static_cast<const volatile unsigned char*>(at) - ImageBase()); };

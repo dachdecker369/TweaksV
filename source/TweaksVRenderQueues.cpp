@@ -11,15 +11,16 @@
 //   DIAGNOSTIC_MODE  the measurement, and nothing is looked for without it: a thread reads the twelve arrays' counts and capacities,
 //                    the six pools' and the references' every 20 ms, and at each new most of a family the number of different entries
 //                    in that array, which gives the entries per ped per frame; 10 seconds in, and then every minute while a most
-//                    changes, the log says how near each family has come. An array seen past its capacity is a line of the log and
-//                    nothing else
+//                    changes, the log says how near each family has come. An array seen past its capacity is a line of the log at
+//                    once, since a crash may be what comes of it, and nothing else
 //   DRY_RUN          changes nothing here: the module writes nothing to begin with
 // Every site its writing half will use is found and checked first, every value read at run time: each pool's three fields inside the
 // game's .data, side by side, with a rotation and an addend a pool's code can hold; the adds, the inits and the flips agreeing on each
 // family's arrays, index and lock; every size lookup a call into the game, all to one function. A pattern missing or a site not as
 // expected is logged, not reported - the measurement is an aid (NOTES.md, T-DIAG) - and nothing is measured. Racing the game is
 // harmless: every read of its memory goes through CopyMemorySafely, at worst one frame's count half done and a copy of pointers that
-// are only compared, and a pool's pointer is believed only when the pool's stride is the one its code hands the pool.
+// are only compared, and a pool's pointer is believed only when the pool's stride is the one its code hands the pool. What stays wrong
+// or unreadable for about a second, 50 samples in a row, is said once and not read further.
 // Written for TweaksV from the findings of its own research in the game's code (PATTERNS.md); that these queues are a limit is the
 // idea of Resource Extensions [Enhanced] by Koukol, whose plugin was not read (CREDITS.md).
 
@@ -28,6 +29,7 @@
 #include <windows.h>
 
 #include <algorithm>
+#include <atomic>
 #include <cstdint>
 #include <string>
 
@@ -73,15 +75,16 @@ namespace TweaksV
 			size_t flagAt, keyAt, rolAt, valueAt, addAt;
 			int32_t stride;			// what the make hands the pool, the proof at run time that its pointer is decoded right
 			size_t lookupCallAt;	// in the lookup's match: "call rel32", its rel32 past the match
+			int onlyAdd;			// the one add its code rotates by, or below 0 where it rotates by any
 		};
 		enum : size_t { kPedRequests, kPedRender, kPropRequests, kPropRender, kVehicleRequests, kVehicleRender, kPoolCount };
 		constexpr PoolSite kPools[kPoolCount] = {
-			{ &Pattern("U-E-S1"), &Pattern("U-E-N1"), "StreamPed req data", 3, 10, 17, 21, 36, 0x508, 18 },
-			{ &Pattern("U-E-S2"), &Pattern("U-E-N2"), "StreamPed render data", 17, 24, 31, 35, 51, 0x2E0, 18 },
-			{ &Pattern("U-E-P1"), &Pattern("U-E-N3"), "PedProp req data", 3, 10, 17, 21, 33, 0x80, 18 },
-			{ &Pattern("U-E-P2"), &Pattern("U-E-N4"), "PedProp render data", 3, 10, 17, 21, 37, 0x3C, 18 },
-			{ &Pattern("U-E-V1"), &Pattern("U-E-N5"), "CVehicleStreamRequestGfx", 3, 10, 17, 21, 37, 0x1C8, 15 },
-			{ &Pattern("U-E-V2"), &Pattern("U-E-N6"), "CVehicleStreamRenderGfx", 3, 10, 17, 21, 33, 0xBB0, 15 },
+			{ &Pattern("U-E-S1"), &Pattern("U-E-N1"), "StreamPed req data", 3, 10, 17, 21, 36, 0x508, 18, 1 },
+			{ &Pattern("U-E-S2"), &Pattern("U-E-N2"), "StreamPed render data", 17, 24, 31, 35, 51, 0x2E0, 18, -1 },
+			{ &Pattern("U-E-P1"), &Pattern("U-E-N3"), "PedProp req data", 3, 10, 17, 21, 33, 0x80, 18, -1 },
+			{ &Pattern("U-E-P2"), &Pattern("U-E-N4"), "PedProp render data", 3, 10, 17, 21, 37, 0x3C, 18, -1 },
+			{ &Pattern("U-E-V1"), &Pattern("U-E-N5"), "CVehicleStreamRequestGfx", 3, 10, 17, 21, 37, 0x1C8, 15, -1 },
+			{ &Pattern("U-E-V2"), &Pattern("U-E-N6"), "CVehicleStreamRenderGfx", 3, 10, 17, 21, 33, 0xBB0, 15, -1 },
 		};
 		consteval bool PoolsAsPinned()
 		{
@@ -105,6 +108,8 @@ namespace TweaksV
 				PatternImm32(*kPools[kVehicleRequests].make, 61) == kPools[kVehicleRequests].stride;
 		}
 		static_assert(PoolsAsPinned(), "TweaksV: each make holds its flag, key, value, rol and add where kPools has them, and hands the pool its stride; each lookup its call");
+		// U-E-S1 does not rotate with a rol by cl: it shifts left by c + add and right by c ^ 63, which is 64 - (c + add), a rotation, at an add of 1 alone.
+		static_assert(PatternHolds(*kPools[kPedRequests].make, 43, { 0x34, 0x3F }) && kPools[kPedRequests].onlyAdd == 1, "TweaksV: U-E-S1 pairs c ^ 63 with c + add");
 
 		// A pool as the game keeps it. Its count, the low 30 bits of its word, is read as the game reads it, sign-extended.
 		constexpr size_t kFieldsSize = 0x18;		// its pointer's three fields: the flag at +0, the value at +8, the key at +0x10
@@ -232,6 +237,13 @@ namespace TweaksV
 			if (add > 63)
 			{
 				why = "the " + name + "'s add at " + DescribeAddress(match + pool.addAt) + " holds " + std::to_string(add) + ", not 0 to 63" + At(*pool.make) + ".";
+				return false;
+			}
+			if (pool.onlyAdd >= 0 && add != pool.onlyAdd)
+			{
+				why = "the " + name + "'s add at " + DescribeAddress(match + pool.addAt) + " holds " + std::to_string(add) + ", not " + std::to_string(pool.onlyAdd) +
+					", the one its code rotates by" +
+					At(*pool.make) + ".";
 				return false;
 			}
 			const uint8_t* const flag = Rel32Target(match + pool.flagAt);
@@ -571,13 +583,18 @@ namespace TweaksV
 
 		constexpr DWORD kSampleMs = 20;				// three of a family's four arrays hold a whole past frame: this sees every frame up to about 150 fps
 		constexpr uint32_t kMaxEntriesRead = 4096;	// of an array at a new most: the different ones are counted among these
+		// Samples in a row, about a second: what stays wrong that long is no race with the game, and each read that fails is an access
+		// violation through every handler in the process, so that a pointer that leads nowhere is not retried for good.
+		constexpr uint32_t kGiveUpAfter = 50;
+		constexpr const char* kNotReadFurther = "not read further (see above)";
+		constexpr const char* kPastCapacity = " - PAST ITS CAPACITY: the game wrote past the array's end, a crash may follow";
 
-		enum class State : uint8_t { NotMade, CouldNotBeRead, Read, NotReadFurther };
+		enum class State : uint8_t { NotMade, Read, NotReadFurther };
 
 		struct PoolReading
 		{
 			State state = State::NotMade;
-			uint64_t object = 0;	// where its pointer led when it could not be read
+			uint32_t wrong = 0;		// samples in a row not read, or with another stride than its code hands it
 			int32_t capacity = 0;
 			int32_t latest = 0;
 			int32_t most = 0;
@@ -590,14 +607,16 @@ namespace TweaksV
 			uint32_t most = 0;
 			uint32_t capacity = 0;
 			uint32_t different = 0;
+			uint32_t wrong = 0;		// samples in a row with an array not read
 			bool entriesRead = false;
 			bool past = false;
+			bool notReadFurther = false;
 		};
 
 		struct ReferencesReading
 		{
 			State state = State::NotMade;
-			uint64_t manager = 0;	// where its global led when it could not be read
+			uint32_t wrong = 0;		// samples in a row not read
 			uint32_t most = 0;
 			uint32_t capacity = 0;
 		};
@@ -617,12 +636,13 @@ namespace TweaksV
 					return false;
 			for (size_t i = 0; i < kFamilyCount; i++)
 				if (a.arrays[i].most != b.arrays[i].most || a.arrays[i].capacity != b.arrays[i].capacity || a.arrays[i].different != b.arrays[i].different ||
-					a.arrays[i].entriesRead != b.arrays[i].entriesRead || a.arrays[i].past != b.arrays[i].past)
+					a.arrays[i].entriesRead != b.arrays[i].entriesRead || a.arrays[i].past != b.arrays[i].past || a.arrays[i].notReadFurther != b.arrays[i].notReadFurther)
 					return false;
 			return a.references.state == b.references.state && a.references.most == b.references.most && a.references.capacity == b.references.capacity;
 		}
 
 		Sites g_sites;							// set before the threads start
+		std::atomic<bool> g_stopSampling{ false };	// no summary's thread came to read for the sampling thread
 		SRWLOCK g_readingLock = SRWLOCK_INIT;
 		Reading g_published;					// what the sampling thread last read, under the lock
 		Reading g_sampled;						// the sampling thread's own
@@ -630,13 +650,27 @@ namespace TweaksV
 		Reading g_logged;						// the summary's thread's own: what the last summary said
 		uint64_t g_news = 0;
 
-		// One pool's numbers. A flag that is clear: not made yet, or gone. A stride of 0: the pool is being constructed. Any other stride
-		// than its code hands it: the pointer is not the pool's, and it is said once and not read further.
+		// True at the sample that makes kGiveUpAfter in a row not read as they should be: what they read is then read no further, said once.
+		bool GiveUp(uint32_t& wrong)
+		{
+			return ++wrong >= kGiveUpAfter;
+		}
+
+		void StopPool(PoolReading& reading, const std::string& what)
+		{
+			reading.state = State::NotReadFurther;
+			WriteLog(kTag, "DIAGNOSTIC: the pool of " + what + ": it is not read further.");
+		}
+
+		// One pool's numbers. A flag that is clear: not made yet, or gone. A read that fails, or another stride than its code hands the pool,
+		// which says that the pointer is not the pool's, or not yet or no more - the game's allocator need not zero, and a teardown may
+		// come before the flag clears - is believed in nothing: kGiveUpAfter of them in a row end the pool's reading.
 		void SamplePool(size_t i)
 		{
 			PoolReading& reading = g_sampled.pools[i];
 			if (reading.state == State::NotReadFurther)
 				return;
+			const PoolSite& pool = kPools[i];
 			struct Fields
 			{
 				uint64_t flag;		// its low byte
@@ -645,34 +679,34 @@ namespace TweaksV
 			} fields;
 			static_assert(sizeof(Fields) == kFieldsSize);
 			if (!CopyMemorySafely(&fields, g_sites.fields[i], sizeof(fields)))
+			{
+				if (GiveUp(reading.wrong))
+					StopPool(reading, std::string(pool.name) + "'s fields at " + DescribeAddress(g_sites.fields[i]) + " cannot be read");
 				return;
+			}
 			const uint64_t object = DecodePoolPointer(static_cast<uint8_t>(fields.flag), fields.value, fields.key, g_sites.rol[i], g_sites.add[i]);
 			if (!object)
 			{
 				reading.latest = 0;
+				reading.wrong = 0;
 				return;
 			}
+			const uint8_t* const at = reinterpret_cast<const uint8_t*>(static_cast<uintptr_t>(object));
 			uint8_t bytes[kPoolRead];
-			if (!CopyMemorySafely(bytes, reinterpret_cast<const void*>(static_cast<uintptr_t>(object)), sizeof(bytes)))
+			if (!CopyMemorySafely(bytes, at, sizeof(bytes)))
 			{
-				if (reading.state != State::Read)
-				{
-					reading.state = State::CouldNotBeRead;
-					reading.object = object;
-				}
+				if (GiveUp(reading.wrong))
+					StopPool(reading, std::string(pool.name) + " at " + DescribeAddress(at) + " cannot be read");
 				return;
 			}
 			const int32_t stride = ValueAt<int32_t>(bytes, kPoolStrideAt);
-			if (stride == 0)
-				return;
-			if (stride != kPools[i].stride)
+			if (stride != pool.stride)
 			{
-				reading.state = State::NotReadFurther;
-				WriteLog(kTag, std::string("DIAGNOSTIC: the pool of ") + kPools[i].name + " at " + Hex(object) + " has stride " + std::to_string(stride) + ", not " +
-					std::to_string(kPools[i].stride) +
-					": it is not read further.");
+				if (GiveUp(reading.wrong))
+					StopPool(reading, std::string(pool.name) + " at " + DescribeAddress(at) + " has stride " + std::to_string(stride) + ", not " + std::to_string(pool.stride));
 				return;
 			}
+			reading.wrong = 0;
 			const int32_t count = static_cast<int32_t>(ValueAt<uint32_t>(bytes, kPoolCountAt) << 2) >> 2;
 			reading.state = State::Read;
 			reading.capacity = ValueAt<int32_t>(bytes, kPoolCapacityAt);
@@ -699,20 +733,33 @@ namespace TweaksV
 			reading.different = different;
 		}
 
+		// A family's arrays. The first time one is seen past its capacity it is said at once, a line of the log and no box (D30), since what
+		// that does may be a crash long before the next summary, which would leave the log's last word on this family a false all-clear.
 		void SampleArrays(size_t family)
 		{
 			ArraysReading& reading = g_sampled.arrays[family];
+			if (reading.notReadFurther)
+				return;
+			const FamilySite& site = kFamilies[family];
+			bool allRead = true;
 			for (size_t i = 0; i < kArrayCount; i++)
 			{
 				const uint8_t* const array = g_sites.arrays[family] + i * kArraySize;
 				uint16_t words[2] = {};		// the count and the capacity, side by side
 				static_assert(kArrayCapacityAt == kArrayCountAt + sizeof(uint16_t));
 				if (!CopyMemorySafely(words, array + kArrayCountAt, sizeof(words)))
+				{
+					allRead = false;
 					continue;
+				}
 				if (reading.most == 0)
 					reading.capacity = words[1];
-				if (words[0] > words[1])
+				if (words[0] > words[1] && !reading.past)
+				{
 					reading.past = true;
+					WriteLog(kTag, std::string("DIAGNOSTIC: ") + site.summary + ": a frame's array at " + std::to_string(words[0]) + " entries of " + std::to_string(words[1]) +
+						kPastCapacity + ".");
+				}
 				if (words[0] > reading.most)
 				{
 					reading.most = words[0];
@@ -720,24 +767,47 @@ namespace TweaksV
 					CountDifferent(array, words[0], reading);
 				}
 			}
+			if (allRead)
+				reading.wrong = 0;
+			else if (GiveUp(reading.wrong))
+			{
+				reading.notReadFurther = true;
+				WriteLog(kTag, std::string("DIAGNOSTIC: the ") + site.what + "' arrays at " + DescribeAddress(g_sites.arrays[family]) + " cannot be read: they are not read further.");
+			}
 		}
 
 		void SampleReferences()
 		{
 			ReferencesReading& reading = g_sampled.references;
-			uint64_t manager = 0;
-			if (!CopyMemorySafely(&manager, g_sites.manager, sizeof(manager)) || !manager)
+			if (reading.state == State::NotReadFurther)
 				return;
-			uint8_t arrays[kArrayCount * kArraySize];
-			if (!CopyMemorySafely(arrays, reinterpret_cast<const uint8_t*>(static_cast<uintptr_t>(manager)) + kReferencesAt, sizeof(arrays)))
+			uint64_t manager = 0;
+			if (!CopyMemorySafely(&manager, g_sites.manager, sizeof(manager)))
 			{
-				if (reading.state != State::Read)
+				if (GiveUp(reading.wrong))
 				{
-					reading.state = State::CouldNotBeRead;
-					reading.manager = manager;
+					reading.state = State::NotReadFurther;
+					WriteLog(kTag, "DIAGNOSTIC: the draw list manager's global at " + DescribeAddress(g_sites.manager) + " cannot be read: the references are not read further.");
 				}
 				return;
 			}
+			if (!manager)
+			{
+				reading.wrong = 0;
+				return;
+			}
+			const uint8_t* const at = reinterpret_cast<const uint8_t*>(static_cast<uintptr_t>(manager)) + kReferencesAt;
+			uint8_t arrays[kArrayCount * kArraySize];
+			if (!CopyMemorySafely(arrays, at, sizeof(arrays)))
+			{
+				if (GiveUp(reading.wrong))
+				{
+					reading.state = State::NotReadFurther;
+					WriteLog(kTag, "DIAGNOSTIC: the draw list's references at " + DescribeAddress(at) + " cannot be read: they are not read further.");
+				}
+				return;
+			}
+			reading.wrong = 0;
 			reading.state = State::Read;
 			for (size_t i = 0; i < kArrayCount; i++)
 			{
@@ -746,10 +816,11 @@ namespace TweaksV
 			}
 		}
 
-		// The sampling thread: every array, pool and the references every 20 ms, each pass inside a try, so nothing leaves the thread; it never ends.
-		DWORD WINAPI SampleQueues(LPVOID)
+		// The sampling thread: every array, pool and the references every 20 ms, each pass inside a try, so nothing leaves the thread. It ends
+		// only when no summary's thread came to read for it.
+		DWORD WINAPI SampleQueues(LPVOID module)
 		{
-			for (;;)
+			while (!g_stopSampling.load())
 			{
 				Sleep(kSampleMs);
 				try
@@ -766,6 +837,7 @@ namespace TweaksV
 				{
 				}
 			}
+			FreeLibraryAndExitThread(static_cast<HMODULE>(module), 0);
 		}
 
 		// Changes with every reading that has something new to say: the first, a new most, a capacity, a pool made.
@@ -784,39 +856,41 @@ namespace TweaksV
 			return g_news;
 		}
 
-		// "render data 14 in use of 120, at most 31", "requests 0 of 55, at most 9", "render data not made yet"
+		// "render data 14 in use of 120, at most 31", "requests 0 of 55, at most 9", "render data not made yet",
+		// "requests not read further (see above), until then at most 9 of 55"
 		std::string DescribePool(const char* label, const char* inUse, const PoolReading& pool, const char* full)
 		{
 			const std::string text = std::string(label) + " ";
+			const std::string capacity = std::to_string(pool.capacity), most = std::to_string(pool.most);
+			const char* const isFull = pool.capacity > 0 && pool.most >= pool.capacity ? full : "";
 			switch (pool.state)
 			{
 			case State::NotMade:
 				return text + "not made yet";
-			case State::CouldNotBeRead:
-				return text + "could not be read at " + Hex(pool.object);
 			case State::NotReadFurther:
-				return text + "not read further (see above)";
+				return text + kNotReadFurther + (pool.capacity > 0 ? ", until then at most " + most + " of " + capacity + isFull : std::string());
 			case State::Read:
 				break;
 			}
-			return text + std::to_string(pool.latest) + inUse + " of " + std::to_string(pool.capacity) + ", at most " + std::to_string(pool.most) +
-				(pool.capacity > 0 && pool.most >= pool.capacity ? full : "");
+			return text + std::to_string(pool.latest) + inUse + " of " + capacity + ", at most " + most + isFull;
 		}
 
 		// "a frame's array at most 63 entries of 120, 21 different in that frame"
 		std::string DescribeArrays(const ArraysReading& arrays)
 		{
-			if (arrays.capacity == 0 && arrays.most == 0)
-				return "a frame's array not made yet";
-			std::string text = "a frame's array at most " + std::to_string(arrays.most) + " entries of " + std::to_string(arrays.capacity);
+			const bool nothingYet = arrays.capacity == 0 && arrays.most == 0;
+			const std::string text = "a frame's array ";
+			if (nothingYet)
+				return text + (arrays.notReadFurther ? kNotReadFurther : "not made yet");
+			std::string numbers = "at most " + std::to_string(arrays.most) + " entries of " + std::to_string(arrays.capacity);
 			if (arrays.most != 0 && !arrays.entriesRead)
-				text += ", the entries could not be read";
+				numbers += ", the entries could not be read";
 			else if (arrays.most != 0)
-				text += ", " + std::to_string(arrays.different) + " different " + (arrays.most > kMaxEntriesRead ? "among the first " + std::to_string(kMaxEntriesRead) + " " :
+				numbers += ", " + std::to_string(arrays.different) + " different " + (arrays.most > kMaxEntriesRead ? "among the first " + std::to_string(kMaxEntriesRead) + " " :
 					std::string()) + "in that frame";
 			if (arrays.past)
-				text += " - PAST ITS CAPACITY: the game wrote past the array's end, a crash may follow";
-			return text;
+				numbers += kPastCapacity;
+			return text + (arrays.notReadFurther ? std::string(kNotReadFurther) + ", until then " : std::string()) + numbers;
 		}
 
 		void LogSummary(uint64_t)
@@ -829,14 +903,15 @@ namespace TweaksV
 					DescribePool("requests", "", now.pools[family.requests], kFullStops) + "; " + DescribeArrays(now.arrays[i]) + ".");
 			}
 			const ReferencesReading& references = now.references;
+			const std::string numbers = "at most " + std::to_string(references.most) + " of " + std::to_string(references.capacity) + " in a frame" +
+				(references.capacity > 0 && references.most >= references.capacity ? " - FULL: past it a streaming reference is taken and never released, a silent leak" : "");
 			std::string line = "DIAGNOSTIC: the draw list's references: ";
 			if (references.state == State::NotMade)
 				line += "not made yet";
-			else if (references.state == State::CouldNotBeRead)
-				line += "could not be read at " + Hex(references.manager) + " (its manager)";
+			else if (references.state == State::Read)
+				line += numbers;
 			else
-				line += "at most " + std::to_string(references.most) + " of " + std::to_string(references.capacity) + " in a frame" +
-					(references.capacity > 0 && references.most >= references.capacity ? " - FULL: past it a streaming reference is taken and never released, a silent leak" : "");
+				line += kNotReadFurther + (references.capacity > 0 ? ", until then " + numbers : std::string());
 			WriteLog(kTag, line + ".");
 		}
 
@@ -857,8 +932,9 @@ namespace TweaksV
 			WriteLog(kTag, std::string(kNotMeasured) + "its sampling thread could not be started.");
 			return;
 		}
-		if (!StartMeasurement<kMeasurement>())	// its line is written; the sampling thread never ends, and reads for nobody then
+		if (!StartMeasurement<kMeasurement>())	// its line is written
 		{
+			g_stopSampling = true;
 			WriteLog(kTag, std::string(kNotMeasured) + "its summary thread could not be started.");
 			return;
 		}
