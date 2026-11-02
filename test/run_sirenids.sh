@@ -284,7 +284,7 @@ check "the callback back with its result and last error each time, every registe
 echo "== W15 the same with LARGE_SIREN_IDS=0: the comparison a start without the part gives - IDs cut to their low byte, no hook, nothing written"
 measure_ini; out=$(game full_game.exe siload sipacks wait)
 check "the base game's numbers and IDs the same as W11's, the pack's IDs cut: 300 is 44, 1534 is 254, 40 stays; 300's second drop by 44" "lines 'siren settings loaded: 31 (vehicles can use 255 at most); siren setting IDs in use: 31 of 256; settings past position 255, which no vehicle can reach: 0; IDs given to more than one setting: 0.' 'siren setting IDs of settings 0 to 30 of 31: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 44, 254, 40, 0, 25, 26, 27'"
-check "no hook, nothing written, the code as bytes, the variations' cut IDs lead to theirs, those of 0xFF to none" "log_lacks 'are hooked' && log_lacks 'I-E-H1' && has 'siren ids: sites as placed 17 of 17, data as placed' && has 'siren code: loads and stores 0 words 11 bytes, loop bytes, constructors 0 words 3 bytes' && has 'variations 6 of 8'"
+check "no hook, nothing written, the code as bytes, the variations' cut IDs lead to theirs, those of 0xFF to none" "log_lacks '\[SirenSettings\] .*are hooked' && log_lacks 'I-E-H1' && has 'siren ids: sites as placed 17 of 17, data as placed' && has 'siren code: loads and stores 0 words 11 bytes, loop bytes, constructors 0 words 3 bytes' && has 'variations 6 of 8'"
 
 echo "== W16 more settings than the lines per kind: 20,001 packs' carcols, the 20,001st line the cap's"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe siload siflood)

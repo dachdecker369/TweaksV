@@ -346,13 +346,6 @@ namespace TweaksV
 			return true;
 		}
 
-		template <typename T> T ReadAt(const uint8_t* at)
-		{
-			T value{};
-			memcpy(&value, at, sizeof(value));
-			return value;
-		}
-
 		// A match's sites from the table, each logged; the first one not as the game has it ends the checks
 		bool CheckSitesOf(Match match)
 		{
@@ -403,7 +396,7 @@ namespace TweaksV
 		{
 			const char* const label = kLimitPatterns[r.match]->label;
 			const uint8_t type = data[kMemberTypeAt];
-			Note(std::string(r.member) + head + "its data at " + DescribeAddress(data) + ", offset field " + Hex(ReadAt<uint64_t>(data + kMemberOffsetAt)) +
+			Note(std::string(r.member) + head + "its data at " + DescribeAddress(data) + ", offset field " + Hex(ValueAt<uint64_t>(data + kMemberOffsetAt)) +
 				", type " + Hex(type) + " (" + label + ")");
 			if (type != 0x01 && type != 0x02 && !g_widened)
 				Note("the " + std::string(r.member) + "'s type at " + DescribeAddress(data + kMemberTypeAt) + " is " + Hex(type) +
@@ -420,14 +413,14 @@ namespace TweaksV
 				return false;
 			const uint8_t* const memberTable = Rel32Target(match + kMemberTableAt);
 			const uint8_t* const offsetTable = Rel32Target(match + kOffsetsAt);
-			Note(std::string(r.structure) + " parser registration at " + DescribeAddress(match) + ": name hash " + Hex(ReadAt<uint32_t>(match + kNameHashAt)) +
+			Note(std::string(r.structure) + " parser registration at " + DescribeAddress(match) + ": name hash " + Hex(ValueAt<uint32_t>(match + kNameHashAt)) +
 				", member data table at " + DescribeAddress(memberTable) + ", offsets table at " + DescribeAddress(offsetTable) + " (" + label + ")");
 			const size_t pointers = std::max(r.id, r.members) + 1;	// the member's pointer, and the null after the last member
 			if (!Readable(memberTable, pointers * sizeof(uint64_t), std::string(r.structure) + " member data table", label) ||
 				!Readable(offsetTable, (std::max(r.id, r.neighbour) + 1) * sizeof(uint32_t), std::string(r.structure) + " offsets table", label))
 				return false;
-			const uint32_t idOffset = ReadAt<uint32_t>(offsetTable + r.id * sizeof(uint32_t));
-			const uint32_t neighbourOffset = ReadAt<uint32_t>(offsetTable + r.neighbour * sizeof(uint32_t));
+			const uint32_t idOffset = ValueAt<uint32_t>(offsetTable + r.id * sizeof(uint32_t));
+			const uint32_t neighbourOffset = ValueAt<uint32_t>(offsetTable + r.neighbour * sizeof(uint32_t));
 			if (idOffset != r.idOffset || neighbourOffset != r.neighbourOffset)
 				return Fail("the " + std::string(r.structure) + " members " + std::to_string(r.id) + " and " + std::to_string(r.neighbour) + " are at +" +
 					Hex(idOffset) + " and +" + Hex(neighbourOffset) + ", not +" + Hex(r.idOffset) + " and +" + Hex(r.neighbourOffset) + " (" + label + ").");
@@ -435,14 +428,14 @@ namespace TweaksV
 			if (r.members)
 			{
 				size_t found = 0;
-				while (found < pointers && ReadAt<const uint8_t*>(memberTable + found * sizeof(uint64_t)))
+				while (found < pointers && ValueAt<const uint8_t*>(memberTable + found * sizeof(uint64_t)))
 					found++;
 				if (found != r.members)
 					return Fail("the " + std::string(r.structure) + " parser registration has " + std::to_string(found) +
 						(found == pointers ? " or more" : "") + " members, not " + std::to_string(r.members) + " (" + label + ").");
 				count = " of " + std::to_string(r.members);
 			}
-			const uint8_t* const data = ReadAt<const uint8_t*>(memberTable + r.id * sizeof(uint64_t));
+			const uint8_t* const data = ValueAt<const uint8_t*>(memberTable + r.id * sizeof(uint64_t));
 			if (!Readable(data, kMemberTypeAt + 1, std::string(r.member) + "'s data", label))
 				return false;
 			g_memberData[r.match] = data;
@@ -452,7 +445,7 @@ namespace TweaksV
 				return true;
 			// what the part writes over: a byte's type, and an offset field that is the member's, or not written yet
 			const uint8_t type = data[kMemberTypeAt];
-			const uint64_t offsetField = ReadAt<uint64_t>(data + kMemberOffsetAt);
+			const uint64_t offsetField = ValueAt<uint64_t>(data + kMemberOffsetAt);
 			if (type != 0x01 && type != 0x02)
 				return Fail("the " + std::string(r.member) + "'s type at " + DescribeAddress(data + kMemberTypeAt) + " is " + Hex(type) +
 					", not 0x1 or 0x2, which store a byte (another mod may have widened it already) (" + label + ").");
@@ -583,8 +576,8 @@ namespace TweaksV
 			const uint8_t* const match = g_matches[kM1];
 			const char* const label = kLimitPatterns[kM1]->label;
 			const uint8_t* const pointer = Rel32Target(match + kCarcolsAtM1);
-			Note("siren settings getter at " + DescribeAddress(match) + ": a model's siren setting index at +" + Hex(ReadAt<uint32_t>(match + kModelIndexAt)) +
-				", the settings at +" + Hex(match[kGetterArrayAt]) + " of the carcols data, " + Hex(ReadAt<uint32_t>(match + kGetterSizeAt)) +
+			Note("siren settings getter at " + DescribeAddress(match) + ": a model's siren setting index at +" + Hex(ValueAt<uint32_t>(match + kModelIndexAt)) +
+				", the settings at +" + Hex(match[kGetterArrayAt]) + " of the carcols data, " + Hex(ValueAt<uint32_t>(match + kGetterSizeAt)) +
 				" bytes each; the carcols pointer at " + DescribeAddress(pointer) + " (" + label + ")");
 			if (pointer != g_carcolsPointer)
 				return Fail("the carcols pointer the siren settings getter reads, " + DescribeAddress(pointer) + ", is not the one a pack's builder reads, " +
@@ -921,10 +914,7 @@ namespace TweaksV
 				return "(a name that cannot be read)";
 			if (name[0] == '\0')
 				return "(no name)";
-			for (char& c : name)
-				if (c != '\0' && (static_cast<unsigned char>(c) < 0x20 || static_cast<unsigned char>(c) > 0x7E))
-					c = '?';
-			return name;
+			return Printable(name);
 		}
 
 		std::atomic<uint64_t> g_fileLines{ 0 };		// the lines per file written
