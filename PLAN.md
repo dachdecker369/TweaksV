@@ -54,9 +54,8 @@ Each table is in the order of the merge.
 |---|---|---|---|
 | The sirens per vehicle, if approved | | `source\TweaksVSirenCount.cpp` and `.h`; `test\run_sirencount.sh` | the part's raise and its suite; needs its findings first |
 | The lighting capacity, measured | | `source\TweaksVLightCapacity.cpp` and `.h`; `test\run_lightcapacity.sh` | the module and its suite; needs its findings first |
-| The vehicle model budget, measured | | `source\TweaksVVehicleModelBudget.cpp` and `.h`; `test\run_vehiclemodelbudget.sh` | the same |
-| The ped model budget, measured | | `source\TweaksVPedModelBudget.cpp` and `.h`; `test\run_pedmodelbudget.sh` | the same |
-| The ped pool, measured | | `source\TweaksVPedPool.cpp` and `.h`; `test\run_pedpool.sh` | the same |
+| The two model budgets, measured | | `source\TweaksVPopulation.cpp` and `.h`; `test\run_population.sh` | one module for both, as they share a block and a site (D31) |
+| The ped pool, measured, and the pool memory raised | | `source\TweaksVPedPool.cpp` and `.h`; `test\run_pedpool.sh`; `POOL_MEMORY` in `source\TweaksVHeapAdjuster.cpp`, its row of `source\TweaksVSettings.h` and the files that pin the layout | the module, its suite and the raise, since they share the site (D31) |
 | The render queues, measured | | `source\TweaksVRenderQueues.cpp` and `.h`; `test\run_renderqueues.sh` | the same |
 
 The scaffold puts an anchor only where two tracks must write in one table, and each track writes right below its own: `source\TweaksVFeatures.cpp`'s `kMeasuredFirst`, `source\TweaksVPatterns.h`, `source\TweaksV.vcxproj` and `.vcxproj.filters`, `test\fake_game_full.cpp`, `test\run_all.sh` and `test\run_integration.sh`'s I3, and PATTERNS.md, whose rows the patterns suite pins to the table.
@@ -154,6 +153,26 @@ a pass that finds its limit sharing code with a neighbour's may read the neighbo
   The twenty-five tracks this plan first had at the go became eleven: six for the research, as they were, and five for the coding - the data window, static bounds, the siren IDs and two sweeps.
   That split is the choice of the overview that planned it, kept.
   This round is also the test of the new rules, with a fresh overview and a fresh merge: what they show goes into my rules afterwards.
+- **D30, the lighting capacity and the render queues, on their findings** (2026-11-02), 1 to 4 to the four decisions in the lighting capacity's summary, 5 to 8 to the four in the render queues'.
+  Both measurements go in 2.7.0.
+  The lighting capacity's has one write, D25's rule lifted for this alone: the jump at RVA 0xE15711 through a counting stub, with `DIAGNOSTIC_MODE=1` only, as its review's point 6 has it; the jump's target reads no flags, so the stub's `lock inc` is safe (its findings, 6.5).
+  If D23 says yes, the stores' move (its 8 A) goes in the same build; otherwise 8 A and 8 B are 2.8.0's, whatever the numbers say.
+  An array seen past its capacity is a line of the log, no box.
+  `[PEDPROPS]` stays exactly as it ships, off, its comment word for word, and T-PEDPROPS stands; the proof's new step (The boots) needs nothing of that part.
+  `StreamPed render data` and `PedProp render data` are a caution for gameconfig questions, no test.
+- **D31, the two model budgets and the ped pool, on their findings** (2026-11-02).
+  The two budgets' measurement goes in 2.7.0, one track and one module for both: `TweaksVPopulation.cpp` and `.h`, `MeasurePopulation()`, the tag `Population`, `test\run_population.sh`.
+  `VehicleMemoryMultiplier`, `PedMemoryMultiplier` and the `PedVarietyMultiplier` start wait for the boot's numbers, with nothing to build.
+  The proof's drive stays about ten minutes, going on only while the budgets' line still grows.
+  The ped pool's measurement goes in 2.7.0; the pool is not raised, 2.8.0 only if the numbers ask, and `Peds` stays at 256 in my file, a caution, no test.
+  The pool memory budget is raised in 2.7.0, D25's rule lifted for this alone: `POOL_MEMORY` under `[HEAP_ADJUSTER]`, in MB, 136 to 2047, 256 by default, one immediate written as `H-E1`'s is and when, its pattern the part's, `H-E2` (the ped pool's `N-E-B1`'s bytes); another value than 136 found there is another mod's, left and logged.
+  Layout 5 goes to 43 keys, unreleased, so no new layout number.
+  The pool memory's line is HeapAdjuster's measurement, and "nearly spent" is a line of the log, no box.
+  The ped pool's track also takes the raise, since they share the site, and its module gets the address from the part, a pattern being used once.
+  One reader of a pool's pointer serves the ped pool and the render queues, which decode alike, in shared code on the merged tree before they start.
+  The letters are settled: G the lighting capacity, U the render queues, O the population (the vehicle pass's `V-E-` and the ped pass's `H-E-` rows alike, `O-E-V1`, `O-E-P1`, the shared site once, `H-E-C1`'s longer form), N the ped pool, `H-E2` the budget; the sirens' stay I.
+  PATTERNS.md's "Not settled: ... the heap the pool's allocator draws on" goes, with the ped pool's section 3.
+  Each pass's review, beside its findings in my research tools' folder, has what its track takes in its "For the coding track".
 
 ## The items
 
@@ -220,9 +239,12 @@ I copy it into the game folder, start the game, stay in it for the seconds the l
 The overview reads `TweaksV.log`; the pass reads the files.
 
 **2.7.0's proof,** on the Release build of the tagged commit, with `DIAGNOSTIC_MODE=1`, my usual mods folder, my converted emergency packs, a save loaded and about ten minutes of driving and shootouts with a wanted level in the city, which is what the population's measurements need.
+The drive goes on only while the budgets' line still grows (D31).
 A start with `LARGE_SIREN_IDS=0` and one with `LARGE_SIREN_IDS=1` compare the base game's settings and IDs (D22), and a pack's ID past 255 kept whole; its emergency vehicle shows its own lights.
 `STATICBOUNDS_SIZE` above what my `gameconfig.xml` gives the pool - 24,500 at my second test, so 30000 - since a larger value there keeps the default's 16,000 from changing anything: the raise's line with both sizes, the two hooks at 0x15A3F0 and 0x15A4D0.
 One start at `STATICBOUNDS_SIZE=100000`, the key's maximum, in that load, since my `AnimStore` test ended the game with a failed allocation right behind that allocator's start: if it crashes, the maximum comes down to what boots, or README says so.
+That start is safe only with `POOL_MEMORY`'s raise (D31), so the key goes in before it; the key's maximum stands.
+The render queues' step (D30): about ten `mp_m_freemode_01` spawned in view with Simple Trainer V, some with hats, mods set on three or four cars, 30 seconds standing still; it needs nothing of `[PEDPROPS]`, which stays off.
 The proof: line 1 names 2.7.0 and the commit without `-dirty`; no `PROBLEM` but what a test means; `Features:` naming the two new parts; each new pattern at its RVA; each measurement's numbers; no crash.
 Then the tag, the searches, and one atomic push.
 The next plan, 2.8.0, comes from those numbers.
@@ -247,7 +269,8 @@ The next plan, 2.8.0, comes from those numbers.
 **State:** phase C's round runs since 2026-11-02, the split of D29 kept.
 The scaffold (D27) is on main: `TweaksV.ini`'s layout 5 with its 42 keys, the two new parts as stubs, the test keys and the anchors; nothing of the tracks is built.
 2.6.0 stands as the last build, tagged on c6c8854 and pushed: thirteen parts, layout 4 with its 38 keys, 143 patterns, 1247 checks.
-
+The reflow is on main too;
+the sirens' pass waits for my boot of the data window.
 The open issues are T-HARDEN, T-DIAG, T-SUMMARY, T-FREEZE, T-LATEBOX, T-LEGACYWALK, T-COPIES, T-NAMES, T-TESTGAPS and T-PEDPROPS.
 
 
