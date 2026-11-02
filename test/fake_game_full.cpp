@@ -592,7 +592,7 @@
 //   rqfull         rqload's frames, every pool at its capacity
 //   rqpast         the peds' array at 130, the props' at 125, and CVehicleStreamRenderGfx named 80 over VehicleStreamRender's 60, so that the
 //                  vehicles' array reaches 70: each past its capacity
-//   rqmany         rqload's frames but the peds' array at 5,000 entries
+//   rqmany         rqload's frames but the peds' array at 5,000 entries, 31 different in the first 4,096 and 9 others past them
 //   rqfullrefs     rqload's frames with the draw list's references at their capacity
 //   rqrs           each pool's rol and add other than the findings' table, its fields encrypted by them; the first pool's add stays 1, since its
 //                  code rotates by that alone
@@ -6915,7 +6915,7 @@ static void RqActions(int argc, wchar_t** argv)
 		{
 			RqNextFrame(references);
 			for (int entry = 0; entry < 5000; entry++)
-				RqRun(g_rqAddPed, RqSlot(kRqPedRender, entry % 31));
+				RqRun(g_rqAddPed, RqSlot(kRqPedRender, entry < 4096 ? entry % 31 : 31 + entry % 9));
 		}
 		else if (past)
 		{
