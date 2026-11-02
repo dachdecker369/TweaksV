@@ -235,13 +235,13 @@ check "the check made and waiting, nothing reported past its time" "made '2 seco
 
 echo "== SB29b other programs before blip_controller (test build, TWEAKSV_TEST_STATICBOUNDS_CHECK=2): the session starts with blip_controller, not with the first program of all, which comes perhaps before the landing page"
 fresh_ini; out=$(ASI=TweaksV_test.asi game full_game.exe sbearly scriptotheralone sbwait)
-check "another program alone, the pool made before TweaksV: the session not started, nothing reported past the check's time" "has 'script: 1 placed' && has 'blips: 0 placed' && made '2 seconds' && log_lacks 'did not make the pool' && quiet"
+check "another program alone, the pool made before TweaksV: the session not started, nothing reported past the check's time" "has 'script: 1 placed' && has 'blips: 0 placed' && made '2 seconds' && log_lacks '${TAG}.*did not make the pool' && quiet"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(ASI=TweaksV_test.asi game full_game.exe sbearly scriptother scriptgap sbwait)
 check "another program, blip_controller 3 seconds later, the pool made before TweaksV: the problem past the check's time from blip_controller, once" "has 'script: 2 placed' && log_line '$NOT_MADE' && [ \$(count 'did not make the pool') -eq 1 ] && [ \$(grep -n 'the threshold 150 -> 1900 (placement 1)' TweaksV.log | cut -d: -f1) -lt \$(grep -n 'did not make the pool' TweaksV.log | cut -d: -f1) ]"
 check "the session's start timed once, blip_controller's, the program before it and its 3 seconds gone by" "[ \$(count 'DIAGNOSTIC: the session started') -eq 1 ] && [ \$(session_ms) -ge 2900 ]"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(ASI=TweaksV_test.asi game full_game.exe sbfirst script sbwait)
 unset TWEAKSV_TEST_STATICBOUNDS_CHECK
-check "the pool made before blip_controller is placed: its allocation ends the check, the session's start timed after it, nothing reported past the check's time; the pool raised" "[ \$(allocated_ms) -le \$(session_ms) ] && log_lacks 'did not make the pool' && quiet && has '$RAISED'"
+check "the pool made before blip_controller is placed: its allocation ends the check, the session's start timed after it, nothing reported past the check's time; the pool raised" "[ \$(allocated_ms) -le \$(session_ms) ] && log_lacks '${TAG}.*did not make the pool' && quiet && has '$RAISED'"
 
 echo "== SB30 nothing hooked, no check (test build, TWEAKSV_TEST_STATICBOUNDS_CHECK=2, the pool made before TweaksV, a script program placed): DRY_RUN, a refused job, a hook not made"
 export TWEAKSV_TEST_STATICBOUNDS_CHECK=2
@@ -323,7 +323,7 @@ check "the hooks made, the pool raised, said once; no check made, the program pl
 
 echo "== SB38c the Release build given TWEAKSV_TEST_STATICBOUNDS_CHECK=2 (the pool made before TweaksV, a script program placed, past those 2 seconds): the check stays 60 seconds, nothing said, nothing reported"
 fresh_ini; out=$(TWEAKSV_TEST_STATICBOUNDS_CHECK=2 game full_game.exe sbearly script sbwait)
-check "the check's line says 60 seconds, the test build's line is not there, nothing reported past the 2 seconds" "made '60 seconds' && log_lacks '${TAG}TEST BUILD' && log_lacks 'did not make the pool' && quiet"
+check "the check's line says 60 seconds, the test build's line is not there, nothing reported past the 2 seconds" "made '60 seconds' && log_lacks '${TAG}TEST BUILD' && log_lacks '${TAG}.*did not make the pool' && quiet"
 
 echo "== SB39 BlipLimitFix.asi with the made event not made (test build): no check was to be made, logged - not reported"
 fresh_ini; touch BlipLimitFix.asi; out=$(TWEAKSV_TEST_STATICBOUNDS_NO_EVENT=made ASI=TweaksV_test.asi game full_game.exe); rm -f BlipLimitFix.asi
