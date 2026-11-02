@@ -82,11 +82,12 @@ namespace TweaksV
 		// N-E-S1: at a fixed distance past the match, "mov [rip+disp32], rbx", the array's pointer.
 		constexpr size_t kSpatialStoreAt = 63, kSpatialPointerAt = 66, kSpatialStoreSize = 7;
 
-		// N-E-K1: four "mov r32, [rip+disp32]"; N-E-K2: three stores, the last of an XMM register.
+		// N-E-K1: four "mov r32, [rip+disp32]"; N-E-K2: three stores, the last of an XMM register. Which of the first two caps is in cars and
+		// which on foot is a hint of the research's (PATTERNS.md, "Ped pool"), so that the line says so.
 		constexpr size_t kAmbientCarsAt = 2, kAmbientFootAt = 8, kScenarioCarsAt = 14, kScenarioFootAt = 20;
-		constexpr size_t kCapFirstAt = 6, kCapSecondAt = 20, kCapScenarioAt = 28;
+		constexpr size_t kCapCarsAt = 6, kCapFootAt = 20, kCapScenarioAt = 28;
 		static_assert(PatternHolds(kCounters, 0, { 0x8B, 0x05 }) && PatternHolds(kCounters, kAmbientFootAt - 2, { 0x8B, 0x0D }) && PatternHolds(kCounters, kScenarioCarsAt - 2, { 0x8B, 0x35 }) &&
-			PatternHolds(kCounters, kScenarioFootAt - 2, { 0x8B, 0x3D }) && PatternHolds(kCaps, kCapFirstAt - 2, { 0x89, 0x05 }) && PatternHolds(kCaps, kCapSecondAt - 2, { 0x89, 0x05 }) &&
+			PatternHolds(kCounters, kScenarioFootAt - 2, { 0x8B, 0x3D }) && PatternHolds(kCaps, kCapCarsAt - 2, { 0x89, 0x05 }) && PatternHolds(kCaps, kCapFootAt - 2, { 0x89, 0x05 }) &&
 			PatternHolds(kCaps, kCapScenarioAt - 4, { 0x66, 0x0F, 0x7E, 0x3D }), "TweaksV: N-E-K1 holds the four counts' loads, N-E-K2 the three caps' stores");
 
 		// N-E-R1: two calls of the number's getter, and the 12 bytes that undo their clamp.
@@ -157,8 +158,8 @@ namespace TweaksV
 			const uint8_t* ambientCars = nullptr;
 			const uint8_t* scenarioFoot = nullptr;
 			const uint8_t* scenarioCars = nullptr;
-			const uint8_t* capFirst = nullptr;
-			const uint8_t* capSecond = nullptr;
+			const uint8_t* capCars = nullptr;
+			const uint8_t* capFoot = nullptr;
 			const uint8_t* capScenario = nullptr;
 		};
 		Data g_data;
@@ -329,13 +330,13 @@ namespace TweaksV
 				return false;
 			Site("the population's counts at " + DescribeAddress(counters) + ": ambient in cars at " + DescribeAddress(g_data.ambientCars) + ", on foot at " + DescribeAddress(g_data.ambientFoot) +
 				"; scenario in cars at " + DescribeAddress(g_data.scenarioCars) + ", on foot at " + DescribeAddress(g_data.scenarioFoot), kCounters);
-			g_data.capFirst = Rel32Target(caps + kCapFirstAt);
-			g_data.capSecond = Rel32Target(caps + kCapSecondAt);
+			g_data.capCars = Rel32Target(caps + kCapCarsAt);
+			g_data.capFoot = Rel32Target(caps + kCapFootAt);
 			g_data.capScenario = Rel32Target(caps + kCapScenarioAt);
-			if (!DataOf<int32_t>("the first cap of ambient peds", g_data.capFirst, kCaps, why) || !DataOf<int32_t>("the second cap of ambient peds", g_data.capSecond, kCaps, why) ||
+			if (!DataOf<int32_t>("the first cap of ambient peds", g_data.capCars, kCaps, why) || !DataOf<int32_t>("the second cap of ambient peds", g_data.capFoot, kCaps, why) ||
 				!DataOf<int32_t>("the cap of scenario peds", g_data.capScenario, kCaps, why))
 				return false;
-			Site("the population's caps at " + DescribeAddress(caps) + ": ambient at " + DescribeAddress(g_data.capFirst) + " and " + DescribeAddress(g_data.capSecond) + ", scenario at " +
+			Site("the population's caps at " + DescribeAddress(caps) + ": ambient on foot at " + DescribeAddress(g_data.capFoot) + " and in cars at " + DescribeAddress(g_data.capCars) + ", which is which a hint, scenario at " +
 				DescribeAddress(g_data.capScenario), kCaps);
 
 			// 10. the copy into a fixed array: both calls to one getter, inside the game
@@ -599,8 +600,8 @@ namespace TweaksV
 			std::string line = "DIAGNOSTIC: ped pool: " + std::to_string(now.inUse) + " of " + std::to_string(now.slots) + " slots in use, at most " + std::to_string(g_loggedMostInUse) + " so far; " +
 				(counted ? "mission " + std::to_string(mission) + ", reuse " + std::to_string(reuse) : std::string("mission and reuse not counted this time")) +
 				"; scenario " + std::to_string(Count(g_data.scenarioFoot)) + " on foot and " + std::to_string(Count(g_data.scenarioCars)) + " in cars, cap " + std::to_string(Count(g_data.capScenario)) +
-				"; ambient " + std::to_string(Count(g_data.ambientFoot)) + " on foot and " + std::to_string(Count(g_data.ambientCars)) + " in cars, caps " + std::to_string(Count(g_data.capFirst)) +
-				" and " + std::to_string(Count(g_data.capSecond)) + "; " +
+				"; ambient " + std::to_string(Count(g_data.ambientFoot)) + " on foot and " + std::to_string(Count(g_data.ambientCars)) + " in cars, caps " + std::to_string(Count(g_data.capFoot)) +
+				" and " + std::to_string(Count(g_data.capCars)) + " (which is which a hint); " +
 				(now.spatialRead ? "spatial array " + std::to_string(now.spatialCount) + " of " + std::to_string(now.spatialCapacity) + ", at most " + std::to_string(g_loggedMostSpatial) :
 					std::string(now.spatialMade ? "spatial array not read this time" : "spatial array not made yet"));
 			if (g_loggedMostInUse >= static_cast<uint32_t>(now.slots))

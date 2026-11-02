@@ -14,8 +14,11 @@
 // RVA 0x15A514 (PATTERNS.md, "A pool's memory"). The same start-up code hands it over as the imm32 of a "mov
 // r9d, imm32" (H-E2; the budget, in bytes, is at +22), and POOL_MEMORY sets it in MB, from the game's own
 // up to 2047, written as the heap's is and when: a ceiling on a counter, which allocates nothing itself.
-// Any other value found there is another mod's, left as it is, logged. With DIAGNOSTIC_MODE a thread reads
-// the allocator's use and its least room so far, 10 seconds in and then every minute while they change.
+// Any other value found there is another mod's or a game update's, and an allocator, heap or constructor that
+// code names outside the game another mod's: each left as it is, logged. An allocator already holding the game's
+// own budget was set up before TweaksV started: the write comes too late, and is made and reported. With
+// DIAGNOSTIC_MODE a thread reads the allocator's use and its least room so far, 10 seconds in and then every minute
+// while they change.
 // Written for TweaksV; the pattern and the idea of the heap come from HeapAdjusterEnhanced by Chiheb-Bacha,
 // which builds on the CitizenFX Collective's heap adjuster as updated by Dilapidated (CREDITS.md); the
 // budget from the findings of TweaksV's own research in the game's code (PATTERNS.md).
@@ -51,14 +54,20 @@ namespace TweaksV
 		constexpr int kAdjustedFromMb = 1024;	// a heap of this size or more is not the game's own: another adjuster set it
 
 		// H-E2 (PATTERNS.md, "A pool's memory"): "lea rcx, [rip+disp32]", the allocator (its disp32 at +3); "lea rdx, [rip+disp32]", the
-		// heap it takes small blocks from; "mov r8d, 0x10000", the block it counts as big; "mov r9d, imm32", its budget in bytes (at
-		// +22); "call rel32", its constructor.
+		// heap it takes small blocks from (+10); "mov r8d, 0x10000", the block it counts as big; "mov r9d, imm32", its budget in bytes (at
+		// +22); "call rel32", its constructor (+26), its rel32 past the match.
 		constexpr const GamePattern& kBudgetSetUp = Pattern("H-E2");
-		constexpr size_t kAllocatorAt = 3, kBudgetAt = 22;
-		static_assert(PatternHolds(kBudgetSetUp, 0, { 0x48, 0x8D, 0x0D }) && PatternHolds(kBudgetSetUp, kBudgetAt - 2, { 0x41, 0xB9 }) &&
-			PatternHolds(kBudgetSetUp, kBudgetAt + 4, { 0xE8 }), "TweaksV: H-E2 holds the allocator's lea, the budget's mov at +20 and the constructor's call after it");
+		constexpr size_t kAllocatorAt = 3, kHeapAt = 10, kBudgetAt = 22, kConstructorCallAt = 26, kCallSize = 5;
+		static_assert(PatternHolds(kBudgetSetUp, 0, { 0x48, 0x8D, 0x0D }) && PatternHolds(kBudgetSetUp, kHeapAt - 3, { 0x48, 0x8D, 0x15 }) && PatternHolds(kBudgetSetUp, kBudgetAt - 2, { 0x41, 0xB9 }) &&
+			PatternHolds(kBudgetSetUp, kConstructorCallAt, { 0xE8 }) && PatternByte(kBudgetSetUp, kConstructorCallAt + 1) == -1,
+			"TweaksV: H-E2 holds the allocator's and the heap's leas, the budget's mov at +20 and the constructor's call after it, its rel32 past the match");
 		constexpr int kGameBudgetMb = 136;		// the game's own (1.0.1158.16)
 		constexpr uint32_t kGameBudget = kGameBudgetMb * kMegabyte;
+
+		// The allocator, as its constructor and its allocation lay it out (PATTERNS.md, "A pool's memory"): its budget, what is in use,
+		// the room left and the least room so far, 64 bits each; the blocks it has given out, a word. Its fields are the game's data,
+		// which the game's threads write under its lock and this reads without: each read whole, the whole not all of one moment.
+		constexpr size_t kAllocatorBudgetAt = 0x20, kUsedAt = 0x28, kRoomAt = 0x30, kLeastRoomAt = 0x38, kBlocksAt = 0x40;
 		static_assert(kGameBudgetMb == kPoolMemory.minValue && kMaxHeapMb == kPoolMemory.maxValue,
 			"TweaksV: POOL_MEMORY goes from the game's own budget to the most whole MB the game's imm32 holds as a positive int32");
 
@@ -148,15 +157,20 @@ namespace TweaksV
 				return;
 			}
 
-			// 1. the budget the game holds: its own 136 MB, or another mod's, whatever it is
+			// 1. the budget the game holds and what its set-up names: its own 136 MB, or another mod's or a game update's, whatever it is
 			uint8_t* const site = match + kBudgetAt;
 			const uint32_t bytes = ValueAt<uint32_t>(site);
+			const uint8_t* const allocator = Rel32Target(match + kAllocatorAt);
+			const uint8_t* const heap = Rel32Target(match + kHeapAt);
+			const uint8_t* const call = match + kConstructorCallAt;
+			const uint8_t* const constructor = IsReadable(call, kCallSize) ? CallTarget(call) : nullptr;
 			if (IsDiagnosticMode())
-				WriteLog(kTag, "DIAGNOSTIC: pool memory budget at " + DescribeAddress(site) + " holds " + Budget(bytes) + ", its allocator at " +
-					DescribeAddress(Rel32Target(match + kAllocatorAt)) + At(kBudgetSetUp));
+				WriteLog(kTag, "DIAGNOSTIC: pool memory budget at " + DescribeAddress(site) + " holds " + Budget(bytes) + ", its allocator at " + DescribeAddress(allocator) +
+					", its heap at " + DescribeAddress(heap) + ", its constructor's call at " + DescribeAddress(call) + " -> " +
+					(constructor ? DescribeAddress(constructor) : std::string("cannot be read")) + At(kBudgetSetUp));
 			if (bytes != kGameBudget)
 			{
-				WriteLog(kTag, std::string(kBudgetJob) + "another mod already set it to " + Budget(bytes) + " - left as it is.");
+				WriteLog(kTag, std::string(kBudgetJob) + "another mod or a game update already set it to " + Budget(bytes) + " - left as it is.");
 				return;
 			}
 
@@ -168,7 +182,28 @@ namespace TweaksV
 				return;
 			}
 
-			// 3. one write; the arithmetic is 64-bit, as 2047 MB only just fits the imm32
+			// 3. the set-up leads where the research found it: what it names outside the game is another mod's
+			if (!constructor)
+			{
+				ReportFailure(kTag, kBudgetJob + ("its constructor's call at " + DescribeAddress(call) + " cannot be read") + At(kBudgetSetUp) + ".");
+				return;
+			}
+			const auto anotherMods = [](const char* what, const uint8_t* at)
+			{
+				if (IsInsideGameImage(at))
+					return false;
+				WriteLog(kTag, std::string(kBudgetJob) + what + " at " + DescribeAddress(at) + " is another mod's" + At(kBudgetSetUp) + " - left as it is.");
+				return true;
+			};
+			if (anotherMods("its allocator", allocator) || anotherMods("its heap", heap) || anotherMods("its constructor", constructor))
+				return;
+
+			// 4. a field that holds the game's own budget already: the game set the allocator up before TweaksV started, as no write of a
+			// budget can tell otherwise, and this one comes too late. It is made as the heap's is, and reported, since nothing else would say
+			// so without DIAGNOSTIC_MODE; 0, or any other value, says nothing
+			const bool tooLate = IsReadable(allocator + kAllocatorBudgetAt, sizeof(uint64_t)) && ValueAt<uint64_t>(allocator, kAllocatorBudgetAt) == kGameBudget;
+
+			// 5. one write; the arithmetic is 64-bit, as 2047 MB only just fits the imm32
 			const uint32_t newBytes = static_cast<uint32_t>(static_cast<uint64_t>(size) * kMegabyte);
 			const std::string change = std::to_string(kGameBudgetMb) + " MB -> " + std::to_string(size) + " MB";
 			if (!WriteCode({ { site, BytesOf(newBytes), "pool memory budget (" + change + ")" } }, kTag))
@@ -178,14 +213,13 @@ namespace TweaksV
 			}
 			if (!IsDryRun())
 				WriteLog(kTag, "Pool memory budget patched: " + change + ".");
+			if (tooLate)
+				ReportFailure(kTag, kBudgetJob + ("the game set its allocator up before TweaksV started, with " + std::to_string(kGameBudgetMb) +
+					" MB, so the new value at its site comes too late."));
 		}
 
 		// ---- the measurement (DIAGNOSTIC_MODE)
 
-		// The allocator, as its constructor and its allocation lay it out (PATTERNS.md, "A pool's memory"): its budget, what is in use,
-		// the room left and the least room so far, 64 bits each; the blocks it has given out, a word. Its fields are the game's data,
-		// which the game's threads write under its lock and this reads without: each read whole, the whole not all of one moment.
-		constexpr size_t kAllocatorBudgetAt = 0x20, kUsedAt = 0x28, kRoomAt = 0x30, kLeastRoomAt = 0x38, kBlocksAt = 0x40;
 		constexpr int kFatalBlocks = 900;		// the allocator traps the game at this many blocks
 		constexpr uint64_t kNearlySpent = kMegabyte;
 
@@ -275,7 +309,7 @@ namespace TweaksV
 			std::string line = "DIAGNOSTIC: pool memory: " + Tenths(now.used) + " of " + BudgetMb(now.budget) + " MB in use, at least " + Tenths(now.leastRoom) +
 				" MB free so far, " + std::to_string(now.blocks) + " blocks (" + std::to_string(kFatalBlocks) + " ends the game)";
 			if (now.leastRoom < kNearlySpent)
-				line += " - nearly spent: a pool made now can crash the game at 0x15A514";
+				line += " - nearly spent: a pool made now can crash the game at RVA 0x15A514 on 1.0.1158.16";
 			WriteLog(kTag, line + ".");
 		}
 

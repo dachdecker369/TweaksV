@@ -53,7 +53,7 @@ check "three story patterns found once each" "log_has 'Pattern S-E1 found: 0F 85
 check "three writes logged with old -> new bytes" "log_has 'DIAGNOSTIC: splash screen at RVA 0x.*: 0F 84 85 01 00 00 -> E9 86 01 00 00 90' && log_has 'DIAGNOSTIC: legal screen at RVA' && log_has 'DIAGNOSTIC: landing page at RVA 0x.*: 48 89 5C -> 31 C0 C3'"
 check "patterns found once get no per-match lines (only D-E-L12, which matches 7 times, and G-E-G1, twice, get them: A-E-G1, which matches twice, is PedProps', off)" "[ \$(count ' match 1 of ') -eq 2 ] && log_has 'D-E-L12 match 1 of 7 at RVA' && log_has 'G-E-G1 match 1 of 2 at RVA'"
 check "the heap's site logged with the size it holds" "log_has 'HeapAdjuster\] DIAGNOSTIC: heap size at RVA 0x[0-9A-F]* holds 648 MB'"
-check "the pool memory budget's pattern and site, its allocator, its write, word for word" "log_has 'Pattern H-E2 found: 48 8D 0D ? ? ? ? 48 8D 15 ? ? ? ? 41 B8 00 00 01 00 41 B9 ? ? ? ? E8 -> RVA 0x.*, 1 match' && log_line '\[HeapAdjuster\] DIAGNOSTIC: pool memory budget at RVA 0x[0-9A-F]* holds 136 MB, its allocator at RVA 0x[0-9A-F]* (H-E2)\$' && log_line '\[HeapAdjuster\] DIAGNOSTIC: pool memory budget (136 MB -> 256 MB) at RVA 0x[0-9A-F]*: 00 00 80 08 -> 00 00 00 10\$'"
+check "the pool memory budget's pattern and site, its allocator, its write, word for word" "log_has 'Pattern H-E2 found: 48 8D 0D ? ? ? ? 48 8D 15 ? ? ? ? 41 B8 00 00 01 00 41 B9 ? ? ? ? E8 -> RVA 0x.*, 1 match' && log_line '\[HeapAdjuster\] DIAGNOSTIC: pool memory budget at RVA 0x[0-9A-F]* holds 136 MB, its allocator at RVA 0x[0-9A-F]*, its heap at RVA 0x[0-9A-F]*, its constructor.s call at RVA 0x[0-9A-F]* -> RVA 0x[0-9A-F]* (H-E2)\$' && log_line '\[HeapAdjuster\] DIAGNOSTIC: pool memory budget (136 MB -> 256 MB) at RVA 0x[0-9A-F]*: 00 00 80 08 -> 00 00 00 10\$'"
 check "the three screens' sites logged with the bytes they hold, three lines" "[ \$(count 'StraightToStoryMode\] DIAGNOSTIC: .*\(jz\|function\) at RVA') -eq 3 ] && log_has 'DIAGNOSTIC: splash screen jz at RVA 0x[0-9A-F]*: 0F 84 85 01 00 00' &&log_has 'DIAGNOSTIC: legal screen jz at RVA 0x[0-9A-F]*: 0F 84 07 05 00 00' && log_has 'DIAGNOSTIC: landing page function at RVA 0x[0-9A-F]*: 48 89 5C'"
 
 echo "== S7 already patched (an old StraightToStoryMode ran first under another name): skipped quietly"
@@ -137,11 +137,11 @@ check "at 136 MB the pool past the budget is refused, the allocation the game th
 fresh_ini; out=$(game full_game.exe pmheavy)
 check "at the default's 256 MB it fits" "has 'pool memory: 0x10000000, 256 MB, the rest as placed, its constructor given 256 MB, 121 blocks, 0 refused |'"
 
-echo "== S20 another mod ran first (the site holds 200 MB, or no whole number of MB): left as it is, logged, not a problem"
+echo "== S20 another mod or a game update (the site holds 200 MB, or no whole number of MB): left as it is, logged, not a problem"
 fresh_ini; setkey POOL_MEMORY 1024; out=$(game full_game.exe pmraised); echo "      $out"
-check "the 200 MB found stays, POOL_MEMORY=1024 not applied, logged, no problem; the heap still patched" "has 'pool memory: 0x0C800000, 200 MB, the rest as placed, its constructor given 200 MB, 120 blocks, 0 refused |' && log_line '\[HeapAdjuster\] The pool memory budget is not changed this session: another mod already set it to 200 MB - left as it is.\$' && log_lacks '\[HeapAdjuster\] Pool memory budget patched' && log_lacks '\[HeapAdjuster\] PROBLEM' && has 'heap: 1024 MB'"
+check "the 200 MB found stays, POOL_MEMORY=1024 not applied, logged, no problem; the heap still patched" "has 'pool memory: 0x0C800000, 200 MB, the rest as placed, its constructor given 200 MB, 120 blocks, 0 refused |' && log_line '\[HeapAdjuster\] The pool memory budget is not changed this session: another mod or a game update already set it to 200 MB - left as it is.\$' && log_lacks '\[HeapAdjuster\] Pool memory budget patched' && log_lacks '\[HeapAdjuster\] PROBLEM' && has 'heap: 1024 MB'"
 fresh_ini; out=$(game full_game.exe pmodd); echo "      $out"
-check "a value that is no whole number of MB is another mod's too, its bytes in the line; no problem" "has 'pool memory: 0x0C800001, 200 MB, the rest as placed,' && log_line '\[HeapAdjuster\] The pool memory budget is not changed this session: another mod already set it to 0x0C800001 bytes - left as it is.\$' && log_lacks '\[HeapAdjuster\] Pool memory budget patched' && log_lacks '\[HeapAdjuster\] PROBLEM'"
+check "a value that is no whole number of MB is one too, its bytes in the line; no problem" "has 'pool memory: 0x0C800001, 200 MB, the rest as placed,' && log_line '\[HeapAdjuster\] The pool memory budget is not changed this session: another mod or a game update already set it to 0x0C800001 bytes - left as it is.\$' && log_lacks '\[HeapAdjuster\] Pool memory budget patched' && log_lacks '\[HeapAdjuster\] PROBLEM'"
 
 echo "== S21 each job goes on without the other: H-E2 missing or held twice, H-E1 missing (the test build's keys); the plain game; no code may be changed"
 fresh_ini; addkey TEST_BREAK_PATTERN H-E2; out=$(ASI=TweaksV_test.asi game full_game.exe); echo "      $out"
@@ -154,6 +154,19 @@ fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game plain_game.exe)
 check "the plain game: both jobs' problems, the measurement's line, no crash" "grep -q 'loaded' harness.out && log_has 'PROBLEM: The heap size is not changed this session: H-E1 was not found.' && log_line '\[HeapAdjuster\] PROBLEM: The pool memory budget is not changed this session: H-E2 was not found.\$' && log_line '\[HeapAdjuster\] DIAGNOSTIC: the pool memory is not measured: H-E2 was not found.\$'"
 fresh_ini; out=$(game full_game.exe nodyncode); echo "      $out"
 check "no code may be changed: nothing written, each job's problem" "has 'pool memory: 0x08800000, 136 MB, the rest as placed, its constructor given 136 MB,' && has 'heap: 648 MB' && log_line '\[HeapAdjuster\] PROBLEM: The pool memory budget is not changed this session: the game code could not be made writable (details in TweaksV.log).\$' && log_has 'PROBLEM: The heap size is not changed this session: the game code could not be made writable' && has 'protect: all restored (RX)'"
+
+echo "== S21b the allocator set up before TweaksV started, without DIAGNOSTIC_MODE: written as the heap's is, and reported, or nothing would say that the raise did not take"
+LATE='The pool memory budget is not changed this session: the game set its allocator up before TweaksV started, with 136 MB, so the new value at its site comes too late.'
+fresh_ini; out=$(game full_game.exe pmbefore); echo "      $out"
+check "the problem word for word, after the write's line, the one problem; the site written, its constructor given 136 MB" "log_line \"\\[HeapAdjuster\\] PROBLEM: \$LATE\\\$\" && log_line '\[HeapAdjuster\] Pool memory budget patched: 136 MB -> 256 MB.\$' && log_has 'Start-up summary not shown (ERROR_POPUP=0): 1 problem' && has 'pool memory: 0x10000000, 256 MB, the rest as placed, its constructor given 136 MB, 120 blocks, 0 refused |'"
+fresh_ini; setkey DRY_RUN 1; out=$(game full_game.exe pmbefore)
+check "DRY_RUN: nothing written, the same problem" "log_line \"\\[HeapAdjuster\\] PROBLEM: \$LATE\\\$\" && log_lacks '\\[HeapAdjuster\\] Pool memory budget patched' && has '$GAME_POOLS'"
+fresh_ini; setkey POOL_MEMORY 136; out=$(game full_game.exe pmbefore)
+check "POOL_MEMORY=136: no raise to come too late, no problem" "log_lacks '\\[HeapAdjuster\\] PROBLEM' && has '$GAME_POOLS'"
+fresh_ini; out=$(game full_game.exe pmfield)
+check "a field of another value says nothing: written, no problem, the game's set-up handed it" "log_lacks '\\[HeapAdjuster\\] PROBLEM' && has '$RAISED_POOLS'"
+fresh_ini; out=$(game full_game.exe)
+check "a field of 0 says nothing: written, no problem" "log_lacks '\\[HeapAdjuster\\] PROBLEM' && has '$RAISED_POOLS'"
 
 # The measurement's runs, each past its first summary, 10 seconds in, side by side in a folder of its own: pm NAME [INI_CHANGES] -- [OPTION...], in the
 # background; pm_in NAME takes the checks there. The first summary comes 10 s after TweaksV's start, the fake's report 11 s later or more.
@@ -182,8 +195,11 @@ pm unreadable : pmunreadable &
 pm gone : pmgone wait &
 pm dry 'setkey DRY_RUN 1' wait &
 pm off 'setkey ENABLED 0 HEAP_ADJUSTER' wait &
-pm again ':' pmmore &
-pm off2 'setkey DIAGNOSTIC_MODE 0' wait &
+pm heapout : pmheapout &
+pm callout : pmcallout &
+pm callunread : pmcallunread &
+pm refused 'export ASI=TweaksV_test.asi TWEAKSV_TEST_REFUSE_THREAD="1 pool memory summary"' &
+pm off2 'setkey DIAGNOSTIC_MODE 0; export ASI=TweaksV_test.asi TWEAKSV_TEST_REFUSE_THREAD="1 pool memory summary"' wait &
 wait
 
 echo "== S22 DIAGNOSTIC_MODE=1: the pool memory measured from the allocator, 10 seconds in"
@@ -191,33 +207,39 @@ pm_in default; echo "      $out"
 check "the announcement, word for word; the thread's first summary, word for word: the load's 134.5 MB of the default's 256, the least room kept, one block given back" "pm_line 'DIAGNOSTIC: the pool memory is measured, through its allocator at RVA 0x[0-9A-F]* (H-E2): its use and its least room so far are logged after 10 seconds, then every minute while they change.' && pm_line 'DIAGNOSTIC: pool memory: 134.5 of 256 MB in use, at least 120.4 MB free so far, 120 blocks (900 ends the game).' && [ \$(count '\[HeapAdjuster\] DIAGNOSTIC: pool memory: ') -eq 1 ]"
 check "no problem of the part's, the game as the part leaves it" "log_lacks '\[HeapAdjuster\] PROBLEM' && has '$RAISED_POOLS'"
 pm_in nearly; echo "      $out"
-check "POOL_MEMORY=136: the same load nearly spends it - a line of the log, no problem, no box" "pm_line 'DIAGNOSTIC: pool memory: 134.5 of 136 MB in use, at least 0.4 MB free so far, 120 blocks (900 ends the game) - nearly spent: a pool made now can crash the game at 0x15A514.' && log_lacks '\[HeapAdjuster\] PROBLEM'"
+check "POOL_MEMORY=136: the same load nearly spends it - a line of the log, no problem, no box" "pm_line 'DIAGNOSTIC: pool memory: 134.5 of 136 MB in use, at least 0.4 MB free so far, 120 blocks (900 ends the game) - nearly spent: a pool made now can crash the game at RVA 0x15A514 on 1.0.1158.16.' && log_lacks '\[HeapAdjuster\] PROBLEM'"
 pm_in raised
 check "another mod's 200 MB: measured all the same, what it holds" "pm_line 'DIAGNOSTIC: pool memory: 134.5 of 200 MB in use, at least 64.4 MB free so far, 120 blocks (900 ends the game).' && has 'pool memory: 0x0C800000, 200 MB,'"
 pm_in odd
 check "another mod's value of no whole MB: its tenth" "pm_line 'DIAGNOSTIC: pool memory: 134.5 of 200.0 MB in use, at least 64.4 MB free so far, 120 blocks (900 ends the game).'"
 pm_in before
-check "the allocator set up before TweaksV started: the budget it holds said to be not the site's, then its numbers; the raise written all the same" "pm_line 'DIAGNOSTIC: pool memory: its allocator at RVA 0x[0-9A-F]* holds a budget of 136 MB, not the 256 MB its site holds: the game set it up before TweaksV started, or its layout is not as the research found it.' && pm_line 'DIAGNOSTIC: pool memory: 134.5 of 136 MB in use, at least 0.4 MB free so far, 120 blocks (900 ends the game) - nearly spent: a pool made now can crash the game at 0x15A514.'"
+check "the allocator set up before TweaksV started: the problem, the budget it holds said to be not the site's, then its numbers; the raise written all the same" "pm_line \"PROBLEM: \$LATE\" && pm_line 'DIAGNOSTIC: pool memory: its allocator at RVA 0x[0-9A-F]* holds a budget of 136 MB, not the 256 MB its site holds: the game set it up before TweaksV started, or its layout is not as the research found it.' && pm_line 'DIAGNOSTIC: pool memory: 134.5 of 136 MB in use, at least 0.4 MB free so far, 120 blocks (900 ends the game) - nearly spent: a pool made now can crash the game at RVA 0x15A514 on 1.0.1158.16.'"
 pm_in notmade
 check "the allocator not set up: said so, nothing read past it" "pm_line 'DIAGNOSTIC: no pool memory yet - the game has not set its allocator up.' && [ \$(count '\[HeapAdjuster\] DIAGNOSTIC: pool memory: ') -eq 0 ]"
 pm_in nosum
 check "in use and room that do not add up: said so, then the numbers" "pm_line 'DIAGNOSTIC: pool memory: 135.5 MB in use and 121.5 MB of room do not add up to its budget of 256 MB: the game may have been changing them, or its layout is not as the research found it.' && pm_line 'DIAGNOSTIC: pool memory: 135.5 of 256 MB in use, at least 120.4 MB free so far, 120 blocks (900 ends the game).'"
 pm_in outside
-check "the allocator outside the game: not measured, a line, no problem; the budget raised all the same" "pm_line 'DIAGNOSTIC: the pool memory is not measured: its allocator at 0x[0-9A-F]* (outside the game) is not inside the game (H-E2).' && log_lacks '\[HeapAdjuster\] PROBLEM' && has 'pool memory: 0x10000000, 256 MB,'"
+check "the allocator outside the game: another mod's, left and logged, no problem, nothing written; not measured, a line" "pm_line 'The pool memory budget is not changed this session: its allocator at 0x[0-9A-F]* (outside the game) is another mod.s (H-E2) - left as it is.' && pm_line 'DIAGNOSTIC: the pool memory is not measured: its allocator at 0x[0-9A-F]* (outside the game) is not inside the game (H-E2).' && log_lacks '\[HeapAdjuster\] PROBLEM' && has 'pool memory: 0x08800000, 136 MB, the rest as placed,' && log_lacks '\[HeapAdjuster\] Pool memory budget patched'"
+pm_in heapout
+check "the heap outside the game: another mod's, left and logged, nothing written" "pm_line 'The pool memory budget is not changed this session: its heap at 0x[0-9A-F]* (outside the game) is another mod.s (H-E2) - left as it is.' && log_lacks '\[HeapAdjuster\] PROBLEM' && has 'pool memory: 0x08800000, 136 MB, the rest as placed,' && log_lacks '\[HeapAdjuster\] Pool memory budget patched'"
+pm_in callout
+check "the constructor outside the game: another mod's, left and logged, nothing written" "pm_line 'The pool memory budget is not changed this session: its constructor at 0x[0-9A-F]* (outside the game) is another mod.s (H-E2) - left as it is.' && log_lacks '\[HeapAdjuster\] PROBLEM' && has 'pool memory: 0x08800000, 136 MB, the rest as placed,' && log_lacks '\[HeapAdjuster\] Pool memory budget patched'"
+pm_in callunread
+check "the constructor's call that cannot be read, past the match on a page of no access: the problem, nothing written" "pm_line 'PROBLEM: The pool memory budget is not changed this session: its constructor.s call at RVA 0x[0-9A-F]* cannot be read (H-E2).' && pm_line 'DIAGNOSTIC: pool memory budget at RVA 0x[0-9A-F]* holds 136 MB, its allocator at RVA 0x[0-9A-F]*, its heap at RVA 0x[0-9A-F]*, its constructor.s call at RVA 0x[0-9A-F]* -> cannot be read (H-E2)' && has 'pool memory: 0x08800000, 136 MB, the rest as placed,' && log_lacks '\[HeapAdjuster\] Pool memory budget patched'"
+pm_in refused
+check "the summary's thread that cannot start: not measured, a line, no problem; the budget raised (the test build's TWEAKSV_TEST_REFUSE_THREAD)" "pm_line 'DIAGNOSTIC: the pool memory is not measured: its summary thread could not be started.' && log_has 'The pool memory summary thread could not be started (Windows error 8' && log_lacks '\[HeapAdjuster\] DIAGNOSTIC: the pool memory is measured' && log_lacks '\[HeapAdjuster\] PROBLEM' && has 'pool memory: 0x10000000, 256 MB,'"
 pm_in unaligned
-check "the allocator not aligned: not measured, a line, no problem" "pm_line 'DIAGNOSTIC: the pool memory is not measured: its allocator at RVA 0x[0-9A-F]* is not aligned to 8 bytes (H-E2).' && log_lacks '\[HeapAdjuster\] PROBLEM'"
+check "the allocator not aligned: not measured, a line, no problem; the budget raised" "pm_line 'DIAGNOSTIC: the pool memory is not measured: its allocator at RVA 0x[0-9A-F]* is not aligned to 8 bytes (H-E2).' && log_lacks '\[HeapAdjuster\] PROBLEM' && has 'pool memory: 0x10000000, 256 MB,'"
 pm_in unreadable
-check "the allocator that cannot be read as TweaksV starts: not measured, a line, no problem" "pm_line 'DIAGNOSTIC: the pool memory is not measured: its allocator at RVA 0x[0-9A-F]* cannot be read (H-E2).' && log_lacks '\[HeapAdjuster\] PROBLEM'"
+check "the allocator that cannot be read as TweaksV starts: not measured, a line, no problem, its field read for nothing; the budget raised" "pm_line 'DIAGNOSTIC: the pool memory is not measured: its allocator at RVA 0x[0-9A-F]* cannot be read (H-E2).' && log_lacks '\[HeapAdjuster\] PROBLEM' && has 'pool memory: 0x10000000, 256 MB,'"
 pm_in gone
 check "the allocator that cannot be read later: the announcement, then the summary says so, no crash" "pm_line 'DIAGNOSTIC: the pool memory is measured, through its allocator at RVA 0x[0-9A-F]* (H-E2): its use and its least room so far are logged after 10 seconds, then every minute while they change.' && pm_line 'DIAGNOSTIC: pool memory: its allocator at RVA 0x[0-9A-F]* or its site at RVA 0x[0-9A-F]* cannot be read.' && has 'protect: '"
 pm_in dry
-check "DRY_RUN: nothing written; measured all the same, of the game's own budget" "has '$GAME_POOLS' && pm_line 'DRY_RUN: would patch the pool memory budget (136 MB -> 256 MB): 00 00 80 08 -> 00 00 00 10' && pm_line 'DIAGNOSTIC: pool memory: 134.5 of 136 MB in use, at least 0.4 MB free so far, 120 blocks (900 ends the game) - nearly spent: a pool made now can crash the game at 0x15A514.'"
+check "DRY_RUN: nothing written; measured all the same, of the game's own budget" "has '$GAME_POOLS' && pm_line 'DRY_RUN: would patch the pool memory budget (136 MB -> 256 MB): 00 00 80 08 -> 00 00 00 10' && pm_line 'DIAGNOSTIC: pool memory: 134.5 of 136 MB in use, at least 0.4 MB free so far, 120 blocks (900 ends the game) - nearly spent: a pool made now can crash the game at RVA 0x15A514 on 1.0.1158.16.'"
 pm_in off
 check "[HEAP_ADJUSTER] ENABLED=0: a part that is off logs nothing and measures nothing" "has '$GAME_POOLS' && log_lacks '\[HeapAdjuster\]' && log_lacks 'Pattern H-E1'"
 pm_in off2
-check "DIAGNOSTIC_MODE=0: the budget raised, no line of the measurement, no thread's" "has '$RAISED_POOLS' && log_lacks '\[HeapAdjuster\] DIAGNOSTIC' && log_lacks 'pool memory summary'"
-pm_in again
-check "a second summary only when its numbers change: the first, then the block added 11 s in - in the Release build a minute later, so none by the report" "pm_line 'DIAGNOSTIC: pool memory: 134.5 of 256 MB in use, at least 120.4 MB free so far, 120 blocks (900 ends the game).' && [ \$(count '\[HeapAdjuster\] DIAGNOSTIC: pool memory: ') -eq 1 ]"
+check "DIAGNOSTIC_MODE=0: the budget raised, no line of the measurement, and no start of its thread, which the test build would refuse and say so" "has '$RAISED_POOLS' && log_lacks '\[HeapAdjuster\] DIAGNOSTIC' && log_has 'TWEAKSV_TEST_REFUSE_THREAD=1 pool memory summary' && log_lacks 'The pool memory summary thread could not be started'"
 B=$measured; cd "$B" && rm -rf pm
 
 echo "== S23 the test build, its summaries every 2 s: again when the numbers change - a pool more 11 s in, then 3 s more - and no more"
