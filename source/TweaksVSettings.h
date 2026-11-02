@@ -150,7 +150,7 @@ namespace TweaksV
 		Switch(kSirenSettingsSection, "LARGE_SIREN_IDS", true, "Siren setting IDs up to 65535 (game: 255)"),
 
 		Switch(kStaticBoundsSection, "ENABLED", true),
-		Number(kStaticBoundsSection, "STATICBOUNDS_SIZE", 16000, 1, 100000, "Number of static collision bounds - Maximum 100000"),
+		Number(kStaticBoundsSection, "STATICBOUNDS_SIZE", 16000, 1, 32767, "Number of static collision bounds - Maximum 32767"),
 	};
 
 	// The keys the default TweaksV.ini holds: layout 5 has 43.

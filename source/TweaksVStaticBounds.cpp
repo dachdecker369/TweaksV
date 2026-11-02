@@ -2,39 +2,36 @@
 // TweaksV - the StaticBounds part (see TweaksVStaticBounds.h).
 //
 // The game keeps the static collision bounds of the map - every building, prop and interior placed in it, a heavy
-// map mod's MLOs and expansions among them - in one pool, the pool named StaticBounds, and a full pool ends the game in
-// an access violation. The game makes its pools through two functions (PATTERNS.md, "StaticBounds"): the set-up
-// (C-E-P1), which takes the pool, its name, a third argument, the stride and the allocator, and the allocator (C-E-A1),
-// which takes the pool, whose capacity is set by then - the size gameconfig.xml gives it, else the game's default - and
-// allocates its room. STATICBOUNDS_SIZE in [STATICBOUNDS], 1 to 100000, 16000 by default, is the least the pool gets:
-// the set-up's hook notes a pool of stride 16 named StaticBounds, and the allocator's hook raises the noted pool's
-// capacity, its stride checked again, to the key before the game's allocator runs - so a gameconfig.xml that gives the pool
-// more keeps it - and logs the sizes once. Both functions are hooked in DllMain, all or none, and each match is its
-// function's start, which its pattern pins: the set-up's down to its ret, the allocator's from its pushes on.
-// Both hooks stay on, so that a pool made a second time is raised as well, and no thread of the game is frozen in the
-// middle of its start to take them off. The set-up's hook tests the stride before it touches the name, the allocator's
-// compares one pointer, and neither touches anything else of a pool that is not the static bounds pool.
-// The hooks raise the pool only if the game makes it after TweaksV's DllMain: a thread of the part checks, 60 seconds
-// after the session's start - the game placing blip_controller, which the script programs' hook sees: the Blips
-// part's, which the part joins, or while TweaksV.ini switches Blips off the part's own; the game makes its pools as the
-// session starts - that the game has made the pool, and reports a problem, with the part's box, when it has not: the game
-// made the pool before TweaksV started, or makes it another way. While a plugin that does the Blips part's job is
-// installed, whatever TweaksV.ini says, no check is made, logged. A check that cannot be made - its events, the hook or its
-// thread not there - is reported, the hooks staying: nothing else would say when the game does not make the pool.
+// map mod's MLOs and expansions among them - in one store, the store named StaticBounds, and a full store ends the game
+// at a trap. The store's size is read once, from one call (PATTERNS.md, "StaticBounds"): the store's init (C-E-L1) hashes the
+// store's name and asks the game's pool size lookup - the size gameconfig.xml gives it, else the default - and everything
+// follows what comes back: the pool, the name map, the module's count, the streaming range and the box streamer's arrays.
+// That is why gameconfig.xml's value carries a load, and a write to the pool's capacity alone does not: the 8001st name of
+// start 3 of 2.7.0's proof found the name map's free list empty and the game trapped, the slot taken from a raised pool.
+// STATICBOUNDS_SIZE in [STATICBOUNDS], 1 to 32767, 16000 by default, is the least the store gets: that call is redirected in
+// DllMain, in the way of WeaponComponents' W-E-C4, to a function that asks the lookup and, for the store's hash alone, gives
+// back the larger of the answer and the key - so a gameconfig.xml that gives the store more keeps it - and logs the sizes
+// once. 32767 is the largest size whose every slot is sound: a slot past it comes out negative in an interior proxy, one
+// past 65535 is cut in an entity's tag, and a size past 65535 wraps the box streamer's counts.
+// The redirect raises the store only if the game asks after TweaksV's DllMain: a thread of the part checks, 60 seconds
+// after the session's start - the game placing blip_controller, which the script programs' hook sees: the Blips part's,
+// which the part joins, or while TweaksV.ini switches Blips off the part's own - that the game has asked, and reports a
+// problem, with the part's box, when it has not: the game asked before TweaksV started, or makes the store another way.
+// While a plugin that does the Blips part's job is installed, whatever TweaksV.ini says, no check is made, logged. A check
+// that cannot be made - its events, the hook or its thread not there - is reported, the redirect staying: nothing else
+// would say when the game does not ask.
+// The same thread reads the store back once, through C-E-D1, whose lea names it: its count, its pool and its streamer
+// differing is a problem, since the load would end at the smallest, and so is more than 32767 slots in use. C-E-D1 missing is
+// a line, the raise going on.
 // A size above the key's default on a pool memory budget not raised - the HeapAdjuster part off, by TweaksV.ini or a plugin
 // found, or POOL_MEMORY at the game's own - is a problem of the start-up summary, the raise made all the same.
-//   DRY_RUN          nothing is hooked, nothing checked; the line says what would be
-//   DIAGNOSTIC_MODE  the two sites at their RVAs, with what IsFunctionStart says of each, which refuses nothing since
-//                    the patterns pin it; every making of the pool, and its time after the part's start; every set-up of
-//                    stride 16 with the first bytes of its name, since nothing but the original's word says the game passes it
-// Written for TweaksV from the Static Bounds Limit Adjuster v1.0.2 by Nochala (3_Washing_Machines), commit 61507bc:
+//   DRY_RUN          nothing is written, nothing checked; the line says what would be
+//   DIAGNOSTIC_MODE  the call and the store at their RVAs; when the game asked, after the part's start
+// The key's name, its default and the rule - the larger of the two sizes - and the hash are those of the Static Bounds Limit
+// Adjuster v1.0.2 by Nochala (3_Washing_Machines), commit 61507bc:
 //   Copyright (C) 2026 Nochala
 //   License: GPL-3.0-or-later - https://github.com/Nochala/StaticboundsLimitAdjuster (THIRD_PARTY_NOTICES.md)
-// Adapted for TweaksV on 2026-11-02: its two patterns of the game's code, of the set-up and of the allocator, its two
-// hooks on them with the pool told by its name and stride, its offsets of the capacity and the stride, its rule - the larger
-// of the two sizes - and its key, STATICBOUNDS_SIZE, with its default and its maximum. Its other routes, the size lookup's
-// call and its hook on the lookup, are left out, as is its taking the hooks off after the first allocation: a pattern
-// missing or a hook not made is reported, as every part does.
+// The route is TweaksV's own, from the findings of its research in the game's code (PATTERNS.md).
 
 #include "TweaksVStaticBounds.h"
 
@@ -46,7 +43,6 @@
 #include <cstring>
 #include <cwchar>
 #include <string>
-#include <string_view>
 #include <vector>
 
 #include "TweaksVConflicts.h"
@@ -65,65 +61,58 @@ namespace TweaksV
 	{
 		constexpr const char* kTag = "StaticBounds";
 
-		// ---- the two functions a pool is made through (PATTERNS.md, "StaticBounds")
+		// ---- the store's size call and the store (PATTERNS.md, "StaticBounds")
 
-		constexpr const GamePattern& kSetUpPattern = Pattern("C-E-P1");
-		constexpr const GamePattern& kAllocatorPattern = Pattern("C-E-A1");
-		constexpr const char* kSetUpWhat = "the pools' set-up";
-		constexpr const char* kAllocatorWhat = "the pools' allocator";
+		constexpr const GamePattern& kSizeCallPattern = Pattern("C-E-L1");
+		constexpr const GamePattern& kStorePattern = Pattern("C-E-D1");
+		constexpr const char* kWhat = "static bounds store's size call";
 
-		constexpr size_t kCapacityAt = 0x18;		// a pool's capacity, an int32
-		constexpr size_t kStrideAt = 0x1C;			// a pool's stride, an int32
-		constexpr uint32_t kStride = 16;			// the static bounds pool's
-		constexpr char kName[] = "StaticBounds";	// its name, as the game hands it to the set-up
+		constexpr uint32_t kStoreHash = 0x2CDFE406;	// the game's hash of the store's name, StaticBounds
+		constexpr int kSoundSlots = 32767;			// the largest size whose every slot is sound, and the key's maximum
+		static_assert(kSoundSlots == kStaticBoundsSize.maxValue, "TweaksV: STATICBOUNDS_SIZE goes up to the largest size whose every slot is sound");
 
-		// Checked when TweaksV is compiled: the offsets are the bytes the patterns pin - the set-up's mov [rax+0x1C], r9d (the
-		// stride, its fourth argument) and mov dword [rax+0x18], 0, its ret; the allocator's movsxd of both.
-		static_assert(PatternHolds(kSetUpPattern, 11, { 0x44, 0x89, 0x48, kStrideAt }) && PatternHolds(kSetUpPattern, 22, { 0xC7, 0x40, kCapacityAt }) &&
-			PatternHolds(kSetUpPattern, 36, { 0xC3 }) && PatternByte(kSetUpPattern, 37) == -1, "TweaksV: C-E-P1 is the set-up, down to its ret");
-		static_assert(PatternHolds(kAllocatorPattern, 9, { 0x48, 0x63, 0x51, kCapacityAt }) && PatternHolds(kAllocatorPattern, 13, { 0x48, 0x63, 0x79, kStrideAt }),
-			"TweaksV: C-E-A1 reads the capacity and the stride at these offsets");
+		constexpr size_t kCallAt = 8;				// in C-E-L1's match: "call rel32", the lookup
+		constexpr size_t kStoreLeaAt = 3;			// in C-E-D1's match: the disp32 of "lea rcx, [rip+disp32]", the store
 
-		// The set-up's mov rcx, [rsp+disp8], its allocator: the disp8 is the pattern's one wildcard, and the hook hands on five
-		// arguments, so the job is done only where the set-up reads its fifth from the stack slot of a fifth.
-		constexpr size_t kAllocatorSlotAt = 7;
-		constexpr uint8_t kAllocatorSlot = 0x28;
-		static_assert(PatternHolds(kSetUpPattern, 3, { 0x48, 0x8B, 0x4C, 0x24 }) && PatternByte(kSetUpPattern, kAllocatorSlotAt) == -1,
-			"TweaksV: C-E-P1 reads the allocator from the stack at a byte it leaves open");
+		// The store, as its init and its streamer leave it: its offset of the pool is the one the init's lea pins, and the others no pattern holds
+		constexpr uint8_t kPoolAt = 0x38;
+		constexpr size_t kBaseAt = 0x08, kCountAt = 0x10, kPoolCapacityAt = 0x50, kInUseAt = 0x60, kBucketsAt = 0x88, kNamesAt = 0x90, kMadeAt = 0x98,
+			kStreamerWordAt = 0xF0, kStreamerCountAt = 0xF8, kStoreRead = kStreamerCountAt + sizeof(uint32_t);
+		constexpr uint32_t kInUseMask = 0x3FFFFFFF;	// the word at +0x60: its low 30 bits, the slots in use
+		static_assert(kPoolCapacityAt == kPoolAt + 0x18u && kInUseAt == kPoolAt + 0x28u, "TweaksV: a pool's capacity at +0x18 and its bits at +0x28 (PATTERNS.md)");
+
+		// Checked when TweaksV is compiled: the bytes the patterns pin. C-E-L1: mov rcx, rbx; mov edx, eax; mov r8d, edi, the three arguments;
+		// the call; mov r14d, eax and lea rcx, [rsi+0x38] and mov edx, eax, what comes back handed to the pool. C-E-D1: lea rcx, [rip+disp32], the store
+		static_assert(PatternHolds(kSizeCallPattern, 0, { 0x48, 0x89, 0xD9, 0x89, 0xC2, 0x41, 0x89, 0xF8, 0xE8 }) && PatternImm32(kSizeCallPattern, kCallAt + 1) == -1 &&
+			PatternHolds(kSizeCallPattern, kCallAt + 5, { 0x41, 0x89, 0xC6, 0x48, 0x8D, 0x4E, kPoolAt, 0x89, 0xC2, 0xE8 }), "TweaksV: C-E-L1 is the store's size call, its answer handed to the store's pool");
+		static_assert(PatternHolds(kStorePattern, 0, { 0x48, 0x8D, 0x0D }) && PatternImm32(kStorePattern, kStoreLeaAt) == -1, "TweaksV: C-E-D1 holds the store's lea at +0, its disp32 read");
 
 		// The job not done, for the start-up summary.
 		void Fail(const std::string& why)
 		{
-			ReportFailure(kTag, "The static bounds pool's size is not raised this session: " + why);
+			ReportFailure(kTag, "The static bounds store's size is not raised this session: " + why);
 		}
 
-		// ---- the hooks' state, set before they go on
+		// ---- the call's state, set before it is redirected
 
-		// The allocator's four argument registers are handed on as they came, whatever it reads of them: its pattern's
-		// call of the memory allocator loads no r8 and no r9 of its own (C-E-A1, +38).
-		using SetUpFn = uintptr_t (*)(void* pool, const char* name, uintptr_t third, uint32_t stride, void* allocator);
-		using AllocatorFn = uintptr_t (*)(void* pool, uintptr_t second, uintptr_t third, uintptr_t fourth);
-		SetUpFn g_setUp = nullptr;					// the game's functions, behind the hooks
-		AllocatorFn g_allocator = nullptr;
-		std::atomic<void*> g_noted{ nullptr };		// the static bounds pool the set-up saw last, until another takes its place
+		using LookupFn = int32_t (*)(const void* configuration, uint32_t hash, int32_t fallback);
+		LookupFn g_lookup = nullptr;				// the game's function, behind the redirect
 		int32_t g_size = 0;							// STATICBOUNDS_SIZE
-		bool g_diagnostic = false;					// DIAGNOSTIC_MODE, read once at the start: the hooks never read a switch
-		ULONGLONG g_start = 0;						// the part's start, for the time of each making
-		std::atomic<uint64_t> g_makingLines{ 0 };	// the lines of the makings, up to the cap
-		std::atomic<uint64_t> g_nameLines{ 0 };		// the lines of the names of stride 16, up to the cap
-		std::atomic<bool> g_sizesSaid{ false };		// the pool's sizes are said once
-		std::atomic<bool> g_noSizeSaid{ false };	// a capacity below 0 is reported once
-		std::atomic<bool> g_strideSaid{ false };	// a stride that changed is reported once
-		std::atomic<bool> g_afterAllSaid{ false };	// a making after the check's report is said once
+		bool g_diagnostic = false;					// DIAGNOSTIC_MODE, read once at the start
+		ULONGLONG g_start = 0;						// the part's start, for the time the game asks
+		const uint8_t* g_store = nullptr;			// the store, for the read-back: null while C-E-D1 gives none
+		std::atomic<bool> g_sizesSaid{ false };		// the store's sizes are said once
+		std::atomic<bool> g_noSizeSaid{ false };	// a size below 0 is reported once
+		std::atomic<bool> g_afterAllSaid{ false };	// the game's asking after the check's report is said once
 
-		// ---- the check that the game makes the pool: whichever comes first, the game's first allocation of the noted pool or
-		// the check's end, takes the state - a making after the check has reported is said once, with the sizes
+		// ---- the check that the game asks: whichever comes first, the game's first asking or the check's end, takes the state
 
-		constexpr DWORD kCheckSeconds = 60;			// the check's time after the session's start, by when the game has made its pools
+		constexpr DWORD kCheckSeconds = 60;			// the check's time after the session's start, by when the game has made its stores
+		constexpr DWORD kSettleMs = 1000;			// from an asking the thread has just seen to the read-back: the init runs on, on the game's thread
 		constexpr uint32_t kSessionScript = Scripts::NameHash("blip_controller");	// its placement is the session's start
-		enum : int { kWaiting, kMade, kReported };
+		enum : int { kWaiting, kAsked, kReported };
 		std::atomic<int> g_check{ kWaiting };
-		HANDLE g_madeEvent = nullptr;				// set at the first allocation of the noted pool, so that the check's thread ends early
+		HANDLE g_askedEvent = nullptr;				// set at the first asking, so that the check's thread goes on early
 		HANDLE g_sessionEvent = nullptr;			// set at the session's start: the game placing blip_controller
 		std::atomic<bool> g_sessionStarted{ false };
 		ULONGLONG g_sessionTick = 0;				// when the session started, written before its event is set
@@ -157,7 +146,7 @@ namespace TweaksV
 			return kCheckSeconds;
 		}
 
-		// One of the check's two events, "made" or "session", or nullptr - in test builds also while
+		// One of the check's two events, "asked" or "session", or nullptr - in test builds also while
 		// TWEAKSV_TEST_STATICBOUNDS_NO_EVENT=<its name> in the environment, said once, so that a suite reaches a check that
 		// cannot be made.
 		HANDLE MakeEvent(const char* name)
@@ -176,16 +165,15 @@ namespace TweaksV
 			return CreateEventW(nullptr, TRUE, FALSE, nullptr);
 		}
 
-		// The check not made, for the start-up summary: the hooks stay, and nothing says whether the game makes the pool.
+		// The check not made, for the start-up summary: the redirect stays, and nothing says whether the game asks.
 		void CheckNotDone(const std::string& why)
 		{
-			ReportFailure(kTag, "The check that the game makes the static bounds pool is not done this session: " + why);
+			ReportFailure(kTag, "The check that the game asks for the static bounds store's size is not done this session: " + why);
 		}
 
 		// The script programs' hook calls this for every program the game places, on the game's thread: blip_controller's first
-		// placement, told by its hash as the Blips part reads it, is the session's start, which starts the check's clock. The first
-		// program of all comes some 24 seconds earlier, perhaps before the landing page, where a player may wait as long as they like;
-		// a pool made before blip_controller does no harm, since the first allocation ends the check either way. Nothing more is done here.
+		// placement, told by its hash as the Blips part reads it, is the session's start. The first program of all comes some 24
+		// seconds earlier, perhaps before the landing page, where a player may wait as long as they like. Nothing more is done here.
 		void* SessionStarts(uint8_t* program, uint32_t)
 		{
 			if (!g_sessionStarted.load(std::memory_order_relaxed) && IsReadable(program, Scripts::kProgramSize) &&
@@ -197,10 +185,43 @@ namespace TweaksV
 			return nullptr;
 		}
 
-		// The check's thread: from the session's start, until the game has made the pool or for the check's time - then, if it
-		// has still not, the problem, after the start-up summary in a box of its own. A session that never starts leaves it
+		// The store read back, once, all of it through CopyMemorySafely, since it is the game's data and the game goes on: what its size
+		// reached. Its count, its pool and its streamer differing is a problem, and so is more in use than the slots that are sound.
+		void ReadBack()
+		{
+			if (!g_store)
+				return;
+			uint8_t copy[kStoreRead];
+			if (!CopyMemorySafely(copy, g_store, sizeof(copy)))
+			{
+				WriteLog(kTag, "The static bounds store's read-back is not done: the store at " + DescribeAddress(g_store) + " cannot be read" + At(kStorePattern) + ".");
+				return;
+			}
+			if (ValueAt<uint8_t>(copy, kMadeAt) == 0)
+			{
+				WriteLog(kTag, "The static bounds store's read-back is not done: the game has not finished making the store.");
+				return;
+			}
+			const int32_t count = ValueAt<int32_t>(copy, kCountAt);
+			const int32_t pool = ValueAt<int32_t>(copy, kPoolCapacityAt);
+			const uint32_t streamer = ValueAt<uint32_t>(copy, kStreamerCountAt);
+			const uint32_t inUse = ValueAt<uint32_t>(copy, kInUseAt) & kInUseMask;
+			WriteLog(kTag, "The static bounds store's read-back: count " + std::to_string(count) + ", pool " + std::to_string(pool) + ", name map " +
+				std::to_string(ValueAt<uint32_t>(copy, kBucketsAt)) + " buckets with " + std::to_string(ValueAt<uint32_t>(copy, kNamesAt)) + " names, streamer " +
+				std::to_string(streamer) + " (its word " + std::to_string(ValueAt<uint16_t>(copy, kStreamerWordAt)) + "), " + std::to_string(inUse) +
+				" slots in use, its streaming base " + std::to_string(ValueAt<int32_t>(copy, kBaseAt)) + ".");
+			if (pool != count || streamer != static_cast<uint32_t>(count))
+				Fail("the store's count " + std::to_string(count) + ", its pool " + std::to_string(pool) + " and its streamer " + std::to_string(streamer) +
+					" differ, and the load would end at the smallest (another mod may have changed one).");
+			if (inUse > static_cast<uint32_t>(kSoundSlots))
+				ReportFailure(kTag, "The static bounds store holds " + std::to_string(inUse) + " slots in use this session, past the " + std::to_string(kSoundSlots) +
+					" whose every slot is sound: gameconfig.xml gives it " + std::to_string(count) + ", and an interior whose slot lies past them can lose its collision.");
+		}
+
+		// The check's thread: from the session's start, until the game has asked or for the check's time - then, if it has still not, the
+		// problem, after the start-up summary in a box of its own, and if it has, the read-back. A session that never starts leaves it
 		// waiting. Nothing leaves the thread, which drops the reference to the module StartModuleThread handed it as it ends.
-		DWORD WINAPI CheckMade(LPVOID module)
+		DWORD WINAPI CheckAsked(LPVOID module)
 		{
 			WaitForSingleObject(g_sessionEvent, INFINITE);
 			try
@@ -212,132 +233,60 @@ namespace TweaksV
 			catch (...)
 			{
 			}
-			WaitForSingleObject(g_madeEvent, g_checkSeconds * 1000);
+			WaitForSingleObject(g_askedEvent, g_checkSeconds * 1000);
 			int waiting = kWaiting;
-			if (g_check.compare_exchange_strong(waiting, kReported))
+			const bool late = g_check.compare_exchange_strong(waiting, kReported);
+			try
 			{
-				try
+				if (late)
+					Fail("the game did not ask for the store's size within " + Seconds(g_checkSeconds) + " of the session's start - it asked before TweaksV "
+						"started, or makes the store another way, and the store keeps the game's size.");
+				else
 				{
-					if (g_noted.load(std::memory_order_acquire))
-						Fail("the game set the pool up but did not allocate it through " + std::string(kAllocatorWhat) + " within " + Seconds(g_checkSeconds) +
-							" of the session's start, and the pool keeps the game's size.");
-					else
-						Fail("the game did not make the pool within " + Seconds(g_checkSeconds) + " of the session's start - it made the pool before TweaksV "
-							"started, or makes it another way, and the pool keeps the game's size.");
+					Sleep(kSettleMs);
+					ReadBack();
 				}
-				catch (...)
-				{
-				}
+			}
+			catch (...)
+			{
 			}
 			FreeLibraryAndExitThread(static_cast<HMODULE>(module), 0);
 		}
 
-		// ---- the hooks
+		// ---- the redirect
 
-		// A line of a making with DIAGNOSTIC_MODE, up to the cap: the set-up and the allocation are one kind of line.
-		void MakingLine(const std::string& what, const void* pool)
+		// The store's init calls this in the place of the game's pool size lookup, on the game's thread, as other inits of its kind do for
+		// their stores: a hash other than the store's goes through. The store's first asking ends the check. Both sizes are said before
+		// the game goes on with them, so that the log holds them should the store's making fail. Nothing may throw out of here, and the
+		// last error is the game's.
+		int32_t StoreSize(const void* configuration, uint32_t hash, int32_t fallback)
 		{
-			const uint64_t line = g_makingLines.fetch_add(1, std::memory_order_relaxed) + 1;
-			if (line <= kMaxLinesPerKind)
-				WriteLog(kTag, "DIAGNOSTIC: the static bounds pool at " + DescribeAddress(pool) + " " + what + ", " + std::to_string(GetTickCount64() - g_start) +
-					" ms after the part's start.");
-			else if (line == kMaxLinesPerKind + 1)
-				WriteLog(kTag, "DIAGNOSTIC: " + std::to_string(kMaxLinesPerKind) + " lines of the pool's makings written - from now on they are only counted.");
-		}
-
-		// A line of a set-up of stride 16 with DIAGNOSTIC_MODE, up to the cap: what the game's second argument leads to, the hook's copy
-		// of it or nullptr, so that a boot shows whether the game passes a name there, as only the original's word says.
-		void NameLine(const void* pool, const char* name, const char* copy)
-		{
-			const uint64_t line = g_nameLines.fetch_add(1, std::memory_order_relaxed) + 1;
-			if (line <= kMaxLinesPerKind)
-				WriteLog(kTag, "DIAGNOSTIC: a pool of stride " + std::to_string(kStride) + " at " + DescribeAddress(pool) + " is set up, " + (copy ? "the first " +
-					std::to_string(sizeof(kName)) + " bytes at its name, " + DescribeAddress(name) + ": " + Printable(std::string_view(copy, sizeof(kName))) :
-					"its name at " + DescribeAddress(name) + " is not readable."));
-			else if (line == kMaxLinesPerKind + 1)
-				WriteLog(kTag, "DIAGNOSTIC: " + std::to_string(kMaxLinesPerKind) + " lines of the names of stride " + std::to_string(kStride) + " written - from now on they are only counted.");
-		}
-
-		// The set-up's hook, on the game's thread, for every pool the game makes: the static bounds pool, told by its stride and by
-		// its name, its terminating zero included, is noted; a set-up of anything else at the noted address ends the note, since the
-		// address holds another pool from now on. The name is copied through CopyMemorySafely, since nothing but the original's word
-		// says that the second argument is a pointer to a name. Nothing may throw out of here, and the set-up's result and the last
-		// error are the game's.
-		uintptr_t SetUpHook(void* pool, const char* name, uintptr_t third, uint32_t stride, void* allocator)
-		{
-			bool thePool = false;
-			if (stride == kStride)
-			{
-				char copy[sizeof(kName)];
-				const bool read = CopyMemorySafely(copy, name, sizeof(copy));
-				thePool = read && memcmp(copy, kName, sizeof(copy)) == 0;
-				if (thePool)
-					g_noted.store(pool, std::memory_order_release);
-				if (g_diagnostic)
-				{
-					const DWORD lastError = GetLastError();
-					try
-					{
-						NameLine(pool, name, read ? copy : nullptr);
-						if (thePool)
-							MakingLine("is set up", pool);
-					}
-					catch (...)
-					{
-					}
-					SetLastError(lastError);
-				}
-			}
-			if (!thePool)
-			{
-				void* noted = pool;
-				g_noted.compare_exchange_strong(noted, nullptr, std::memory_order_acq_rel);	// one step: another thread may note a pool meanwhile
-			}
-			return g_setUp(pool, name, third, stride, allocator);
-		}
-
-		// The noted pool, as the game hands it to its allocator, on the game's thread: its capacity raised to STATICBOUNDS_SIZE,
-		// its stride checked again, before the game's allocator runs, what happened logged before it runs too, so that the log
-		// holds it should the game's allocation fail. Both fields are read and written as the game's own code does
-		// right before and right after: the game's set-up has written them, its allocator reads them next. The first
-		// allocation ends the check. Nothing may throw out of here, and the last error is the game's.
-		void RaisePool(uint8_t* pool)
-		{
+			const int32_t game = g_lookup(configuration, hash, fallback);
+			if (hash != kStoreHash)
+				return game;
+			const int32_t size = game >= 0 && game < g_size ? g_size : game;
 			const DWORD lastError = GetLastError();
-			volatile int32_t& capacityField = *reinterpret_cast<volatile int32_t*>(pool + kCapacityAt);
-			const int32_t stride = *reinterpret_cast<const volatile int32_t*>(pool + kStrideAt);
-			const int32_t game = capacityField;
-			const bool strideKept = stride == static_cast<int32_t>(kStride);
-			const int32_t size = strideKept && game >= 0 && game < g_size ? g_size : game;
-			if (size != game)
-				capacityField = size;
 			int checked = kWaiting;
-			if (g_check.compare_exchange_strong(checked, kMade) && g_madeEvent)
-				SetEvent(g_madeEvent);
+			if (g_check.compare_exchange_strong(checked, kAsked) && g_askedEvent)
+				SetEvent(g_askedEvent);
 			try
 			{
-				if (g_diagnostic)
-					MakingLine("is allocated with " + std::to_string(size) + " slots, the game's " + std::to_string(game), pool);
 				if (checked == kReported && !g_afterAllSaid.exchange(true))
-					WriteLog(kTag, "The game made the static bounds pool after all, after the check had reported it missing.");
-				if (!strideKept)
-				{
-					if (!g_strideSaid.exchange(true))
-						Fail("the pool at " + DescribeAddress(pool) + " holds the stride " + std::to_string(stride) + " when the game allocates it, not the " +
-							std::to_string(kStride) + " it was set up with - it is left as the game made it.");
-				}
-				else if (game < 0)
+					WriteLog(kTag, "The game asked for the static bounds store's size after all, after the check had reported it missing.");
+				if (game < 0)
 				{
 					if (!g_noSizeSaid.exchange(true))
-						Fail("the game gives the static bounds pool the size " + std::to_string(game) + ", which is none - left as the game gave it.");
+						Fail("the game gives the store the size " + std::to_string(game) + ", which is none - left as the game gave it.");
 				}
 				else if (!g_sizesSaid.exchange(true))
 				{
+					if (g_diagnostic)
+						WriteLog(kTag, "DIAGNOSTIC: the game asked for the static bounds store's size " + std::to_string(GetTickCount64() - g_start) + " ms after the part's start.");
 					if (size != game)
-						WriteLog(kTag, "The size the game gives the static bounds pool, " + std::to_string(game) + ", is raised to " + std::to_string(size) +
+						WriteLog(kTag, "The size the game gives the static bounds store, " + std::to_string(game) + ", is raised to " + std::to_string(size) +
 							" (STATICBOUNDS_SIZE).");
 					else
-						WriteLog(kTag, "The size the game gives the static bounds pool, " + std::to_string(game) + ", is kept: it is not below STATICBOUNDS_SIZE=" +
+						WriteLog(kTag, "The size the game gives the static bounds store, " + std::to_string(game) + ", is kept: it is not below STATICBOUNDS_SIZE=" +
 							std::to_string(g_size) + ".");
 				}
 			}
@@ -345,14 +294,7 @@ namespace TweaksV
 			{
 			}
 			SetLastError(lastError);
-		}
-
-		// The allocator's hook, on the game's thread, for every pool the game makes.
-		uintptr_t AllocatorHook(void* pool, uintptr_t second, uintptr_t third, uintptr_t fourth)
-		{
-			if (pool && pool == g_noted.load(std::memory_order_acquire))
-				RaisePool(static_cast<uint8_t*>(pool));
-			return g_allocator(pool, second, third, fourth);
+			return size;
 		}
 
 		// ---- what the raise spends
@@ -370,6 +312,28 @@ namespace TweaksV
 				"the HeapAdjuster part, which raises that budget, is off. A pool past the budget crashes the game: switch the part on, or lower STATICBOUNDS_SIZE." :
 				"POOL_MEMORY=" + std::to_string(kPoolMemory.minValue) + " leaves that budget at the game's own. A pool past the budget crashes the game: raise POOL_MEMORY, or lower STATICBOUNDS_SIZE."));
 		}
+
+		// The store for the read-back, from C-E-D1's match, or null with the line that says why: the raise goes on without it.
+		const uint8_t* FindStore()
+		{
+			constexpr const char* kNoReadBack = "The static bounds store's read-back is not done this session: ";
+			std::string notFound;
+			const uint8_t* const match = Scanner::FindOnce(kStorePattern, notFound);
+			if (!match)
+			{
+				WriteLog(kTag, kNoReadBack + notFound + ".");
+				return nullptr;
+			}
+			const uint8_t* const store = Rel32Target(match + kStoreLeaAt);
+			if (const std::string fault = DataFault(store, kStoreRead, sizeof(uint64_t)); !fault.empty())
+			{
+				WriteLog(kTag, kNoReadBack + ("the store at " + DescribeAddress(store) + " " + fault) + At(kStorePattern) + ".");
+				return nullptr;
+			}
+			if (g_diagnostic)
+				WriteLog(kTag, "DIAGNOSTIC: the static bounds store at " + DescribeAddress(store) + At(kStorePattern));
+			return store;
+		}
 	}
 
 	void InitStaticBounds()
@@ -377,58 +341,45 @@ namespace TweaksV
 		g_start = GetTickCount64();
 		g_diagnostic = IsDiagnosticMode();
 
-		// 1. both patterns looked for, so that the log names each one missing
+		// 1. both patterns looked for, so that the log names each one missing: the size call is the job, the store only the read-back's
 		std::string notFound;
-		uint8_t* const setUp = Scanner::FindOnce(kSetUpPattern, notFound);
-		uint8_t* const allocator = Scanner::FindOnce(kAllocatorPattern, notFound);
-		if (!setUp || !allocator)
+		uint8_t* const match = Scanner::FindOnce(kSizeCallPattern, notFound);
+		g_store = FindStore();
+		if (!match)
 		{
 			Fail(notFound + ".");
 			return;
 		}
 
-		// 2. each match is its function's start, which its pattern pins: what IsFunctionStart says is a fact for the log
+		// 2. the call leads into the game: else another mod has redirected it
+		uint8_t* const call = match + kCallAt;
+		const uint8_t* const target = CallTarget(call);
 		if (g_diagnostic)
+			WriteLog(kTag, std::string("DIAGNOSTIC: the ") + kWhat + " at " + DescribeAddress(call) + " -> " + (target ? DescribeAddress(target) : std::string("not a call")) + At(kSizeCallPattern));
+		if (!target || !IsInsideGameImage(target))
 		{
-			std::string detail;
-			IsFunctionStart(setUp, detail);
-			WriteLog(kTag, std::string("DIAGNOSTIC: ") + kSetUpWhat + " at " + DescribeAddress(setUp) + At(kSetUpPattern) + ": " + detail);
-			IsFunctionStart(allocator, detail);
-			WriteLog(kTag, std::string("DIAGNOSTIC: ") + kAllocatorWhat + " at " + DescribeAddress(allocator) + At(kAllocatorPattern) + ": " + detail);
-		}
-
-		// the set-up reads its allocator where the hook hands it on, the one byte its pattern leaves open
-		if (setUp[kAllocatorSlotAt] != kAllocatorSlot)
-		{
-			Fail(std::string(kSetUpWhat) + " at " + DescribeAddress(setUp) + " reads its allocator from the stack at +" + Hex(setUp[kAllocatorSlotAt]) +
-				", not at +" + Hex(kAllocatorSlot) + ", the slot of a fifth argument, the last the hook hands on" + At(kSetUpPattern) + ".");
+			Fail(std::string("the ") + kWhat + " at " + DescribeAddress(call) + " is not a call into the game (another mod may have hooked it already)" + At(kSizeCallPattern) + ".");
 			return;
 		}
 
+		// 3. redirected, its original set before the rewrite - the check's event made first, so that the game's first asking finds it
 		g_size = GetNumber(kStaticBoundsSize);
-		const std::string where = std::string(kSetUpWhat) + " at " + DescribeAddress(setUp) + " and " + kAllocatorWhat + " at " + DescribeAddress(allocator);
-		if (IsDryRun())
+		const bool dryRun = IsDryRun();
+		if (!dryRun)
+			g_askedEvent = MakeEvent("asked");
+		const std::vector<CallRedirect> redirects = { { call, reinterpret_cast<const void*>(&StoreSize), kWhat, reinterpret_cast<void**>(&g_lookup) } };
+		if (!RedirectCalls(redirects, {}, kTag))
 		{
-			WriteLog(kTag, "DRY_RUN: would hook " + where + " so that the static bounds pool gets at least " + std::to_string(g_size) +
-				" slots (STATICBOUNDS_SIZE) when the game makes it.");
+			if (g_askedEvent)
+				CloseHandle(g_askedEvent);
+			g_askedEvent = nullptr;
+			Fail("the game code could not be changed (details in TweaksV.log).");
 			return;
 		}
-
-		// 3. both hooked, all or none - the check's event made first, so that the game's first allocation finds it
-		g_madeEvent = MakeEvent("made");
-		const std::vector<FunctionHook> hooks = {
-			{ setUp, reinterpret_cast<const void*>(&SetUpHook), reinterpret_cast<void**>(&g_setUp), kSetUpWhat },
-			{ allocator, reinterpret_cast<const void*>(&AllocatorHook), reinterpret_cast<void**>(&g_allocator), kAllocatorWhat } };
-		if (!HookFunctions(hooks, kTag))
-		{
-			if (g_madeEvent)
-				CloseHandle(g_madeEvent);
-			g_madeEvent = nullptr;
-			Fail(where + " could not be hooked (details in TweaksV.log).");
+		if (dryRun)
 			return;
-		}
-		WriteLog(kTag, Capitalised(where) + " are hooked: the static bounds pool gets at least " + std::to_string(g_size) + " slots (STATICBOUNDS_SIZE) when the "
-			"game makes it, more where the game gives it more.");
+		WriteLog(kTag, Capitalised(std::string("the ") + kWhat) + " at " + DescribeAddress(call) + " is redirected: the store gets at least " + std::to_string(g_size) +
+			" slots (STATICBOUNDS_SIZE), more where the game gives it more.");
 		CheckBudget();
 
 		// 4. the check, from the session's start - the game placing blip_controller, seen through the script programs'
@@ -436,15 +387,15 @@ namespace TweaksV
 		// it, while TweaksV.ini switches Blips off. While a plugin that does Blips' job on the same script programs is installed
 		// - BlipLimitFix.asi or Resource Extensions, closed source, as the conflict check found them, whatever TweaksV.ini
 		// says of Blips - the part makes no hook and leaves the script programs to it, logged. A check that cannot be made
-		// otherwise - its events, the hook or its thread not there - is reported, the hooks staying
+		// otherwise - its events, the hook or its thread not there - is reported, the redirect staying
 		if (IsPluginInstalledFor(kBlipsSection))
 		{
-			WriteLog(kTag, "The static bounds check is not made this session: it starts with the session, which TweaksV sees through the script programs' hook, and a "
-				"plugin that does the Blips part's job on the script programs is installed (named above) - TweaksV leaves the script programs to it.");
+			WriteLog(kTag, "The static bounds check and its read-back are not made this session: they start with the session, which TweaksV sees through the script programs' hook, "
+				"and a plugin that does the Blips part's job on the script programs is installed (named above) - TweaksV leaves the script programs to it.");
 			return;
 		}
 		g_sessionEvent = MakeEvent("session");
-		if (!g_madeEvent || !g_sessionEvent)
+		if (!g_askedEvent || !g_sessionEvent)
 		{
 			CheckNotDone("its events could not be made.");
 			return;
@@ -456,12 +407,12 @@ namespace TweaksV
 			return;
 		}
 		g_checkSeconds = CheckSeconds();
-		if (!StartModuleThread(&CheckMade, "static bounds check"))
+		if (!StartModuleThread(&CheckAsked, "static bounds check"))
 		{
 			CheckNotDone("its thread could not be started (details in TweaksV.log).");
 			return;
 		}
 		WriteLog(kTag, "The static bounds check waits for the session's start - the game placing blip_controller - and then " +
-			Seconds(g_checkSeconds) + " for the game to make the pool.");
+			Seconds(g_checkSeconds) + " for the game to ask for the store's size.");
 	}
 }

@@ -245,8 +245,8 @@ namespace TweaksV
 		// StaticBounds (TweaksVStaticBounds.cpp), the patterns of Nochala's Static Bounds Limit Adjuster: the two functions the
 		// game makes its pools through - the set-up, the whole of it down to its ret (P1), and the allocator, from its pushes
 		// on to its call of the memory allocator (A1)
-		{ "C-E-P1", "48 89 C8 48 8B 4C 24 ? 48 89 08 44 89 48 1C 0F 57 C0 0F 11 40 08 C7 40 18 00 00 00 00 81 60 28 00 00 00 C0 C3" },
-		{ "C-E-A1", "56 57 48 83 EC ? 48 89 CE 48 63 51 18 48 63 79 1C 48 0F AF FA 48 83 C7 07 48 83 E7 F8 48 8B 09 48 01 FA 48 8B 01 FF 50 08" },
+		{ "C-E-L1", "48 89 D9 89 C2 41 89 F8 E8 ? ? ? ? 41 89 C6 48 8D 4E 38 89 C2 E8" },
+		{ "C-E-D1", "48 8D 0D ? ? ? ? E8 ? ? ? ? BA 01 00 00 00 E8 ? ? ? ? B9 28 3A 00 00" },
 
 		// LightCapacity, the lighting capacity (TweaksVLightCapacity.cpp): the frame's two stores of vehicle lights, reset (A1) and
 		// drained (A2, A3); a job's 5 vehicles (B1) and its scratch's size in its two kicks (B2, B3); add-to-a-job's-list (C1), the
