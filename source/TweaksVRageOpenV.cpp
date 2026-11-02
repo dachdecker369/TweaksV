@@ -636,7 +636,6 @@ namespace TweaksV
 			for (size_t i = 0; i < kArchiveCalls; i++)
 			{
 				const ArchiveCall& call = kCalls[i];
-				const std::string label = call.pattern->label;
 				std::string notFound;
 				uint8_t* const match = Scanner::FindOnce(*call.pattern, notFound);
 				if (!match)
@@ -805,7 +804,7 @@ namespace TweaksV
 			if (SameFolder(here, game))
 				return;
 			WriteLog(kTag, "The current directory is " + ToUtf8(here) + ", not the game folder - the mods folder is looked for there.");
-			const DWORD attributes = GetFileAttributesW((game + L"\\mods").c_str());
+			const DWORD attributes = GetFileAttributesW((game + L"\\" + kModsRoot).c_str());
 			if (IsOn(kModsFolder) && attributes != INVALID_FILE_ATTRIBUTES && (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0)
 				ReportFailure(kTag, "Files in the mods folder are not used this session: the game runs in " + ToUtf8(here) +
 					", not in the game folder.");

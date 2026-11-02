@@ -449,14 +449,12 @@ namespace TweaksV
 		}
 
 		// A name of the walk: a file named .rpf, in any case, is a pack, read once its folder's find handle is closed. Its
-		// name for the lines is its path from the current directory, with Windows' separator.
+		// name for the lines is its path from the current directory, as the walk gives it.
 		void PackEntry(void* context, const ModsEntry& entry)
 		{
 			if (entry.kind != ModsEntryKind::File || !HasExtension(entry.below, ".rpf"))
 				return;
-			std::string name = "mods\\" + std::string(entry.below);
-			std::replace(name.begin(), name.end(), '/', '\\');
-			static_cast<Check*>(context)->folderPacks.emplace_back(entry.path, std::move(name));
+			static_cast<Check*>(context)->folderPacks.emplace_back(entry.path, ToUtf8(entry.path));
 		}
 
 		// A folder's packs in the order Windows lists them, every find handle closed.
