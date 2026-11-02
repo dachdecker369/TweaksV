@@ -389,6 +389,13 @@
 //   rtsetuptwice, rtgeometrytwice, rtropestwice
 //                  T-E-B1, T-E-C1 or T-E-C2 a second time: its site's match copied to the twin, a site that holds nothing else
 // [data window]
+// TEST_DUMP_DATA's window, g_dwWindow, a stretch of this program's own .data:
+//   dwrvas         the report gives its RVA, .data's and what a file's header says about the game, for the suite's key
+//   dwwindow       the same, and the window filled before TweaksV loads, written to dw_start.bin, then, as soon as TweaksV's
+//                  start-up has patched the heap site, changed and written to dw_later.bin, for the suite to compare with the
+//                  files; and 2.5 s more at the end, so that a key's 1 s passes well before the program ends
+//   dwnoaccess     with dwwindow: the window's second page cannot be read, from before TweaksV loads; zeros there in both files
+//   dwnodata       the section table in memory names no .data: that section's name changed before TweaksV loads
 // [static bounds]
 // [late boxes]
 // [light capacity]
@@ -3694,6 +3701,102 @@ static void RtReport()
 }
 
 // [data window]
+// TEST_DUMP_DATA's window: larger than the largest window, 64 KB, and on whole pages, since dwnoaccess takes one away.
+constexpr size_t kDwBytes = 0x12000;
+constexpr size_t kDwPage = 0x1000;			// where the page dwnoaccess takes away starts, and its size
+__declspec(align(4096)) static unsigned char g_dwWindow[kDwBytes];
+static bool g_dwOn = false, g_dwNoAccess = false, g_dwReport = false;
+
+// Fills the window: every byte differs from the one another salt gives it. file gets what the window then holds,
+// zeros in the page that cannot be read: what TweaksV's file must hold.
+static void DwFill(unsigned salt, const wchar_t* file)
+{
+	static unsigned char held[kDwBytes];
+	for (size_t i = 0; i < kDwBytes; i++)
+	{
+		const bool readable = !g_dwNoAccess || i < kDwPage || i >= 2 * kDwPage;
+		if (readable)
+			g_dwWindow[i] = static_cast<unsigned char>(i * 31 + (i >> 8) + salt);
+		held[i] = readable ? g_dwWindow[i] : 0;
+	}
+	const HANDLE out = CreateFileW(file, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+	if (out == INVALID_HANDLE_VALUE)
+		return;
+	DWORD written = 0;
+	WriteFile(out, held, static_cast<DWORD>(kDwBytes), &written, nullptr);
+	CloseHandle(out);
+}
+
+// Changes the window as soon as TweaksV has patched the heap site: in its start-up, after the first copies of its windows,
+// which come before any part changes the game, and before its own thread can run.
+static HANDLE g_dwWatching = nullptr;
+static DWORD WINAPI DwWatchHeapSite(void*)
+{
+	const unsigned char before = g_heapSite[4];		// the top byte of the size
+	SetEvent(g_dwWatching);
+	for (int i = 0; i < 5000 && g_heapSite[4] == before; i++)
+		Sleep(1);
+	DwFill(0x55, L"dw_later.bin");
+	return 0;
+}
+
+static IMAGE_NT_HEADERS* DwHeaders()
+{
+	const auto base = const_cast<unsigned char*>(ImageBase());
+	return reinterpret_cast<IMAGE_NT_HEADERS*>(base + reinterpret_cast<const IMAGE_DOS_HEADER*>(base)->e_lfanew);
+}
+
+// The section this program's table in memory names .data
+static IMAGE_SECTION_HEADER* DwDataSection()
+{
+	IMAGE_NT_HEADERS* const nt = DwHeaders();
+	IMAGE_SECTION_HEADER* section = IMAGE_FIRST_SECTION(nt);
+	for (WORD i = 0; i < nt->FileHeader.NumberOfSections; i++, section++)
+		if (memcmp(section->Name, ".data\0\0\0", 8) == 0)
+			return section;
+	return nullptr;
+}
+
+static void DwSetUp(int argc, wchar_t** argv)
+{
+	g_dwOn = HasOption(argc, argv, L"dwwindow");
+	g_dwNoAccess = HasOption(argc, argv, L"dwnoaccess");
+	g_dwReport = g_dwOn || HasOption(argc, argv, L"dwrvas");
+	if (g_dwOn)
+	{
+		DWORD old = 0;
+		if (g_dwNoAccess)
+			VirtualProtect(g_dwWindow + kDwPage, kDwPage, PAGE_NOACCESS, &old);
+		DwFill(0, L"dw_start.bin");
+		// A new thread waits for the loader's lock, which TweaksV's start-up holds: it must be running before that
+		g_dwWatching = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+		if (const HANDLE thread = CreateThread(nullptr, 0, DwWatchHeapSite, nullptr, 0, nullptr))
+		{
+			WaitForSingleObject(g_dwWatching, 30000);
+			CloseHandle(thread);
+		}
+	}
+	IMAGE_SECTION_HEADER* const section = HasOption(argc, argv, L"dwnodata") ? DwDataSection() : nullptr;
+	if (section)
+	{
+		DWORD old = 0;
+		VirtualProtect(section, sizeof(*section), PAGE_READWRITE, &old);
+		memcpy(section->Name, ".notdata", sizeof(section->Name));
+		VirtualProtect(section, sizeof(*section), old, &old);
+	}
+}
+
+static void DwReport()
+{
+	const IMAGE_SECTION_HEADER* const section = g_dwReport ? DwDataSection() : nullptr;
+	if (!section)
+		return;
+	const IMAGE_NT_HEADERS* const nt = DwHeaders();
+	const auto base = reinterpret_cast<uintptr_t>(ImageBase());
+	wprintf(L"dw: window RVA 0x%llX, .data RVA 0x%lX, 0x%lX bytes, image %lu %lu %lu %lu | ",
+		static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(g_dwWindow) - base), section->VirtualAddress, section->Misc.VirtualSize,
+		static_cast<unsigned long>(base & 0xFFFFFFFFu), static_cast<unsigned long>(base >> 32), nt->OptionalHeader.SizeOfImage, nt->FileHeader.TimeDateStamp);
+}
 // [static bounds]
 // [late boxes]
 // [light capacity]
@@ -5773,6 +5876,8 @@ int wmain(int argc, wchar_t** argv)
 	// The ray tracing buffer: the set-up's call to the maker, the checks' slot and counters, the reset's lea - as the options ask
 	RtSetUp(argc, argv);
 	// [data window]
+	// TEST_DUMP_DATA's window, filled before TweaksV takes its first copies - as the options ask
+	DwSetUp(argc, argv);
 	// [static bounds]
 	// [late boxes]
 	// [light capacity]
@@ -5919,6 +6024,9 @@ int wmain(int argc, wchar_t** argv)
 	// The ray tracing buffer: the game's renderer makes it and its frames take ranges of it - as the options ask, the checks run
 	RtActions(argc, argv);
 	// [data window]
+	// TEST_DUMP_DATA's second copies, a key's 1 s after TweaksV started, are made before the program ends
+	if (g_dwOn)
+		Sleep(2500);
 	// [static bounds]
 	// [late boxes]
 	// [light capacity]
@@ -6007,6 +6115,7 @@ int wmain(int argc, wchar_t** argv)
 	LpReport();
 	RtReport();
 	// [data window]
+	DwReport();
 	// [static bounds]
 	// [late boxes]
 	// [light capacity]

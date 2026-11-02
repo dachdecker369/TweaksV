@@ -314,6 +314,98 @@ fresh_ini; addkey TEST_DUMP_CODE 1; rm -rf $d; out=$(game full_game.exe)
 check "the release build ignores TEST_DUMP_CODE: nothing saved, no problem" "[ ! -e $d/GameCode-start.bin ] && log_lacks 'TEST BUILD' && log_lacks 'PROBLEM' && has '$ALL_ON_HEAP'"
 rm -rf $d
 
+# Test builds only: named windows of the game's .data, the static data the code dump leaves out. The fake game's
+# window lies in its own .data, at the RVA its report gives. With dwwindow it holds what dw_start.bin holds until TweaksV
+# patches the heap site in its start-up, and what dw_later.bin holds from then on, the files of the two moments the same:
+# so the first copies come before any part changes the game.
+echo "== I16b TEST_DUMP_DATA in a test build: named windows of the game's .data saved in %LOCALAPPDATA%\\TweaksV at start and later"
+d=appdata/TweaksV
+hex() { printf '%X' "$1"; }
+# dw_read: the last run's report into dw_win, dw_data, dw_bytes (the window's RVA, .data's RVA and its size, in hex)
+# and dw_image (the game's base as two numbers, its size, its stamp, as a file's header gives them)
+dw_read() { read -r dw_win dw_data dw_bytes dw_image <<< "$(sed -nE 's/.*dw: window RVA 0x([0-9A-F]+), \.data RVA 0x([0-9A-F]+), 0x([0-9A-F]+) bytes, image ([0-9 ]+) \|.*/\1 \2 \3 \4/p' <<< "$out")"; }
+# dw_run VALUE [OPTION...]: the fake game with the test build, TEST_DUMP_DATA=VALUE, no window's file there before it
+dw_run() { local value=$1; shift; fresh_ini; addkey TEST_DUMP_DATA "$value"; rm -rf $d; out=$(ASI=TweaksV_test.asi game full_game.exe dwrvas "$@"); dw_read; }
+# dw_header FILE SECONDS RVA SIZE UNREADABLE: the file's DataDumpHeader (TweaksVDump.h, 48 bytes) for that window of this
+# run's game, the RVA and the size in hex, and the file as long as the header and the window
+dw_header() {
+	[ "$(head -c 8 "$1")" = TWKVDATA ] &&
+	[ "$(od -An -tu4 -j8 -N40 "$1" | tr -s ' \n' ' ')" = " 1 48 $dw_image $2 $((0x$3)) $((0x$4)) $5 " ] &&
+	[ "$(stat -c %s "$1")" = $((48 + 0x$4)) ]
+}
+# dw_holds FILE HELD OFFSET SIZE: after its header, the file holds byte for byte the SIZE bytes HELD, a file of the fake
+# game's, holds from OFFSET on, both in hex
+dw_holds() { cmp -s -i "48:$((0x$3))" -n "$((0x$4))" "$1" "$2"; }
+# dw_saved_line NAME SIZE RVA WORDS UNREADABLE: the log's line for a saved file, word for word but the folder
+dw_saved_line() { log_line "\[TweaksV\] TEST BUILD: GameData-$1 saved, $2 bytes of the game.s .data at RVA 0x$3 as they were $4, in .*TweaksV; $5.\$"; }
+dw_files() { ls $d . 2> /dev/null | grep -c "^GameData-.*$1"; }
+# dw_refused DESCRIPTION VALUE REASON: the value is one problem giving REASON, a pattern, and nothing is saved
+dw_refused() {
+	dw_run "$2"
+	dw_want="PROBLEM: TweaksV.ini: \\[TWEAKSV\\] TEST_DUMP_DATA=$2: $3 - the game.s data is not saved.\$"
+	check "$1: one problem, nothing saved" 'log_line "$dw_want" && [ "$(count PROBLEM)" = 1 ] && [ "$(dw_files)" = 0 ]'
+}
+fresh_ini; out=$(game full_game.exe dwrvas); dw_read
+check "the fake game's window lies in its own .data" '[ -n "$dw_win" ] && [ $((0x$dw_win)) -ge $((0x$dw_data)) ] && [ $((0x$dw_win + 0x12000)) -le $((0x$dw_data + 0x$dw_bytes)) ]'
+dw_a=$dw_win; dw_b=$(hex $((0x$dw_win + 0x1234))); dw_end=$((0x$dw_data + 0x$dw_bytes))
+
+dw_run "1,$dw_a:10000,0x${dw_b,,}:100" dwwindow
+check "two windows, one of the largest size, each in two files in %LOCALAPPDATA%\\TweaksV under its RVA in upper-case hex, whatever the key's spelling; nothing in the game folder; the log header lists the switch" "[ -f $d/GameData-$dw_a-start.bin ] && [ -f $d/GameData-$dw_a-later.bin ] && [ -f $d/GameData-$dw_b-start.bin ] && [ -f $d/GameData-$dw_b-later.bin ] && [ \"\$(dw_files)\" = 4 ] && [ ! -e GameData-$dw_a-start.bin ] && log_has 'TEST BUILD - not for release. .* TEST_DUMP_DATA=1,$dw_a:10000,0x${dw_b,,}:100 '"
+check "each header: format 1, the game's base, size and stamp, the moment, the RVA, the size, none unreadable; each file's length" "dw_header $d/GameData-$dw_a-start.bin 0 $dw_a 10000 0 && dw_header $d/GameData-$dw_a-later.bin 1 $dw_a 10000 0 && dw_header $d/GameData-$dw_b-start.bin 0 $dw_b 100 0 && dw_header $d/GameData-$dw_b-later.bin 1 $dw_b 100 0"
+check "the start files hold what the fake's .data held before TweaksV patched anything, which it no longer held when its thread wrote them" "dw_holds $d/GameData-$dw_a-start.bin dw_start.bin 0 10000 && dw_holds $d/GameData-$dw_b-start.bin dw_start.bin 1234 100"
+check "the later files hold what it held after the patch, which is not what it held before" "dw_holds $d/GameData-$dw_a-later.bin dw_later.bin 0 10000 && dw_holds $d/GameData-$dw_b-later.bin dw_later.bin 1234 100 && ! cmp -s -n 256 -i 48:0 $d/GameData-$dw_a-later.bin dw_start.bin"
+check "the log says each of them, word for word" "dw_saved_line $dw_a-start.bin 65536 $dw_a '0 s after TweaksV started, before anything was patched' 'none unreadable' && dw_saved_line $dw_b-start.bin 256 $dw_b '0 s after TweaksV started, before anything was patched' 'none unreadable' && dw_saved_line $dw_a-later.bin 65536 $dw_a '1 s after TweaksV started' 'none unreadable' && dw_saved_line $dw_b-later.bin 256 $dw_b '1 s after TweaksV started' 'none unreadable'"
+check "no problem, and the parts did their work beside it" "log_lacks 'PROBLEM' && has '$ALL_ON_HEAP'"
+
+# the edges of .data, the most windows and TEST_DUMP_CODE beside it, in one run
+dw_most="1,$dw_data:10,$(hex $((dw_end - 0x10))):10"
+for i in {0..13}; do dw_most+=",$(hex $((0x$dw_a + i * 0x10))):10"; done
+fresh_ini; addkey TEST_DUMP_DATA "$dw_most"; addkey TEST_DUMP_CODE 1; rm -rf $d; out=$(ASI=TweaksV_test.asi game full_game.exe dwwindow); dw_read
+check "16 windows, .data's first bytes and its last among them, with TEST_DUMP_CODE beside them: every file saved, no problem" "[ \"\$(dw_files -start.bin)\" = 16 ] && [ \"\$(dw_files -later.bin)\" = 16 ] && [ -f $d/GameCode-later.bin ] && dw_header $d/GameData-$dw_data-start.bin 0 $dw_data 10 0 && dw_header $d/GameData-$(hex $((dw_end - 0x10)))-later.bin 1 $(hex $((dw_end - 0x10))) 10 0 && log_lacks 'PROBLEM'"
+# a value of 254 characters, as long as a key is read whole: 14 windows of 8 digits each, the seconds 2 digits
+dw_long="01"
+for i in {0..13}; do dw_long+=",$(printf '%08X:%08X' $((0x$dw_a + i * 0x10)) 16)"; done
+dw_run "$dw_long"
+check "a value of ${#dw_long} characters is read whole: its 14 windows saved" "[ ${#dw_long} = 254 ] && [ \"\$(dw_files -start.bin)\" = 14 ] && log_lacks 'PROBLEM'"
+# one character more: it may be cut short, and a window cut short would be saved smaller without a word
+dw_run "0$dw_long"
+check "a value of 255 characters: a problem, nothing saved" "log_has 'PROBLEM: TweaksV.ini: \[TWEAKSV\] TEST_DUMP_DATA=001,.*: it is longer than the 254 characters a key can hold whole - the game.s data is not saved.' && [ \"\$(dw_files)\" = 0 ]"
+
+dw_refused "text that is no number of seconds" "abc,$dw_a:10" 'it does not start with a number of seconds from 1 to 3600'
+dw_refused "0 seconds" "0,$dw_a:10" 'it does not start with a number of seconds from 1 to 3600'
+dw_refused "3601 seconds" "3601,$dw_a:10" 'it does not start with a number of seconds from 1 to 3600'
+dw_refused "the seconds alone" 3 'it names no window'
+for window in zz:10 "$dw_a" "$dw_a:" :10 "$dw_a:10:10" "$dw_a:1G" "123456789:10" "$dw_a:0x"; do
+	dw_refused "the window $window, text that is no window" "3,$window" "\"$window\" is not a window of <rva>:<bytes>, both in hex"
+done
+dw_refused "a comma with nothing after it" "3,$dw_a:10," '"" is not a window of <rva>:<bytes>, both in hex'
+dw_too_many=3
+for i in {0..16}; do dw_too_many+=",$(hex $((0x$dw_a + i * 0x10))):10"; done
+dw_refused "17 windows" "$dw_too_many" 'it names more than 16 windows'
+dw_refused "a window of no bytes" "3,$dw_a:0" "the window $dw_a:0 is not of 1 byte to 64 KB (10000 in hex)"
+dw_refused "a window one byte over 64 KB" "3,$dw_a:10001" "the window $dw_a:10001 is not of 1 byte to 64 KB (10000 in hex)"
+dw_refused "one RVA twice, however it is written: its files would have one name" "3,$dw_a:10,0x$dw_a:20" "the window at 0x$dw_a is named twice, and its files have one name"
+dw_leaves() { echo "the window of 0x$1 bytes at 0x$2 is not wholly inside the game.s .data, 0x$dw_data to $(printf '0x%X' $dw_end)"; }
+dw_refused "a window that runs a byte past .data" "3,$(hex $((dw_end - 0x10))):11" "$(dw_leaves 11 "$(hex $((dw_end - 0x10)))")"
+dw_refused "a window that starts a byte before .data" "3,$(hex $((0x$dw_data - 1))):10" "$(dw_leaves 10 "$(hex $((0x$dw_data - 1)))")"
+dw_refused "a window in the game's code" "3,1000:10" "$(dw_leaves 10 1000)"
+dw_refused "a window whose end does not fit 32 bits" "3,FFFFFFFF:10" "$(dw_leaves 10 FFFFFFFF)"
+dw_refused "a good window before one that leaves .data: nothing of either" "3,$dw_a:10,$(hex $((dw_end - 0x10))):11" "$(dw_leaves 11 "$(hex $((dw_end - 0x10)))")"
+dw_run "3,$dw_a:10" dwnodata
+check "a game whose section table names no .data: a problem, nothing saved" "log_has 'PROBLEM: TweaksV.ini: \[TWEAKSV\] TEST_DUMP_DATA=3,$dw_a:10: the game.s section table names no .data - the game.s data is not saved.' && [ \"\$(dw_files)\" = 0 ]"
+
+mkdir -p $d; echo "not a window" > victim.txt; ln victim.txt $d/GameData-$dw_a-start.bin
+fresh_ini; addkey TEST_DUMP_DATA "1,$dw_a:100,$dw_b:100"; out=$(ASI=TweaksV_test.asi game full_game.exe dwwindow)
+check "GameData-<rva>-start.bin a hard link to another file: that file left alone, a problem; the other files saved" "[ \"\$(cat victim.txt)\" = 'not a window' ] && log_has 'PROBLEM: TEST_DUMP_DATA: GameData-$dw_a-start.bin was not saved: it is a hard link' && [ -f $d/GameData-$dw_a-later.bin ] && [ -f $d/GameData-$dw_b-start.bin ] && [ -f $d/GameData-$dw_b-later.bin ]"
+rm -f victim.txt
+
+dw_run "1,$dw_a:4000" dwwindow dwnoaccess
+check "a page of the window that cannot be read: zeros in both files, 4096 bytes counted in each header and log line, the rest as the fake holds it, no problem" "dw_header $d/GameData-$dw_a-start.bin 0 $dw_a 4000 4096 && dw_header $d/GameData-$dw_a-later.bin 1 $dw_a 4000 4096 && dw_holds $d/GameData-$dw_a-start.bin dw_start.bin 0 4000 && dw_holds $d/GameData-$dw_a-later.bin dw_later.bin 0 4000 && dw_saved_line $dw_a-later.bin 16384 $dw_a '1 s after TweaksV started' '4096 bytes unreadable, saved as zeros' && log_lacks 'PROBLEM'"
+
+fresh_ini; addkey TEST_DUMP_DATA "3,$dw_a:100"; rm -rf $d; out=$(game full_game.exe)
+check "the release build ignores TEST_DUMP_DATA: nothing saved, no problem" "[ \"\$(dw_files)\" = 0 ] && log_lacks 'TEST BUILD' && log_lacks 'PROBLEM' && has '$ALL_ON_HEAP'"
+rm -rf $d; rm -f dw_start.bin dw_later.bin
+
 # Test builds only: a script program as the game places it in memory, for reading a script's code. The fake game
 # places blip_controller - and with some options other_script or blip_imposter - through the call at the hook
 # site, on a thread of its own, and writes what it placed to script_placed_<n>.bin, n counting blip_controller's
