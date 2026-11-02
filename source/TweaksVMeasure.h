@@ -1,13 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // TweaksV - the measurements: one loop for every part that sums up what it counts - DIAGNOSTIC_MODE's,
-// and DirectStorage's UNLOCK_FILES summary.
+// and DirectStorage's UNLOCK_FILES summary - and one check of the game's data, for every part that reads it.
 #pragma once
 
 #include <windows.h>
 
 #include <bit>
+#include <cstddef>
 #include <cstdint>
+#include <string>
 
+#include "TweaksVConflicts.h"
+#include "TweaksVPatch.h"
 #include "TweaksVSummary.h"
 
 namespace TweaksV
@@ -28,6 +32,28 @@ namespace TweaksV
 	}
 	static_assert(DecodePoolPointer(1, 0x1D9528EC93461AA6, 0x0123456789ABCDEF, 30, 2) == 0x00000123456789A0 &&
 		DecodePoolPointer(0, 0x1D9528EC93461AA6, 0x0123456789ABCDEF, 30, 2) == 0, "TweaksV: a pool's pointer as the game's code decodes it");
+
+	// What keeps the size bytes at at from being data of the game that is read unit bytes at a time, each read whole: "not inside the
+	// game" - or inside what a caller names in its place, by its test and its words - or "not aligned to 8 bytes", where a read could
+	// straddle a cache line and tear; "" when nothing does.
+	inline std::string Misplaced(const uint8_t* at, size_t size, size_t unit, bool (*inside)(const void*) = IsInsideGameImage, const char* place = "the game")
+	{
+		if (!inside(at) || !inside(at + size - 1))
+			return std::string("not inside ") + place;
+		if (reinterpret_cast<uintptr_t>(at) % unit != 0)
+			return "not aligned to " + std::to_string(unit) + " bytes";
+		return {};
+	}
+
+	// What keeps those bytes from being read so, the one check of a part's data, as a sentence about them goes on: "is not inside the
+	// game", "are not aligned to 8 bytes" (many), "cannot be read"; "" when nothing does.
+	inline std::string DataFault(const uint8_t* at, size_t size, size_t unit, bool many = false, bool (*inside)(const void*) = IsInsideGameImage, const char* place = "the game")
+	{
+		const std::string wrong = Misplaced(at, size, unit, inside, place);
+		if (!wrong.empty())
+			return (many ? "are " : "is ") + wrong;
+		return IsReadable(at, size) ? std::string() : std::string("cannot be read");
+	}
 
 	// A part's measurement: numbers() changes whenever the summary has something new to say, and
 	// summary(numbers) writes it, given what numbers() returned. Both run on the measurement's thread.

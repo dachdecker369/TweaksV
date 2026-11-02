@@ -178,14 +178,8 @@ namespace TweaksV
 		// read; else logged. The game keeps them mapped from then on: its .data, read without asking again.
 		template <typename T> bool DataOf(const char* what, const uint8_t* at, size_t count, Site site)
 		{
-			const size_t size = count * sizeof(T);
-			if (!InsideGame(what, at, size, site, count > 1))
-				return false;
-			if (reinterpret_cast<uintptr_t>(at) % sizeof(T) != 0)
-				return Fail(std::string("the ") + what + " at " + DescribeAddress(at) + At(P(site)) + (count > 1 ? " are" : " is") + " not aligned to " + std::to_string(sizeof(T)) + " bytes.");
-			if (!IsReadable(at, size))
-				return Fail(std::string("the ") + what + " at " + DescribeAddress(at) + At(P(site)) + " cannot be read.");
-			return true;
+			const std::string fault = DataFault(at, count * sizeof(T), sizeof(T), count > 1);
+			return fault.empty() || Fail(std::string("the ") + what + " at " + DescribeAddress(at) + At(P(site)) + " " + fault + ".");
 		}
 
 		// Where a call past its pattern's match leads, that call's rel32 read only once it is known readable; nullptr, logged, if it

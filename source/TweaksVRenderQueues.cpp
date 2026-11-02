@@ -211,15 +211,10 @@ namespace TweaksV
 		// True if the size bytes at at are the game's data, aligned, so that a word of it reads whole, and can be read; else why not.
 		bool GameData(const std::string& what, const uint8_t* at, size_t size, size_t alignment, const GamePattern& pattern, std::string& why)
 		{
-			const std::string data = "the " + what + " at " + DescribeAddress(at) + At(pattern);
-			if (!IsInsideGameData(at) || !IsInsideGameData(at + size - 1))
-				why = data + " is not inside the game's data.";
-			else if (reinterpret_cast<uintptr_t>(at) % alignment != 0)
-				why = data + " is not aligned to " + std::to_string(alignment) + " bytes.";
-			else if (!IsReadable(at, size))
-				why = data + " cannot be read.";
-			else
+			const std::string fault = DataFault(at, size, alignment, false, IsInsideGameData, "the game's data");
+			if (fault.empty())
 				return true;
+			why = "the " + what + " at " + DescribeAddress(at) + At(pattern) + " " + fault + ".";
 			return false;
 		}
 

@@ -768,16 +768,10 @@ namespace TweaksV
 		// read; else why not.
 		template <typename T> bool DataOf(const std::string& what, const uint8_t* at, size_t count, const GamePattern& pattern, std::string& why)
 		{
-			const size_t size = count * sizeof(T);
-			const std::string data = "the " + what + " at " + DescribeAddress(at) + At(pattern);
-			if (!IsInsideGameImage(at) || !IsInsideGameImage(at + size - 1))
-				why = data + " is not inside the game.";
-			else if (reinterpret_cast<uintptr_t>(at) % alignof(T) != 0)
-				why = data + " is not aligned to " + std::to_string(alignof(T)) + " bytes.";
-			else if (!IsReadable(at, size))
-				why = data + " cannot be read.";
-			else
+			const std::string fault = DataFault(at, count * sizeof(T), alignof(T));
+			if (fault.empty())
 				return true;
+			why = "the " + what + " at " + DescribeAddress(at) + At(pattern) + " " + fault + ".";
 			return false;
 		}
 

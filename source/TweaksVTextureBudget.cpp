@@ -163,17 +163,6 @@ namespace TweaksV
 		std::atomic<bool> g_raising{ false };
 		std::atomic<bool> g_raised{ false };
 
-		// What keeps the size bytes from p from being data of the game that is read unit bytes at a time, each read whole: "not
-		// inside the game", or "not aligned to 8 bytes", where a read could straddle a cache line and tear; "" when nothing does.
-		std::string Misplaced(const uint8_t* p, size_t size, size_t unit)
-		{
-			if (!IsInsideGameImage(p) || !IsInsideGameImage(p + size - 1))
-				return "not inside the game";
-			if (reinterpret_cast<uintptr_t>(p) % unit != 0)
-				return "not aligned to " + std::to_string(unit) + " bytes";
-			return {};
-		}
-
 		// Where "mulss xmm, [rip+disp32]" at p leads - F3, maybe a REX, 0F 59, a ModRM of mod 00 and r/m 101, the
 		// disp32 - or nullptr when p holds no such instruction; p readable for kMulssMaxSize bytes.
 		const uint8_t* MulssTarget(const uint8_t* p)

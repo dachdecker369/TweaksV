@@ -175,15 +175,10 @@ namespace TweaksV
 		// True if a T at at lies inside the game, aligned to its size, so that Load reads it whole, and can be read; else why not.
 		template <typename T> bool DataOf(const char* what, const uint8_t* at, const GamePattern& pattern, std::string& why)
 		{
-			const std::string data = std::string(what) + " at " + DescribeAddress(at);
-			if (!IsInsideGameImage(at) || !IsInsideGameImage(at + sizeof(T) - 1))
-				why = data + " is not inside the game" + At(pattern) + ".";
-			else if (reinterpret_cast<uintptr_t>(at) % sizeof(T) != 0)
-				why = data + " is not aligned to " + std::to_string(sizeof(T)) + " bytes" + At(pattern) + ".";
-			else if (!IsReadable(at, sizeof(T)))
-				why = data + " cannot be read" + At(pattern) + ".";
-			else
+			const std::string fault = DataFault(at, sizeof(T), sizeof(T));
+			if (fault.empty())
 				return true;
+			why = std::string(what) + " at " + DescribeAddress(at) + " " + fault + At(pattern) + ".";
 			return false;
 		}
 
