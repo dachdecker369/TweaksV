@@ -54,7 +54,9 @@ namespace TweaksV
 		// is the rename the HeapAdjuster author recommends; OpenRPF.asi and OpenIV.asi do RageOpenV's job,
 		// alloc8or's DirectStorageFix.asi that of the DirectStorage part, rootBrz's BlipLimitFix.asi that of
 		// the Blips part, Nochala's Static Bounds Limit Adjuster - StaticBoundLimitAdjuster.asi on its page,
-		// StaticBoundsLimitAdjuster.asi in its repository - that of the StaticBounds part, and the
+		// StaticBoundsLimitAdjuster.asi in its repository - that of the StaticBounds part,
+		// WeaponLimitsAdjusterEnhanced.asi that of the WeaponLimits part, GTAV.ResourceAdjusterEnhanced.asi that of
+		// the Resources part, and the
 		// closed-source DecalPatch.asi that of both the box streamer and the decal definitions parts, so it
 		// switches both off. WeaponLimits is two modules, each started in turn.
 		constexpr Feature kFeatures[] = {
@@ -79,7 +81,7 @@ namespace TweaksV
 				[] { InitBlips(); return false; } },
 			// WeaponLimits is two modules, each done on its own (SPECIFICATIONS 11.10): each start has its own try, so that an
 			// exception ends only that half, which the problem names, and the other still starts.
-			{ &kWeaponLimitsSection, {}, {},
+			{ &kWeaponLimitsSection, { L"WeaponLimitsAdjusterEnhanced.asi" }, {},
 				[] {
 #ifdef TWEAKSV_TEST_BUILD
 					// test builds only: TWEAKSV_TEST_WEAPON_HALF_THROWS=1 or 2 in the environment makes that half throw in place of
@@ -122,7 +124,7 @@ namespace TweaksV
 				} },
 			{ &kPedPropsSection, {}, {},
 				[] { InitPedProps(); return false; } },
-			{ &kResourcesSection, {}, {},
+			{ &kResourcesSection, { L"GTAV.ResourceAdjusterEnhanced.asi" }, {},
 				[] { InitTextureBudget(); return false; } },
 			{ &kRayTracingSection, {}, { &kResourceExtensions },
 				[] { InitRayTracing(); return false; } },

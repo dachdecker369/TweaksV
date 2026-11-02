@@ -137,6 +137,8 @@ The log says `The weapon component list moved and its limit raised from 470 to 1
 With `DIAGNOSTIC_MODE=1` the log says how many definitions your game holds, from how many files, 10 seconds in and then every minute while it changes - `[WeaponLimits] DIAGNOSTIC: 556 weapon component definitions from 40 weaponcomponents.meta files (the game's own list holds 470, this one 1024) - the game's own list would have overflowed by 86.` - and ` - the room is used up` at its end means that the guard refuses every further file: raise `WEAPON_COMPONENTS_SIZE`.
 Six of the 17 places in the game's code that use the list lie in its protected code, which could put them back; with `DIAGNOSTIC_MODE=1` TweaksV reads them back at every summary, and a box tells you should one be put back, since the game is then likely to crash.
 
+With `WeaponLimitsAdjusterEnhanced.asi` installed, TweaksV switches its own WeaponLimits part off.
+
 ### PedProps
 
 **Experimental and untested, off by default - use it at your own risk:** this part is in TweaksV, but it has not been tried in the game past 255 props on an anchor - no hat past 255 has been worn yet - so `ENABLED` under `[PEDPROPS]` ships at 0.
@@ -170,6 +172,8 @@ It would rather count a load whose bytes read as a store than miss a writer, so 
 TweaksV has to start before the game's start-up sets the budgets, as it does with Script Hook V's loader: if the game has set them already, nothing is raised, and the start-up summary says that too.
 With `DIAGNOSTIC_MODE=1` the log also says, 10 seconds in and again every minute while the numbers change, how much of the budget the streamed textures and buffers take (`2845 MB of the 6000 MB budget`), the four budgets of `gameconfig.xml` and the raised ones, how many of the 98,304 objects the game allows are in use, the most so far, and whether the game's own check is dropping textures ahead of time (`the update check's flag is up`); ` - at the budget` at its end means the game is dropping what it cannot place right now.
 The same budgets can be raised by data instead: `MaxStreamingMemory_2_Base` and `_3_Base` in `ConfigGraphics` of a `gameconfig.xml` in your mods folder.
+
+With `GTAV.ResourceAdjusterEnhanced.asi` installed, TweaksV switches its own Resources part off.
 
 ### RayTracing
 
@@ -365,7 +369,7 @@ Add these switches to the `msbuild` line above:
 
 1. Use GTA V Enhanced in Story Mode with BattlEye disabled.
    Never go online with mods.
-2. Remove the old plugins TweaksV replaces from the game folder and its `scripts` and `plugins` folders: `HeapAdjuster.asi` (or `ZHeapAdjuster.asi`, the name its author suggests), `ModkitLimitAdjusterEnhanced.asi`, `PackfileLimitAdjusterEnhanced.asi`, `RageOpenV.asi`, `OpenRPF.asi`, `OpenIV.asi`, `StraightToStoryMode.asi`, alloc8or's `DirectStorageFix.asi`, `DecalPatch.asi`, rootBrz's `BlipLimitFix.asi` and Nochala's `StaticBoundLimitAdjuster.asi` (also named `StaticBoundsLimitAdjuster.asi`) - the thirteen old plugins the conflict check knows.
+2. Remove the old plugins TweaksV replaces from the game folder and its `scripts` and `plugins` folders: `HeapAdjuster.asi` (or `ZHeapAdjuster.asi`, the name its author suggests), `ModkitLimitAdjusterEnhanced.asi`, `PackfileLimitAdjusterEnhanced.asi`, `RageOpenV.asi`, `OpenRPF.asi`, `OpenIV.asi`, `StraightToStoryMode.asi`, alloc8or's `DirectStorageFix.asi`, `DecalPatch.asi`, rootBrz's `BlipLimitFix.asi`, `WeaponLimitsAdjusterEnhanced.asi`, `GTAV.ResourceAdjusterEnhanced.asi` and Nochala's `StaticBoundLimitAdjuster.asi` (also named `StaticBoundsLimitAdjuster.asi`) - the fifteen old plugins the conflict check knows.
    While one of them is there, TweaksV switches its matching part off and says so in the start-up message.
    Two more files it knows stay: NaturalVision Enhanced's loader, `onigiri.asi`, which NVE needs - while it is there, TweaksV's RageOpenV and StraightToStoryMode parts are off - and Koukol's Resource Extensions, `ResourceExtensions.asi` - while it is there, the HeapAdjuster, PackfileLimit, Blips and RayTracing parts are off (see "Other mods").
 3. `TweaksV.asi` goes in the game folder next to `GTA5_Enhanced.exe`.

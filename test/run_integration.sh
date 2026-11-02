@@ -7,7 +7,7 @@
 # on, PedProps too, which ships off (PEDPROPS_ON).
 # Fake LOCALAPPDATA: the real one is never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
-CHECKS=192
+CHECKS=196
 cd "$B" || exit 1
 cp "$R/x64/Release/TweaksV.asi" TweaksV.asi
 cp "$R/object/Test/Release/TweaksV.asi" TweaksV_test.asi
@@ -58,7 +58,7 @@ after_header() {
 }
 
 echo "== I1 each old plugin on its own: only its part is skipped, and the log header says so"
-for old in HeapAdjuster.asi ZHeapAdjuster.asi ModkitLimitAdjusterEnhanced.asi PackfileLimitAdjusterEnhanced.asi DecalPatch.asi RageOpenV.asi OpenRPF.asi OpenIV.asi StraightToStoryMode.asi DirectStorageFix.asi StaticBoundLimitAdjuster.asi StaticBoundsLimitAdjuster.asi; do
+for old in HeapAdjuster.asi ZHeapAdjuster.asi ModkitLimitAdjusterEnhanced.asi PackfileLimitAdjusterEnhanced.asi DecalPatch.asi RageOpenV.asi OpenRPF.asi OpenIV.asi StraightToStoryMode.asi DirectStorageFix.asi StaticBoundLimitAdjuster.asi StaticBoundsLimitAdjuster.asi WeaponLimitsAdjusterEnhanced.asi GTAV.ResourceAdjusterEnhanced.asi; do
 	fresh_ini; touch "$old"; out=$(game full_game.exe); rm -f "$old"
 	case "$old" in
 		*HeapAdjuster.asi) off=HeapAdjuster; ok="has '$GAME_HEAP' && has '$MODKIT_ON' && has '$PACK_ON' && has '$BOX_ON' && has '$DECAL_ON' && has '$ROV_ON' && has '$STORY_ON'" ;;
@@ -69,6 +69,8 @@ for old in HeapAdjuster.asi ZHeapAdjuster.asi ModkitLimitAdjusterEnhanced.asi Pa
 		StraightToStoryMode.asi) off=StraightToStoryMode; ok="has '$ALL_ON_HEAP' && has '$MODKIT_ON' && has '$PACK_ON' && has '$ROV_ON' && has '$STORY_OFF'" ;;
 		DirectStorageFix.asi) off=DirectStorage; ok="has '$ALL_ON_HEAP' && has '$MODKIT_ON' && has '$PACK_ON' && has '$ROV_ON' && has '$STORY_ON' && log_lacks '\[DirectStorage\]'" ;;
 		StaticBound*) off=StaticBounds; ok="has '$ALL_ON_HEAP' && has '$MODKIT_ON' && has '$PACK_ON' && has '$BOX_ON' && has '$DECAL_ON' && has '$ROV_ON' && has '$STORY_ON' && log_lacks '\[StaticBounds\]'" ;;
+		WeaponLimits*) off=WeaponLimits; ok="has '$ALL_ON_HEAP' && has '$MODKIT_ON' && has '$PACK_ON' && has '$BOX_ON' && has '$DECAL_ON' && has '$ROV_ON' && has '$STORY_ON' && log_lacks '\[WeaponLimits\]'" ;;
+		GTAV.Resource*) off=Resources; ok="has '$ALL_ON_HEAP' && has '$MODKIT_ON' && has '$PACK_ON' && has '$BOX_ON' && has '$DECAL_ON' && has '$ROV_ON' && has '$STORY_ON' && log_lacks '\[Resources\]'" ;;
 	esac
 	check "$old: its part skipped, the rest applied, reported once in the summary" "$ok && log_has 'Old plugin found: .*$old' && summary_once"
 	check "$old: the header's Features: line says off for ${off// /, } and on for the rest, the check's line stands after the header" "features_say $off && after_header 'Old plugin found'"
@@ -91,13 +93,13 @@ check "the header's Features: line says off for HeapAdjuster, PackfileLimit, Bli
 
 echo "== I2 all old plugins at once, in the game folder, scripts\\ and plugins\\: everything skipped"
 fresh_ini
-touch HeapAdjuster.asi ModkitLimitAdjusterEnhanced.asi plugins/PackfileLimitAdjusterEnhanced.asi scripts/OpenRPF.asi StraightToStoryMode.asi scripts/DecalPatch.asi
+touch HeapAdjuster.asi ModkitLimitAdjusterEnhanced.asi plugins/PackfileLimitAdjusterEnhanced.asi scripts/OpenRPF.asi StraightToStoryMode.asi scripts/DecalPatch.asi WeaponLimitsAdjusterEnhanced.asi plugins/GTAV.ResourceAdjusterEnhanced.asi
 out=$(game full_game.exe); echo "      $out"
-rm -f HeapAdjuster.asi ModkitLimitAdjusterEnhanced.asi plugins/PackfileLimitAdjusterEnhanced.asi scripts/OpenRPF.asi StraightToStoryMode.asi scripts/DecalPatch.asi
-check "nothing applied: the six old plugins switch every part off" "has '$GAME_HEAP' && has '$MODKIT_OFF' && has '$PACK_OFF' && has '$ROV_OFF' && has '$STORY_OFF' && has '$BOX_OFF' && has '$DECAL_OFF'"
-check "all six reported (DecalPatch.asi for two parts), one summary with 7 problems, no crash" "[ \$(count 'PROBLEM: Old plugin found') -eq 7 ] && log_has 'Start-up summary not shown (ERROR_POPUP=0): 7 problem' && summary_once"
+rm -f HeapAdjuster.asi ModkitLimitAdjusterEnhanced.asi plugins/PackfileLimitAdjusterEnhanced.asi scripts/OpenRPF.asi StraightToStoryMode.asi scripts/DecalPatch.asi WeaponLimitsAdjusterEnhanced.asi plugins/GTAV.ResourceAdjusterEnhanced.asi
+check "nothing applied: the eight old plugins switch every part off" "has '$GAME_HEAP' && has '$MODKIT_OFF' && has '$PACK_OFF' && has '$ROV_OFF' && has '$STORY_OFF' && has '$BOX_OFF' && has '$DECAL_OFF'"
+check "all eight reported (DecalPatch.asi for two parts), one summary with 9 problems, no crash" "[ \$(count 'PROBLEM: Old plugin found') -eq 9 ] && log_has 'Start-up summary not shown (ERROR_POPUP=0): 9 problem' && summary_once"
 
-echo "== I2b the same six and onigiri.asi in the game folder: everything skipped, every plugin said"
+echo "== I2b six of them and onigiri.asi in the game folder: everything skipped, every plugin said"
 fresh_ini
 touch HeapAdjuster.asi ModkitLimitAdjusterEnhanced.asi plugins/PackfileLimitAdjusterEnhanced.asi scripts/OpenRPF.asi StraightToStoryMode.asi scripts/DecalPatch.asi onigiri.asi
 out=$(game full_game.exe)

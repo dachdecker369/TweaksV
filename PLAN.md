@@ -76,7 +76,7 @@ D1 to D18, phases A and B, in short; their full text is in the git history up to
 - **D6:** 2.5.0's measurement boot, from which phase B was planned.
 - **D7, stands, the versions:** a build for my own use is tagged and pushed, and the next version I publish is the full one, with all of the upgrades.
 - **D8:** the siren count measured, through one redirected call of the renderer.
-- **D9, stands, the conflict check:** it names only plugins made for Enhanced, Legacy names left out; WeaponLimitsAdjuster Enhanced joins once its page shows its file, the withdrawn Resource Adjuster Enhanced if its file is ever known.
+- **D9, stands, the conflict check:** it names only plugins made for Enhanced, Legacy names left out; `WeaponLimitsAdjusterEnhanced.asi` is an old plugin of WeaponLimits and `GTAV.ResourceAdjusterEnhanced.asi` one of Resources.
 - **D10:** phase B built WeaponLimits, PedProps and the texture budget and dropped the streaming heap; PedProps ships off (NOTES.md, T-PEDPROPS).
 - **D11:** phase B's scaffold and `TweaksV.ini`'s layout 4.
 - **D12:** phase B's designs, as built in SPECIFICATIONS.md's sections of those parts.
@@ -278,7 +278,7 @@ The next plan, 2.8.0, comes from those numbers.
 ## Next steps
 
 **State:** phase C's round runs since 2026-11-02, the split of D29 kept.
-The nine coding tracks and the review's fixes are merged on main and their documents folded: fifteen parts, `TweaksV.ini`'s layout 5 with its 43 keys, 228 patterns, 2408 checks, the full run about 9 minutes side by side.
+The nine coding tracks and the review's fixes are merged on main and their documents folded: fifteen parts, `TweaksV.ini`'s layout 5 with its 43 keys, 228 patterns, 2412 checks, the full run about 9 minutes side by side.
 All six research passes are done and decided (D23, D30, D31): no siren track in this round, the sirens per vehicle being 2.8.0's.
 2.7.0 is set here, with its proof on the merged tree; 2.6.0 stands as the last tag, on c6c8854 and pushed.
 Next: my boots of 2.7.0's proof, then the tag and one atomic push.
