@@ -239,23 +239,14 @@ Then 2.7.0 set - the project's version, the specification's header example and i
 I copy it into the game folder, start the game, stay in it for the seconds the line names, quit, and put the build I use back.
 The overview reads `TweaksV.log`; the pass reads the files.
 
-**2.7.0's proof,** on the Release build of 6042fe7 and, for what D32 rebuilt, of the tagged commit, with `DIAGNOSTIC_MODE=1`, my usual mods folder, my converted emergency packs, a save loaded and about ten minutes of driving and shootouts with a wanted level in the city, which is what the population's measurements need.
-The load is my folder as it stands, `TrainerV.asi` and Collectibles on Map beside TweaksV, which only `POOL_MEMORY` makes safe (below), the police packs coming by the trainer.
-The drive goes on only while the budgets' lines still grow, which their last words say, `; no new high for N s` (D31).
-A start with `LARGE_SIREN_IDS=0` and one with `LARGE_SIREN_IDS=1` compare the base game's settings and IDs (D22), and a pack's ID past 255 kept whole; its emergency vehicle shows its own lights.
-The render queues' step (D30) stands in starts 4 and 5 below; it needed nothing of `[PEDPROPS]`, which stays off.
-Starts 1, 2, 4 and 5's numbers stand (below), on the build of 6042fe7, since the rebuild does not touch what they test; on the new build of D32 come two short starts:
-- **Start 3 again,**: the pool in my `gameconfig.xml` at 8000 against the load's 10,406, `STATICBOUNDS_SIZE=16000`: in use above 8000 is the proof, past the save's load, no falling through.
-- **One at `STATICBOUNDS_SIZE=32767`,** the pool at 24,500.
-The proof: line 1 names 2.7.0 and the commit without `-dirty`; no `PROBLEM` but what a test means; `Features:` naming the two new parts; each new pattern at its RVA; each measurement's numbers; no crash.
-`the lighting capacity is measured` must be in the log, since a check that ends that measurement is a line alone, and `a job's refused lights 0` shows the redirect was made, not that the stub ran.
-`pool memory: N of 256 MB` and no too-late problem are the proof that `H-E2`'s write came before the game read it.
-The model budgets' first lines must not read `256 for traffic, 256 outside the pop cycle`.
-Then the tag, the searches, and one atomic push.
+**2.7.0's proof,** done on 2026-11-02 (below), on the Release builds of 6042fe7 and, for what D32 rebuilt, of the tagged commit 7fa28da, with `DIAGNOSTIC_MODE=1`, my usual mods folder, my converted emergency packs and a save loaded; `TrainerV.asi` and Collectibles on Map lay beside TweaksV, which only `POOL_MEMORY` makes safe, and the police packs came by the trainer.
+A start with `LARGE_SIREN_IDS=0` and one with `LARGE_SIREN_IDS=1` compared the base game's settings and IDs (D22), about half an hour of driving and shootouts with a wanted level gave the measurements' numbers, the render queues' step (D30) stands in starts 4 and 5, and the store's raise (D32) was proved below and above the game's size.
+It read line 1 naming 2.7.0 and the commit without `-dirty`, the one `PROBLEM` `lfpolice`'s Legacy box, each new pattern at its RVA, each measurement's numbers, no too-late line of `H-E2`'s write, and no crash but the old build's start 3.
+Then came the tag, the searches and one atomic push.
 The next plan, 2.8.0, comes from those numbers.
 
 **What my boots have shown so far** (the full account is in the git history up to 098836c):
-- **2.7.0's proof so far,** 2026-11-02, the build of 6042fe7, each with `DIAGNOSTIC_MODE=1`, my usual mods folder, `TrainerV.asi` and Collectibles on Map in: line 1 clean in all four, the one `PROBLEM` `lfpolice`'s Legacy box, all 208 patterns of the check at the RVAs of PATTERNS.md's rows.
+- **2.7.0's proof,** 2026-11-02, first the build of 6042fe7, each start with `DIAGNOSTIC_MODE=1`, my usual mods folder, `TrainerV.asi` and Collectibles on Map in: line 1 clean in all of them, the one `PROBLEM` `lfpolice`'s Legacy box, all 208 patterns of the check at the RVAs of PATTERNS.md's rows.
   - **Start 1,** `LARGE_SIREN_IDS=0`, `STATICBOUNDS_SIZE=30000`: budget patched 136 to 256 MB, no too-late line, 136.0 MB in use, 119.9 free: the load uses the old budget whole, which is what the crash was. Base IDs 0 to 13; packs' IDs cut to 174, 179, 69, 209, 66, 67.
   - **Start 2,** `LARGE_SIREN_IDS=1`, `STATICBOUNDS_SIZE=100000`: passed, 137.1 MB in use; D22's comparison passes: the same 27 settings, 14 base, 13 from packs, base IDs the same, packs' IDs whole, 5550, 5555, 8005, 2001, 24130, 24131, each the low byte of start 1's.
   - **Start 3,** the pool at 8000, `STATICBOUNDS_SIZE=16000`, `SKIP_LANDING_PAGE=0`, over a minute on the page: no false box, then the crash at the save's load, `int3` at `+0x93AA93`, the store's name map's free list empty on the 8001st name, which D32 answers. The pool is made at 15.3 to 15.9 s whether or not the page is skipped, before the page and well before `blip_controller` at 42.5 to 54.7 s.
@@ -266,10 +257,16 @@ The next plan, 2.8.0, comes from those numbers.
     Render queues: streamed peds' render data 15 of 120, requests 2 of 55, a frame's array 28 of 120, 14 different; props of peds 5 of 120, requests 3 of 50, array 6 of 120, 3 different; streamed vehicles 1 of 100, no mods set; references 3,813 of 10,368.
     Texture budget 3,017 of 3,000 MB, the most 3,076, the game's own flag up, "texture loss", my LOD switching's first suspect, measured; 50,112 of 98,304 objects; ray tracing buffer at most 3,278,783 of 4,194,304 vertices, none refused; blips 253 of 2,000; `weapons.meta` files 166, component definitions 556; decals 259 of 260; box streamer's largest 1,277 of 10,000; the siren count 6 models with sirens, 20 of 20, none past `siren20`.
     The trainer stopped answering after caps were set on freemode peds; the game ran on, no event, no crash file, the cause not known.
-  - **Start 5,** the pool at 24,500, `VIDEO_MEMORY_BUDGET=6000`, `STATICBOUNDS_SIZE=16000`, 16 minutes: `hp16fpiu1` (ID 8005), `lspdcvpi08` (24130, 24131) and `policelv` (2001) side by side, sirens on, each its own pattern, every light lit but half of `hp16fpiu1`'s bar, the 20 sirens' limit, 3 models with bones past `siren20` in the log: D22's check on the game passes; three cars at max mods, no crash, the trainer working throughout.
+  - **Start 5,** the pool at 24,500, `VIDEO_MEMORY_BUDGET=6000`, `STATICBOUNDS_SIZE=16000`, 16 minutes: `hp16fpiu1` (ID 8005), `lspdcvpi08` (24130, 24131) and `policelv` (2001) side by side, sirens on, each its own pattern, every light lit but half of `hp16fpiu1`'s bar, the 20 sirens' limit, 3 models with bones past `siren20` in the log: D22's check on the game passes; three cars at max mods, no crash, the trainer's stopping not reported this time.
     My LOD switching noticeably better, a little left, by my eye: the texture budget about 4,700 of 6,000 MB, the most 5,576, the game's flag down, so the memory no longer binds; objects 98,343 of `MaxStreamingResources`' 98,304, rising from 71,727 to 98,283 in one minute of driving, so that limit now binds and is the likely rest, not proven; it stands in `ConfigGraphics` in `gameconfig.xml`, no finding on what else reads it, for 2.8.0's plan.
     Lights: vehicles 93 of 300, vehicle lights 327 of 400, vehicle coronas 439 of 928, scene lights 642 of 1024, ray traced list 1024 of 1024, past 512 in 65,887 of 94,076 samples, reflection lists 298 of 768, coronas 1088 of 1088, a job's refused lights 0: two stores at their room, and the 400 past which the game overwrites its memory within 73.
     Vehicle model budget at most 1,223.8 of 429 MB, mods up to 5.3 and 49.9 MB; peds at most 505.8 of 561, 52 models at once; ped pool at most 96; streamed vehicles 4 of 100, requests 1 of 60, array 4 of 100; references 4,571 of 10,368; ray tracing buffer at most 3,734,612 of 4,194,304, none refused.
+  - **Start 3 again,** the build of 7fa28da, which is tagged, the pool at 8000 in my `gameconfig.xml`, `STATICBOUNDS_SIZE=16000`, `SKIP_LANDING_PAGE=0`: passed.
+    `The size the game gives the static bounds store, 8000, is raised to 16000` at 15.4 s; the read-back: count 16000, pool 16000, name map 4621 buckets with 10406 names, streamer 16000, 10406 slots in use, its streaming base 727662.
+    Past the save's load, where the old build died on its 8001st name; driving, into Ammu-Nation and out again by my eye, no falling through, no crash.
+  - **The last start,** the build of 7fa28da, the pool back at 24,500, `STATICBOUNDS_SIZE=32767`, `SKIP_LANDING_PAGE=1`: passed.
+    24500 raised to 32767 at 15.6 s; the read-back: count 32767, pool 32767, name map 13297 buckets with 10406 names, streamer 32767, 10406 slots in use; no crash.
+  - **Both of these:** line 1 names 2.7.0 and 7fa28da, the one `PROBLEM` `lfpolice`'s Legacy box, 208 patterns found, `C-E-L1` at RVA 0x34336 and `C-E-D1` at RVA 0x1046805, each 1 match, no line of a check not made; pool memory at most 136.1 of 256 MB.
 - **The data window's boot,** 2026-11-02, the test build of 498a6de on the windows: the nine windows at both moments, 18 files, none unreadable; one `PROBLEM`, the Legacy box for `lfpolice`, which stays Legacy on purpose, never spawned.
   Both budgets at 180 seconds: the variety 6.0, vehicles 71.5 MB x 6 = 429, peds 93.5 MB x 6 = 561, level 3, entry 0 of each table 1.5 MB; vehicles in use 428.7 of 429 MB, past the stop at 427.5, with 94 traffic models and 8 dropped, peds 305.1 MB: the vehicle budget looks to bind at the three-minute mark, one reading only, which the drive will say.
   A start before it, with `TrainerV.asi` and Collectibles on Map in, crashed at `+0x15A514`, a write to 0x170, `rax` 0, a pool of 23 slots of 16 bytes, room under 64 KB, a third site near 0x1AEA7FC, the ninth sample; without the two plugins it passed.
@@ -289,11 +286,11 @@ The next plan, 2.8.0, comes from those numbers.
 
 ## Next steps
 
-**State:** phase C's round runs since 2026-11-02, the split of D29 kept.
-The nine coding tracks, the review's fixes and StaticBounds' rebuild (D32) are merged on main and their documents folded: fifteen parts, `TweaksV.ini`'s layout 5 with its 43 keys, 228 patterns, 2382 checks, the full run about 9 minutes side by side.
-All six research passes are done and decided (D23, D30, D31): no siren track in this round, the sirens per vehicle being 2.8.0's.
-2.7.0 is set here, with its proof on the merged tree; 2.6.0 stands as the last tag, on c6c8854 and pushed.
-Next: my two short starts of 2.7.0's proof on the new build, then the tag and one atomic push.
+**State:** 2.7.0, phase C's first build, is tagged on 7fa28da and pushed, this document with it: StaticBounds anew at its one call, SirenSettings' IDs past 255, `POOL_MEMORY`, and the lighting capacity, the two model budgets, the ped pool and the render queues measured.
+It has fifteen parts, `TweaksV.ini`'s layout 5 with its 43 keys, 228 patterns and 2382 checks, the full run about 9 minutes side by side.
+My proof passed on it ("The boots"), and 2.2.1 stays the last one published.
+All six research passes and the second one on StaticBounds are done and decided (D23, D30, D31, D32).
+Next: the plan of 2.8.0, from the numbers of my proof, with what is decided: the sirens per vehicle as the hybrid (D23), the lighting capacity's 8.1 A, B and C (D23, D30), `VIDEO_MEMORY_BUDGET` at 6000 by default (D33), and the vehicle budget's raise in my `gameconfig.xml` once the stores are in (D-V5); `MaxStreamingResources`, which now binds, has no finding yet on what else reads it.
 The open issues are T-HARDEN, T-DIAG, T-FREEZE and T-PEDPROPS.
 
-**Decisions waiting on me:** none.
+**Decisions waiting on me:** the clearing up: what the round left locally, and the dumps, `GameData-*.bin` and the `work-*` folders (D28).
