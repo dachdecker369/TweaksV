@@ -30,6 +30,9 @@ namespace TweaksV
 		constexpr size_t kMaxLine = 2048;		// the longest line written: 2 KB
 		constexpr size_t kMaxPending = 1024;	// lines kept until the log is started
 		constexpr uint64_t kMaxLogBytes = 64ull * 1024 * 1024;	// TweaksV.log grows to 64 MB at most
+#ifdef TWEAKSV_TEST_BUILD
+		constexpr DWORD kTestLastError = 0x54574B;				// what every line leaves as the last error, no error of Windows'
+#endif
 
 		SRWLOCK g_lock = SRWLOCK_INIT;
 		HANDLE g_file = INVALID_HANDLE_VALUE;
@@ -235,6 +238,11 @@ namespace TweaksV
 		{
 			WriteLineLocked(line);
 		}
+#ifdef TWEAKSV_TEST_BUILD
+		// test builds only: a good write sets no last error, so without this a hook of the game's call that writes a line
+		// could lose the game's last error with every check of the suites' "last error kept" green
+		SetLastError(kTestLastError);
+#endif
 	}
 
 	void ClearLogFile()

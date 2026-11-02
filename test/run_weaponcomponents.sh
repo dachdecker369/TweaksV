@@ -132,6 +132,8 @@ fresh_ini; out=$(game full_game.exe wcconfig)
 check "600 replaced by 1494, word for word; the stub's 1494 slots, the lookup called each time, its last error kept" "replaced 600 1494 && has 'size call to a stub, RX: 1494 and 1494 slots, lookups 2 of 2 as called, last error kept' && quiet"
 fresh_ini; out=$(game full_game.exe wcconfigbig)
 check "20000, more than the room and 470, replaced by 1494 exactly, word for word" "replaced 20000 1494 && has 'size call to a stub, RX: 1494 and 1494 slots, lookups 2 of 2 as called, last error kept' && quiet"
+fresh_ini; out=$(ASI=TweaksV_test.asi game full_game.exe wcconfig)
+check "the test build, whose every line leaves a last error of its own: the lookup's handed back all the same" "replaced 600 1494 && has 'size call to a stub, RX: 1494 and 1494 slots, lookups 2 of 2 as called, last error kept' && quiet"
 
 echo "== W11 WEAPON_COMPONENTS_SIZE=20000, past its range: 16384, reported"
 fresh_ini; setkey WEAPON_COMPONENTS_SIZE 20000; out=$(game full_game.exe)
