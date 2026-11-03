@@ -19,4 +19,4 @@ Each has a research pass in the dump (PLAN.md, D20) and a measurement before any
 - The vehicle model budget and the ped model budget: researched, each a budget in bytes, 429 MB and 561 MB at the Population Variety slider's top, measured first in `TweaksVPopulation` (SPECIFICATIONS.md, section 11.16.4); a raise goes by my own `gameconfig.xml`'s block for my load (the vehicles' in 2.8.0's proof, PLAN.md, D-V5; the peds' not, D43), a key of a part only if other people's loads are to get it, and only from the numbers.
 - The ped pool: measured in 2.7.0, not raised: my proof's numbers do not ask for it (PLAN.md, D31, D43).
 - The render queues: measured in 2.7.0, not raised: my proof's numbers do not ask for it (PLAN.md, D43); a raise's design is in the findings' section 8.
-- The ray traced list: at its room in my proof, 1024, in 2 of 32 minutes; 2.8.0 counts what it refuses, and no sort comes unless that number asks (PLAN.md, D36).
+- The ray traced list: 2.8.0 counts what it refuses, and my proof's start 4 refused 172,943 lights, 165,438 of them in one minute in the tunnel: no sort in 2.8.0, a research pass in a later build (PLAN.md, D36).

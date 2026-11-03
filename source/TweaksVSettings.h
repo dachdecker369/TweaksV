@@ -101,6 +101,7 @@ namespace TweaksV
 		TestText(kTweaksVSection, "TEST_DUMP_CODE"),
 		TestText(kTweaksVSection, "TEST_DUMP_DATA"),
 		TestText(kTweaksVSection, "TEST_DUMP_SCRIPT"),
+		TestText(kTweaksVSection, "TEST_SIREN_PASSES"),
 
 		Switch(kHeapSection, "ENABLED", true),
 		Number(kHeapSection, "HEAP_SIZE", 2000, 1, 2047, "Heap size in MB - Maximum 2047"),
@@ -219,6 +220,7 @@ namespace TweaksV
 	inline constexpr const Setting& kTestDumpCode = FindSetting(kTweaksVSection, "TEST_DUMP_CODE");
 	inline constexpr const Setting& kTestDumpData = FindSetting(kTweaksVSection, "TEST_DUMP_DATA");
 	inline constexpr const Setting& kTestDumpScript = FindSetting(kTweaksVSection, "TEST_DUMP_SCRIPT");
+	inline constexpr const Setting& kTestSirenPasses = FindSetting(kTweaksVSection, "TEST_SIREN_PASSES");
 	inline constexpr const Setting& kHeapSize = FindSetting(kHeapSection, "HEAP_SIZE");
 	inline constexpr const Setting& kPoolMemory = FindSetting(kHeapSection, "POOL_MEMORY");
 	inline constexpr const Setting& kModkitArraySize = FindSetting(kModkitSection, "MODKITARRAY_SIZE");

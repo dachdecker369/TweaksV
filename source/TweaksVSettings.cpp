@@ -262,12 +262,14 @@ namespace TweaksV
 		const std::string& dumpCode = GetText(kTestDumpCode);
 		const std::string& dumpData = GetText(kTestDumpData);
 		const std::string& dumpScript = GetText(kTestDumpScript);
+		const std::string& sirenPasses = GetText(kTestSirenPasses);
 		lines.push_back("TEST BUILD - not for release. TEST_BREAK_PATTERN=" + (broken.empty() ? std::string("(none)") : broken) +
 			" TEST_TWICE_PATTERN=" + (twice.empty() ? std::string("(none)") : twice) +
 			" TEST_LOG_LIMIT_KB=" + (logLimit.empty() ? std::string("(none)") : logLimit) +
 			" TEST_DUMP_CODE=" + (dumpCode.empty() ? std::string("(none)") : dumpCode) +
 			" TEST_DUMP_DATA=" + (dumpData.empty() ? std::string("(none)") : dumpData) +
-			" TEST_DUMP_SCRIPT=" + (dumpScript.empty() ? std::string("(none)") : dumpScript));
+			" TEST_DUMP_SCRIPT=" + (dumpScript.empty() ? std::string("(none)") : dumpScript) +
+			" TEST_SIREN_PASSES=" + (sirenPasses.empty() ? std::string("(none)") : sirenPasses));
 #endif
 		return lines;
 	}

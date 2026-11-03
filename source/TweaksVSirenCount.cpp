@@ -55,6 +55,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <optional>
 #include <string>
@@ -309,6 +310,9 @@ namespace TweaksV
 		bool g_raised = false;					// the part's one write is done, so that the wrapper in the renderer's call is the raise's
 		bool g_wouldRaise = false;				// with DRY_RUN: every site found, and the line that would redirect the call written
 		bool g_counting = false;				// the measurement counts, on a first pass in the raise's wrapper too
+#ifdef TWEAKSV_TEST_BUILD
+		int g_testPasses = 0;					// test builds only: TEST_SIREN_PASSES, so many more of the wrapper's calls in each pass
+#endif
 
 		// A light's bytes that hold no member, which a copy need not keep and the heap leaves as it likes (the findings' 3.3)
 		constexpr bool IsLightPadding(size_t at)
@@ -917,6 +921,22 @@ namespace TweaksV
 				}
 				SetLastError(lastError);
 			}
+#ifdef TWEAKSV_TEST_BUILD
+			// test builds only: TEST_SIREN_PASSES more of both calls, so that real light records and coronas go the game's own way into a job's lists, the
+			// moved stores and the scene store, past numbers no normal load reaches
+			if (g_testPasses)
+			{
+				const DWORD lastError = GetLastError();
+				const ModelBlock* const block = slot && slot->state.load(std::memory_order_acquire) == kCounted ? slot->block : nullptr;
+				for (int pass = 0; pass < g_testPasses; pass++)
+				{
+					g_renderer(vehicle, a, b, c, flag, model, skeleton, value, coronas);
+					if (block)
+						SecondCall(static_cast<const uint8_t*>(vehicle), a, b, c, flag, block, skeleton, value, coronas);
+				}
+				SetLastError(lastError);
+			}
+#endif
 			return result;
 		}
 
@@ -1262,6 +1282,18 @@ namespace TweaksV
 			list.writes.push_back({ nullptr, {}, "write a test build refuses" });
 		if (writeFails == L'5')
 			list.hooks.front().function = nullptr;
+
+		// TEST_SIREN_PASSES under [TWEAKSV], read before the wrapper can run
+		const std::string& testPasses = GetText(kTestSirenPasses);
+		if (!testPasses.empty())
+		{
+			char* end = nullptr;
+			const unsigned long passes = strtoul(testPasses.c_str(), &end, 10);
+			if (*end != '\0' || passes > 31)
+				ReportFailure(kTag, "TweaksV.ini: [TWEAKSV] TEST_SIREN_PASSES=" + testPasses + " is not a number from 0 to 31, so it is ignored.");
+			else
+				g_testPasses = static_cast<int>(passes);
+		}
 #endif
 
 		// 4. one write, all or nothing: the hooks first, since a hook can be taken back, then the calls and the constants together
@@ -1313,6 +1345,11 @@ namespace TweaksV
 		g_raised = !dryRun;
 		if (!dryRun)
 			WriteLog(kTag, "The sirens per vehicle are raised to " + std::to_string(sirens) + ".");
+#ifdef TWEAKSV_TEST_BUILD
+		if (!dryRun && g_testPasses)
+			WriteLog(kTag, "TEST BUILD: each pass of the siren lights' renderer runs " + std::to_string(g_testPasses) + " more times, the second call with it (TEST_SIREN_PASSES=" +
+				std::to_string(g_testPasses) + ", up to 31).");
+#endif
 	}
 
 	void MeasureSirenCount()

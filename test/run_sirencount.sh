@@ -14,7 +14,7 @@
 # stores and each site failing alone with nothing written, the hook taken back, DRY_RUN, the IDs' job on and off.
 # Fake LOCALAPPDATA: the real one is never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
-CHECKS=138
+CHECKS=145
 cd "$B" || exit 1
 cp "$R/x64/Release/TweaksV.asi" TweaksV.asi
 cp "$R/object/Test/Release/TweaksV.asi" TweaksV_test.asi
@@ -322,6 +322,22 @@ raised_ini; out=$(TWEAKSV_TEST_SIREN_WRITE_FAILS=3 ASI=TweaksV_test.asi game ful
 check "a hook that cannot be switched off: the patch module's line, and the problem says that it stays, not that nothing is changed" "log_has 'could not be switched off (MinHook: ' && sc_line '$NOT_RAISED its writes could not be made (details above). Its hook stays on and passes the calls on (details above); nothing else is changed.' && has 'state size 0x188,' && has 'siren lights: second calls 0,'"
 raised_ini; out=$(TWEAKSV_TEST_SIREN_WRITE_FAILS=4 ASI=TweaksV_test.asi game full_game.exe srdraw)
 check "an exception once the writes are in, as a line after them can throw: they stand with their hook, the raise with them, no problem" "sc_line '$RAISED' && has \"$RAISED_SITES\" && has '$LIT_32' && has '$LIGHTS_OK' && log_lacks 'PROBLEM'"
+
+echo "== R21 TEST_SIREN_PASSES (test build): so many more of both calls in each pass, the load my proof of the stores needs; no effect at 0, none in the Release build"
+PASSES_LINE() { echo "TEST BUILD: each pass of the siren lights. renderer runs $1 more times, the second call with it (TEST_SIREN_PASSES=$1, up to 31)\."; }
+raised_ini; addkey TEST_SIREN_PASSES 3; out=$(ASI=TweaksV_test.asi game full_game.exe srdraw); echo "      $out"
+check "3 more of each: the renderer 1 + 3 times, the second call likewise, with the same arguments; the first call's result and last error back; each model lit as ever" "has 'siren draws: 2814 through a TweaksV stub, the renderer 16080 times, args ok, result and last error kept 2814 of 2814,' && has 'siren lights: second calls 4824, $LIGHTS_OK' && has '$LIT_32'"
+check "its one line, word for word, and the header's; no problem" "sc_line \"\$(PASSES_LINE 3)\" && [ \$(count 'TEST_SIREN_PASSES=3, up to 31)') -eq 1 ] && log_has 'TEST BUILD - not for release\..* TEST_SIREN_PASSES=3\$' && log_lacks 'PROBLEM'"
+raised_ini; addkey TEST_SIREN_PASSES 31; out=$(ASI=TweaksV_test.asi game full_game.exe srdraw)
+check "its top, 31: the renderer 32 times, the second call likewise" "has 'the renderer 128640 times, args ok, result and last error kept 2814 of 2814,' && has 'siren lights: second calls 38592, $LIGHTS_OK' && sc_line \"\$(PASSES_LINE 31)\" && log_lacks 'PROBLEM'"
+raised_ini; addkey TEST_SIREN_PASSES 0; out=$(ASI=TweaksV_test.asi game full_game.exe srdraw)
+check "0: as without it, no line" "has 'the renderer 4020 times, args ok,' && has 'siren lights: second calls 1206, $LIGHTS_OK' && [ \$(count 'TEST BUILD: each pass') -eq 0 ] && log_lacks 'PROBLEM'"
+for value in 32 x; do
+	raised_ini; addkey TEST_SIREN_PASSES $value; out=$(ASI=TweaksV_test.asi game full_game.exe srdraw)
+	check "$value is no number from 0 to 31: the problem word for word, as without it, the raise standing" "sc_line \"PROBLEM: TweaksV.ini: \\\\[TWEAKSV\\\\] TEST_SIREN_PASSES=$value is not a number from 0 to 31, so it is ignored\\\\.\" && has 'the renderer 4020 times, args ok,' && sc_line '$RAISED'"
+done
+raised_ini; addkey TEST_SIREN_PASSES 3; out=$(game full_game.exe srdraw)
+check "the Release build asks for no such key: as without it, no TEST BUILD line, the header without the key" "has 'the renderer 4020 times, args ok,' && has 'siren lights: second calls 1206, $LIGHTS_OK' && log_lacks 'TEST BUILD' && log_lacks 'TEST_SIREN_PASSES' && log_lacks 'PROBLEM'"
 
 echo
 echo "SIREN COUNT SCENARIOS: $pass passed, $fail failed"

@@ -387,6 +387,7 @@ Add these switches to the `msbuild` line above:
   `TEST_DUMP_DATA=<seconds>,<rva>:<bytes>[,<rva>:<bytes>...]` saves named windows of the game's `.data`, which `TEST_DUMP_CODE` leaves out, for reading static data that lies there: at most 16 windows of at most 64 KB each, the RVAs and the sizes in hex, each wholly inside `.data`, as `GameData-<rva>-start.bin` before TweaksV patches anything and `GameData-<rva>-later.bin` that many seconds later, in `%LOCALAPPDATA%\TweaksV`.
   Anything else is a problem, and nothing is saved; the format is in `source\TweaksVDump.h`, and they go when the others go.
   `TEST_DUMP_SCRIPT=<name>` saves one of the game's script programs - `blip_controller`, say: 1 to 63 letters, digits and `_` - as the game places it in memory, for reading a script's code, which the game's archives store encrypted: each time the game places it, at most 16 times a session, as `Script-<name>-<n>.bin` in `%LOCALAPPDATA%\TweaksV`, with its code, its native table before and after the game resolves it, and its strings; the format is in `source\TweaksVDump.h` too.
+  `TEST_SIREN_PASSES=<n>` (0 to 31) has each pass of a vehicle's sirens run the game's renderer n more times, with `SIRENS_PER_VEHICLE` above 20, so that a handful of cars loads the lighting stores as no normal load does.
   The log header will list `TEST BUILD`.
 
 ## Testing
