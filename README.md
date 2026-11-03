@@ -142,7 +142,7 @@ With `WeaponLimitsAdjusterEnhanced.asi` installed, TweaksV switches its own Weap
 ### PedProps
 
 **Experimental and untested, off by default - use it at your own risk:** this part is in TweaksV, but it has not been tried in the game past 255 props on an anchor - no hat past 255 has been worn yet - so `ENABLED` under `[PEDPROPS]` ships at 0.
-Set it to 1 to try it; what is still open is in [NOTES.md](NOTES.md), T-PEDPROPS.
+Set it to 1 to try it; what is still open is in [ISSUES.md](ISSUES.md), T-PEDPROPS.
 
 A ped model - above all GTA Online's freemode characters, `mp_m_freemode_01` and `mp_f_freemode_01`, which clothing packs dress - carries its props, the hats, helmets, glasses, earrings and watches, on 13 anchors (anchor 0 is the head), and each pack adds a file of them per model.
 The game's checks take the props of one anchor, all files together, as 8 bits: past 255 on an anchor, only the props below (total mod 256) can be put on - with 300 props, the first 44 - the helmet code drops or clamps a head prop past it, and the game takes a worn prop past the 255th for another one.
@@ -344,7 +344,7 @@ Every kind of line that comes per event stops after 20,000 - also DirectStorage'
 - **Tables:** each setting is one entry in `TweaksVSettings.h`, each byte pattern one in `TweaksVPatterns.h`, each part one in `TweaksVFeatures.cpp`.
   A new part is an entry in these tables plus its own file.
 - **Shared code:** patches to the game's code go through `TweaksVPatch` - one writer for bytes, one for redirected calls, the hooks on a function's start through MinHook - which writes all or nothing and gives every page its own protection back; `TweaksVScanner` finds the patterns in the running game's code; the six parts that move one of the game's arrays describe it in a table and share the relocation core, `TweaksVRelocation`, which finds and checks every site before anything is written and then writes all of it in one go; `TweaksVScripts` holds the one hook where the game places its script programs, for every part that works on one - the Blips part, the StaticBounds part's check, and the test builds' `TEST_DUMP_SCRIPT`.
-- **The whole design:** [SPECIFICATIONS.md](SPECIFICATIONS.md) describes every module, format and log line as built, [NOTES.md](NOTES.md) what each part does and measures, [PATTERNS.md](PATTERNS.md) every game fact - with this file, the whole truth about the code: enough to fork it or build on it without reading the source first.
+- **The whole design:** [SPECIFICATIONS.md](SPECIFICATIONS.md) describes every module, format and log line as built, [NOTES.md](NOTES.md) what each part does and measures, [ISSUES.md](ISSUES.md) what is still open, [PATTERNS.md](PATTERNS.md) every game fact - with this file, the whole truth about the code: enough to fork it or build on it without reading the source first.
 
 ## Building
 

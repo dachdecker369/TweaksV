@@ -17,7 +17,7 @@
 // Every site its writing half will use is found and checked first, every value read at run time: each pool's three fields inside the
 // game's .data, side by side, with a rotation and an addend a pool's code can hold; the adds, the inits and the flips agreeing on each
 // family's arrays, index and lock; every size lookup a call into the game, all to one function. A pattern missing or a site not as
-// expected is logged, not reported - the measurement is an aid (NOTES.md, T-DIAG) - and nothing is measured. Racing the game is
+// expected is logged, not reported - the measurement is an aid (ISSUES.md, T-DIAG) - and nothing is measured. Racing the game is
 // harmless: every read of its memory goes through CopyMemorySafely, at worst one frame's count half done and a copy of pointers that
 // are only compared, and a pool's pointer is believed only when the pool's stride is the one its code hands the pool. What stays wrong
 // or unreadable for about a second, 50 samples in a row, is said once and not read further.

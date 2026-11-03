@@ -25,7 +25,7 @@
 // and every site checked: the stores' and the lists' distances, the stores' references by a scan, each site naming what the others
 // name, every address inside the game, every value read aligned and readable; the constants the patterns pin are compared when
 // TweaksV is compiled. For the measurement alone a pattern missing, a site not as expected, a thread that cannot start or a stub
-// that cannot be made is logged, not reported - the measurement is an aid (NOTES.md, T-DIAG); G-E-K1 and G-E-K2, which the measurement
+// that cannot be made is logged, not reported - the measurement is an aid (ISSUES.md, T-DIAG); G-E-K1 and G-E-K2, which the measurement
 // alone looks for, and the ray traced list's jump, not as the findings have them, cost their own number and nothing else.
 // The stubs run on the game's worker threads, so they count with lock instructions into 64-bit counters and lie near the game,
 // read+execute, their counters on a read/write page of its own. A jump's keeps every register and uses no stack, and changes only the

@@ -17,7 +17,7 @@
 //                    the values of gameconfig.xml, which is the only proof that a raise there has taken
 //   DRY_RUN          changes nothing here: nothing is written either way
 // A pattern missing, a site not as expected or a thread that cannot start is logged, not reported - the measurement is an aid
-// (NOTES.md, T-DIAG) - and nothing more is measured. A writer of a story table besides the set-up's three stores would undo a
+// (ISSUES.md, T-DIAG) - and nothing more is measured. A writer of a story table besides the set-up's three stores would undo a
 // raise and not the measurement, so it is a line and the measurement goes on.
 // Written for TweaksV from the research's own findings in the game's code (PATTERNS.md); the idea of the two budgets, the key
 // VehicleModelBudget and "fewer repeated ped models", is that of Resource Extensions [Enhanced] by Koukol, whose plugin was not read

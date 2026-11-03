@@ -891,7 +891,7 @@ namespace TweaksV
 		constexpr Measurement kMeasurement = { "blip pool summary", kFirstSummaryMs, &PoolNumbers, &LogPool };
 
 		// L-E-P1 and L-E-P2 found, the pool and its mark inside the game, and the measurement started; what keeps
-		// it from starting is logged, not reported - an aid (NOTES.md, T-DIAG).
+		// it from starting is logged, not reported - an aid (ISSUES.md, T-DIAG).
 		void StartPoolMeasurement()
 		{
 			std::string notFound;

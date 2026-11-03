@@ -19,7 +19,7 @@ D1 to D18, phases A and B, in short; their full text is in the git history up to
 - **D7, stands, the versions:** a build for my own use is tagged and pushed, and the next version I publish is the full one, with all of the upgrades.
 - **D8:** the siren count measured, through one redirected call of the renderer.
 - **D9, stands, the conflict check:** it names only plugins made for Enhanced, Legacy names left out; `WeaponLimitsAdjusterEnhanced.asi` is an old plugin of WeaponLimits and `GTAV.ResourceAdjusterEnhanced.asi` one of Resources.
-- **D10:** phase B built WeaponLimits, PedProps and the texture budget and dropped the streaming heap; PedProps ships off (NOTES.md, T-PEDPROPS).
+- **D10:** phase B built WeaponLimits, PedProps and the texture budget and dropped the streaming heap; PedProps ships off (ISSUES.md, T-PEDPROPS).
 - **D11:** phase B's scaffold and `TweaksV.ini`'s layout 4.
 - **D12:** phase B's designs, as built in SPECIFICATIONS.md's sections of those parts.
 - **D13:** `ResourceExtensions.asi` is a plugin that stays: it switches HeapAdjuster, PackfileLimit, Blips and RayTracing off.
@@ -80,7 +80,7 @@ The full account is in the git history up to b3a7a1b.
 - **My load without packs,** 2.5.0, 2026-10-29: `weapons.meta` files 155 of 160; component definitions 465 of 470; siren settings 21; streamed textures 3,004 of 3,000 MB; the resource heap 10 of its 32 regions.
 - **With packs,** 2.5.0, 2026-10-30: siren settings 33, their IDs 33 of 256, none given twice, an ID past 255 keeping its low byte.
   Three models past `siren20`: `lspdcvpi08` with 10 sirens and 6 glass bones never lit, the CHP FPIU with 12, half its lightbar dark, the LVMPD Crown Victoria with 10 and 6.
-  The male freemode model holds 255 head props with the base game alone, the female 254; a switch past 255 crashes at `+0x5A0998D` (NOTES.md, T-PEDPROPS).
+  The male freemode model holds 255 head props with the base game alone, the female 254; a switch past 255 crashes at `+0x5A0998D` (ISSUES.md, T-PEDPROPS).
   The box streamer's largest search 1,067 of 10,000; decals 259 of 260; blips 243 of 2,000.
 - **Packs:** every Legacy vehicle traps the game at `+0x127C32F` as it is created; converted with CodeWalker, most spawn.
   Two converted packs crash in the game's texture and buffer code, where TweaksV writes nothing: State Wide after a minute or two of driving, the SFPD collection's police6 seconds after its spawn.
@@ -94,6 +94,6 @@ The full account is in the git history up to b3a7a1b.
 It has sixteen parts, `TweaksV.ini`'s layout 5 with its 47 keys, 274 patterns and 2986 checks, the full run about 10 minutes side by side.
 It takes the sirens per vehicle (D23), the light stores and the corona store as a part (D35, D39), `VIDEO_MEMORY_BUDGET` at 6000 (D33), and `STREAMED_OBJECTS` at 131072 (D37), which ended my LOD switching by my eye.
 Open for a later plan, none asked for now: the ray traced list's sort (D36); some lights on buildings that come on late, about 50 m from a Gruppe 6 building downtown by my eye, with nothing refused in the log (ROADMAP.md); the hat of T-PEDPROPS (D42).
-The open issues are T-HARDEN, T-DIAG, T-FREEZE, T-PEDPROPS and T-DESCRIPTORS.
+The open issues, in ISSUES.md, are T-HARDEN, T-DIAG, T-FREEZE, T-PEDPROPS and T-DESCRIPTORS.
 
 **Decisions waiting on me:** whether 2.8.0 is the version I publish, which is my own act. The dumps, `GameData-*.bin` and the `work-*` folders stay (D28).

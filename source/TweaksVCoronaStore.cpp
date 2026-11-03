@@ -20,7 +20,7 @@
 // lock inc on to where they led, and the batch's six bytes through a stub that adds what the batch could not place. The stubs lie near the
 // game, read+execute, use no stack and keep every register but the flags, which their targets write anew before anything reads them, and
 // the batch's rax, which the moved lea writes; the counters lie on a read/write page of their own. They run only when a corona is refused,
-// and at each batch. A stub that cannot be made is logged, not reported - an aid (NOTES.md, T-DIAG) - and the raise goes on without it.
+// and at each batch. A stub that cannot be made is logged, not reported - an aid (ISSUES.md, T-DIAG) - and the raise goes on without it.
 // If the part refuses after this has said yes it calls DiscardCoronaStore, and the store's memory and the stubs' go back.
 // Written for TweaksV from the findings of its own research in the game's code; the idea of raising what many siren lights reach comes from
 // the page of Resource Extensions [Enhanced] by Koukol, whose plugin was not read (CREDITS.md).

@@ -271,7 +271,7 @@ The facts, from the dump of 1.0.1158.16, verified against it on 2026-10-27:
 - **The function behind it** (RVA 0x91BF20) takes the program alone and returns a byte: 1 when every native resolved, 0 when one did not; the constructor ignores it.
   Before the call, the program's native table holds the natives' 64-bit hashes - the constructor has rotated them back already, in the loop `Y-E-N1` matches; after it, each entry holds its handler's address, and a hash the game does not know gets the handler at RVA 0x50CB60, `CC C3` (an `int3`, then a `ret`).
 - **The thread and the timing:** the constructor runs on the game's resource placement thread whenever a script program is streamed in.
-  The program enters the game's registry of programs only after the call, and every script thread looks its program up in the registry each time it runs (a thread whose program is not there faults rather than runs it), so no thread can run the program while the hook looks at it: the window of T-FREEZE (NOTES.md) does not arise.
+  The program enters the game's registry of programs only after the call, and every script thread looks its program up in the registry each time it runs (a thread whose program is not there faults rather than runs it), so no thread can run the program while the hook looks at it: the window of T-FREEZE (ISSUES.md) does not arise.
 - **The fields,** counted from the program's start: +0x10 the code page table (8-byte pointers, one per page), +0x1C the code length in bytes (dword), +0x2C the native count (dword), +0x40 the native table (count x 8 bytes), +0x58 the name's hash (dword), +0x60 the name (a pointer to a zero-terminated string), +0x68 the string page table, +0x70 the strings' length in bytes (dword); the object is at least 0x80 bytes.
   `Y-E-N1` pins +0x1C and +0x40, `Y-E-I1` +0x10, and `Y-E-H1` +0x70 with the page rounding: its last bytes begin the constructor's loop over the strings' pages (`mov r14d, 0x3FFF` at RVA 0x91BBB0, `mov eax, [r12+0x70]` at 0x91BBB6, `add eax, r14d; cmp eax, 0x4000` at 0x91BBBB; the loop at 0x91BD1B to 0x91BD37, `shr eax, 14` and the page table read at +0x68); the others are on the list of "When Game Updates", item 5.
 - **The pages:** 0x4000 bytes each.
@@ -592,7 +592,7 @@ N is `SIRENS_PER_VEHICLE`; the room stays 64 bytes whatever N.
 ## PedProps
 
 The PedProps part lifts the 255 props per anchor of a ped model to 65535: it widens the eleven narrowings below from 8 to 16 bits once every site and the complete sets have checked out (SPECIFICATIONS.md, section 11.11).
-It ships off, experimental (NOTES.md, T-PEDPROPS).
+It ships off, experimental (ISSUES.md, T-PEDPROPS).
 Its letter is `A`.
 The facts, from the dump of 1.0.1158.16 (2026-10-29), and what my boots of 2.5.0 measured:
 
@@ -614,7 +614,7 @@ The facts, from the dump of 1.0.1158.16 (2026-10-29), and what my boots of 2.5.0
 - **Measured:** the base game's own head props on 1.0.1158.16, by my second test of 2.5.0 (2026-10-30): 255 on `mp_m_freemode_01`, from 39 files, and 254 on `mp_f_freemode_01`, from 38 - so a single add-on head prop takes the male model past the limit.
   With clothing packs its head anchor reached 272 and 279, the props from index 16 and 23 on refused, and every switch to the male model past 255 crashed the game (0xC0000005 at RVA 0x5A0998D, a read of 0x274, in the natives' code), with packs made for Legacy and converted ones alike, while 255 switched fine.
   My boot of 2.6.0 (2026-11-01) widened the eleven, and the switch past 255, with `r4usarmyv3` in, crashed at the same RVA; with that pack out the male model, at 255, switched fine with a hat at index 200.
-  Not settled: whether the crash comes from going past 255 or from the big packs' own data, since no test has gone past 255 without a big pack, and no hat past 255 has been worn; the part ships off until then (NOTES.md, T-PEDPROPS).
+  Not settled: whether the crash comes from going past 255 or from the big packs' own data, since no test has gone past 255 without a big pack, and no hat past 255 has been worn; the part ships off until then (ISSUES.md, T-PEDPROPS).
 
 The part looks for `A-E-T1..T5`, `A-E-G1`, `A-E-G3..G6` and `A-E-C1` on every boot it is on, and for its measurement `A-E-C2` and `A-E-S1` with `DIAGNOSTIC_MODE=1` only - with the part off only those two and `A-E-C1`, with `DIAGNOSTIC_MODE=1` - (`TweaksVPedProps`, SPECIFICATIONS.md section 11.11), each matching as often as its row says in the dump of 1.0.1158.16, where the ped variation code, RVA 0x10C0000..0x1110000, 582 functions, was read whole, and in my boots of 2.5.0.
 It makes each narrowing's B6 a B7, one byte at the offset its row gives, the instruction otherwise as it is.

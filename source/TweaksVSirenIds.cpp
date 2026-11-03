@@ -44,7 +44,7 @@
 // dedupe's own check for none on the low byte, so that a pack's ID n*256+255 skips the dedupe and gets a free ID when
 // its own is taken; the two IDs stored into a variation, which nothing reads afterwards.
 // For the part, a site not as the findings have it is a problem and nothing is written; for the measurement alone, with
-// the part off, it is logged and nothing is measured - an aid, not a problem (NOTES.md, T-DIAG). A type other than a byte's is
+// the part off, it is logged and nothing is measured - an aid, not a problem (ISSUES.md, T-DIAG). A type other than a byte's is
 // another mod's work for the part, and for the measurement a line that stops nothing. The measurement reads the game's data
 // without a lock and writes nothing: the carcols data's siren settings through CopyMemorySafely, since their array grows
 // while packs load, and the ID table after IsReadable.

@@ -4,7 +4,7 @@
 // props over all of them, but its checks take that total, and a worn prop's index, as 8 bits, so from 256 props on
 // one anchor it refuses the props past (total mod 256). The part widens those eleven narrowings to 16 bits, so that
 // an anchor holds up to 65535 props in all; with DIAGNOSTIC_MODE=1 it also logs how many props each ped model has
-// on each anchor. It ships off: the raise is experimental, untested in the game past 255 (NOTES.md, T-PEDPROPS).
+// on each anchor. It ships off: the raise is experimental, untested in the game past 255 (ISSUES.md, T-PEDPROPS).
 #pragma once
 
 namespace TweaksV

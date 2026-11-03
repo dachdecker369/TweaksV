@@ -12,7 +12,7 @@
 // 65535 props in all. Each narrowed register holds the whole value, so below 256 the widened reads give exactly
 // what the game's own give (PATTERNS.md, "PedProps").
 //   ENABLED          [PEDPROPS]'s only key, off by default: the raise is experimental, untested in the game past
-//                    255 props on an anchor (NOTES.md, T-PEDPROPS). No size to choose, the width is fixed
+//                    255 props on an anchor (ISSUES.md, T-PEDPROPS). No size to choose, the width is fixed
 //   DIAGNOSTIC_MODE  every site and every write logged, then the measurement: 10 seconds in and then every minute
 //                    while the numbers change, every ped model of the model info store (A-E-S1), its variation
 //                    files and their props per anchor (the layout A-E-C1 and A-E-C2 pin), the most props on one
@@ -28,7 +28,7 @@
 // one file's count, a file holding 255 props on an anchor at most by its own data. The measurement reads the
 // game's heap through CopyMemorySafely, within bounds of its own, without a lock, since the game adds variation
 // files while it loads its packs; it is an aid: a site of its own not as expected, an address outside the game or
-// a thread that cannot start is logged, not reported (NOTES.md, T-DIAG), and it runs whether the part's job is
+// a thread that cannot start is logged, not reported (ISSUES.md, T-DIAG), and it runs whether the part's job is
 // done or not, and while the part is off (MeasurePedPropsWhileOff).
 // Written for TweaksV from the research's own findings in the game's code (PATTERNS.md, "PedProps"); the idea comes
 // from PedProp Limit Adjuster by Zombieguy and from FiveM's pull request 2421 by Disquse - none of their code was
@@ -618,7 +618,7 @@ namespace TweaksV
 			ReportFailure(kTag, "The ped props' limit is not raised this session: " + why);
 		}
 
-		// "DIAGNOSTIC: the ped props are not measured: <why>" - logged, not reported: an aid (NOTES.md, T-DIAG)
+		// "DIAGNOSTIC: the ped props are not measured: <why>" - logged, not reported: an aid (ISSUES.md, T-DIAG)
 		void NotMeasured(const std::string& why)
 		{
 			WriteLog(kTag, "DIAGNOSTIC: the ped props are not measured: " + why);

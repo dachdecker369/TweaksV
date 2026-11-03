@@ -15,7 +15,7 @@
 // Everything is checked first, in the order of the patterns, and the first thing not as the research found it ends the checks. Every read
 // of the game's data goes through IsReadable, of its heap data through CopyMemorySafely, and a walk of the slots is bounded by the pool's
 // own count. A pattern missing, a site not as expected or a thread that cannot start is logged, not reported - the measurement is an aid
-// (NOTES.md, T-DIAG) - and the module measures nothing more.
+// (ISSUES.md, T-DIAG) - and the module measures nothing more.
 // Written for TweaksV from the findings of its own research in the game's code (PATTERNS.md); the idea of a larger pool is that of Resource
 // Extensions [Enhanced] by Koukol, whose plugin was not read (CREDITS.md).
 

@@ -283,7 +283,7 @@ namespace TweaksV
 			ReportFailure(kTag, "The most streamed objects are not raised this session: " + why + ".");
 		}
 
-		// The measurement not started - logged, not reported, an aid (NOTES.md, T-DIAG).
+		// The measurement not started - logged, not reported, an aid (ISSUES.md, T-DIAG).
 		void NotMeasured(const std::string& why)
 		{
 			WriteLog(kTag, "DIAGNOSTIC: the texture budget is not measured: " + why + ".");

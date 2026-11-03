@@ -41,7 +41,7 @@
 // lookup by name is guarded against an access violation, since no pattern pins what it is handed. For the raise
 // each of these is the part's problem, nothing written; for the measurement a pattern missing, a site not as
 // expected, a summary thread that cannot start or a call that cannot be redirected is logged, not reported - the
-// measurement is an aid (NOTES.md, T-DIAG) - and nothing is redirected.
+// measurement is an aid (ISSUES.md, T-DIAG) - and nothing is redirected.
 // Written for TweaksV from the research's own findings in the game's code (PATTERNS.md); the idea of more sirens comes
 // from SirenSetting Limit Adjuster by cp702 - none of its code was read or used (CREDITS.md).
 
