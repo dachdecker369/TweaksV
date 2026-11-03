@@ -34,7 +34,6 @@ NTFS takes `FILE_RENAME_POSIX_SEMANTICS` from Windows 10 1607 on.
 3. Update the pattern in `source\TweaksVPatterns.h` and in this file - the tests check that both agree - and confirm that it matches exactly once.
    `GTA5_Enhanced.exe` is encrypted on disk and its code decrypted only in memory, so the file shows random bytes where the patterns match: look for the code in a copy of the running game, which a test build with `TEST_DUMP_CODE=60` saves (README, Test Builds).
    The game is built with clang, not MSVC: its code writes `31 C9` and `45 31 C0` for xor where MSVC writes `33 C9`, and the image has a `.retplne` section, two `.text` sections and a `.pdata` function table, so a pattern from a GTA V Legacy mod never carries over and is found anew here.
-   To analyse a dump, rebuild it as a PE (the headers and the saved sections at their offsets, `.data` as zeros) for Ghidra's headless analyser; the `.pdata` table gives the functions.
    A fact in `.data`, which a dump holds as zeros, is read with `TEST_DUMP_DATA` (README, Test Builds): windows of it at the RVAs the code names, at the start and later.
    Re-find each site from its anchor pattern rather than trusting its old RVA, and treat a site that moved as new findings, never a guess.
 4. DirectStorage: with `DIAGNOSTIC_MODE=1` the log names the factory's functions and says why `OpenFile` cannot be logged (another interface, an `OpenFile` outside DirectStorage's DLLs); the part's job depends on how the files are opened (item 5).
@@ -52,23 +51,18 @@ NTFS takes `FILE_RENAME_POSIX_SEMANTICS` from Windows 10 1607 on.
    - **Script programs:** the fields at +0x2C, +0x58, +0x60 and +0x68; the page size and its rule; the opcodes' values and lengths, against the game's length table; the native table's rotation and what it holds before and after `Y-E-H1`'s call; the function behind that call; the resource placement thread the call runs on at every placement, a save load included; the registry the program enters only after it; the name's hash.
    - **Blips:** the pool's 2,000 slots (`L-E-P1` and `L-E-P2` give addresses, not the number, which the measurement takes as 2,000) and the three the count leaves out; the count's answers with the pool full; the guard's shape in `blip_controller`, which a script update can move or change in its natives' indices, its form or its threshold: the threshold 150, the room it needs and 1,997, the highest limit, are this build's.
    - **Weapon infos:** the initializer running after `DllMain`; 0x1893AC0's blobs from `edx` alone, its loop unchecked; the capacity the only other carrier; no compare of the count and no other array sized by it (60 instructions in 13 functions address its fields); the loader the only adder, the block never reallocated after the initializer; the data file entry in the loader's `rcx`, 0xA8 bytes: its name read bounded within the first 0x80 bytes, which the loader copies itself, its type at +0x90 (0xA3 a re-parse of the blob of that name, which goes to 0x1863E40).
-     Not settled: what the loader returns: the guard returns 0 for a file it refuses, the load handler of later packs returns true either way (`B0 01` at 0x188E4E1), the manager's init is not read.
-     Seen by my boot of the guards, at the rooms 160 and 470: 3 component files and 6 `weapons.meta` files refused, the game playable, no crash; a refused pack's weapon spawned without its magazine, its rounds floating under the gun.
    - **Weapon components:** the list's size, the distance to its count right behind it (`W-E-C1`'s +2), in no instruction: for a compare added, or something put between them, look in the dump for an immediate of the size and of the size minus one, and at the shape of each load the scan finds; the 17 loads as the list's whole use (no pointer in the dumped sections, `.data`'s initialised part never dumped), 6 in the protected `.text`, which could put them back: only a boot with more than 470 definitions, played a while, shows whether it does; the rebuild after every file, so that the count is all loaded files' definitions and `W-E-C1`'s +14 the files; the entries' sort; the pool's slot count, the lookup's result as it stands, handed to the constructor (0x15A490) at 0x1856022 as `mov edx, ebx`; the lookup's rule; the slot's size; the blob's definitions and their uint16 at +0x08.
      For the guard: the loader's two callers; the parse coming after it, so that the blobs' sum is true at its head for every mounted file, the base loader's list count stale until its rebuild; its callback's vtable's +0x20, with dl the callable not stored inline; the mounter's unload, and its load true whatever the loader did; the blob's count, which `W-E-C5` does not pin: the pool's margin of 470 rests on the parser making no definition past the blob's array, not settled; when the weapon init, and the base loader with it, runs, in the protected code (the names kept cover a run after the packs).
    - **Siren IDs:** the parser's types and member data; the room after the IDs' members (+0x01..+0x03 of a setting, +0x4C..+0x4F of a variation); the settings' and the carcols data's layout; the ID table's place and its fill before the base loader's call; 255 as "no ID", position 0 as no sirens; the loaders' rules for a clash; nothing reading an ID after the load; the constructors' stores `I-E-C1` to `C3` rely on; the protection's reads of the gap bytes; the dedupe's load and what follows it, for the stub; the init calling the base loader right after another call, setting up no argument; the merge and the resize (RVA 0x1378210, 0x137A3D0) copying a setting's +0x00..+0x38 whole, a wide ID's high byte at +0x01 with it; the PSO loader with a member wider than its file's.
    - **Siren count:** the renderer's nine arguments, the 7th, the skeleton, pinned by nothing; its call once per pass of a vehicle whose sirens are on (a HINT from the data flow, not verified); the bone structure's layout and IDs; the skeleton data and its bone count; find-bone-by-name's arguments and result; the bones' names; the model info's +0x18; first sign of a change: the measurement's line per model that says a bone its structure names is not found by name, or found at another bone.
    - **Siren damage:** the fill's arguments, its table's shape, no ID checked; the tag's rule; the 32-bit sets at the vehicle's +0x860 and the damage object's +0x440; every reader not raised reading the game's own table, the raised loops nothing sized by 20; the load of the pool right before `I-E-Y2`; a loop added or missed stays at 20, cosmetic, no crash; the raise stays off any build these were not read on.
-   - **PedProps:** the narrowed registers holding the whole 32-bit value, or the widening has no effect: `A-E-T1`'s `ebx`, the anchor's total, by `add ebx, eax` at RVA 0x10F4E19 before the pattern; for `A-E-T2..T5` the per-anchor count's sum in `eax` (`add eax, ecx`, inside `A-E-C2`); `A-E-G1`'s `esi` by `mov esi, [rdx+rdi+8]` at RVA 0x10F1DE9, `A-E-G6`'s `edi` by `mov edi, [rax+rsi*4+0x1c8]` at RVA 0x10F883C, both outside their patterns, `A-E-G3..G5`'s inside; the eleven as all the narrowings of an anchor's total and of a worn prop's index: the call counts (7 and 17) guard the calls, not a walk written inline anew, so repeat the region's scan, the per-file narrowings and every call of the prop functions read for a narrowed index; one file's own bound, 255 props on an anchor; the layout the measurement reads beyond its patterns: an anchor entry's anchor (compared at RVA 0x10F4F00, `39 54 39 10`, after the loop's alignment), a model info's hash, the 13 anchors, the per-anchor count taking an anchor's first entry in each file; the natives' bodies in the protected code, out of the part's reach: on 1.0.1158.16 the set-prop native's path checks the anchor and the index's sign, nothing narrower.
-   - **Texture budget:** the counters' layout and what the game counts there; the configuration's offsets: `Q-E-T1` and `Q-E-T2` pin 0x54C, 0x550 and 0x558, +0x554 and +0x55C follow from `pmovsxdq` reading two int32 each; the three stores as the only writers: the part's scan sees only stores through `[rip+disp32]`, not a write through a register, as the getter reads them; no full value beside each `_Base`, as `ConfigPopulation` has; the index and its override; the update check's switch, factors and flag, and its two calls into the device's vtable; a placement failing while the budget is at most the bytes of both (`48 39 C6`, then `73 1C`, at RVA 0x4DBCDF); Windows' budget in the adapter and `availablevidmem`'s `int3`; the game's adapter, DXGI's choice by high performance with software adapters and Microsoft's skipped; the call after the stores (`Q-E-T2`'s +40), its function's four registers at most and nothing on the stack, as my boot at 6,000 MB bore out; the check before the read and the counting at the place; a counted object's one descriptor; the heap's sum taken in code, its free list plain and unchecked (a list of another shape shows as the walk ending at once, "all in use"); 0x509BF0 and 0x1C124E0 not setting the settings' +0x128 and +0x12C, so that the raise's read takes the same constants.
+   - **PedProps:** the narrowed registers holding the whole 32-bit value, or the widening has no effect; the eleven as all the narrowings of an anchor's total and of a worn prop's index: the call counts (7 and 17) guard the calls, not a walk written inline anew, so repeat the region's scan; one file's own bound, 255 props on an anchor.
+   - **Texture budget:** the counters' layout; the configuration's offsets; the three stores as the only writers, the part's scan seeing only stores through `[rip+disp32]`; the index and its override; a placement failing while the budget is at most the bytes of both; the call after the stores (`Q-E-T2`'s +40), its function's four registers at most and nothing on the stack; a counted object's one descriptor; the heap's sum taken in code, its free list plain and unchecked.
    - **Legacy packs:** the resource versions the check for packs made for GTA V Legacy names a pack by, from the packs' files, and such a vehicle's trap (section "RageOpenV", with the RPF7 layout): a boot with a pack made for Legacy and the same pack converted for Enhanced shows whether the trap and the versions still hold.
    - **RayTracing:** the buffer object's fields, +0x0C the stride in the low 12 bits of a word, and the views' size from them (the maker with its flags' bit 3), which `T-E-B1` does not pin; the 20-byte vertex (the skinning shader 0x4CDF58A2 writes it, the reflection lighting reads it); the buffer made once, after `DllMain`, its global 0 until then: made anew later (a hint: ray tracing switched on in the menu) a second store; the two frame slots and their adjacent counters; the capacity held only by the two checks and the count (a check added elsewhere refuses earlier, which is safe; a write by a size of its own would not show); the shaders' 26-bit first vertex; what a refusal does, its callers handing their job lists back, rax and the flags free for the counting stubs; the skinning job's +0x48; the neighbouring limits of the same frame.
    - **StaticBounds:** the one lookup of the store's size, which `C-E-L1` pins from the call to the pool's lea and no more (the read-back reports a second reader, which splits the store); the name's hash (a store renamed stays at the game's size with the redirect in place, which only the size's line shows); the store's offsets, in no pattern but the pool's; the game asking after `DllMain`; `blip_controller`'s placement after the load's names, which the read-back's numbers rest on, by the hash at +0x58 of a program.
    - **LightCapacity:** the records' sizes, which the stores' distances rest on; 5 vehicles a job and 60 jobs, in the code's shape and no one constant (`lea edi, [rax+rax*4]` at RVA 0xDE692E and 0xDE6931, the same in 0xF0104E); 300 vehicles a frame, the length of four arrays with their counts right behind them, in no instruction; the frame's order, the vehicles' lights last; the sort list's mark, the byte at +4 of its count, read by no pattern's instruction; the siren setting's byte at +0x38 and its lights' flag at +0x45, through `I-E-T4`'s pointer; a job's scratch handed from the worker's frame to a job whose +0x6E has bit 0 set, the only such call found; the shaders' 512 and 128, in the game's shader files; the ray traced upload's score, with its 196 m; the functions behind `G-E-C1`'s and `G-E-F1`'s jumps, pinned only by the 12 and the 14 bytes of their ways out that the module compares at run time.
-   - **Population:** the object's fields no pattern pins (the vehicles' excess, lists, requests in flight and shares, the peds' excess) and the list's format, only logged, a wrong one a wrong number, never harm; the model info's +0x286 bit 1, the streamed flag (a hint of the render queues' pass), and its +0x9D's kinds; the variety's formula (`O-E-P8`'s line logs the 5, the 1 and the 10, not the 0.05; a raise's cap rests on the 10); the block of `gameconfig.xml`, but the story entries' dwords, which `O-E-V7` and `O-E-P5` to `P7` pin: the parser ignores a renamed member in silence, so read the names again from its descriptors with a data window; the constructor's defaults (a change reads in the tables' line as `not the defaults of 1.0.1158.16`, and the module's two arrays are read again); entry 0 of each table and the level's first value, in `.data` (the first tables' line and summary show them); the floor of 9 vehicle models, the frame gates and the 64 frames, behaviour TweaksV does not read; the floor of 6 ped models, only as the bytes `O-E-P2`'s check compares at +0xEA, where a change stops the measurement.
-   - **Ped pool:** the pool's layout and the high 2 bits of its +0x28; the spatial array's offsets, +0x28, +0x30 and +0x38 x, y and z, +0x40 and +0x48 the node's address's parts, +0x50 flags, +0x58 capacity, +0x5C count, set in 0x11682D0; no other function holding a list by that count, so every read of +0x5C after a load of its pointer; the fixed arrays' sizes, the singleton's offsets in 0x1D90620, +0x20 and +0x1020, the filler's three arrays, 1,024 in the six methods and 0x1164D40; the ped's offsets the measurement reads; the pool's size never passing the number.
-   - **A pool's memory:** the allocator's offsets, which the pool memory's line reads and only its budget and the sum of its use and room check; the pools' proxy leading to that allocator, slot 5 of the master allocator (0x36D90, and 0x13CB90 with slot 5 in the start-up).
-   - **Render queues:** the pool object's layout, protected by the stride read at +0x1C at run time; the array's capacity at +0xA, which only the inits pin, the adds the rest of the array; three of a family's four arrays holding whole frames (reset on a flip, the most would read low, not wrong); the game's own `gameconfig.xml` naming the vehicles' two sizes (if not, one vehicle streams, a capacity of 1 in the measurement); the pools' names, labels only, since the code matches hashes; whether streamed models exist in a given load, which is data, not code.
+   - **The limits measured and not raised** (Population, Ped pool, A pool's memory, Render queues): their layouts in their sections, only logged, a wrong one a wrong number, never harm; a raise reads them again first.
 
 ## HeapAdjuster
 
@@ -175,11 +169,9 @@ The list: RVA 0x3ED6B40, 1000 entries of 8 bytes, with no pattern of its own: tw
 
 The array: RVA 0x42EC8A0, N = 260 entries of 80 bytes.
 The count of registered definitions: a dword 16 bytes before it (0x42EC890), addressed only by its own instructions, never through the array, nor the array through it; vanilla registers 259.
-The pair of constants 0x100 and 0x200 that `DecalPatch.asi` patches is not this build's limit.
-A scan for every `lea r64, [rip+disp32]` that loads the array finds exactly 31: RVA 0xB195A8, 0xB3187E, 0xB31AD6, 0xB31FA7, 0xB324CA, 0xB326EF, 0xB32C71, 0xB32F2B, 0xB33423, 0xB338F6, 0xB33EF5, 0xB34892, 0xB34CF7, 0xB34F96, 0xCA0A1F, 0xCA11CE, 0xCA323B, 0xCA6DD5, 0xCA756C, 0xCA960E, 0xCAA2F7, 0xCAD859, 0xCADE17, 0xCB30C9, 0xCB386D, 0xCB3A4F, 0xCBEAE2, 0xCBF181, 0xCBF251, 0xCBF2D0, 0xCD2B60.
+A scan for every `lea r64, [rip+disp32]` that loads the array finds exactly 31.
 An entry, as the parser fills it from the `decals.dat` columns: +0x00 int32 decal id (the first column); +0x08, +0x10 and +0x18 pointers to the diffuse, normal and specular textures (0 until loaded - the only pointers in an entry, and the ones the start-up loop zeroes); +0x20 float size; +0x24 specular multiplier, +0x28 specular falloff, +0x2C specular intensity, +0x30 fresnel, +0x34 steep, +0x38 parallax scale and +0x3C emissive value, all floats; +0x40 byte texture rows, +0x41 columns, +0x42 id A, +0x43 id B, +0x44 texture wrap (0 or 1; the game sets 4 later for "rotate to camera"), +0x45 anisotropic, +0x46 washable, +0x47 underwater create, +0x48 underwater fade; +0x49 to +0x4F unused.
 No entry holds a pointer to another entry or into the array, and nothing else in the game is sized by the number of definitions.
-Entries are read with scalar loads and cleared with unaligned stores, so a page-aligned buffer needs no more alignment.
 A definition's index is a uint16 in the game's decal instances.
 Findings: `decals_findings_for_the_clean_room_build.txt`.
 
@@ -212,7 +204,6 @@ The RPF7 layout, which no pattern holds:
 - **Name offset:** the word at +0, into the names, so a file's name lies in their first 64 KB.
 - **Resource:** version = (system >> 28) << 4 | (graphics >> 28), the top four bits of its system flags (the dword at +8) and of its graphics flags (+12).
 - **Binary:** +2 the compressed size, 3 bytes (0 for one stored); +5 the offset, 3 bytes, in blocks of 512 bytes from the start of the archive that holds it; +8 the size, a dword; +12 the encryption of its bytes, a dword (0 for none).
-  One whose block is 0x7FFFFF and whose compressed size's top byte is 0 would read as a folder, and one whose block has its top bit set as a resource.
 - **Nested archive:** such a binary, named `.rpf`, stored, its bytes not encrypted, inside the archive that holds it, past that one's names.
 - **Unencrypted archive:** the game expects 0x0FEFFFFF in the encryption field (+12) of every binary entry whose name offset and encryption field are not zero, and in the packfile's current file offset (+0xBC from the `fiPackfile` object's start, item 5).
 - **Versions,** from the archives' tables: Enhanced's own files and my map mods `yft` 171, `ydr` and `ydd` 159, `ytd` 5; packs made for Legacy `yft` 162, `ydr` and `ydd` 165, `ytd` 13; both `ybn` 43, `ymap`, `ytyp` and `ymt` 2.
@@ -247,7 +238,6 @@ The RPF7 layout, which no pattern holds:
 ## Script programs
 
 A script program is one of the game's compiled scripts, which its archives store encrypted, as the game holds it in memory.
-The first program of all comes about 24 seconds before `blip_controller` in the one boot that logged both.
 Findings, here and for "Blips": `blips_findings_for_the_clean_room_build.txt`.
 
 - **`Y-E-H1`'s callee** takes the program alone and returns a byte, which the constructor ignores: 1 when every native resolved, 0 when one did not.
@@ -256,7 +246,6 @@ Findings, here and for "Blips": `blips_findings_for_the_clean_room_build.txt`.
 - **Thread:** the constructor runs on the game's one resource placement thread whenever a script program is streamed in; loading a save places `blip_controller` again, a new program object, its code and tables the same (the 48th program at the start and the 137th after Load Game in one boot).
   The program enters the game's registry of programs only after the call, and every script thread looks its program up there each time it runs (a thread whose program is not there faults rather than runs it), so none can run it during the call: the window of T-FREEZE (ISSUES.md) does not arise.
 - **Fields,** from the program's start: +0x10 the code page table (8-byte pointers, one per page), +0x1C the code length in bytes (dword), +0x2C the native count (dword), +0x40 the native table (count x 8 bytes), +0x58 the name's hash (dword), +0x60 the name (a pointer to a zero-terminated string), +0x68 the string page table, +0x70 the strings' length in bytes (dword); the object is at least 0x80 bytes.
-- **The constructor's loop over the strings' pages:** `mov r14d, 0x3FFF` at RVA 0x91BBB0, `mov eax, [r12+0x70]` at 0x91BBB6, `add eax, r14d; cmp eax, 0x4000` at 0x91BBBB; the loop at 0x91BD1B to 0x91BD37, `shr eax, 14` and the page table read at +0x68.
 - **Pages:** 0x4000 bytes each, the strings' too; a length gives (length + 0x3FFF) >> 14 pages, every one full but the last, which holds length & 0x3FFF bytes (0x4000 when that is 0).
 - **Name's hash,** the game's own function (RVA 0x91B6A0): over the name's bytes - a leading double quote skipped, the name then ending at the next one; A to Z lowered and `\` taken as `/`; each byte sign-extended - h = (h + c) * 0x401 and h ^= h >> 6, all in 32 bits; then h *= 9, h ^= h >> 11, h *= 0x8001; a result below 2 gets 2 added.
   `blip_controller` gives 0x80CFE974.
@@ -275,7 +264,6 @@ Findings, here and for "Blips": `blips_findings_for_the_clean_room_build.txt`.
 
 - **Pool** (`L-E-P1`, its mark `L-E-P2`): a blip's handle is (serial << 16) | index, and the pool's code bounds an index with 0x7CF.
 - **Count native** (hash 0xC802478C8862BDAD, handler at RVA 0x1D51F40, which starts with a jump into the game's protected code): counts the slots below the mark that hold a blip, except three: the slot whose index the dword at RVA 0x288FEF0 holds, and those of the handles at RVA 0x3DEB7F8 and 0x3DEB7F4, these two only while the byte at RVA 0x3DEB7F0 is set.
-  The pool's two further sites, for those three, have no pattern.
   With all 2,000 slots taken it answers 1,997 while the three name live blips, and 1,998, 1,999 or 2,000 when one or more of them names none.
   So 1,997 is the highest limit that holds with the pool full: above it the script can pass the guard then, where making a blip fails.
 - **WAIT:** hash 0x4EDE34FBADD967A6, handler at RVA 0x920EA0.
@@ -296,11 +284,8 @@ Findings, here and for "Blips": `blips_findings_for_the_clean_room_build.txt`.
   It holds the script back while count >= 150 and lets it on to make a blip as soon as count < 150.
   The count native is called nowhere else in the program, 150 is pushed nowhere else, no jump, call or SWITCH case lands in 0x402..0x408, and no target is computed (the program holds no CATCH, THROW or CALLINDIRECT).
   Told apart by their argument and result counts alone, the guard's NATIVE is the only one with 0 arguments and 1 result that a constant push and a comparison follow.
-- **Threshold:** the game's own is 150; the program holds no 240, the value some setups show, and where that comes from is open.
 - **Room:** the 4 bytes 0x402..0x405 between the count's NATIVE and the JZ, `25 96 0C 06`.
   PUSH_CONST_S16 and IGE fill them for any limit up to 32,767 (`43 lo hi 0B`, for 1900 `43 6C 07 0B`), and NOP, PUSH_CONST_U8 and IGE for one up to 255 (`00 25 nn 0B`, for 200 `00 25 C8 0B`): IGE in the place of ILT and NOT keeps the polarity, and the JZ keeps its target.
-- **Not settled:** which of the game's two copies of the script it runs, update2.rpf's, resource version 12, or x64b.rpf's, 10; the part reads either as placed.
-  A lead: the script store is built with 12 at its +0x2C (RVA 0x13FA29D and 0x30E40).
 
 | Label | Pattern | Use | 1.0.1158.16 | RVA |
 |---|---|---|---|---|
@@ -315,23 +300,16 @@ A `weapons.meta` file is a data file of the type 0x4E (the type's name is not in
 Findings: `weaponinfos_findings_for_the_clean_room_build.txt`.
 
 - **Array:** RVA 0x47CE480 in `.data`: +0 the blobs' one block on the game's heap, +8 the count loaded, +0xA the capacity, both 16-bit, so 65,535 at most.
-  It lies in the weapon info manager, a global at 0x47CE430..0x47CE4C8 with seven more arrays of that shape, all sized at run time from what the blobs hold.
 - **Limit:** two immediates, 160 (Legacy had 90 at v1365, by the original's page; a boot of mine counted 155 `weapons.meta` files), in the C++ static initializer 0x18956A0, index 1,103 of the CRT's table of C++ initializers at `.rdata` 0x2838700, which no call reaches: 0x1897A80 `mov edx, 160`; `call 0x1893AC0`, which allocates and constructs that many blobs, n x 0xF8 bytes, alignment 8, through the game's allocator 0x18B0, the number from `edx` alone; 0x1897A8A the block's store; 0x1897A91 `mov word [capacity], 160`.
-  The manager's exit destructor (0x1863370, registered at 0x1897AA1) destroys `capacity` blobs and frees the block.
 - **Loader** 0x1863B40 (761 bytes), a function start by its unwind data (`41 57 41 56 41 55 41 54 56 57 53 48 81 EC 80 01 00 00`, seven pushes and `sub rsp, 0x180`): adds a blob with no check, the count + 1, the blob at the block + the old count x 248, the file parsed into it (the parser's call at 0x1863DF7).
   Past the capacity it writes into memory the array never had: a heap corruption, the game's crash while loading or later.
-  It copies the data file entry's first 0x80 bytes and more onto its stack.
 - **Callers:** the manager's init 0x18634A0 (every type-0x4E file of the data file list, its call at 0x1863552) and the load handler 0x188E4A0 (packs mounted later: `48 89 D1 48 89 C2 E8 ? ? ? ? EB 08 48 89 D1 E8 ? ? ? ? B0 01` at 0x188E4CC, its call of the loader at +6 for a type-0x4E file, of 0x1863E40 at +16 for a type-0xA3 one, then `mov al, 1` whatever the loader returned); the unload handler 0x188E4F0 takes a pack's blobs back again (0x18641A0, the count - 1).
 - **Order:** the initializer runs after TweaksV's `DllMain`: in the table the heap's initializer, `H-E1`'s 0x1000 -> 0x1020, is index 3 and the heap adjusters work at `DllMain`, and my boot read the array's pointer and capacity still 0 at TweaksV's start.
-- **References:** exactly 2 instructions of the kind `FindRipRelativeReferences` finds load or store the array's address, 0x1897A1E, the `lea rcx` of the allocation's unused argument, and 0x1897A8A, the block's store.
-- **Traps:** shorter forms of `W-E-I1` match the allocate-and-store idiom of many reserved arrays (10 and more); with the number fixed (`BA A0 00 00 00 ...`) it is unique but would break when Rockstar raises it; `W-E-I2` without its last 11 bytes also matches once.
 
 | Label | Pattern | Use | 1.0.1158.16 | RVA |
 |---|---|---|---|---|
 | W-E-I1 | `C7 05 ? ? ? ? 00 00 00 00 BA ? ? ? ? E8 ? ? ? ? 48 89 05 ? ? ? ? 66 C7 05 ? ? ? ? ? ? 48 8D 0D` | in the initializer: +11 the imm32 of `mov edx` (`BA` at +10) - the blobs allocated, 160; +16 the rel32 of the call to the allocation 0x1893AC0 (`E8` at +15), which begins `56 57 48 83 EC 28 89 D6 48 63 FA 48 69 CF`, the element size, 0xF8, after it; +23 the disp32 of `mov [rip+disp32], rax` (`48 89 05` at +20) - the array (match + 27 + disp); +30 the disp32 of `mov word [rip+disp32], imm16` (`66 C7 05` at +27) - the capacity's address, the array + 0xA (match + 36 + disp: the imm16 follows the disp32); +34 the imm16 - the capacity, 160, equal to +11's | found | 0x1897A76 |
 | W-E-I2 | `0F B7 05 ? ? ? ? 8D 48 01 66 89 0D ? ? ? ? 4C 69 E8 ? ? ? ? 4C 03 2D ? ? ? ?` | in the loader: +3 and +13 the disp32 of the count's `movzx eax, word [rip+disp32]` and `mov word [rip+disp32], cx` - the array + 8 (match + 7 + disp, match + 17 + disp); +20 the imm32 of `imul r13, rax, imm32` - the blob's size, 0xF8, equal to the allocation's; +27 the disp32 of `add r13, [rip+disp32]` - the array (match + 31 + disp); the match - 0x18 is the loader's start 0x1863B40, a function start by its unwind data | found | 0x1863B58 |
-
-On 1.0.1158.16, beyond the rows: the immediates at 0x1897A81 (the blobs allocated) and 0x1897A98 (the capacity); the allocation call at 0x1897A85 to 0x1893AC0; the block's store at 0x1897A8D to the array 0x47CE480, the capacity's store at 0x1897A94 to 0x47CE48A; the initializer's `lea` at 0x1897A21; the loader's count read at 0x1863B5B to 0x47CE488; the blob size at 0x1863B6C, holding 0xF8.
 
 ### Weapon components
 
@@ -339,7 +317,6 @@ Findings: `weaponcomponents_findings_for_the_clean_room_build.txt`; for the load
 
 - **List** (`W-E-C1`): every weapon component definition of all `weaponcomponents.meta` files together, sorted, a static array of pointers in `.data` with its count, an int32, right after it.
   Its size is that distance, (0x47CD3E8 - 0x47CC538) / 8 = 470, and no instruction carries it.
-  15 binary searches, inlined and bounded by the count, read it.
 - **Rebuild** (RVA 0x188E320, the call operator of the callbacks the data file mounter, 0x188E2E0, and the base loader, 0x1856210, hand the parser; their vtables 0x26D0860 and 0x26CE390, entry [2]): runs after every `weaponcomponents.meta` loaded, sets the count to 0, copies every file's definitions in without a bound and sorts with qsort, 8-byte entries by the uint32 hash at +0x10 of each definition (the comparison at 0x1838F50).
   The 471st definition is stored over the count itself, and the copy then writes through the garbage: memory corruption while the game loads.
 - **Loads:** exactly 17 `lea r64, [rip+disp32]` with REX 48 or 4C, the rebuild's two and the searches' 15; nothing else references the list or into it.
@@ -356,9 +333,7 @@ Findings: `weaponcomponents_findings_for_the_clean_room_build.txt`; for the load
   Its callers, no other reference: the mounter's load (the call at 0x188E2FD) and the base loader (0x18562C2).
   The parse runs in the parser's request runner 0xAC30E0, which the change-set apply 0xC2E0B0 runs after every action, so a mounted file is parsed, and the list rebuilt, before the next file comes.
   The base loader clears every blob, leaves the list's count, queues all its files and the rebuild last.
-  The game never unloads a weapon components file (the mounter's unload, vtable 0x26D0840 [2], is a plain return).
 - **Not settled:** what the parser does with more than 470 definitions in one file; the use of the definitions' uint16 at +0x08, 0xFFFF when made.
-- **Trap:** `W-E-C5` without its last 17 bytes matches once too.
 
 | Label | Pattern | Use | 1.0.1158.16 | RVA |
 |---|---|---|---|---|
@@ -367,8 +342,6 @@ Findings: `weaponcomponents_findings_for_the_clean_room_build.txt`; for the load
 | W-E-C3 | `48 63 15 ? ? ? ? 8D 4A 01 89 0D ? ? ? ? 4D 89 04 D2` | the rebuild's update of the count: +3 and +12 the disp32 of the count's load and store; +16 the unbounded store into the list (`mov [r10+rdx*8], r8`) | found | 0x188E385 |
 | W-E-C4 | `48 8B 0D ? ? ? ? BA CF 3C E3 BA 41 B8 ? ? ? ? E8 ? ? ? ? 89 C3` | the pool's size: +18 the `E8 rel32` of the size lookup's call (RVA 0x1855FD8, to 0x149060); +8 0xBAE33CCF, the hash of the pool's name; +14 the imm32 of `mov r8d, imm32` - the default, 470; +3 the disp32 of the configuration's pointer (0x2E96FB0); +23 `mov ebx, eax`, the result kept as the slot count | found | 0x1855FC6 |
 | W-E-C5 | `49 89 D7 49 89 CE B9 D8 0E 00 00 E8 ? ? ? ? 49 89 C4 41 B8 D8 0E 00 00 48 89 C1 31 D2 E8 ? ? ? ? 0F B7 1D ? ? ? ? 66 3B 1D ? ? ? ? 75 ? 44 0F B7 EB 49 8D 6D 10 48 8B 35 ? ? ? ?` | the loader of a `weaponcomponents.meta`: the match - 0x13 is its start, 0x1856740, a function start by its unwind data; +0x07 and +0x15 the imm32 of `mov ecx, imm32` (`B9` at +0x06) and `mov r8d, imm32` (`41 B8` at +0x13) - the blob's size, 0xED8, both; +0x26 the disp32 of `movzx ebx, word [rip+disp32]` (the instruction ends at +0x2A) - the blobs' count (0x47CD3F8), the one `W-E-C1` gives at +14; +0x2D the disp32 of `cmp bx, word [rip+disp32]` (ends at +0x31) - the blob array's capacity (0x47CD3FA); +0x3E the disp32 of `mov rsi, [rip+disp32]` (ends at +0x42) - the blob array's pointer (0x47CD3F0) | found | 0x1856753 |
-
-On 1.0.1158.16 the default the pool size call is given lies at 0x1855FD4 and holds 470.
 
 ## SirenSettings
 
@@ -386,9 +359,7 @@ Findings, in my research tools' output folder, `<topic>_findings_for_the_clean_r
   The member data: +0x08 the member's offset, a qword, 0 at TweaksV's start, written from the structure's offsets table when the game registers it; +0x10 the type, a byte (0x0D an array, 0x0C a structure); +0x11 the subtype; +0x20 the element's size; +0x28 a fixed array's capacity; +0x30 the element's member data.
   Beside the IDs: a setting's member 2, next in memory, at +0x04; a variation's member 5, the light ID, at +0x4A, +0x4C..+0x4F unused.
   The member data lie in `.data`, their pointers and offsets (`I-E-P1`, `I-E-P2`) in `.rdata`, the pointers ending in a null (20 and 7 members).
-  The registrations' hashes, in `.data`: `sirenSettings`' at RVA 0x471F310, `CVehicleVariationData`'s at 0x471F400, the neighbouring `sirenLight`'s at 0x471F2A0.
 - **The PSO loader** (binary `.ymt` files, the base game's among them) loads member by member by name hash, each value read by the file's type and stored by the member's, so a member wider than its file's keeps the base game's numbers: my comparison boot, the same 27 settings, the base game's IDs the same, the packs' IDs whole.
-  Through the base loader a binary `carcols.ymt`'s array is read by the file's count with no limit (RVA 0xACF6F0): past the runtime capacity it writes over the count, the name and the next setting, the game's own hazard.
 - **The base load:** the vehicle metadata's init (`I-E-R1`) fills the light and siren ID tables with 0xFF, 32 `movdqa` of 16 bytes, the siren table's 16 from RVA 0x1349C6E to 0x1349CE6, then calls the base loader.
   That loads `carcols.ymt`, runs the builder (`I-E-H2`: kits, lights, sirens), loads `carvariations.ymt`, turns each variation's IDs into positions (`I-E-T1`), copies the positions into the model infos and frees the variations.
 - **A pack's load:** its carcols through the data-file callback (`I-E-H1`; `.rdata` 0x266F060, slot 2), the call slot of the callable the carcols mount hands the parser: `rcx` that callable, `r8` a pointer to the parsed object's pointer; nothing is done with a false byte in `rdx`.
@@ -396,11 +367,9 @@ Findings, in my research tools' output folder, `<topic>_findings_for_the_clean_r
   The settings are not in memory as the callback starts: the dedupe's load (`I-E-D1` +0x0B) is the one place that sees all of them, and what the pattern pins after it, a `movzx` and a compare, leaves the flags free for a stub there.
   Its carvariations through `I-E-H4` (`.rdata` 0x266F030, slot 2; `I-E-T3`).
   Within one file a setting whose ID is taken moves to the first free ID.
-  All of it silent.
 - **A pack's file's name:** inline at +0 of its data file entry, 128 bytes with its NUL (the manager at .data 0x29CAFC0, +0 the array, stride 0xA8), which moves as the array grows and swap-removes.
   The dispatcher (RVA 0xC39440) hands it to the carcols mount (RVA 0x13730D0), through RVA 0x134AFE0 into the file opener (RVA 0xAC6B30), which keeps no name.
   Then the pump (RVA 0xAC30E0) calls the callback, one file at a time, each with exactly one such call before it for the same object; a read that cannot start calls the callback inside the opener.
-  A hint: the text is the path the pack's content file gives, a RAGE device path, no user folder.
 - **The carcols data** (its pointer in `.data`, `I-E-T4`): +0x38 and +0x40 the light settings; +0x48 the siren settings' array, +0x50 their count, +0x52 their capacity, words; +0x58 and +0x60 the kits.
   The array grows by 16 (RVA 0x137A3D0), the spare entries constructed; the pointer is stored first and the count after (RVA 0x1378210), so a thread reading the count before the pointer never pairs a new count with an old array.
   A position is valid when given and the count never falls: below the count is the one right bound.
@@ -409,10 +378,8 @@ Findings, in my research tools' output folder, `<topic>_findings_for_the_clean_r
   It touches rax and rcx alone; neither caller holds anything in a volatile register across it.
   Its only calls, with no other reference and no absolute pointer: RVA 0xE9BD4E in the renderer (`I-E-Z1` +24) and RVA 0xE16FA7 right after the renderer returns (`I-E-B1` +24), which uses the setting's +0x24, +0x28, +0x2C and +0x30, each behind a test for null, null and zero taking the same branches.
   A position comes from [variation+0x49] = table[ID] alone (RVA 0x13780D8 and 0x134A233), so a variation naming a setting not loaded yet keeps the free entry's 0xFF.
-  A hint, not walked: the light settings' getter (RVA 0x135D200) has the same unbounded shape, at one call (RVA 0xE161C2).
 - **The "has sirens" bit:** bit 1 of the vehicle's +0x96B, set from the model info's +0x53B at RVA 0xDCA9DD, computed at RVA 0xDCA9F5; only RVA 0xE15B20 goes on from it to the setting, by the getter's two calls, while the sirens are on.
 - **The constructors** (`I-E-C1` to `C3`): the setting's default ID at RVA 0x13635D0, its +0x1C written at 0x1363538 and again at 0x13635F9; the variation's two leave +0x44..+0x47 and +0x4C..+0x4F unwritten.
-- **Code the protection reads:** two functions of the protected `.text` section read the 4 gap bytes at RVA 0x135D21A, right before the getter (a check of the bytes between functions, it seems); no site of the part writes a gap byte.
 
 | Label | Pattern | Use | 1.0.1158.16 | RVA |
 |---|---|---|---|---|
@@ -451,9 +418,7 @@ The 32-bit masks of the siren state, of the vehicle's broken sirens and of a dam
   A down-counter from 20 only scales a reversed light's delta: delta x (20 - i), as a signed float; forward delta x i.
   A light's group, +0x40, indexes 4 stack entries unchecked, the game's own.
 - **The renderer with a setting of zeros** (`sequencerBpm` 0 or 200; its listing read in full, and emulated) lights nothing and cannot fault.
-  `sequencerBpm`, a dword it turns into a float (`cvtsi2ss`), the constructor's 200: at 0 it gives +inf by an SSE `divss`, the exceptions masked (the game's only `LDMXCSR` masks more), as a pack's own 0 does.
   No value of a setting is an index, a pointer or an integer denominator but a light's group, reached only with `light` set and `useRealLights` 0: with bytes from past the array a way to a smashed stack (from group 9 it reaches the return address).
-  It never reads a setting's count or its name.
 - **The bone structure:** from the model info's +0xB0 through two pointers: +0x00 128 bits, one per bone index; +0x10 one signed byte per hierarchy ID, 644 of them (0 to 0x283), that ID's bone's index, below 0 for none.
   Siren n is ID 0x88 + n, its byte at +0x98 + n (`siren1` at +0x99); its glass, `siren_glass`n, is ID 0x9C + n, at +0xAC + n (`siren_glass1` at +0xAD); n runs from 1 to 20, the next group of IDs begins at 0xB1: no ID and no name past `siren20` and `siren_glass20`.
   A bone index is a signed byte: a model names at most 128 bones to the game, 0 to 127.
@@ -466,13 +431,9 @@ The 32-bit masks of the siren state, of the vehicle's broken sirens and of a dam
   The array's base is r8 plus the member data's offset, read at the call.
   The element's slot 1, called at RVA 0xAE6A00 to 0xAE6A1A: rcx the element's member object, rdx the child, r8 the element's address, no r9 set, its result not read.
 - **The lights' member data** (RVA 0x28EE4C8, entry 19 of `I-E-P1`'s table): hash 0x7A07C7F6, `sirens`, type 0x0D, subtype 1, flags 0x0009, element size 0x48, capacity 20, offset 0x3C once registered; type, subtype, size and capacity stand from the start, read with a data window.
-  Their element's (RVA 0x28EE488): hash 0x063FA3F2, `Item`, type 0x0C.
-  The array of settings' (RVA 0x28EC470): hash 0x9AF814F5, `Sirens`, type 0x0D, subtype 0, a growing array, its own element size 0x5E8.
 - **A siren setting's members,** each matched by its hash: `id` +0x00, `name` +0x5E0, `timeMultiplier` +0x04, `lightFalloffMax` +0x08, `lightFalloffExponent` +0x0C, `lightInnerConeAngle` +0x10, `lightOuterConeAngle` +0x14, `lightOffset` +0x18, `textureName` +0x1C, `sequencerBpm` +0x20, `leftHeadLight` +0x24, `rightHeadLight` +0x28, `leftTailLight` +0x2C, `rightTailLight` +0x30, `leftHeadLightMultiples` +0x34, right +0x35, `leftTailLightMultiples` +0x36, right +0x37, `useRealLights` +0x38, `sirens` +0x3C, 20 of 0x48 bytes, their count +0x5DC.
   A light's: `rotation` +0x00, `flashiness` +0x14, `corona` +0x28, `color` +0x38, `intensity` +0x3C, `lightGroup` +0x40, `scaleFactor` +0x41, `scale` +0x42, `rotate` +0x43, `flash` +0x44, `light` +0x45, `spotLight` +0x46, `castShadows` +0x47.
   Its rotation and its flashiness, one layout: +0x00 delta, a float; +0x04 start, a float; +0x08 speed; +0x0C sequencer, a dword; +0x10 multiples, a byte; +0x11 direction, a byte, not 0 for reversed; +0x12 syncToBpm, a byte.
-  A light's padding, +0x13, +0x27 and +0x35 to +0x37, holds no member, and what a copy does with it no pattern says.
-  Delta, start and direction are read from what the code does with them, the other names by the XML's order and their uses.
 - **The array's tree reader** (`I-E-Z3`, slot 1 of the array class, vtable at RVA 0x261E520) counts the node's children, calls RVA 0xACFCA0 with the member, the object, the count and 7, then reads each child into the array's base + i x the element's size by the element's slot 1; for subtypes 1 to 4 and 9 it stops when i reaches the capacity.
   RVA 0xACFCA0, for subtype 1, stores min(children, capacity) at ((size x capacity + 3) & ~3) + offset: a fixed array's count lies behind its elements by rule.
   So item 21 and on of an XML file's setting are dropped, the count 20, no message.
@@ -507,14 +468,8 @@ My proof ran the raise on the game, with 32-siren packs: the lights, a shot, a r
   A table's entry is 16 bytes, a name and an ID; the game's tables come from the vehicle factory's virtuals by the model's type at +0x340, flag 0 for the first and 1 for the others, the third for types 8 and 1, whose first glass slots are gear doors.
 - **A tag** (RVA 0xAA0260): letters folded to upper case, an ELF-style hash, modulo 0xFE8F, plus 0x170, so the game's lookup ignores case.
   Read with a data window: `chassis` 0xCD54, `siren1` 0x61A7, `siren20` 0x1642, `siren_glass1` 0xF688; by the same rule `siren21` 0x1643, `siren32` 0x1674, `siren_glass21` 0x4055, `siren_glass32` 0x4026.
-- **The set at +0x00:** RVA 0x1350360, called last in RVA 0x134D680, clears the bit of each bone whose ID lies in 7..0x2F, 0x38..0x7F, 0x82..0xB0 or 0x1CE..0x1D1 or is below 3, then sets some for two vehicle types.
-  HINT, no reader was found: it does not change how a siren is drawn.
 - **The damage, read in full:** each loop touches only the structure's bytes, the 32-bit sets (the vehicle's +0x860 and the damage object's +0x440, both `i >> 5` = 0 up to 31), the bone through the game's functions, and the fragment child through RVA 0xFF1B70; none reads a setting, a state or anything else sized by 20.
-  +0x860's other readers: the renderer, by its bound; RVA 0x1543DA0, 20 bits; RVA 0xECE980 copies the dword whole; RVA 0x1DE80A0 its first 3; nothing compares the whole, and +0x865 is only written and copied.
-  +0x440's: RVA 0xECB990, RVA 0xE7D590 and two resets of the whole dword (RVA 0xE77820, RVA 0xE77A30).
 - **What stays at 20:** the stored damage state, RVA 0x1548A80 (slot 28 of three vtables) and its twin RVA 0x1543DA0: its loop reads 20 bytes of sync data at +0xF4 (`48 83 FD 14 0F 84 ? ? ? ? 41 0F B6 84 2D F4 00 00 00` at RVA 0x15490F3, its glass `0F BE 9C 28 AD 00 00 00 48 8B 06 48 89 F1` at RVA 0x154915A), and past them it would apply other fields as broken sirens; HINT, the network objects' sync data, no path found in story mode.
-  RVA 0x1DE80A0 reads 3 sirens only (`I-E-B3`).
-  The glass loops over 9 and 8 bones (RVA 0xE29321, RVA 0xE4C9E7).
 - **A loop of another shape** would stay at 20, cosmetic: the search took `cmp r64, 0x14`, the three displacements, a start or a bound at the IDs 0x89, 0x9D and 0xB1, a subtraction of those with a compare and lists of those IDs in the read-only data, and found these.
   After a game update these loops too are read again before the patterns are trusted: no pattern proves that no loop was added.
 
@@ -560,15 +515,11 @@ Findings: `pedprops_findings_for_the_clean_room_build.txt`, the ped variation co
   A worn prop's index, before 13 calls of the metadata lookup (RVA 0x10F9880) at six places (`A-E-G1` twice, `A-E-G3..G6`), and in the random props' builder, which the part leaves, its list keeping an index as a byte by its format.
   From 256 props on one anchor in all, the set-prop native refuses every prop from (total mod 256) on, the helmet code clamps or drops a head prop past it, and a worn prop at index 256 or more gets the metadata of (index mod 256): `A-E-G6` writes flags into that other prop's entry.
   Below 256 nothing narrowed matters, and a `movzx` of 16 bits gives the values the game's of 8 gives: each narrowed register holds the whole value ("When Game Updates", item 5), and none is AH..BH.
-  Not narrowed: the count native's result, the set-prop function's checks and its dwords, the conversions' results, the shop natives' metadata lookups.
 - **The complete sets:** the per-anchor count has exactly 7 calls, all in the helmet code: `A-E-T2..T5`'s four, and three whose result is unused, at RVA 0xD614DA, 0xD621EA (at `A-E-T5`'s +22, the last byte of its match) and 0xD622D1.
   The metadata lookup has exactly 17: 13 after the narrowings (`A-E-G1`'s two, `A-E-G3`'s three, `A-E-G4`'s, `A-E-G5`'s and `A-E-G6`'s six), the random props' builder's at 0x10F8483, two in their picker at 0x10F6373 and 0x10F6787, and a thunk's at 0x10F9A64, whose callers pass 32-bit indices.
   The validity check has two callers, the set-prop native's and the preload native's.
 - **The model info store,** in `.data`: a dword count of model indices (RVA 0x444AF98), a bitmap with one bit per index (its pointer at 0x444AFC0; index >> 5 the dword, index & 31 the bit), an array of elements of the stride's size (its pointer at 0x444AF90, the stride a qword at 0x444AFA8), each beginning with the model info's pointer.
-  The lookup stands inline at about 200 places in the code; `A-E-S1` takes the one in the function at RVA 0x1DFC0, followed by the ped type's check.
 - **Measured,** the base game's own head props: 255 on `mp_m_freemode_01`, from 39 files, and 254 on `mp_f_freemode_01`, from 38, so a single add-on head prop takes the male model past the limit.
-  With clothing packs its head anchor reached 272 and 279, the props from index 16 and 23 on refused, and every switch to the male model past 255 crashed the game (0xC0000005 at RVA 0x5A0998D, a read of 0x274, in the natives' code), with packs made for Legacy and converted ones alike, while 255 switched fine.
-  With the eleven widened the switch past 255, with `r4usarmyv3` in, crashed at the same RVA; with that pack out the male model, at 255, switched fine with a hat at index 200.
   Not settled: whether the crash comes from going past 255 or from the big packs' own data, since no test has gone past 255 without a big pack, and no hat past 255 has been worn (ISSUES.md, T-PEDPROPS).
 
 | Label | Pattern | Use | 1.0.1158.16 | RVA |
@@ -599,11 +550,9 @@ The game counts the video memory of the textures and buffers its streaming engin
 
 - **The counters,** one object at RVA 0x481D080 (`Q-E-T4`): +0x00 the streamed buffers' video memory in bytes; +0x08 the streamed textures'; +0x10 and +0x14 their numbers (dwords); +0x18 the most of both so far, the game's own high-water mark, raised by the buffers' function with `lock cmpxchg`; +0x20 the most objects allowed (a dword); +0x28 four budgets in bytes, one per index 0 to 3 (to RVA 0x481D0C7).
   The game counts a texture (RVA 0x1E89640) or a buffer (0x1E88030) as it makes it while the thread's dword at TLS +0x15C38, raised by 0x1E9A890 and lowered by 0x1E9AB50, is not 0, and uncounts it as it frees it (0x1E8B0A0, 0x1E89510).
-  The device's slots +0x350 and +0x358 raise and lower that dword around a place in 22 functions; the other 33 of the 55 that build a datResource do not, among them the "defrag" re-placements, viseme data and direct loads, whose objects are not counted but take descriptors.
   A buffer counts (word [obj+0xC] & 0xFFF) x dword [obj+8] bytes, a texture the size its creation computes.
 - **The sizes:** the start-up (RVA 0x509BF0) loads `common:/data/gameconfig.xml` into the configuration (its data [[RVA 0x2E96FB0] + 0x18]) and writes the most from its +0x54C and the four budgets from its +0x550 to +0x55C, int32 in MB, sign-extended and shifted left by 20.
   By my export of the x64 override of the game's own file: `ConfigGraphics`'s `MaxStreamingResources`, 98,304, and `MaxStreamingMemory_0_Base` to `_3_Base`, 1,500, 1,500, 3,000 and 3,000 MB.
-  +0x548 is `MaxWritableResources` (20,480): 0x50A12C puts it at +0x120 of the device settings, a word at 0x44D06FA in the end, which sizes a slot table for writable objects at 0x1191EF0, so it is a u16 and gives this limit no room.
   No other code writes the most and the budgets than the three stores of `Q-E-T1` and `Q-E-T2` (a boot's scan of every `[rip+disp32]` store of any width into their 32 bytes, the bytes read every way: `none besides them`); nothing adds to a `_Base` value on this build: each is its budget as it stands.
 - **The call after the stores** (`Q-E-T2` +40, at RVA 0x509F9F) comes once on the start-up thread before any streaming, so every reader of the budgets takes them after it.
   That function's arguments were not read: the start-up sets none up between its stores and the call (`lea r14` and `mov [rip+disp32], r14` stand between them) and gives it 32 bytes of stack, `sub rsp, 0x20`, right before it, so it takes four registers at most and nothing on the stack.
@@ -613,12 +562,8 @@ The game counts the video memory of the textures and buffers its streaming engin
 - **Where it binds:** a resource's placement (`Q-E-T4`) needs the objects below the most and the bytes of both below the budget of the index in use (after the getter, `cmp rsi, rax` and `jae` at RVA 0x4DBCDF and 0x4DBCE2) and the physical streaming budget, which never refuses; otherwise it evicts, tries again and at last sets the out-of-memory byte at RVA 0x435F57D.
   The update check (`Q-E-T5`, every update) evicts ahead of time while its switch, a dword, is not 0: it raises its flag, a byte, once the bytes pass the budget times the raise factor, or the game's video memory Windows' budget times the float at RVA 0x28DB5BC, and lowers it below the budget times the lower factor and that ratio.
   The four values lie in `.data`, and no code is known to write them.
-- **Windows' budget** for the game's video memory: the adapter object (a static array at RVA 0x2E90270, 0x1490 bytes each) caches DXGI's `QueryVideoMemoryInfo` (RVA 0x1ECCE00) for the local segment group at +0x1428 (Budget) and +0x1430 (CurrentUsage), under its lock at +0x18 (RVA 0x1ECCC80).
-  The graphics device reads it through its vtable's +0x948 and +0x960 (the vtable at RVA 0x2717350, a hint on its base), and the settings' video memory bar (RVA 0x5D1410) shows it.
-  The command-line parameter `availablevidmem` lowers the cached budget in MB; a value above the real budget runs into an `int3` (RVA 0x1ECCCE0).
 - **The most** has one store (RVA 0x509F5B) and one reader, the placement's compare (RVA 0x4DBCBE); the configuration's +0x54C has one reader, the store's load.
   The check comes at the memory's reservation, before the read, and the objects are counted when the file is placed, so up to 32 reserved files stand uncounted: 98,359, 98,343 and 98,326 in my boots.
-  At the limit the placement refuses and evicts by the LRU list, then, a hint, the lowest of what is in view and population models, and last sets the out-of-memory byte; nothing is said anywhere but the game's debug dump.
 - **The descriptor heap,** CPU-side (`Q-E-T6`, `Q-E-T7`): 196,608 descriptors, the sum of its two dwords, 0x10000 and 0x20000, the initializer's constants at .rdata 0x2662600 and 0x2662610; +0x18 its free list, u32 per descriptor; +0x20 the head; +0x2C the size, which no code reads.
   Taking is head = list[head] under a lock, LIFO; all 11 takers read with plain movs, so at the 196,609th live descriptor the list is read past its end, the view written past the heap and the first descriptor of the visible heap's ring overwritten.
   A streamed texture takes one, a streamed buffer one if it has a view; render targets, code-made textures and buffers, UAV views, the TLAS views and direct loads are not counted and take from it too.
@@ -644,21 +589,15 @@ Its letter is `T`.
 Findings: `rtbuffer_findings_for_the_clean_room_build.txt`, from the dump and from the shaders LuminanceV's run saved.
 
 - **The effect** `bvh_skinning`, compute, skins the moving geometry the ray tracing keeps into one global vertex buffer, which the BLAS refits read before the TLASes are built; its seven programs are named skinning, trees, grass, tyre, micromovement, cable and rope.
-  Its set-up, once: RVA 0x31E470, called from 0x31C320, which the protected start-up code registers (a hint: the renderer's start); it returns at once when 0x118CFE0 says no (a hint: ray tracing not available).
 - **The buffer** (`T-E-B1`): 0x400000 = 4,194,304 vertices of 20 bytes (a float3 position, the normal packed 10:10:10, the tangent 10:10:10:2), 80 MB; the maker takes count, stride, ..., flags; its object's +0x08 the count, +0x0C the stride, +0x28 its GPU address; its view at 0x3852920.
-  Neither the maker nor the view maker 0x486440 holds a size of its own: the views take theirs from the object's count and stride.
 - **The ranges:** each frame's BVH build (RVA 0x396710, the task named "Build BVH") flips its frame slot, a dword, 0 or 1, and sets the new slot's counter to 0 (the counters: one dword per slot) before the frame's objects take their ranges.
   Every moving object's geometry (`T-E-C1`) and every rope (`T-E-C2`) takes its vertex count from the slot's counter by `lock cmpxchg`, refused when the range's end would pass 0x400000.
   A range's start is the skinning job's +0x48 (the shader's job +72) and the geometry record's vertex address, the buffer's +0x28 plus 20 times it.
   So every frame's ranges start at 0, and the other slot's counter holds the last finished frame's total until its own frame starts.
 - **When it is full:** a refused geometry gets no skinning job, and its object no BLAS refit and no instance in that frame's TLASes (0x396710 skips it at 0x39868D): no ray traced shadow, reflection, occlusion or GI of it in that frame, and as the order of the objects changes from frame to frame they come and go, the flicker.
-  The refusal comes before the counter moves, so a later, smaller object can still fit.
-  The game logs nothing.
   Both refusals overwrite or ignore rax and the flags: 0x38CCC2 is `xor eax, eax` and the epilogue, 0x488736 the epilogue of a function without a result.
 - **The bounds of a raise:** the ray tracing shaders read an object's first vertex in 26 bits of its material record (CS_RaytraceReflectionLightPassWave32 0x82EE00F4: word 3 >> 16 and word 7 >> 22), so at most 67,108,864; the game's sizes are 32-bit (count x 20), so at most 214,748,364; D3D12's guaranteed view size, a hint, not verified, 2^27 32-bit elements, 26,843,545 vertices, is the part's cap.
-- **The neighbouring limits** of the same frame, per slot, not raised: 0x2600 job lists (the count at RVA 0x383F740 + slot x 0x13008), 0x4000 BLAS build entries (0x307C2D0 + slot x 0xC0008), 0x1000 rope records (0x34FC690 + slot x 0x28008, the count at +0x88038).
 - **The complete set:** the counters are referenced by three `lea` in the game's code, `T-E-C1`'s, `T-E-C2`'s and the frame's reset at 0x396E22, and by no other load or store; the immediate 0x400000 addresses the buffer only in the set-up and the two compares.
-  The slot's flip (`8B 05 ? ? ? ? F7 D0 FF 05 ? ? ? ? 83 E0 01 89 05` at 0x396BBD) is no pattern of the part.
 
 Each unchanged 60 seconds later:
 
@@ -720,7 +659,6 @@ A frame's lights pass through these layers, sirens' among them:
   A corona is added inline, with its own check.
   One job holds 5 vehicles, run in index order: 0xDE6870 registers a vehicle and kicks a job at every fifth, 0xF01040 kicks the last.
 - **The frame's stores** (`G-E-A1`), reset once a frame: at a job's end `xadd` moves a write pointer by what it has and `memcpy` copies, no capacity anywhere; the 401st light's record lands on the pointers.
-  Reasoned, not seen: the next job's `xadd` or `memcpy`, or the drain's walk, faults: an access violation in the drain from 0xF01130, in `memcpy` 0x2479F10 called from 0xE15AE2 or 0xE15ABA, or garbage in 0x3EF140.
 - **The drain** 0xF010B0: every corona through 0xB3A850 into the corona store; every light through add-scene-light 0x3EF140 with a null mask.
   A frame runs the reset, the vehicles' registration, the other lights, then the drain, so vehicles' lights come last.
 - **The scene store** (0x3EF140, then 0x3FA7B0): two arrays swapped each frame (0x3F30A0); the render count set once a frame by 0x3FB200, stable while that frame draws.
@@ -733,11 +671,6 @@ A frame's lights pass through these layers, sirens' among them:
 - **What a siren adds** (0xE9BCB0), for each of the 20 lights with a bone and not broken: a corona; and if the light's flag +0x45 is set and it is lit, with the setting's byte +0x38 at 0 it joins one of four groups, merged into at most 4 lights a vehicle, else it is a real light of its own.
   So the byte is what costs: `useRealLights` by the element order of `carcols.meta` (HINT for the name, the behaviour is the code's).
 - **The complete sets,** by scan and references: the lights' store's base at 0xF00F85, 0xF011BB and the constructor's 0xF3E27A, which walks it to `cmp rsi, 0x2BC00` at 0xF3E35E; the coronas' at 0xF00F70, 0xF01109 and 0xF3E1B2; both bases also through 0xF00FE0 and 0xF00FE7 into the jobs' parameters +0x30 and +0x38, from the same registers, which the job does not read.
-  The write pointers at 0xF00F77, 0xF00F7E, 0xF00F8C, 0xF00F93, 0xF01110, 0xF011AE, 0xF011C2, 0xF011E7, no other reader.
-  The vehicles' count 0x4362AC0, referenced in 0xDE6870, 0xF01040, 0xF010B0 and 0xF3C140 alone, none comparing it with 300; the arrays behind it 0x4362160 (8 bytes), 0x4362AC8 (4), 0x4362F80 (16), 0x4364250 (4), their counts right behind them, shared by all jobs through the parameters 0x4366CA0.
-  A job's scratch: 0x8C00 at 0xE1592B, 0xE15969, 0xE1596F, in 0xE15933 and 0xE1593D as -0x8C01 and -0xB181; 0x2580 at 0xE15924; 0xB180 at 0xE15944, and at a job's +0x70 at 0xDE6957 and 0xF01090, which the worker does not read; the sixty jobs at 0x4364710, 0xA0 bytes each.
-  The 1024: 0x3FF at 0x3EF6EE, 0x3FA7D0, 0x3FAF08, 0x3FD134, 0x3FD139; 0x70000 at 0x3F335F, 0x3FB230 and the static loops 0x4B6D4F, 0x4B7785, 0x4B788A; 0x72010 at 0x3A4947, 0x3F33AE, 0x3FCFA6; 0x29A0C at 0x3F3385, 0x3FB25A.
-  It also sizes, in `.data`, 0x3D37690 (count 0x3D38690), 0x3D3F0B0, 0x3D400C0, 0x3D401C0, 0x3D40398, 0x3D423A8, 0x3D463B0; on the heap 0x3D40378, capacity written at 0x3F1329; and the stacks of 0x3F2780 and 0x3FCEC0, so it is no constant to raise.
 - **Not settled:** who sets the sort list's mark, and when: the code sorts the list past 1024 if it is set, so it may mark a list sorted or one that needs a sort; the instructions of the constructor's two references to the stores, known by their addresses alone; the value of the pointer 0x2888630; bit 0 of 0x289C098 (HINT: the view and occlusion tests); the name `useRealLights`; whether a job's +0x70 is read anywhere; the size of the vehicle pool; which code adds what to the scene store, 25 callers of 0x3EF140.
 
 | Label | Pattern | Use | 1.0.1158.16 | RVA |
@@ -798,23 +731,14 @@ The stubs' sites:
 
 - **The object 0x41B4210:** 1088 records of 0x30 bytes; +0xCC00 the count; +0xCC08 and +0xCC10 two textures; +0xCC18 to +0xCCB8 the visual settings `coronas.*`.
   A record: +0x00 position; +0x0C flags in the low 16 bits, two angles above them; +0x10 direction; +0x1C a float; +0x20 size; +0x24 color; +0x28 intensity; +0x2C zBias.
-- **Who adds, in a frame's order:** an effect list in the update (0xB6E6F0, inlined); the map's light entities (0x400100); the LOD lights' job, up to 1088 by itself; small sources (0x1B72530, 0x1840500, 0x233B0, 0x1853C70, 0x1B70EB0, 0xEE3E10, and 0xB3A4D0's list, inlined); some vehicle classes directly in the +0x2E0 loop; last the drain, every job's corona, sirens' among them.
   So the vehicles' coronas are the ones dropped: nothing after the drain reaches an add by a direct call.
-  The LOD job runs beside it on a worker, so it may land later and lose its coronas instead (HINT: rarely).
 - **The general add** 0xB3A850: eleven callers, lock-free, refused silently at 0xB3A8DE; nothing if the size is 0, the intensity not above 0 or the byte 0x2FA2860 set.
-  The two inlined adds do the same by rip, each with a `lea` of the store of its own.
 - **The LOD lights' job** 0x2C15C0, kicked in 0x314200, its scratch laid out by 0x2C1360: each LOD corona goes into its scratch while its own limit passes, so a job holds 1088 and the later buckets lose theirs, whatever their distance.
   At its end one batch: `mov ebp, 0x440`, `mov ecx, [rbx]`, `lea edx, [rcx+rsi]`, `cmp edx, 0x440`, `cmovnc edx, ebp`, `lock cmpxchg [rbx], edx`, `sub edx, ecx`, a memcpy of edx x 0x30 to the store + ecx x 0x30; the store and the count's address are its parameters, handed out by 0xB3CAA0.
 - **From the store to the screen:** 0xB1C510 allocates count x 0x30 + 0x180 bytes from the draw list and copies the records; command 0xDF hands the copy on; 0xB6EEB0 adds up to 8 records past the count, the 0x180; 0xB22640 draws: `alloca(count x 0x20)`, `alloca(count x 4)`, quads in batches of 341 of immediate-mode memory, no constant buffer or shader counting coronas.
-  A failed allocation: no coronas that frame, no crash.
-  Every record past the copy is read through the copy, so nothing behind the store knows its size.
   Growing with the count: the stack, 0x24 bytes a corona a draw, of 0x80000 committed on the render threads; the copy; the time.
   A corona's index is a word, 65535 at most.
-- **The complete set sized by 1088:** 0x43F at 0xB3A789, 0xB6ED79, 0xB3A8DA, 0x2C1EAB; 0x440 at 0x2C28AF, 0x2C28D7; 0xCC00 at 0xB3A8D3, 0xB3A8EF, 0xB3CAA6, 0xB3B8BF, 0x2C1387; 0xE800, -0xE801, 0x1C00 and -0x1C01 at 0x2C13A7, 0x2C139D, 0x2C14E6, 0x2C138C and 0x2C1396, and +0x70 in 0x3146C8; 0xCCB4 at 0xBD9CAA, the constructor's loop.
-  Unrelated, read one by one: 0x43F at 0x763EA5 and the other 156 of 0x440.
-  The store's base is named at 19 sites, each a `lea`, by a count of rip-relative references: 0x23FA8, 0x3145AA, 0x4004B8, 0xB0DFC1, 0xB1C4E5, 0xB1C5DC, 0xB22625, 0xB3A7EA, 0xB6EDDA, 0xBD9C6C, 0xDF07AA, 0xDF0CC4, 0xE09637, 0xEE4602, 0xF01122, 0x1840AAC, 0x185512B, 0x1B71D6C, 0x1B72E51.
-  What hands the store out is called once, at 0x3145BB.
-  The count is read by 6 rip reads, and by `[reg+0xCC00]` at 0xB3A8D0, 0xB3A8EB, 0xB3B8BD.
+- **The store's base** is named at 19 sites, each a `lea`, by a count of rip-relative references; what hands the store out is called once, at 0x3145BB.
 - **The raise, 13 writes:** the nop at `G-E-I1` +0 becomes `lea rcx, [new store]` and a nop of 7, turning the old store the callers hand it into the new one before the loop; the count's disp at +17 and +45, and `G-E-I7`'s +6, become the count less the new store; the limits at `G-E-I1` +24 and each `G-E-G1` +9 become N - 1, `G-E-I8`'s +1 and +41 N; the rel32 at `G-E-I2` +11, `G-E-I3` +11, `G-E-I5` +8 and `G-E-I6` +3 lead to the new store.
   The count and everything past +0xCC00 stay, so the other fifteen references to the old base, the reset at 0xB3B8BD and the constructor stay true; the job's own 1088 stays: it keeps a city at night from taking more.
 - **The trap:** at a count past 1088 the old clamp gives edx = 0x440 below ecx, the `cmpxchg` lowers the count and `sub edx, ecx` wraps, so memcpy gets about 200 GB and faults (reasoned, not seen: an access violation in memcpy 0x2479F10, called from 0x2C290B).
@@ -822,7 +746,6 @@ The stubs' sites:
 - **The counters:** the four jumps, `G-E-I1` +30, each `G-E-G1` +15 and `G-E-I9` +13, and where each leads, up to the first instruction that writes the flags, none before it reading one: 0xB3A9AF `0F 28 34 24 0F 28 7C 24 10 44 0F 28 44 24 20 48 83 C4 38`, 0xB3A826 `0F 28 74 24 20 0F 28 7C 24 30 44 0F 28 44 24 40 44 0F 28 4C 24 50 48 83 C4 68`, 0xB6E798 `42 C6 44 2E 6B 00 66 90 48 FF C3 41 8B 47 04 48 39 C3`, 0x2C211C `4C 8B 44 24 58 44 0F 28 DC 0F 28 A4 24 A0 00 00 00 41 0F 50 C1 84 C0`.
   The batch's six bytes at `G-E-I8` +56: rax is free, since the moved `lea` writes it, and what follows them, `shl rax, 4`, reads no flag.
 - **No pattern protects:** that the LOD job has no dependency on the drain; that nothing after the general add's record reads rcx (to 0xB3A9C4); that the render threads have 0x80000 of stack committed, by the PE's reserve and `CreateThread`'s flags.
-- **Not settled:** how many each source brings; how often the LOD job lands after the drain; the stages of the sources reached through tables; the time and the GPU's cost at a full store.
 
 ## Population
 
@@ -833,37 +756,23 @@ A number in MB counts 1,000,000 bytes, as the game's defaults do; HINT marks wha
   Vehicles: level 0x2888D10, story table 0x2888CF0, network table 0x2888D00, 4 dwords each, variety 0x28CACE0, a float.
   Peds: level 0x2888D14, story table 0x2888CD0, network table 0x2888CE0, variety 0x2888B80.
   The flag: 0x29CB211 ("Game In Progress").
-  Two getters (`O-E-C1`) return it doubled, for the crash context's line alone, which prints it in a network game only (0x4600, its print at 0x6350).
-  Their 62 bytes are the same, so no pattern of the table, which wants one match, tells them; a mask at the calls' targets: `8B 05 ? ? ? ? 80 3D ? ? ? ? 00 74 11 48 8D 0D ? ? ? ? 8B 04 81 F3 48 0F 2A C0 EB 17 48 8D 0D ? ? ? ? 8B 04 81 F3 48 0F 2A C0 F3 0F 59 05 ? ? ? ? F3 0F 2C C0 01 C0 C3`: +2 the level; +8 the flag, its `cmp`'s imm8 behind the disp32; +18 the network table; +35 the story table; +51 the variety.
-  The cast is `cvttss2si`: a product at 2^31 bytes gives 0x80000000, the margin's add wraps that to a large positive number, the requests never stop, the excess wraps negative and stays at 0, and the budget is gone altogether.
 - **The tables:** entries 1 to 3 come from the set-up 0x4BD7A0, called once (0x4BD5C8) at the end of the population streaming's init 0x4BB450, so at each run of it, the game's start and a session's: entry = a tunable of `CD_GLOBAL` (0xE3AFC5BD) by a name's hash, its default the configuration's value x 1000, + 1,500,000.
   Twelve blocks of 0x38 bytes, story peds, network peds, story vehicles, network vehicles, three each; their stores, the tables' only writers by a scan of the code: 0x4BD7E4, 0x4BD81C, 0x4BD854; 0x4BD88C, 0x4BD8C4, 0x4BD8FC; 0x4BD934, 0x4BD96C, 0x4BD9A4; 0x4BD9DC, 0x4BDA14, 0x4BDA4C.
   Entry 0 has no writer: `.data`'s 1,500,000 for each table.
-  At TweaksV's start the tables hold `.data`'s other numbers - vehicles 17.5, 29.5, 36.5 MB, peds 28.5, 37.5, 48.3 MB - the level 3, the variety 1.0 and the object zeros; the object's +0x6208 is -1 after the init.
 - **`gameconfig.xml`:** the configuration is [[0x2E96FB0]+0x18]; CGameConfig's member at +0x4F4 is the block `ConfigPopulationStreaming`, which the game's own file leaves out, of `PedsSP` +0x4F4, `PedsMP` +0x500, `VehiclesSP` +0x50C, `VehiclesMP` +0x518, each of `Level1Kb`, `Level2Kb`, `Level3Kb`, dwords.
-  The names by the parser's hashes in the window `28E0700:900`, a descriptor holding the case-sensitive joaat at +0, the offset at +8, the type at +0x10: 0xB90C36F2; 0x5734E391, 0x63432F09, 0x754AC6B3, 0x281C138B; 0x4D3F3EC4, 0x4ED77A3E, 0x9EBE88D3.
   The defaults, from the constructor 0x12BC2C0: peds 54,000, 72,000, 92,000, vehicles 32,000, 56,000, 70,000, in story mode and a network game alike, which gave the tables at 180 s of a boot exactly.
   So the story budget in MB at the slider's top is (`Level3Kb` / 1000 + 1.5) x 6, "Kb" being a thousand; the merge 0x12BC780 copies a value only when it is not negative, so a partial block holds.
   The form, for a budget of 600 MB: `<ConfigPopulationStreaming><VehiclesSP><Level3Kb value="98500"/></VehiclesSP></ConfigPopulationStreaming>` directly inside a `<Config type="CGameConfig">` that applies on PC.
-  `PedMemoryMultiplier` and `VehicleMemoryMultiplier` (cfg+0x38, +0x54) have no reader among the 359 loads of the holder, and the tables stood at the defaults with 2,500 and 4,500 in the file: neither is in the budget.
 - **The variety:** the settings' apply 0x5003A0 stores it, at 0x5004F5 for the peds and 0x50050C for the vehicles, the only stores: the setting (+0xB4 `PedVarietyMultiplier`, +0xB8 `VehicleVarietyMultiplier`, the menu's Population Variety, 0 to 1) x 5 + 1, clamped to 0.05 to 10, so 1 to 6.
-  The check 0x503380 puts a setting outside 0 to 1 back to its default, so the clamp's 10 cannot be reached by `settings.xml` (HINT until a boot shows it).
-- **The level:** 3 from `.data` on; 0x4D5030 (the peds' 0x4D5080) stores a level up to 3 and level / 3 at 0x28CACD4 (0x28C23BC), which also scales how many cars and peds the game wants, and is reached only by a hop of the protected code (HINT: a native's handler); 0x4D5010 and 0x4D5060 set 3 and 1.0 again (HINT: a script's clean-up).
 - **The object** 0x3D73F80, in `.data`; vehicles: +0x6214 bytes in use, a signed dword; +0x6224 what is over the budget, at least 0; the lists +0x3600 traffic of the current pop cycle, +0x3A00 loaded but outside it, +0x3E00 trains, helicopters and two named models (HINT on the types), +0x4200 boats, +0x4A00 dropped but still loaded; +0x62BC requests in flight; +0x623C the weapons' share, in use too; +0x6234 and +0x6238 the mods' pieces.
   Peds: +0x620C bytes in use; +0x621C what is over; +0x6204 the schedule's MaxScenPeds, +0x6208 its override; the lists +0x4E04 the population's, +0x5204 in a group the current schedule does not weigh, +0x5604 in no group (HINT: and the cops), +0x5A04 a network game's chosen models, +0x5E04 asked for directly until loaded.
   Each list is 256 dwords, ended by 0xFFFF or by a value not below the model count, `O-E-P3`'s word; one adder stops silently at 256.
-  At +0, 0x240 records of 24 bytes for vehicles, peds and weapons.
-  The displays (`O-E-C1`), the update's sums (0x4BEB02, 0x4BEB38) that only the crash context reads, count the mods' pieces and a streamed ped's parts twice; every compare reads +0x620C and +0x6214 alone.
 - **What counts:** a model's load callback 0x4CE740 (from 0x1334A70, by the model info's +0x9D & 0x1F: 5 a vehicle, 6 a ped, 4 a weapon) adds through 0x4CDF10 the two sizes of the model and of its dependencies, shared ones once, whoever asked for it; high detail assets come and go on top (0x4C2860), and the common assets are in at the init.
-  So a budget counts bytes, not models, and is no video memory budget, though a car's bytes are mostly video.
 - **Past it,** nothing ends the game and nothing is logged or shown.
   Vehicles: the update's model step 0x4BF990 and the ambient step 0xF06C10 ask for one more model (0x4C5A30) while the use is below the budget less 1.5 MB, the stop, and at level 3 below a floor of 9 models in +0x3600 whatever the use.
   Peds: the gate in 0x4BF990, every 64 frames, about once a second, asks (0x4C7930) while the use is below the budget less 1.5 MB less (n >> 1) x 1.5 MB, n the override or else the schedule's number, and at level 3 below a floor of 6 models in +0x4E04.
-  0x4C1FC0 releases what nothing holds, every frame while over the budget, else every 32nd.
-  A new ambient ped takes the loaded model of its group with the fewest peds, the model info's +0x158 (0x4D24F0), so repeats are about peds divided by models; the number of cars wanted reads no budget, but a model takes only so many instances (0x4D2D10), so too few models can hold traffic under it.
 - **`VehicleStruct`:** the pool behind `O-E-V3`'s pointer, stride 0x34C, 200 slots in the files seen, one per loaded vehicle model.
   A full pool's New ends the game in an `int3`; 0x4C5A30 stops traffic's requests at the size, and 0x4BEB50 releases unused models from 20 below it.
-  The ped models' request 0x4C7930 has no such check, and no pool of `gameconfig.xml` is named for a loaded ped model (HINT: none exists).
 
 | Label | Pattern | Use | 1.0.1158.16 | RVA |
 |---|---|---|---|---|
@@ -897,12 +806,9 @@ The design is in SPECIFICATIONS.md, section 11.16.5, each fixed array and a rais
   A ped's handle is (index << 8) | the slot's flag byte.
 - **The ped,** as the crash log's loop at 0x4F6B reads it: +0xDA & 0xE == 6 a mission ped, +0x1091 bit 4 what every loop skips, +0x1468 bit 4 in the reuse pool, bit 5 reused.
 - **What caps the population,** each update, 0xD8CD20: scenario peds = the schedule's byte x `ScenarioPedsMultiplier` / 100 x factors, ambient peds likewise with `AmbientPedsMultiplier`, both scaled down to `MaxTotalPeds` if their sum passes it, 200 at the population slider's top in my file; then `N-E-K2`'s stores: +28 scenario, +6 ambient x the schedule's percent, +20 the rest of ambient.
-  The reuse pool evicts one when its count 0x434F520 is 15, so it holds at most 15; mission peds are counted against neither, which leaves 41 slots or more on my file.
 - **A full pool** is graceful: the one allocation of a ped, 0xD515F0 in 0xD514C0, returns null when the slots are all in use, before the pool's New 0x15A7C0, which would trap, and its three callers pass the null on.
-  The free-room tests of its users are 2, 3, 5, 10, 11 and 15; "128 kept for missions" is the number of Resource Extensions' page, not the game's.
 - **What the number sizes,** so a raise reaches it by itself: through the getter PedIntelligence (0xDB0 a slot), CMovePed (0x4C0), fragInstNMGta (0x460), two arrays of the population, new'd by the number at 0xD6A73C and filled by 0xD6D1F0 for every live ped of the pool, so the pool must never be larger than the number; through the pool's +0x18 the spatial array, of capacity (size + 3) & ~3, 24 bytes each, and more.
 - **What it does not size,** unchecked, so a raised `Peds` boots well and past 256 peds alive corrupts memory: a memcpy into a fixed array in `.data` (`N-E-R1`, 0x1D90620), the filler's three stack arrays (`N-E-R2`, `N-E-R3`) and the priority function's (`N-E-R4`, 0x12FD0D0); a cap of 1,024 in the spatial array's six search methods and 0x1164D40; and the anim director's family, whose defaults `N-E-D1` to `N-E-D6` hold and whose pools trap when full.
-- **Complete sets:** the pointer and the pool's fields, 608 references in 97 functions and 26 fragments; the getter's 7 calls in 0x10460E0, 0x1167CD0 (3), 0x1175470 and 0x1D90620 (2); the spatial array's pointer, 31 references; a ped's allocation, one `mov edx, 0x1980`.
 
 | Label | Pattern | Use | 1.0.1158.16 | RVA |
 |---|---|---|---|---|
@@ -928,27 +834,13 @@ The design is in SPECIFICATIONS.md, section 11.16.5, each fixed array and a rais
 ## A pool's memory
 
 A pool of the game's does not draw on the heap `H-E1` sizes but on a budget of its own, kept by a big-block allocator that `H-E2` sets up, 0x5A bytes after `H-E1` in the same start-up function (SPECIFICATIONS.md, section 11.1).
-The samples are in `pedpool_findings_for_the_clean_room_build.txt`, section 3.
 
 - **The route:** a pool's allocator 0x15A4D0 asks the allocator at the pool's +0x00, through its vtable's slot 1, for its room, and writes the slots' flags at the result plus the slots' size with no test of the result: `or byte [rcx+rax], 0x80` at 0x15A514.
-  In the pools' makers +0x00 is the proxy 0x286A310, whose vtable lies in `.data` (a hint: the table 0x247CF90).
-  0x36D90 takes the master allocator from TLS+0x5C8, its slot 5, and jumps to that allocator's vtable +0x40 with the size and alignment 16; 0x36E00 frees the same way.
-  The start-up 0x1020 fills the master allocator 0x29B1580: slots 0 and 4 the heap 0x29A8590, slots 1, 2, 3 and 6 another 0x29B15D8, slot 5 the big-block allocator 0x29B1508.
 - **The allocator,** from its constructor 0x141560, called once, at 0x1457, its allocation 0x141640 and its free 0x141800: +0x08 the heap, +0x10 the list of blocks, +0x18 the threshold 0x10000, +0x20 the budget, +0x28 in use, +0x30 room, +0x38 the least room so far, +0x40 the number of blocks, a word, +0x42 bit 0 the fatal flag, set by its constructor, +0x48 a critical section.
-  Its getters: vtable slot 19 the room, slot 22 the least room, slot 17 the use.
 - **An allocation of n bytes,** under its lock: rounded = (n + 0x1003F) & ~0xFFFF; rounded above the room returns null, which is the limit; the fatal flag and 900 blocks, int3; rounded above the threshold, `VirtualAlloc` of rounded + 0x1000 with a guard page at its end, else n + 0x40 from the heap; room and in use change by what was charged, the least room is kept, the block is linked.
-  Free gives the charge back.
 - **The budget:** 0x8800000, 136 MB, `H-E2`'s immediate: a ceiling on a counter, so raising it allocates nothing, and the blocks still come from Windows when asked for.
-  `HEAP_SIZE` changes the heap, not this.
-  At once 0x10F0 takes 8 MB of it, kept at 0x29C76C0 (a hint: the block stays; nothing read gives it back).
 - **A pool's cost:** of n slots s = (stride x n + 7 & ~7) + n, then (s + 0x1003F) & ~0xFFFF above 64 KB and s + 0x40 below it; a store's pool costs stride + 1 bytes a slot.
-  My sum over the 248 references that load the proxy, with my `gameconfig.xml`, comes to 132 to 136 MB of the 136: `InstanceBuffer` 50.7, `Building` 12.0, `GrassBatch` 8.8, the asset stores' pools 18.9, `HandlingData` 6.8, the 8 MB block, the ped pool's 1.6 among them.
-  Script Hook V extends two pools (a hint for who: its log says so, and the same crash's log has their numbers), about 0.4 MB more; whatever raises a pool pays here.
 - **The crash:** past the budget the allocator returns null, and the pool's allocator writes through it at 0x15A514, with `rax` 0 and the address the slots' size.
-  Nine of my dumps fail there: six at 0x1030DA0's pool of 512 slots (a write to 0x26000), two at `HandlingData`'s 8700 x 816 (0x6C5340), the ninth at a pool of 23 slots of 16 bytes (0x170), with room under 64 KB and a third site near 0x1AEA7FC, with `TrainerV.asi` and Collectibles on Map in; without the two plugins the same load passed.
-  In one the dead stack holds the allocator and its lock, and the jump of 0x36D90 is in `r10`.
-  That the budget ran out and not `VirtualAlloc` is by elimination: that log has 46 GB of memory free, and `VirtualAlloc`'s failure makes a call the stack does not show.
-- **Not settled:** why the same load passes one time and fails another: at that crash no other thread stands in an allocator of it or in a pool's maker.
 
 ## Render queues
 
@@ -956,12 +848,10 @@ The design is in SPECIFICATIONS.md, section 11.16.6, a raise's in `renderqueues_
 A pool's name is a hint from memory of the game's `gameconfig.xml`, each backed by its hash at the lookup.
 
 - **The size lookup** 0x149060: rcx the config manager [0x2E96FB0], edx the joaat of the name, r8d the default; it gives the file's value if the file has the entry, else the default, as for an entry's value -1.
-  A flag [0x2E96FA8] would pick the larger of the default and the value; no code writes it, so the value alone stands: `gameconfig.xml` moves a pool both ways (the flag's value a hint: the dump has no `.data`).
 - **A pool** (its layout in "Ped pool"), made by the constructor 0x15A490 and the allocator 0x15A4D0, these six with an empty name.
   A slot is taken at 0x15A7C0 (pool, size): full, or a size above the stride, falls through to the game's fatal trap, INT3 at 0x15A84C, with the stride in edx, which names the pool in a dump.
   A slot is freed at 0x15A930.
 - **A pool's pointer:** three fields, a flag byte at F, a value at F+8, a key at F+0x10, and two constants of its code, r and s: `t = rol64(key, r); x = value ^ t; c = (t & 0x1F) + s; pointer = ~rol64(x, 32 + c)`, null unless the flag's bit 0 is set.
-  0x1363CB0 and 0x1363E60 encrypt it, the same formula backwards.
 - **The six pools:**
 
 | Family | Name (joaat), its lookup | Default | Stride | F | r, s | Where a slot is taken | Full |
@@ -983,20 +873,10 @@ A pool's name is a hint from memory of the game's `gameconfig.xml`, each backed 
 | Vehicles | 0x471F560, 570, 580, 590 | [0x471F5D4] entries (0x1364B70) | 0x471F5A0 | 0x471F5A8 | 0x1368EE0 | none | a walk of the current array | +0xBA8 | 0x1369130 |
 
 - **A flip:** the index goes to (index + 1) mod 4, each entry of the array it enters loses its reference, the count goes to 0, then a pool walk frees render gfx with no references and its "in use" byte clear (+0x2DA for peds).
-  So a render gfx outlives its ped by up to four flips, and three of the four arrays always hold a whole past frame's entries.
-  All three flips run from 0x3CD400, slot 0x48 of the draw list manager's vtable 0x25EAC60, called in 0x13FCE60, which counts a frame number at [0x475B740]; that this is once per frame is a hint from its place.
-  The inits run after `DllMain`: the vehicles' from 0xE7778F in 0xE776D0, called at 0xC4EF1B, the peds' and the props' from 0x1B3BB2F and 0x1B3BB34 in 0x1B3BB00, called at 0xC4EF71.
 - **Past the peds' and the props' arrays** nothing is dropped: the add writes the entry at the count with no compare, so entry 121 lies past the block of 0x3C0 bytes, in whatever the heap put next; the count is 16 bits, so at 65,536 it wraps to 0.
-  Each array has one writer of entries, its add, and one reader, its flip.
 - **Past the vehicles' arrays:** a render gfx enters a frame once, so entries stay within the pool's capacity, which is the arrays' as long as the two names agree; a `gameconfig.xml` naming `CVehicleStreamRenderGfx` above `VehicleStreamRender` makes the pool larger than its arrays, and the same overflow.
-- **`CVehicleStreamRenderGfx` full:** the else branch of 0x13645D0 from 0x1364699 lets the vehicle's current render gfx go and sets its mod state to 0xFF (+0x4F2 to +0x522, +0x533): it draws without its mods, silently.
-  Only two tests of these pools' free room exist: 0x7A6730 returns 0 when the vehicle request pool is full, and the ped clone 0xD4F950 returns 0 for a streamed ped when the free render slots do not exceed the requests in flight.
 - **The draw list's references,** the neighbour on the same path: the manager [0x475B750], 0x14BA0 bytes, made at 0x509330, keeps four arrays at +0x5D0, +0x5E0, +0x5F0, +0x600 of 16-byte entries (module, index), 0x2880 = 10,368 each, with the index at +0xAC and the lock at +0x14AB0.
-  Each add above takes a streaming reference for each asset of the gfx and queues its release there: up to 134 for a ped's render gfx (12 x 7 + 50 slots, those not -1), 52 for a vehicle's; peds pay this per draw, vehicles per frame, and every model drawn pays one too (0x1402640, deduped per frame), so the array is shared with the whole scene.
   The push is checked, but the reference is taken before the check: past 10,368 the release is never queued, and that asset can never unload.
-- **Who is streamed,** hints: a ped by its model info's byte +0x286 bit 1, set at 0x1343BA1 from the ped definition's bool at +0xC0 (0x13438F0); a vehicle's render gfx when mods are applied through 0x134B600.
-- **The callers of the adds:** peds 0x3A0FC6 in 0x3A0CB0, 0x3C2C49 and 0x3C2CC0 in 0x3C2830, which has 13 callers, the draw commands of 0x3EC490; props 0x3A11CD, 0x3D0511, 0x3D28D5; vehicles 0x399AA8, 0x3A2DE9, 0x3C3F37, 0x3C5766.
-  0x3EC490 allocates one draw command per call and nothing asks whether this ped has been added this frame, so a ped's entries per frame come from the render phases that see it.
 
 Each pool's make holds, at the offsets its row gives, the rel32 of its flag, its key and its value, rip-relative with the next instruction 4 bytes on, and r and s, a byte each, wildcards since a build changes them:
 
