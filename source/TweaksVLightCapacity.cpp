@@ -1,24 +1,30 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// TweaksV - the lighting capacity, measured first (see TweaksVLightCapacity.h).
+// TweaksV - the light stores, and the lighting capacity measured (see TweaksVLightCapacity.h).
 //
 // A vehicle's lights go through a job's list, 80 lights and 200 coronas for 5 vehicles, where a light past the room is silently
 // dropped; at the job's end into the frame's two stores, 400 lights and 928 coronas, with no check at all, over the stores' own
 // write pointers; once a frame into the scene store, whose 1024 keep the nearer light but replace a wrong slot, an index of a
 // byte; and from there into the ray traced list of 1024, whose upload takes 512, and the corona store of 1088. 300 vehicles a
-// frame have room, unchecked as well (PATTERNS.md, "LightCapacity"). Before a part raises anything, this module measures which
-// of these layers a mod load reaches:
-//   DIAGNOSTIC_MODE  the measurement, and nothing is looked for without it: a thread reads the game's counters every 10 ms,
-//                    aligned values of its .data, and keeps each one's most, of the minute and of the session; the jump a
-//                    job's full list takes leads through a counting stub, the module's one write, unless the game's frames have
-//                    begun and its threads may run it; 10 seconds in, and then every minute while the numbers change, the log says
-//                    how far each layer filled, how many lights the jobs refused and what the siren settings ask for. A number
-//                    seen past its room is a line of its own at once
-//   DRY_RUN          everything found and checked and the sampling as ever; the jump left as it is, so the refused lights are
-//                    not counted
-// All 22 patterns are found first, those a raise will use with them, and every site checked as a writing half would: the stores'
-// and the lists' distances, the stores' references by a scan, each site naming what the others name, every address inside the game, every value read aligned and
-// readable; the constants the patterns pin are compared when TweaksV is compiled. A pattern missing, a site not as expected, a
-// thread that cannot start or a stub that cannot be made is logged, not reported - the measurement is an aid (NOTES.md, T-DIAG).
+// frame have room, unchecked as well (PATTERNS.md, "LightCapacity").
+// The part (D30, D39), [LIGHTCAPACITY] ENABLED: a job's lists raised to 180 lights and 300 coronas, the most the worker's scratch
+// allows; the frame's two stores moved near the game, 10800 lights and 18000 coronas, all that the 60 jobs can hand them, so that
+// no overflow can happen by construction; the byte index widened by two instructions of the same length, so that past its 1024 the
+// scene store drops the farthest light. One write, all or nothing, in DllMain, with the game's frames not begun; a site not as the
+// findings have it, or frames that have begun, is a problem and nothing is changed. The sirens per vehicle ask for it.
+// The measurement says which of these layers a mod load reaches:
+//   DIAGNOSTIC_MODE  the measurement: a thread reads the game's counters every 10 ms, aligned values of its .data, and keeps each
+//                    one's most, of the minute and of the session; the jump a job's full list takes leads through a counting stub,
+//                    the measurement's one write, unless the game's frames have begun and its threads may run it; 10 seconds in,
+//                    and then every minute while the numbers change, the log says how far each layer filled, over the moved stores
+//                    when they are moved, how many lights the jobs refused and what the siren settings ask for. A number seen past
+//                    its room is a line of its own at once
+//   DRY_RUN          everything found and checked and the sampling as ever, over the game's own stores; no write of the part and
+//                    the jump left as it is, so the refused lights are not counted
+// All 22 patterns are found first, by the part when it is on and else by the measurement, and nothing is looked for with neither,
+// and every site checked: the stores' and the lists' distances, the stores' references by a scan, each site naming what the others
+// name, every address inside the game, every value read aligned and readable; the constants the patterns pin are compared when
+// TweaksV is compiled. For the measurement alone a pattern missing, a site not as expected, a thread that cannot start or a stub
+// that cannot be made is logged, not reported - the measurement is an aid (NOTES.md, T-DIAG).
 // The stub runs on the game's worker threads, so it counts with a lock instruction into a 64-bit counter, keeps every register,
 // uses no stack, changes only the flags, which the jump's target writes anew before anything reads them, and lies near the
 // game, read+execute, its counter on a read/write page of its own. It runs only when a list is full.
@@ -81,6 +87,15 @@ namespace TweaksV
 		constexpr uint32_t kUploadRecordsAt = 0x70E0, kWorkerFrame = 0x18058, kScratchAt = 0x50;
 		constexpr uint32_t kSortEntries = kSceneRoom, kSortEntryBytes = 8;
 
+		// What the part raises them to: a job's lists at the top of what the worker's scratch allows, 0x20 bytes to spare, and the
+		// frame's stores as large as all 60 jobs can fill them.
+		constexpr uint32_t kJobs = kVehiclesRoom / kJobVehicles, kRaisedJobLights = 180, kRaisedJobCoronas = 300, kScratchSpare = 0x20;
+		constexpr uint32_t kRaisedLights = kJobs * kRaisedJobLights, kRaisedCoronas = kJobs * kRaisedJobCoronas;
+		constexpr uint32_t kRaisedJobCoronaBytes = kRaisedJobCoronas * kCoronaBytes, kRaisedJobLightBytes = kRaisedJobLights * kLightBytes;
+		constexpr uint32_t kRaisedJobBytes = kRaisedJobCoronaBytes + kRaisedJobLightBytes;
+		static_assert(kJobs == 60 && kRaisedLights == 10800 && kRaisedCoronas == 18000 && kRaisedJobBytes == 0x17340, "TweaksV: 60 jobs of 180 lights and 300 coronas, a job's scratch of 0x17340 bytes");
+		static_assert(kRaisedJobBytes + kScratchSpare <= kWorkerFrame - kScratchAt, "TweaksV: a job's raised scratch fits the worker's frame from +0x50");
+
 		// -N-1, as a site's imm32 holds it.
 		constexpr int64_t MinusOneMore(uint32_t value)
 		{
@@ -92,7 +107,10 @@ namespace TweaksV
 		constexpr size_t kCoronaStoreAt = 3, kCoronaPointerAt = 10, kLightStoreAt = 24, kLightPointerAt = 31;	// A1; A2 the first two; A3 the same two for lights
 		constexpr size_t kDrainStoreAt = 3, kDrainPointerAt = 10, kDrainCallAt = 32;							// A2, A3
 		constexpr size_t kVehiclesAt = 2, kVehiclesEnd = 10;													// B1
+		constexpr size_t kKickSizeAt = 4, kLastKickSizeAt = 5;													// B2, B3
 		constexpr size_t kJumpAt = 6, kJumpRelAt = 8, kJumpSize = 6;											// C1: "jae rel32"
+		constexpr size_t kCoronaBytesAt = 17, kLightBytesAt = 22, kLightsPastAt = 32, kScratchPastAt = 42, kScratchBytesAt = 47;	// C2
+		constexpr size_t kLightsAddAt = 2, kLightsCompareAt = 9;												// C3
 		constexpr size_t kStartValuesAt = 8;																	// C4
 		constexpr size_t kSceneCountAt = 3, kSceneLimitAt = 9, kSortCountAt = 22, kSortListAt = 29, kSortStoreAt = 38, kByteStoreAt = 42;	// D1
 		constexpr size_t kStoreBaseAt = 10, kRenderPointerAt = 20, kBufferCountsAt = 27, kRenderCountAt = 38, kReflectionsAt = 52, kReflectionPointerAt = 62;	// E1
@@ -107,12 +125,12 @@ namespace TweaksV
 		static_assert(PatternHolds(P(kB1), 0, { 0x69, 0x05 }) && PatternHolds(P(kB1), kVehiclesAt + 4, { 0xCD, 0xCC, 0xCC, 0xCC, 0x05, 0x99, 0x99, 0x99, 0x19, 0x3D, 0x32, 0x33, 0x33, 0x33, 0x77 }),
 			"TweaksV: G-E-B1 is imul eax, [rip+disp32], imm32, its disp32 at +2 and its imm32 past it, then a job's 5 vehicles in the three constants' test");
 		static_assert(kVehiclesEnd == kVehiclesAt + 4 + 4 && kJobVehicles * 60 == kVehiclesRoom, "TweaksV: G-E-B1's disp32 counts from past its imm32; 60 jobs of 5 vehicles");
-		static_assert(PatternImm32(P(kB2), 4) == kJobBytes && PatternImm32(P(kB3), 5) == kJobBytes, "TweaksV: G-E-B2 and G-E-B3 give a job its scratch of 0xB180 bytes");
+		static_assert(PatternImm32(P(kB2), kKickSizeAt) == kJobBytes && PatternImm32(P(kB3), kLastKickSizeAt) == kJobBytes, "TweaksV: G-E-B2 and G-E-B3 give a job its scratch of 0xB180 bytes");
 		static_assert(PatternHolds(P(kC1), 0, { 0x8B, 0x41, 0x14, 0x3B, 0x41, 0x1C }) && PatternHolds(P(kC1), kJumpAt, { 0x0F, 0x83 }),
 			"TweaksV: G-E-C1 compares a list's count with its capacity and jumps when they are not below: its jae at +6, its rel32 at +8");
-		static_assert(PatternImm32(P(kC2), 17) == kJobCoronaBytes && PatternImm32(P(kC2), 22) == kJobLightBytes && PatternImm32(P(kC2), 32) == MinusOneMore(kJobLightBytes) &&
-			PatternImm32(P(kC2), 42) == MinusOneMore(kJobBytes) && PatternImm32(P(kC2), 47) == kJobBytes, "TweaksV: G-E-C2 lays a job's scratch out as 200 coronas and 80 lights");
-		static_assert(PatternImm32(P(kC3), 2) == kJobLightBytes && PatternImm32(P(kC3), 9) == kJobLightBytes, "TweaksV: G-E-C3 holds the job's lights' bytes twice");
+		static_assert(PatternImm32(P(kC2), kCoronaBytesAt) == kJobCoronaBytes && PatternImm32(P(kC2), kLightBytesAt) == kJobLightBytes && PatternImm32(P(kC2), kLightsPastAt) == MinusOneMore(kJobLightBytes) &&
+			PatternImm32(P(kC2), kScratchPastAt) == MinusOneMore(kJobBytes) && PatternImm32(P(kC2), kScratchBytesAt) == kJobBytes, "TweaksV: G-E-C2 lays a job's scratch out as 200 coronas and 80 lights");
+		static_assert(PatternImm32(P(kC3), kLightsAddAt) == kJobLightBytes && PatternImm32(P(kC3), kLightsCompareAt) == kJobLightBytes, "TweaksV: G-E-C3 holds the job's lights' bytes twice");
 		static_assert(PatternHolds(P(kC4), 5, { 0x0F, 0x28, 0x0D }), "TweaksV: G-E-C4 loads a job's lists' start values through movaps xmm1, [rip+disp32]");
 		static_assert(PatternImm32(P(kD1), kSceneLimitAt) == kSceneRoom - 1 && PatternHolds(P(kD1), kByteStoreAt, { 0x88, 0x04, 0xCA }) && PatternHolds(P(kD2), 0, { 0x0F, 0xB6, 0x1C, 0xC1 }),
 			"TweaksV: G-E-D1 checks the scene store against 1023 and stores a sort entry's index as a byte, which G-E-D2 reads back as one");
@@ -131,8 +149,11 @@ namespace TweaksV
 		constexpr size_t kRealLightsAt = 0x38, kSirenLightsAt = 0x3C, kSirenLightBytes = 0x48, kSirenLightFlagAt = 0x45;
 		constexpr size_t kSirenLights = 20, kSirenBytesRead = kSirenLightsAt + kSirenLights * kSirenLightBytes;
 
-		// The start values of a job's lists: their two counts and capacities, the coronas' first.
+		// The start values of a job's lists: their two counts and capacities, the coronas' first. G-E-C4 reads their 16 bytes with a
+		// movaps, so they lie 16-aligned, the game's and the part's alike.
 		constexpr uint32_t kStartValues[4] = { 0, 0, kJobCoronas, kJobLights };
+		constexpr uint32_t kRaisedStartValues[4] = { 0, 0, kRaisedJobCoronas, kRaisedJobLights };
+		constexpr size_t kStartValuesAlign = sizeof(kStartValues);
 
 		// Where the function's jump when full leads, on 1.0.1158.16 (PATTERNS.md): add rsp, 0x20; pop rbx; pop rdi; pop rsi; pop r14; pop r15;
 		// ret. None of them reads a flag, and add writes them anew, which the stub's lock inc rests on.
@@ -155,14 +176,18 @@ namespace TweaksV
 		};
 		Reads g_reads;
 
+		// A line for the boot, with DIAGNOSTIC_MODE=1 only: the part checks the same sites without it.
 		void Note(const std::string& line)
 		{
-			WriteLog(kTag, "DIAGNOSTIC: " + line);
+			if (IsDiagnosticMode())
+				WriteLog(kTag, "DIAGNOSTIC: " + line);
 		}
 
+		// The first thing not as the findings have it, which the part reports and the measurement logs.
+		std::string g_whyNot;
 		bool Fail(const std::string& why)
 		{
-			Note("the lighting capacity is not measured: " + why);
+			g_whyNot = why;
 			return false;
 		}
 
@@ -317,8 +342,8 @@ namespace TweaksV
 			Note("a job's scratch at " + DescribeAddress(m.at[kC2]) + ": " + Hex(kJobCoronaBytes) + " bytes of coronas, " + Hex(kJobLightBytes) + " of lights, " + Hex(kJobBytes) + " in all" + At(P(kC2)));
 			Note("a job's lights' bytes at " + DescribeAddress(m.at[kC3]) + " hold " + Hex(kJobLightBytes) + At(P(kC3)));
 			const uint8_t* const values = Rel32Target(m.at[kC4] + kStartValuesAt);
-			if (!DataOf<uint32_t>("job's lists' start values", values, std::size(kStartValues), kC4))
-				return false;
+			if (const std::string fault = DataFault(values, sizeof(kStartValues), kStartValuesAlign, true); !fault.empty())
+				return Fail("the job's lists' start values at " + DescribeAddress(values) + At(P(kC4)) + " " + fault + ".");
 			uint32_t read[std::size(kStartValues)] = {};
 			memcpy(read, values, sizeof(read));
 			Note("a job's lists' start values at " + DescribeAddress(values) + ": " + std::to_string(read[0]) + ", " + std::to_string(read[1]) + ", " + std::to_string(read[2]) + ", " +
@@ -426,13 +451,62 @@ namespace TweaksV
 			return true;
 		}
 
+		// ---- the sites, found and checked once: by the part when it is on, else by the measurement
+
+		Matches g_matches;
+		uint8_t* g_jump = nullptr;			// C1's jump when full, and where it leads
+		const uint8_t* g_wayOut = nullptr;
+		bool g_looked = false;
+
+		// True if every site is found and as the findings have it; else g_whyNot says what is not. The part's write leaves the store
+		// sites changed, so this runs before it and never again.
+		bool SitesHold()
+		{
+			if (g_looked)
+				return g_whyNot.empty();
+
+			// 1. every site looked for, so that the log names each one missing
+			g_whyNot.clear();
+			std::string notFound;
+			for (size_t i = 0; i < kSites; i++)
+			{
+				if (i != kG1)
+				{
+					g_matches.at[i] = Scanner::FindOnce(*kSitePatterns[i], notFound);
+					continue;
+				}
+				const std::vector<uint8_t*> found = Scanner::FindAll(*kSitePatterns[i], kG1Matches + 1);
+				if (found.size() == kG1Matches)
+				{
+					g_matches.at[i] = found[0];
+					g_matches.secondG1 = found[1];
+				}
+				else if (notFound.empty())
+					notFound = Scanner::NotAsOften(*kSitePatterns[i], found.size(), kG1Matches);
+			}
+
+			// 2. every site checked, each logged - the first not as the findings have it ends here
+			const bool hold = notFound.empty() ? CheckFrameStores(g_matches) && CheckJobs(g_matches) && CheckAddToList(g_matches, g_jump, g_wayOut) && CheckScratch(g_matches) &&
+				CheckSceneStore(g_matches) && CheckRenderSides(g_matches) && CheckCoronasAndWorker(g_matches) : Fail(notFound + ".");
+			g_looked = true;
+			return hold;
+		}
+
+		// True once the game's reset has run: its frames have begun, so its worker threads may run every site, and a rel32 being
+		// written can be read half written.
+		bool FramesRun()
+		{
+			return Load<uint64_t>(g_reads.coronaPointer) != 0 || Load<uint64_t>(g_reads.lightPointer) != 0;
+		}
+
 		// ---- the measurement
 
 		constexpr DWORD kSampleMs = 10;		// sees every frame up to 100 fps
 
-		// The numbers sampled and what each has room for, in the order of the summary. The two stores' come from their write pointers.
+		// The numbers sampled and what each has room for, in the order of the summary. The two stores' come from their write pointers,
+		// and their rooms are the part's once it has moved them, which it does before the threads start.
 		enum Number : size_t { kVehicles, kVehicleLights, kVehicleCoronas, kSceneLights, kRayTraced, kReflections, kCoronas, kNumbers };
-		constexpr uint32_t kRoom[kNumbers] = { kVehiclesRoom, kStoreLights, kStoreCoronas, kSceneRoom, kRayTracedRoom, kReflectionRoom, kCoronaRoom };
+		uint32_t g_room[kNumbers] = { kVehiclesRoom, kStoreLights, kStoreCoronas, kSceneRoom, kRayTracedRoom, kReflectionRoom, kCoronaRoom };
 		constexpr const char* kNames[kNumbers] = { "vehicles", "vehicle lights", "vehicle coronas", "scene lights", "ray traced list", "reflection lists", "coronas" };
 
 		// The sampling thread's marks since the last reading, each number's most and how many samples saw what.
@@ -460,12 +534,12 @@ namespace TweaksV
 		bool g_saidPast[kNumbers] = {};		// the sampling thread's alone
 		void Keep(Number number, uint32_t value)
 		{
-			if (value > kRoom[number])
+			if (value > g_room[number])
 			{
 				if (!g_saidPast[number])
 				{
 					g_saidPast[number] = true;
-					Note(std::string(kNames[number]) + " seen at " + std::to_string(value) + ", past the " + std::to_string(kRoom[number]) + " the game has room for" +
+					Note(std::string(kNames[number]) + " seen at " + std::to_string(value) + ", past the " + std::to_string(g_room[number]) + " the game has room for" +
 						(number == kVehicles ? " - the game has overwritten memory." : "."));
 				}
 				return;
@@ -483,7 +557,7 @@ namespace TweaksV
 			if (pointer == 0)
 				return;
 			const uint64_t base = reinterpret_cast<uintptr_t>(store);
-			if (pointer < base || pointer > base + uint64_t{ kRoom[number] } * bytes)
+			if (pointer < base || pointer > base + uint64_t{ g_room[number] } * bytes)
 			{
 				if (!g_saidPast[number])
 				{
@@ -646,7 +720,7 @@ namespace TweaksV
 				return "its numbers are not sampled (see above), ";
 			const auto number = [&marks](Number which)
 			{
-				return std::string(kNames[which]) + " " + std::to_string(marks.most[which]) + " of " + std::to_string(kRoom[which]);
+				return std::string(kNames[which]) + " " + std::to_string(marks.most[which]) + " of " + std::to_string(g_room[which]);
 			};
 			const uint32_t rayTraced = marks.most[kRayTraced];
 			return number(kVehicles) + ", " + number(kVehicleLights) + ", " + number(kVehicleCoronas) + ", " + number(kSceneLights) + " (at its room with the sort list marked in " +
@@ -699,12 +773,14 @@ namespace TweaksV
 		}
 
 #ifdef TWEAKSV_TEST_BUILD
-		// test builds only: TWEAKSV_TEST_LIGHT_STUB in the environment reaches what comes of a stub or a jump Windows refuses (SPECIFICATIONS 13.1): "no memory" takes
-		// the near memory for none; "left writable" leaves the stub as it is written, unrun, so that under the fake's dynamic code policy the refusal comes at the jump's page.
+		// test builds only: TWEAKSV_TEST_LIGHT_STUB in the environment reaches what comes of a stub, a jump or the part's memory Windows refuses (SPECIFICATIONS 13.1):
+		// "no memory" takes the near memory for none; "left writable" leaves the stub as it is written, unrun, so that under the fake's dynamic code policy the refusal
+		// comes at the jump's page; "no stores", "stores out of reach" and "values refused" take the part's memory for none, for out of reach, and its first page for
+		// one that cannot be made read-only.
 		bool StubSwitch(const wchar_t* value, const char* words)
 		{
-			wchar_t text[16]{};
-			if (GetEnvironmentVariableW(L"TWEAKSV_TEST_LIGHT_STUB", text, 16) >= 16 || wcscmp(text, value) != 0)
+			wchar_t text[32]{};
+			if (GetEnvironmentVariableW(L"TWEAKSV_TEST_LIGHT_STUB", text, 32) >= 32 || wcscmp(text, value) != 0)
 				return false;
 			WriteLog(kTag, std::string("TEST BUILD: ") + words + " (TWEAKSV_TEST_LIGHT_STUB).");
 			return true;
@@ -768,47 +844,181 @@ namespace TweaksV
 			}
 			return true;
 		}
+
+		// ---- the part's one write
+
+		bool g_raised = false;		// the one write returned true, a dry run's would-write included
+
+		void NotRaised(const std::string& why)
+		{
+			ReportFailure(kTag, "The light stores are not raised this session: " + why);
+		}
+
+		// The findings' 8.1 B and C, but for G-E-C4's rel32: the two instructions of the byte index, the same lengths, and every
+		// constant of a job's scratch, as a dry run names them too.
+		std::vector<CodeWrite> ConstantWrites(const Matches& m)
+		{
+			return {
+				{ m.at[kD1] + kByteStoreAt, { 0x89, 0x04, 0xCA }, "scene store's index store" },
+				{ m.at[kD2], { 0x8B, 0x1C, 0xC1, 0x90 }, "scene store's index read" },
+				{ m.at[kB2] + kKickSizeAt, BytesOf(kRaisedJobBytes), "job's scratch size in its kick" },
+				{ m.at[kB3] + kLastKickSizeAt, BytesOf(kRaisedJobBytes), "job's scratch size in its last kick" },
+				{ m.at[kC2] + kCoronaBytesAt, BytesOf(kRaisedJobCoronaBytes), "job's coronas' bytes" },
+				{ m.at[kC2] + kLightBytesAt, BytesOf(kRaisedJobLightBytes), "job's lights' bytes" },
+				{ m.at[kC2] + kLightsPastAt, BytesOf(static_cast<uint32_t>(MinusOneMore(kRaisedJobLightBytes))), "job's lights' bytes, as -N-1" },
+				{ m.at[kC2] + kScratchPastAt, BytesOf(static_cast<uint32_t>(MinusOneMore(kRaisedJobBytes))), "job's scratch size, as -N-1" },
+				{ m.at[kC2] + kScratchBytesAt, BytesOf(kRaisedJobBytes), "job's scratch size" },
+				{ m.at[kC3] + kLightsAddAt, BytesOf(kRaisedJobLightBytes), "job's lights' bytes, added" },
+				{ m.at[kC3] + kLightsCompareAt, BytesOf(kRaisedJobLightBytes), "job's lights' bytes, compared" },
+			};
+		}
+
+		// The part's memory, one block near the game: the lists' start values first, page-aligned and so 16-aligned for G-E-C4's movaps,
+		// on a page of their own that turns read-only, as the game's are; then the stores, each on pages of its own, read/write and zero:
+		// the records are copied whole and read by value, so they need no constructor. Null, reported, if it cannot be made.
+		uint8_t* MakeRaisedMemory(size_t coronaBytes, size_t lightBytes)
+		{
+			const size_t page = PageSize();
+			uint8_t* block = static_cast<uint8_t*>(AllocateNearGame(page + coronaBytes + lightBytes));
+#ifdef TWEAKSV_TEST_BUILD
+			if (block && StubSwitch(L"no stores", "the near memory is taken for none for the stores"))
+			{
+				VirtualFree(block, 0, MEM_RELEASE);
+				block = nullptr;
+			}
+#endif
+			if (!block)
+			{
+				NotRaised("no memory near the game could be had for the stores.");
+				return nullptr;
+			}
+			memcpy(block, kRaisedStartValues, sizeof(kRaisedStartValues));
+			DWORD old = 0;
+			bool readOnly = VirtualProtect(block, page, PAGE_READONLY, &old) != FALSE;
+			DWORD error = readOnly ? 0 : GetLastError();
+#ifdef TWEAKSV_TEST_BUILD
+			if (StubSwitch(L"values refused", "the start values' page is taken as refused"))
+			{
+				readOnly = false;
+				error = ERROR_ACCESS_DENIED;
+			}
+#endif
+			if (!readOnly)
+			{
+				VirtualFree(block, 0, MEM_RELEASE);
+				NotRaised("a job's lists' start values could not be made read-only (" + DescribeError(error) + ").");
+				return nullptr;
+			}
+			return block;
+		}
+
+		// The rel32 at field led to target, as one more of the writes. False, reported, if it is out of reach.
+		bool AddLead(std::vector<CodeWrite>& writes, uint8_t* field, const uint8_t* target, const char* what)
+		{
+			const intptr_t distance = target - (field + sizeof(int32_t));
+			bool reached = distance >= INT32_MIN && distance <= INT32_MAX;
+#ifdef TWEAKSV_TEST_BUILD
+			if (StubSwitch(L"stores out of reach", "the stores are taken as out of reach"))
+				reached = false;
+#endif
+			if (!reached)
+			{
+				NotRaised(std::string("the part's memory at ") + DescribeAddress(target) + " is out of reach of the " + what + " at " + DescribeAddress(field) + ".");
+				return false;
+			}
+			writes.push_back({ field, BytesOf(static_cast<int32_t>(distance)), what });
+			return true;
+		}
+
+		// Everything checked, the frames not begun: the one write, all or nothing, and the numbers' stores and rooms from now on.
+		void RaiseStores()
+		{
+			const Matches& m = g_matches;
+			const std::string coronaChange = "from " + std::to_string(kStoreCoronas) + " to " + std::to_string(kRaisedCoronas);
+			const std::string lightChange = "from " + std::to_string(kStoreLights) + " to " + std::to_string(kRaisedLights);
+			if (IsDryRun())
+			{
+				WriteLog(kTag, "DRY_RUN: would move the vehicle coronas' store (2 references) and raise its limit " + coronaChange + ".");
+				WriteLog(kTag, "DRY_RUN: would move the vehicle lights' store (2 references) and raise its limit " + lightChange + ".");
+				WriteLog(kTag, "DRY_RUN: would lead a job's lists' start values at " + DescribeAddress(m.at[kC4] + kStartValuesAt) + At(P(kC4)) + " to TweaksV's own: 0, 0, " +
+					std::to_string(kRaisedJobCoronas) + ", " + std::to_string(kRaisedJobLights) + ".");
+				g_raised = WriteCode(ConstantWrites(m), kTag);
+				return;
+			}
+
+			const size_t page = PageSize();
+			const auto pagesOf = [page](size_t bytes) { return (bytes + page - 1) / page * page; };
+			const size_t coronaBytes = pagesOf(size_t{ kRaisedCoronas } * kCoronaBytes), lightBytes = pagesOf(size_t{ kRaisedLights } * kLightBytes);
+			uint8_t* const block = MakeRaisedMemory(coronaBytes, lightBytes);
+			if (!block)
+				return;
+			uint8_t* const coronas = block + page;
+			uint8_t* const lights = coronas + coronaBytes;
+
+			std::vector<CodeWrite> writes = ConstantWrites(m);
+			if (!AddLead(writes, m.at[kA1] + kCoronaStoreAt, coronas, "vehicle coronas' store in the frame's reset") ||
+				!AddLead(writes, m.at[kA1] + kLightStoreAt, lights, "vehicle lights' store in the frame's reset") ||
+				!AddLead(writes, m.at[kA2] + kDrainStoreAt, coronas, "vehicle coronas' store in the drain") ||
+				!AddLead(writes, m.at[kA3] + kDrainStoreAt, lights, "vehicle lights' store in the drain") ||
+				!AddLead(writes, m.at[kC4] + kStartValuesAt, block, "job's lists' start values"))
+			{
+				VirtualFree(block, 0, MEM_RELEASE);	// nothing points at it: nothing was written
+				return;
+			}
+			if (!WriteCode(writes, kTag))
+			{
+				VirtualFree(block, 0, MEM_RELEASE);	// nothing points at it: nothing was written
+				NotRaised("the game code could not be changed (details in TweaksV.log).");
+				return;
+			}
+			g_raised = true;
+			g_reads.coronaStore = coronas;
+			g_reads.lightStore = lights;
+			g_room[kVehicleCoronas] = kRaisedCoronas;
+			g_room[kVehicleLights] = kRaisedLights;
+			Note("the stores moved: the vehicle coronas' at " + DescribeAddress(coronas) + ", the vehicle lights' at " + DescribeAddress(lights) + ", a job's lists' start values at " + DescribeAddress(block));
+			WriteLog(kTag, "The vehicle coronas' store moved and its limit raised " + coronaChange + " entries.");
+			WriteLog(kTag, "The vehicle lights' store moved and its limit raised " + lightChange + " entries.");
+			WriteLog(kTag, "A job's lists patched: " + std::to_string(kJobLights) + " lights and " + std::to_string(kJobCoronas) + " coronas -> " + std::to_string(kRaisedJobLights) + " lights and " +
+				std::to_string(kRaisedJobCoronas) + " coronas.");
+			WriteLog(kTag, "Scene store's index patched: 88 04 CA -> 89 04 CA, 0F B6 1C C1 -> 8B 1C C1 90.");
+		}
+	}
+
+	void InitLightCapacity()
+	{
+		if (!SitesHold())
+		{
+			NotRaised(g_whyNot);
+			return;
+		}
+		if (FramesRun())
+		{
+			NotRaised("the game's frames run already - its threads may run the sites while they are rewritten.");
+			return;
+		}
+		RaiseStores();
+	}
+
+	bool LightStoresRaised()
+	{
+		return g_raised;
 	}
 
 	void MeasureLightCapacity()
 	{
-		// 1. every site looked for, so that the log names each one missing
-		Matches matches;
-		std::string notFound;
-		for (size_t i = 0; i < kSites; i++)
+		if (!SitesHold())
 		{
-			if (i != kG1)
-			{
-				matches.at[i] = Scanner::FindOnce(*kSitePatterns[i], notFound);
-				continue;
-			}
-			const std::vector<uint8_t*> found = Scanner::FindAll(*kSitePatterns[i], kG1Matches + 1);
-			if (found.size() == kG1Matches)
-			{
-				matches.at[i] = found[0];
-				matches.secondG1 = found[1];
-			}
-			else if (notFound.empty())
-				notFound = Scanner::NotAsOften(*kSitePatterns[i], found.size(), kG1Matches);
-		}
-		if (!notFound.empty())
-		{
-			Fail(notFound + ".");
+			Note("the lighting capacity is not measured: " + g_whyNot);
 			return;
 		}
 
-		// 2. every site checked, each logged - the first not as the findings have it ends here
-		uint8_t* jump = nullptr;
-		const uint8_t* wayOut = nullptr;
-		if (!CheckFrameStores(matches) || !CheckJobs(matches) || !CheckAddToList(matches, jump, wayOut) || !CheckScratch(matches) || !CheckSceneStore(matches) ||
-			!CheckRenderSides(matches) || !CheckCoronasAndWorker(matches))
-			return;
-
-		// 3. the stub made, the summary's thread and the sampling thread started, then the jump redirected: a measurement that cannot sum
+		// the stub made, the summary's thread and the sampling thread started, then the jump redirected: a measurement that cannot sum
 		// up redirects nothing. A dry run or frames already running redirect nothing, and the numbers are read all the same.
 		uint8_t* block = nullptr;
+		uint8_t* const jump = g_jump;
 		const std::string site = DescribeAddress(jump) + At(P(kC1));
-		if (Load<uint64_t>(g_reads.coronaPointer) != 0)	// the reset has run: the game's worker threads may run the jump, and a rel32 being written can be read half written
+		if (FramesRun())
 			NotCounted("the game's frames run already - its threads may run the jump while it is rewritten.");
 		else if (IsDryRun())
 		{
@@ -816,12 +1026,12 @@ namespace TweaksV
 			WriteLog(kTag, "DRY_RUN: would redirect the jump at " + site + " to a counting stub - a job's refused lights are not counted.");
 		}
 		else
-			block = MakeStub(wayOut, PageSize());
+			block = MakeStub(g_wayOut, PageSize());
 		if (!StartMeasurement<kMeasurement>())	// its line is written
 		{
 			if (block)
 				VirtualFree(block, 0, MEM_RELEASE);	// no jump leads to it yet
-			Fail("its summary thread could not be started.");
+			Note("the lighting capacity is not measured: its summary thread could not be started.");
 			return;
 		}
 		if (StartModuleThread(SampleNumbers, "lighting capacity sampling"))
@@ -841,14 +1051,5 @@ namespace TweaksV
 		}
 		Note(g_sampling.load() ? "the lighting capacity is measured: its numbers are sampled every 10 ms and logged after 10 seconds, then every minute while they change." :
 			"the lighting capacity is measured, its numbers not sampled: the rest is logged after 10 seconds, then every minute while it changes.");
-	}
-
-	void InitLightCapacity()
-	{
-	}
-
-	bool LightStoresRaised()
-	{
-		return IsFeatureOn(kLightCapacitySection);
 	}
 }

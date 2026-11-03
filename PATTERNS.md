@@ -683,18 +683,18 @@ The patterns, each matching exactly once in both dumps of 2026-10-29 but `G-E-G1
 
 | Label | Pattern | Use | 1.0.1158.16 | RVA |
 |---|---|---|---|---|
-| G-E-A1 | `48 8D 05 ? ? ? ? 48 89 05 ? ? ? ? 4C 8D 05 ? ? ? ? 48 8D 15 ? ? ? ? 48 89 15 ? ? ? ? 4C 8D 0D ? ? ? ?` | the frame's reset (RVA 0xF00F70): +3 the coronas' store (RVA 0x4366D00), +10 their write pointer (RVA 0x439D700), +24 the lights' store (RVA 0x4371B00), +31 their write pointer (RVA 0x439D708); the lights' store 0xAE00 past the coronas', 928 x 0x30, the coronas' pointer 0x2BC00 past the lights' store, 400 x 0x1C0, the lights' pointer right behind it | found | 0xF00F70 |
-| G-E-A2 | `48 8D 1D ? ? ? ? 48 39 1D ? ? ? ? 0F 86` | the drain: +3 the coronas' store, +10 its write pointer, `G-E-A1`'s | found | 0xF01109 |
-| G-E-A3 | `48 8D 35 ? ? ? ? 48 39 35 ? ? ? ? 76 ? 0F 1F 44 00 00 48 89 F1 31 D2 45 31 C0 45 31 C9 E8` | the drain: +3 the lights' store, +10 its write pointer, `G-E-A1`'s; +32 the call of add-scene-light (RVA 0x3EF140) with a null mask, its rel32 past the match | found | 0xF011BB |
+| G-E-A1 | `48 8D 05 ? ? ? ? 48 89 05 ? ? ? ? 4C 8D 05 ? ? ? ? 48 8D 15 ? ? ? ? 48 89 15 ? ? ? ? 4C 8D 0D ? ? ? ?` | the frame's reset (RVA 0xF00F70): +3 the coronas' store (RVA 0x4366D00), +10 their write pointer (RVA 0x439D700), +24 the lights' store (RVA 0x4371B00), +31 their write pointer (RVA 0x439D708); the lights' store 0xAE00 past the coronas', 928 x 0x30, the coronas' pointer 0x2BC00 past the lights' store, 400 x 0x1C0, the lights' pointer right behind it; the part leads +3 and +24 to the stores it moves | found | 0xF00F70 |
+| G-E-A2 | `48 8D 1D ? ? ? ? 48 39 1D ? ? ? ? 0F 86` | the drain: +3 the coronas' store, +10 its write pointer, `G-E-A1`'s; the part leads +3 to the coronas' store it moves | found | 0xF01109 |
+| G-E-A3 | `48 8D 35 ? ? ? ? 48 39 35 ? ? ? ? 76 ? 0F 1F 44 00 00 48 89 F1 31 D2 45 31 C0 45 31 C9 E8` | the drain: +3 the lights' store, +10 its write pointer, `G-E-A1`'s; +32 the call of add-scene-light (RVA 0x3EF140) with a null mask, its rel32 past the match; the part leads +3 to the lights' store it moves | found | 0xF011BB |
 | G-E-B1 | `69 05 ? ? ? ? CD CC CC CC 05 99 99 99 19 3D 32 33 33 33 77` | 5 vehicles a job: `imul eax, [rip+disp32], imm32`, +2 the disp32 of the vehicles' count (RVA 0x4362AC0), counted from past the imm32 at +6; then the test of a multiple of 5 | found | 0xDE68FE |
-| G-E-B2 | `C7 44 1A 70 80 B1 00 00 F0 FF 05` | +4 a job's scratch size, 0xB180, at its +0x70, in the kick | found | 0xDE6957 |
-| G-E-B3 | `42 C7 44 0A 70 80 B1 00 00` | +5 the same in the last kick | found | 0xF01090 |
-| G-E-C1 | `8B 41 14 3B 41 1C 0F 83 ? ? ? ? 48 89 D7 49 89 CE 48 8B 59 08` | add-to-a-job's-list: 11 bytes past the function's start (RVA 0xE15700); +6 the jump when full, `jae rel32`, its rel32 at +8 to the function's way out (RVA 0xE158E7) - with `DIAGNOSTIC_MODE=1` the module's one write, through a counting stub | found | 0xE1570B |
-| G-E-C2 | `4C 8D 48 0F 49 83 E1 F0 4C 89 CA 48 29 C2 49 8D A9 80 25 00 00 BB 00 8C 00 00 48 29 D3 48 81 C2 FF 73 FF FF 45 31 C0 48 81 FA 7F 4E FF FF BE 80 B1 00 00` | a job's scratch laid out: +17 the coronas' bytes, 0x2580; +22 the lights' bytes, 0x8C00; +32 -0x8C01; +42 -0xB181; +47 the sum, 0xB180 | found | 0xE15916 |
-| G-E-C3 | `48 05 00 8C 00 00 48 81 FA 00 8C 00 00` | +2 and +9 the lights' bytes | found | 0xE15969 |
-| G-E-C4 | `48 89 7C 24 68 0F 28 0D ? ? ? ?` | +8 the rel32 of `movaps` to the lists' start values at .rdata 0x26399A0: 0, 0, 200, 80 | found | 0xE159B1 |
-| G-E-D1 | `48 63 05 ? ? ? ? 48 3D FF 03 00 00 0F 8F ? ? ? ? 48 63 0D ? ? ? ? 48 8D 15 ? ? ? ? 8D 59 01 89 1D ? ? ? ? 88 04 CA` | the scene store's add (in RVA 0x3FA7B0): +3 its count (RVA 0x3D39ECC), +9 0x3FF, +22 the sort list's count (RVA 0x3D42398), +29 the sort list (RVA 0x3D40398), +38 the count's store, +42 the index stored as a byte | found | 0x3FA7C9 |
-| G-E-D2 | `0F B6 1C C1 F3 0F 11 74 C1 04 4A 8D 14 C1 E8` | +0 the index read back as a byte | found | 0x3FAA40 |
+| G-E-B2 | `C7 44 1A 70 80 B1 00 00 F0 FF 05` | +4 a job's scratch size, 0xB180, at its +0x70, in the kick; the part writes 0x17340 | found | 0xDE6957 |
+| G-E-B3 | `42 C7 44 0A 70 80 B1 00 00` | +5 the same in the last kick; the part writes 0x17340 | found | 0xF01090 |
+| G-E-C1 | `8B 41 14 3B 41 1C 0F 83 ? ? ? ? 48 89 D7 49 89 CE 48 8B 59 08` | add-to-a-job's-list: 11 bytes past the function's start (RVA 0xE15700); +6 the jump when full, `jae rel32`, its rel32 at +8 to the function's way out (RVA 0xE158E7) - with `DIAGNOSTIC_MODE=1` the measurement's one write, through a counting stub | found | 0xE1570B |
+| G-E-C2 | `4C 8D 48 0F 49 83 E1 F0 4C 89 CA 48 29 C2 49 8D A9 80 25 00 00 BB 00 8C 00 00 48 29 D3 48 81 C2 FF 73 FF FF 45 31 C0 48 81 FA 7F 4E FF FF BE 80 B1 00 00` | a job's scratch laid out: +17 the coronas' bytes, 0x2580; +22 the lights' bytes, 0x8C00; +32 -0x8C01; +42 -0xB181; +47 the sum, 0xB180; the part writes 0x3840, 0x13B00, -0x13B01, -0x17341 and 0x17340 | found | 0xE15916 |
+| G-E-C3 | `48 05 00 8C 00 00 48 81 FA 00 8C 00 00` | +2 and +9 the lights' bytes; the part writes 0x13B00 to both | found | 0xE15969 |
+| G-E-C4 | `48 89 7C 24 68 0F 28 0D ? ? ? ?` | +8 the rel32 of `movaps` to the lists' start values at .rdata 0x26399A0: 0, 0, 200, 80, 16-aligned for it; the part leads it to its own 16 bytes, 16-aligned and read-only: 0, 0, 300, 180 | found | 0xE159B1 |
+| G-E-D1 | `48 63 05 ? ? ? ? 48 3D FF 03 00 00 0F 8F ? ? ? ? 48 63 0D ? ? ? ? 48 8D 15 ? ? ? ? 8D 59 01 89 1D ? ? ? ? 88 04 CA` | the scene store's add (in RVA 0x3FA7B0): +3 its count (RVA 0x3D39ECC), +9 0x3FF, +22 the sort list's count (RVA 0x3D42398), +29 the sort list (RVA 0x3D40398), +38 the count's store, +42 the index stored as a byte; the part writes `89 04 CA`, `mov [rdx+rcx*8], eax` | found | 0x3FA7C9 |
+| G-E-D2 | `0F B6 1C C1 F3 0F 11 74 C1 04 4A 8D 14 C1 E8` | +0 the index read back as a byte; the part writes `8B 1C C1 90`, `mov ebx, [rcx+rax*8]` and a `nop` | found | 0x3FAA40 |
 | G-E-E1 | `48 69 C7 00 00 07 00 48 8D 15 ? ? ? ? 48 01 C2 48 89 15 ? ? ? ? 48 8D 05 ? ? ? ? 44 8B 04 B8 44 89 05 ? ? ? ? 48 69 C7 0C 9A 02 00 48 8D 0D ? ? ? ? 48 01 C1 48 89 0D` | the scene store's render side (in RVA 0x3FB200): +3 0x70000; +10 the store (RVA 0x3AB0250); +20 the render pointer (RVA 0x2888640); +27 the buffers' counts (RVA 0x3D4A520); +38 the render count (RVA 0x3D39ED0); +45 0x29A0C; +52 the reflection lists (RVA 0x3C00250); +62, past the match, their render pointer | found | 0x3FB230 |
 | G-E-E2 | `48 69 C8 00 00 07 00 48 8D 15 ? ? ? ? 48 01 CA 48 89 15 ? ? ? ? 48 8D 0D ? ? ? ? C7 04 81 00 00 00 00 48 69 C8 0C 9A 02 00 48 8D 15` | its update side (in RVA 0x3F30A0): +3 0x70000; +10 the store, `G-E-E1`'s; +20 the current pointer (RVA 0x2888638); +41 0x29A0C | found | 0x3F335F |
 | G-E-E3 | `48 69 C8 10 20 07 00 48 8D 15 ? ? ? ? 48 8D 34 0A 48 89 35 ? ? ? ? 8B 04 11` | +3 0x72010; +10 the ray traced lists (RVA 0x3C53670), a list's count first; +21 their current pointer (RVA 0x28886C0) | found | 0x3F33AE |
@@ -704,9 +704,15 @@ The patterns, each matching exactly once in both dumps of 2026-10-29 but `G-E-G1
 | G-E-G1 | `8B 0D ? ? ? ? 48 81 F9 3F 04 00 00 0F 87` | the corona store, twice, one count: +2 its count (RVA 0x41C0E10); +9 0x43F; the second match at RVA 0xB6ED70 | found | 0xB3A780 |
 | G-E-G2 | `44 8B 81 00 CC 00 00 49 81 F8 3F 04 00 00 0F 87` | the drain's add to it (in RVA 0xB3A850): +3 0xCC00; +10 0x43F | found | 0xB3A8D0 |
 | G-E-H1 | `B8 58 80 01 00 E8 ? ? ? ? 48 29 C4` | the worker's frame (RVA 0x142760): +1 0x18058 | found | 0x14276C |
-| G-E-H2 | `48 8D 44 24 50 49 89 04 24 4C 89 E1 41 FF 54 24 60` | a job's scratch, rsp+0x50: +4 0x50, right before `call [job+0x60]`; so 0x18008 bytes for it | found | 0x14284B |
+| G-E-H2 | `48 8D 44 24 50 49 89 04 24 4C 89 E1 41 FF 54 24 60` | a job's scratch, rsp+0x50: +4 0x50, right before `call [job+0x60]`; so 0x18008 bytes for it, which the part's 0x17340 fits with 0xCC8 to spare | found | 0x14284B |
 
 <!-- [light stores] -->
+
+The light stores, the part (SPECIFICATIONS.md section 11.17), write through these rows, 16 writes in all, from the findings' 8.1.
+A job's lists hold 180 lights and 300 coronas: 0x13B00 and 0x3840 bytes, 0x17340 in all, the top with 0x20 to spare being 187 lights beside the 300 coronas; 5 vehicles of 32 lit sirens take 160.
+The stores hold what the 60 jobs can hand them, 10,800 lights and 18,000 coronas, so no overflow can happen by construction: the constructor keeps the game's own, which nothing reads then, and the records are copied whole and read by value, so the moved stores need no constructor.
+The bases also go into the jobs' parameters +0x30 and +0x38 from the same registers, which the job does not read.
+The index: past 1024 the sort list's entry names the slot to replace; with its 32 bits the farthest light goes, as the code means, and the sort, which moves whole entries, carries them.
 
 <!-- [corona store] -->
 
