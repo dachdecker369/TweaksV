@@ -15,7 +15,7 @@
 //                   1-byte displacements
 // The room is 64 bytes whatever SIRENS_PER_VEHICLE says, and the wrapper fills all of it; only the loops' bounds take the key.
 // The loop of the stored damage state stays at 20: it reads 20 bytes of sync data, and past them other fields (D23). The game's
-// own table stays what every reader not raised reads, and S's own fields do not move.
+// own table stays what every reader not raised reads, and the structure's own fields do not move.
 // Nothing is written here: FindSirenDamage finds and checks every site and adds to the part's one write, which
 // InitSirensPerVehicle makes (TweaksVSirenCount.cpp), so DRY_RUN and DIAGNOSTIC_MODE are the patch module's.
 // Written for TweaksV from the research's own findings in the game's code (PATTERNS.md); no code of anyone's was read.
