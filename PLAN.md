@@ -34,7 +34,7 @@ From my proof's start 5 unless said; starts 4 and 5 read minute by minute, 32 mi
 | The corona store | 1088 of 1088 in 1 minute of 32, 317 to 917 else | Researched, raised if its findings allow it (D35) |
 | The ray traced list | 1024 of 1024 in 2 minutes of 32, 531 to 945 else | A count of what it refuses, no sort (D36) |
 | The ray traced upload | past 512 in nearly every sample | Cannot be raised (8.2) |
-| `MaxStreamingResources` | 98,343 of 98,304, in one minute of driving | Researched, then my boot (D37) |
+| `MaxStreamingResources` | 98,343 of 98,304, in one minute of driving | A key, 131072 by default on my proof's number, and my boot (D37) |
 | The texture budget | about 4,700 of 6,000, the most 5,576, the flag down | 6000 by default (D33) |
 | The vehicle model budget | at the stop 95% of the time, 1,224 of 429 | My `gameconfig.xml` (D-V5), once the stores are in |
 | The ped model budget | 505.8 of 561, at the stop in 0 of 1716 samples in start 4 | No raise (D43) |
@@ -53,14 +53,14 @@ Each table is in the order of the merge; the lengths are rough.
 | Track | Track | Length | Owns | Joined by |
 |---|---|---|---|---|
 | Light stores | | about 2 to 3 hours | `source\TweaksVLightCapacity.cpp` and `.h`; `test\run_lightcapacity.sh` | the part's 8.1 A, B and C, its measurement over the moved stores, a job's most and the ray traced list's count: one module, since a pattern is used once |
-| Siren lights | | about 3 hours | `source\TweaksVSirenCount.cpp` and `.h`; the accessor of `I-E-C1` and `I-E-P1` in `source\TweaksVSirenIds.cpp` and `.h`; `test\run_sirencount.sh` | the findings' 8.3 A, B and C, one wrapper over one table; the part's one write; D41's count and guard, at the same getter |
+| Siren lights | | about 3 hours | `source\TweaksVSirenCount.cpp` and `.h`; the accessor of `I-E-C1` and `I-E-P1` in `source\TweaksVSirenIds.cpp` and `.h`; `test\run_sirencount.sh` | the findings' 8.3 A, B and C, one wrapper over one table; the part's one write; D41's guard, at the two getter calls |
 | Siren damage | | about 2 hours | `source\TweaksVSirenDamage.cpp` and `.h`, new; `test\run_sirendamage.sh`, new | the findings' 8.7: the room, its fill and its 19 damage writes, constants and one redirected call, all found and checked before the part's one write |
 
 **The coding, later,** each once the overview has checked its findings and I have decided on them, each:
 
 | Track | Track | Length | Owns | Joined by |
 |---|---|---|---|---|
-| Sweep | | about 1 hour | `source\TweaksVTextureBudget.cpp` and `VIDEO_MEMORY_BUDGET`'s row of `source\TweaksVSettings.h`, with its line of `test\expected_default.ini`; `test\run_texturebudget.sh`; `FileName` in `source\TweaksVSirenIds.cpp` and its block in `test\run_sirenids.sh` | D33's default, the object limit's key if its findings ask for one, a pack's file name: none an hour alone |
+| Sweep | | about 2 hours | `source\TweaksVTextureBudget.cpp` and the rows of `VIDEO_MEMORY_BUDGET` and `STREAMED_OBJECTS` in `source\TweaksVSettings.h`, with their lines of `test\expected_default.ini`; `test\run_texturebudget.sh`; `I-E-H1`'s region of `source\TweaksVSirenIds.cpp` and its block in `test\run_sirenids.sh` | D33's default, the object limit's key and its walk, a pack's file name and D41's count: small items, and together they stay under the sirens' three hours |
 | Corona store | | from its findings | `source\TweaksVCoronaStore.cpp` and `.h`, new; `test\run_coronastore.sh`, new | its own module, since the light stores' track runs then; only if its findings allow it (D35) |
 
 ## Decisions
@@ -184,14 +184,17 @@ the pass (`staticbounds2_findings_for_the_clean_room_build.txt`) found the size 
 
 - **D35, the corona store:** researched and raised in this build if its findings allow it: 1088 of 1088 in 1 of the 32 minutes of my starts 4 and 5, and 13 to 16 vehicles at 32 sirens take it past that.
 - **D36, the ray traced list:** no sort in 2.8.0, since it was full in 2 of those 32 minutes and a light past it still lights surfaces directly (the lighting capacity's findings, 3.4 and 8.2); a count of what it refuses under `DIAGNOSTIC_MODE`, by a stub as `G-E-C1`'s, and the sort only if my proof's number asks for it.
-- **D37, `MaxStreamingResources`:** one pass, then one boot of mine with it raised in my own `gameconfig.xml` on the build of 7fa28da; a key only if the findings say other people's loads need it.
+- **D37, `MaxStreamingResources`** (2026-11-03, on `streamedobjects`' findings): one boot of mine with 131072 in my own `gameconfig.xml` on the build of 7fa28da.
+  The key `STREAMED_OBJECTS` under `[RESOURCES]`, its default 131072 on my proof's descriptor number, 0 if fewer than 16,384 are free at the highest reading, its maximum 147456, 3/4 of the heap read at run time; a `gameconfig.xml` value above that is left as it is, with one problem line.
+  The descriptor walk under `DIAGNOSTIC_MODE`, with `Q-E-T6` and `Q-E-T7`; no raise of the heap; no watch, so the heap's end stays an open issue in NOTES.md.
 - **D38, `SIRENS_PER_VEHICLE`'s default** (D23): 32, proven on the tagged build by my proof; a vehicle with no lights past 20 pays one lookup.
 - **D39, the light stores a part:** the sixteenth, `[LIGHTCAPACITY]`, `ENABLED` alone, since the sizes stand at the top of what the worker's scratch allows, off beside Resource Extensions.
   `SIRENS_PER_VEHICLE` above 20 refuses with a problem when the stores are not raised, and the vehicles stay at 20 (the sirens' findings, 8.3).
 - **D40, a build check on the sirens' raise:** no pattern proves that the renderer reads nothing new of its stand-ins, and on other people's PCs nobody reads it again after a game update; so the raise runs only on game builds its renderer was read on, today 1.0.1158.16, through `ReadGameVersion`, with `PROBLEM: The sirens per vehicle are not raised this session: ...` on any other.
   A game update costs players the raise until a new TweaksV.
-- **D41, a siren setting ID that finds no setting** (SPECIFICATIONS.md, 11.14, risk 3): a count under `DIAGNOSTIC_MODE`, and one guard while the getter is redirected: a position past the array gets a setting of all zeros, no lights, and one line per model, no box, if `sirenfacts` finds that safe.
-  With `SIRENS_PER_VEHICLE=20` the getter is not redirected and only the count stands, by the measurement's wrapper.
+- **D41, a siren setting ID that finds no setting** (SPECIFICATIONS.md, 11.14, risk 3), on `sirenfacts`' findings, at the same word of 2026-11-03: both getter calls guarded while the getter is redirected, `I-E-Z1` +24 and `I-E-B1` +24: a position past the array's count gets the empty setting, zeros with +0x20 = 200, no lights.
+  A pack's file name by `I-E-H3`, and the count at load through `I-E-H4` under `DIAGNOSTIC_MODE`, which names each vehicle once, no longer on the measurement's wrapper.
+  With `SIRENS_PER_VEHICLE=20` the getter is not redirected and the count stands.
 - **D42, the hat of T-PEDPROPS:** out of this round unless I have a small clean single-prop pack by the proof, then one start of its own; no code unless it passes, and then one default.
 - **D43, no raise of the ped pool, the render queues or the ped budget:** my proof's numbers do not ask for one (D30, D31).
 
@@ -234,10 +237,11 @@ Before its report it makes the builds it needs without a warning and runs the su
   PATTERNS.md gets the sites, not an order against the constructor (its review's point 7).
 - **Siren lights** (D23, D38, D40, D41; the sirens' findings, 8.3's A, B and C as 8.7 keeps them, `I-E-Z8` out, and its review's three points): the two tables each reported once when full, the own settings published whole with no lock on the hot path.
   `SIRENS_PER_VEHICLE=20` looks for nothing and writes nothing of this, and the measurement goes on as now; with `DIAGNOSTIC_MODE` the lines of the findings' section 6, the one that says which models are lit past 20 being my proof's.
-  Last, from `sirenfacts`' findings once they are checked: D41's count and guard.
+  Last, from `sirenfacts`' findings, its review's point 1: D41's guard at both getter calls with its bound, and the same bound on the part's own first pass of a model.
 - **Siren damage** (D23; the sirens' findings, 8.7 and 8.8): the room, its fill and the 19 damage writes; `I-E-L0n` and `I-E-N0n` (D34); a hit, an impact and a wreck on lights past 20 in the fake game, the room's mirror on a plane's IDs, each site failing alone with nothing written.
   The findings' `S-E-C06`, `S-E-D07` and `S-E-D08` stay as they are.
-- **Sweep** (D33, D37): `VIDEO_MEMORY_BUDGET` at 6000 with its comment, README and the suites that pin 0; the object limit's key if `streamedobjects`' findings ask for one; a pack's file name from `sirenfacts`' findings.
+- **Sweep** (D33, D37, D41): `VIDEO_MEMORY_BUDGET` at 6000 with its comment, README and the suites that pin 0; `STREAMED_OBJECTS` and the descriptor walk, `streamedobjects`' sections 4.3 to 4.8, no watch, the keys coming to 46; `I-E-H3` and `I-E-H4` beside `I-E-H1`, a pack's file name and D41's count, with `HookedPackCarcols`' parameters and `FileName`'s comment put right.
+  Its fragment adds an open issue to NOTES.md: the game's descriptor heap has no check at its end, so past what my proof shows the raise can end in a crash or a corrupted descriptor without a word; accepted; it goes when a load shows fewer than 16,384 free, and then a watch or a lower default comes back.
 - **Corona store** (D35): from `coronastore`'s findings, if they allow it.
 
 **The merge** (the merge): the long tracks verified from their branches as they finish, the sweep's diff read itself.
@@ -248,7 +252,8 @@ Then 2.8.0 set - the project's version, the specification's header example and i
 
 ## The boots
 
-**The object limit's boot** (D37), once `streamedobjects`' findings are checked and if they find nothing of fixed size behind it: the build of 7fa28da as it stands in the game folder, `MaxStreamingResources` raised in my own `gameconfig.xml` to the value the findings name, `VIDEO_MEMORY_BUDGET=6000`, `DIAGNOSTIC_MODE=1`, the drive of my start 5: the objects past 98,304 in the log and my LOD switching by eye.
+**The object limit's boot** (D37): the build of 7fa28da as it stands in the game folder, `MaxStreamingResources` at 131072 in my own `gameconfig.xml`, `VIDEO_MEMORY_BUDGET=6000`, `DIAGNOSTIC_MODE=1`, the drive of my start 5: the objects past 100,000 in the log, no "at the most objects", the bytes past 4,714 MB, and my LOD switching by eye.
+  A crash there brings the value down and costs one start.
 
 **2.8.0's proof,** on the Release build, my usual mods folder and trainer, a backup of my Profiles folder first, `DIAGNOSTIC_MODE=1` but for the last start; each start holds a load past the game's own number for what it proves:
 
@@ -257,8 +262,8 @@ Then 2.8.0 set - the project's version, the specification's header example and i
    The log: the models lit past 20 with their bones found, no table full.
 2. **The stores, the same start:** about 30 of those cars spawned in one place, sirens on, the camera among them.
    The log: vehicle lights past 400, vehicle coronas past 928, a job's most past 80 lights and past 200 coronas, how many a job refused, the scene store at its room, the coronas past 1088 if raised, the ray traced list's refused lights; no crash, and the frame rate as I see it (the lighting capacity's findings, 8.4).
-3. **The budgets, a start of its own:** `Level3Kb` at 98,500 in my `gameconfig.xml` (D-V5), the object limit raised, a drive of 20 minutes through the city at night and on to the tunnel: the vehicle budget's share at the stop against 95%, the objects past 98,304, the ray tracing buffer, my LOD switching by eye.
-4. **The build as it ships:** a fresh `TweaksV.ini` from the build's defaults, no `DIAGNOSTIC_MODE`: line 1 names 2.8.0 and the commit without `-dirty`, the one `PROBLEM` `lfpolice`'s Legacy box, every part applied, `VIDEO_MEMORY_BUDGET` at 6000.
+3. **The budgets, a start of its own:** `Level3Kb` at 98,500 in my `gameconfig.xml` (D-V5), `MaxStreamingResources` back at 98304 there, so that `STREAMED_OBJECTS` does the raise, a drive of 20 minutes through the city at night and on to the tunnel: the vehicle budget's share at the stop against 95%, the objects past 100,000, the descriptors in use, whose highest reading with at least 16,384 free settles the key's default (D37), the ray tracing buffer, my LOD switching by eye.
+4. **The build as it ships:** a fresh `TweaksV.ini` from the build's defaults, no `DIAGNOSTIC_MODE`: line 1 names 2.8.0 and the commit without `-dirty`, the one `PROBLEM` `lfpolice`'s Legacy box, every part applied, `VIDEO_MEMORY_BUDGET` at 6000 and `STREAMED_OBJECTS` at its default.
    This is the build that is tagged.
 
 Then the tag 2.8.0, the searches and one atomic push.
@@ -306,9 +311,9 @@ The hat of T-PEDPROPS is a start of its own.
 ## Next steps
 
 **State:** 2.7.0, phase C's first build, is tagged on 7fa28da and pushed, my proof passed on it, and 2.2.1 stays the last one published.
-2.8.0 is planned from my proof's numbers (D34 to D43) and its round runs now: the three research passes, the scaffold, three coding tracks, then the sweep and the corona store once the passes' findings are checked and I have decided on them, one merge, one proof.
-It takes the sirens per vehicle as the hybrid at 32 by default (D23, D38), the light stores as a sixteenth part (D30, D39), `VIDEO_MEMORY_BUDGET` at 6000 by default (D33), and the vehicle budget's raise in my `gameconfig.xml` in my proof (D-V5).
-The corona store and the object limit wait for their passes (D35, D37), the ray traced list gets a count and no sort (D36), and the ped pool, the render queues and the ped budget stay as they are (D43).
+
+It takes the sirens per vehicle as the hybrid at 32 by default (D23, D38), the light stores as a sixteenth part (D30, D39), `VIDEO_MEMORY_BUDGET` at 6000 by default (D33), `STREAMED_OBJECTS` at 131072 on my proof's number (D37), and the vehicle budget's raise in my `gameconfig.xml` in my proof (D-V5).
+The corona store waits for its pass (D35), the ray traced list gets a count and no sort (D36), and the ped pool, the render queues and the ped budget stay as they are (D43).
 The open issues are T-HARDEN, T-DIAG, T-FREEZE and T-PEDPROPS.
 
-**Decisions waiting on me:** none before the three passes' findings. The dumps, `GameData-*.bin` and the `work-*` folders stay (D28).
+**Decisions waiting on me:** none before `coronastore`'s findings; my boot with 131072 comes (D37). The dumps, `GameData-*.bin` and the `work-*` folders stay (D28).
