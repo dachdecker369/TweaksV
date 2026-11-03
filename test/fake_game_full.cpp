@@ -206,17 +206,31 @@
 // and its loop and the constructors run as code from their bytes, so that what it writes is proved by what it does, and the
 // loaders, C++ of the fake's own, go by the sites as they are - the table the lea leads to, the width of an ID, the limit - and
 // the two members' types. A pack's carcols callback (I-E-H1) and the base builder (I-E-H2) are real code around them, a NOP
-// before each. The options:
+// before each, and so are a pack's carcols mount, whose call of the game's file opener is I-E-H3's, and a pack's carvariations callback
+// (I-E-H4). The options:
 //   siload        no settings yet, the table zeros, until the game's init runs after TweaksV has started: its table filled and
 //                 the base loader called through the site's call, which reads the base files and their variations
 //   sitwice       with siload: the init a second time
 //   siclash       with siload: a base setting's ID taken by an earlier one, the next without an ID
 //   sipacks       with siload: three packs' carcols through the callback's start - IDs past 255, one taken, one twice, one without
 //                 an ID, the low byte 0xFF, none at all - and their variations
-//   siflood       with siload: 20,001 packs' carcols of no settings
+//   siflood       with siload: 20,001 packs' carcols of no settings, and 20,001 carvariations of no vehicles
 //   sibigpack     with siload: a pack's carcols of 4,097 settings of one ID, one past the IDs the stub of its dedupe keeps
+//   sibadfiles    with siload: a pack's file that does not parse, whose callback gets a false byte; one whose read cannot start, whose
+//                 callback comes inside the mount's call, the same; and one whose name has a byte past ASCII and runs past 127
+//   sinamebad     with siload: a pack's file whose name cannot be read
+//   siotherobject with siload: a pack's file whose callback gets another object than the file opener's call did
+//   siprofile     with siload: a pack's file whose name holds the user's profile folder
+//   sivariations  with siload: a pack's carvariations through its callback's start: five vehicles, two of them naming an ID that finds
+//                 no setting, one that names no ID, two whose setting is there
+//   sivarmany     with siload: one of 40 vehicles whose ID finds no setting
+//   sivarbad      with siload: one that does not parse, its callback given a false byte
+//   sivarunreadable with siload: one whose variations lie in memory that cannot be read
+//   sivarnames    with siload: one whose vehicles' names cannot be read, run into memory that cannot be read, have a byte past ASCII,
+//                 run past 64 or are empty, all five finding no setting
+//   sifilehooked  the file opener's call already leads outside the game (another mod's hook); no pack is mounted through it then
 //   sihooknoexec  the page of a pack's carcols callback not executable while TweaksV starts, so that MinHook refuses to hook it
-//   sibyte0       the byte before the two hooked functions a 00: neither where a function starts
+//   sibyte0       the byte before the three hooked functions a 00: none where a function starts
 //   silimit       a base builder's limit 65537, past the table's fixed size
 //   sidisagree    a pack's builder's second limit 512
 //   si512         all four limits 512, in agreement (another mod raised them)
@@ -1068,6 +1082,8 @@ volatile unsigned char g_sirenIdsM1[34] = { 0xCC };
 volatile unsigned char g_sirenIdsLeaExtra[8] = { 0xCC };
 volatile unsigned char g_sirenIdsH1[64] = { 0xCC };
 volatile unsigned char g_sirenIdsH2[64] = { 0xCC };
+volatile unsigned char g_sirenIdsH3[96] = { 0xCC };
+volatile unsigned char g_sirenIdsH4[96] = { 0xCC };
 volatile unsigned char g_sirenIdsRun[0x98] = { 0xCC };	// not a site: the fake's way into the sites as code
 
 // The siren count: the vehicle lights' calls of the siren lights' renderer - the E8 at +13 - and of the siren settings getter -
@@ -2581,14 +2597,20 @@ static void SirenIdsInit()
 		g_sirenIdsInitKept++;
 }
 
-// A pack's file: its name as the game's data file entry holds it at +0, and the IDs of its settings, -1 for none given
-struct SirenIdsFile { char name[0xA8]; int ids[8]; size_t count; };
+// A pack's file: its name as the game's data file entry holds it at +0, the IDs of its settings, -1 for none given, and how its read goes
+enum class SirenIdsRead { Parses, Fails, CannotStart };
+struct SirenIdsFile { char name[0xA8]; int ids[8]; size_t count; SirenIdsRead read; };
 static SirenIdsFile g_sirenIdsFiles[] = {
 	{ "dlcpacks:/sipack1/data/carcols.meta", { 300, 1534, 40, 5, -1, 300 }, 6 },
 	{ "dlcpacks:/sipack2/data/carcols.meta", { 511, 767, 511 }, 3 },
 	{ "dlcpacks:/sipack3/data/carcols.meta", {}, 0 },
 };
 static SirenIdsFile g_sirenIdsBigFile = { "dlcpacks:/sibig/data/carcols.meta", { 6000 }, 4097 };	// past eight settings a file's all have its first ID
+static SirenIdsFile g_sirenIdsBadFiles[] = {
+	{ "dlcpacks:/sibad/data/carcols.meta", {}, 0, SirenIdsRead::Fails },
+	{ "dlcpacks:/sinoread/data/carcols.meta", {}, 0, SirenIdsRead::CannotStart },
+	{ "dlcpacks:/silong/d\xE4ta/0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789", {}, 0 },
+};
 static unsigned char g_sirenIdsFileRoom[8 * kSirenIdsSettingSize];
 static unsigned char* g_sirenIdsFileSettings = g_sirenIdsFileRoom;
 
@@ -2596,8 +2618,9 @@ static unsigned char* g_sirenIdsFileSettings = g_sirenIdsFileRoom;
 // code, every register it must keep compared, then its compare loop as code; what is not dropped appended raw; then the
 // builder's rule over the appended ones
 static int g_sirenIdsDedupeLoads = 0, g_sirenIdsDedupeKept = 0;
-static uint64_t SirenIdsPackBody(void*, const SirenIdsFile* file)
+static uint64_t SirenIdsPackBody(void*, const unsigned char*, const SirenIdsFile* const* object)
 {
+	const SirenIdsFile* const file = *object;
 	for (size_t i = 0; i < file->count; i++)
 	{
 		unsigned char* const setting = g_sirenIdsFileSettings + i * kSirenIdsSettingSize;
@@ -2646,15 +2669,114 @@ static uint64_t SirenIdsPackBody(void*, const SirenIdsFile* file)
 	return kSirenIdsResult;
 }
 
-static int g_sirenIdsPackCalls = 0, g_sirenIdsPackKept = 0;
-static void SirenIdsMountPack(const SirenIdsFile& file)
+// A pack's callback, through its start at the site: itself, the byte that says the file parsed, where the parsed object's pointer lies
+static uint64_t SirenIdsCallBack(const volatile unsigned char* callback, const SirenIdsFile* object, bool parsed)
 {
-	using Callback = uint64_t (*)(void*, const SirenIdsFile*);
+	using Callback = uint64_t (*)(void*, const unsigned char*, const SirenIdsFile* const*);
+	const unsigned char ok = parsed ? 1 : 0;
+	return reinterpret_cast<Callback>(const_cast<unsigned char*>(callback + 1))(g_sirenIdsCarcols, &ok, &object);
+}
+
+// The game's file opener, which the carcols mount's call leads to, as its nine arguments come: the parser, the name, "meta", the parent's
+// structure, the parsed object, the callable and three more. A read that cannot start calls the callback at once, with a false byte, inside
+// the mount's call. Its result and its last error go back through TweaksV's stub to the mount.
+constexpr uint32_t kSirenIdsOpenResult = 0x5A5A5A5A;
+static int g_sirenIdsOpened = 0, g_sirenIdsOpenedAsHanded = 0, g_sirenIdsOpenedKept = 0;
+static const char* g_sirenIdsNameHanded = nullptr;
+static const void* g_sirenIdsObjectHanded = nullptr;
+static const char kSirenIdsExtension[] = "meta";
+static unsigned char g_sirenIdsStructure;
+static unsigned char* g_sirenIdsStructurePointer = &g_sirenIdsStructure;
+static uint64_t SirenIdsOpenFile(void* parser, const char* name, const char* extension, void* structure, const SirenIdsFile* object, void* callable, uint64_t seventh,
+	uint64_t eighth, uint64_t ninth)
+{
+	g_sirenIdsOpened++;
+	if (parser == g_sirenIdsCarcols && name == g_sirenIdsNameHanded && extension == kSirenIdsExtension && structure == g_sirenIdsStructurePointer && object == g_sirenIdsObjectHanded &&
+		callable != nullptr && (seventh & 0xFF) == 1 && (eighth & 0xFF) == 1 && ninth == 0)
+		g_sirenIdsOpenedAsHanded++;
+	if (object->read == SirenIdsRead::CannotStart)
+		SirenIdsCallBack(g_sirenIdsH1, object, false);
+	SetLastError(kSirenIdsLastError);
+	return kSirenIdsOpenResult;
+}
+
+// A pack's carcols through the game's way: the mount, whose call at its site hands the file opener the name in its data file entry and the
+// parsed object - with the entry moved right after, as the game's array of entries can, so that a name kept by a pointer shows - then the pump: the
+// callback, with the parsed object and whether the file parsed.
+static int g_sirenIdsPackCalls = 0, g_sirenIdsPackKept = 0;
+static bool g_sirenIdsOtherObject = false;
+static unsigned char* g_sirenIdsNoAccess = nullptr;			// a page that cannot be read: "sinamebad"'s name, "sivarunreadable"'s variations
+static void SirenIdsMountPack(const SirenIdsFile& file, bool nameUnreadable = false)
+{
+	char entry[0x80];
+	memcpy(entry, file.name, sizeof(entry));
+	g_sirenIdsNameHanded = nameUnreadable ? reinterpret_cast<const char*>(g_sirenIdsNoAccess) : entry;
+	g_sirenIdsObjectHanded = &file;
+	using Mount = uint64_t (*)(void*, const char*, const char*, const SirenIdsFile*);
 	SetLastError(0);
-	const uint64_t result = reinterpret_cast<Callback>(const_cast<unsigned char*>(g_sirenIdsH1 + 1))(g_sirenIdsCarcols, &file);
+	const uint64_t opened = reinterpret_cast<Mount>(const_cast<unsigned char*>(g_sirenIdsH3))(g_sirenIdsCarcols, g_sirenIdsNameHanded, kSirenIdsExtension, &file);
+	if (static_cast<uint32_t>(opened) == kSirenIdsOpenResult && GetLastError() == kSirenIdsLastError)
+		g_sirenIdsOpenedKept++;
+	memset(entry, 'X', sizeof(entry) - 1);
+	entry[sizeof(entry) - 1] = '\0';
+	if (file.read == SirenIdsRead::CannotStart)
+		return;
+	SirenIdsFile other = file;
+	SetLastError(0);
+	const uint64_t result = SirenIdsCallBack(g_sirenIdsH1, g_sirenIdsOtherObject ? &other : &file, file.read != SirenIdsRead::Fails);
+	if (file.read == SirenIdsRead::Fails)
+		return;
 	g_sirenIdsPackCalls++;
 	if (result == kSirenIdsResult && GetLastError() == kSirenIdsLastError)
 		g_sirenIdsPackKept++;
+}
+
+// A pack's carvariations as its callback's start gets them: the parsed object's array of variations, 0x50 bytes each, with its model's name's
+// pointer at +0 and its ID through the parser at +0x4B, and their count, a word, at +8; the body, behind its prologue, as the game's gives each
+// variation that names an ID the table's position for it, a free entry's 0xFF among them. Whether it ran and came back is kept for the report.
+struct SirenIdsVariations { unsigned char* array; uint16_t count; };
+static int g_sirenIdsVariationCalls = 0, g_sirenIdsVariationsKept = 0, g_sirenIdsVariationBodies = 0;
+static uint64_t SirenIdsVariationsBody(void*, const unsigned char*, const SirenIdsVariations* const* object)
+{
+	g_sirenIdsVariationBodies++;
+	const SirenIdsVariations& file = **object;
+	for (size_t i = 0; file.array != g_sirenIdsNoAccess && i < file.count; i++)
+	{
+		unsigned char* const variation = file.array + i * 0x50;
+		const unsigned id = SirenIdsLoad(variation + 0x4B);
+		if (id != 0xFF)
+			variation[0x49] = g_sirenIdsLoaderTable[id];
+	}
+	SetLastError(kSirenIdsLastError);
+	return kSirenIdsResult;
+}
+static void SirenIdsVariationsCall(const SirenIdsVariations& file, bool parsed)
+{
+	using Callback = uint64_t (*)(void*, const unsigned char*, const SirenIdsVariations* const*);
+	const unsigned char ok = parsed ? 1 : 0;
+	const SirenIdsVariations* const object = &file;
+	SetLastError(0);
+	const uint64_t result = reinterpret_cast<Callback>(const_cast<unsigned char*>(g_sirenIdsH4 + 1))(g_sirenIdsCarcols, &ok, &object);
+	g_sirenIdsVariationCalls++;
+	if (!parsed || (result == kSirenIdsResult && GetLastError() == kSirenIdsLastError))
+		g_sirenIdsVariationsKept++;
+}
+// A file of these vehicles, id -1 for none given: each made by the constructor as code, its ID through the parser; its names lie where they are
+struct SirenIdsVehicle { const char* name; int id; };
+static void SirenIdsLoadVariations(const SirenIdsVehicle* vehicles, size_t count)
+{
+	static unsigned char array[64][0x50];
+	for (size_t i = 0; i < count; i++)
+	{
+		unsigned char* const variation = array[i];
+		memset(variation, 0xCC, 0x50);
+		SirenIdsMakeVariation(variation, true);
+		memcpy(variation, &vehicles[i].name, sizeof(vehicles[i].name));
+		if (vehicles[i].id >= 0)
+			SirenIdsParse(variation + 0x4B, static_cast<unsigned>(vehicles[i].id), g_sirenIdsMembers[26]);
+	}
+	const SirenIdsVariations file = { array[0], static_cast<uint16_t>(count) };
+	SirenIdsVariationsCall(file, true);
 }
 
 // Before TweaksV loads and as soon as it has started: what the option "sihooknoexec" takes away from the callback's page and puts back, before any code of the page runs
@@ -2664,6 +2786,10 @@ static void SirenIdsHookProtect(int argc, wchar_t** argv, DWORD protection)
 	if (HasOption(argc, argv, L"sihooknoexec"))
 		VirtualProtect(const_cast<unsigned char*>(g_sirenIdsH1), sizeof(g_sirenIdsH1), protection, &old);
 }
+
+// What the options ask of a pack's files and carvariations once the base files are read, and the two sites' bytes as placed, for the report
+static struct { bool badFiles, nameBad, profile, variations, varMany, varBad, varUnreadable, varNames; } g_sirenIdsOptions = {};
+static unsigned char g_sirenIdsH3Placed[sizeof(g_sirenIdsH3)], g_sirenIdsH4Placed[sizeof(g_sirenIdsH4)];
 
 // The sites as the game has them, as the options change them, and the data: 24 siren settings with the IDs 1 to 24 (simany: 300,
 // the IDs 0 to 254, then none)
@@ -2730,6 +2856,17 @@ static void SirenIdsSetup(int argc, wchar_t** argv)
 	SirenIdsPut(g_sirenIdsH2, 1, "41 57 41 56 41 55 41 54 56 57 55 53 48 83 EC 28 49 89 CE 0F B7 71 10 89 F0 4C 89 F1 48 B8 00 00 00 00 00 00 00 00 FF D0 48 83 C4 28 5B 5D 5F 5E 41 5C 41 5D 41 5E 41 5F C3");
 	const uint64_t builderBody = reinterpret_cast<uint64_t>(&SirenIdsBaseBuilder);
 	memcpy(const_cast<unsigned char*>(g_sirenIdsH2 + 31), &builderBody, sizeof(builderBody));
+	// a pack's carcols mount: its prologue, taking the parser, the name, "meta" and the object into the registers the game's has them in, I-E-H3
+	// at +26 and its epilogue, the file opener's result back
+	SirenIdsPut(g_sirenIdsH3, 0, "53 57 41 54 41 56 41 57 48 83 EC 60 49 89 CC 49 89 D7 4D 89 C6 4C 89 CB 31 FF");
+	SirenIdsPut(g_sirenIdsH3, 26, "4C 8B 0D 00 00 00 00 48 89 7C 24 40 48 8D 44 24 50 48 89 44 24 28 48 89 5C 24 20 C6 44 24 38 01 C6 44 24 30 01 4C 89 E1 4C 89 FA 4D 89 F0 E8 00 00 00 00 89 C3");
+	SirenIdsPut(g_sirenIdsH3, 79, "89 D8 48 83 C4 60 41 5F 41 5E 41 5C 5F 5B C3");
+	// a pack's carvariations callback, as the other two
+	SirenIdsPut(g_sirenIdsH4, 0, byte0 ? "00" : "90");
+	SirenIdsPut(g_sirenIdsH4, 1, "41 57 41 56 41 55 41 54 56 57 55 53 48 81 EC D8 00 00 00 0F 29 B4 24 C0 00 00 00 80 3A 00 0F 84 15 00 00 00 4D 8B 28 66 41 83 7D 08 00 48 B8 00 00 00 00 00 00 00 00 FF D0 "
+		"0F 28 B4 24 C0 00 00 00 48 81 C4 D8 00 00 00 5B 5D 5F 5E 41 5C 41 5D 41 5E 41 5F C3");
+	const uint64_t variationsBody = reinterpret_cast<uint64_t>(&SirenIdsVariationsBody);
+	memcpy(const_cast<unsigned char*>(g_sirenIdsH4 + 48), &variationsBody, sizeof(variationsBody));
 	// the way into the sites as code: rcx the registers, rdx the code; rbx, rbp, rsi, rdi, r13, r15 saved around them
 	SirenIdsPut(g_sirenIdsRun, 0, "53 55 57 56 41 55 41 57 51 49 89 CA 49 89 D3 49 8B 02 49 8B 4A 08 49 8B 52 10 49 8B 5A 18 49 8B 6A 20 49 8B 72 28 49 8B 7A 30 4D 8B 6A 38 4D 8B 7A 40 "
 		"48 83 EC 20 41 FF D3 48 83 C4 20 41 5A 49 89 02 49 89 4A 08 49 89 52 10 49 89 5A 18 49 89 6A 20 49 89 72 28 49 89 7A 30 4D 89 6A 38 4D 89 7A 40 41 5F 41 5D 5E 5F 5D 5B C3");
@@ -2777,6 +2914,12 @@ static void SirenIdsSetup(int argc, wchar_t** argv)
 	g_sirenIdsPacks = HasOption(argc, argv, L"sipacks");
 	g_sirenIdsFlood = HasOption(argc, argv, L"siflood");
 	g_sirenIdsBigPack = HasOption(argc, argv, L"sibigpack");
+	g_sirenIdsOtherObject = HasOption(argc, argv, L"siotherobject");
+	g_sirenIdsOptions = { HasOption(argc, argv, L"sibadfiles"), HasOption(argc, argv, L"sinamebad"), HasOption(argc, argv, L"siprofile"), HasOption(argc, argv, L"sivariations"),
+		HasOption(argc, argv, L"sivarmany"), HasOption(argc, argv, L"sivarbad"), HasOption(argc, argv, L"sivarunreadable"), HasOption(argc, argv, L"sivarnames") };
+	g_sirenIdsNoAccess = static_cast<unsigned char*>(VirtualAlloc(nullptr, 2 * 4096, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE));
+	DWORD noAccessOld = 0;
+	VirtualProtect(g_sirenIdsNoAccess, 4096, PAGE_NOACCESS, &noAccessOld);
 	g_sirenIdsCapacity = many ? 304 : 64;
 	g_sirenIdsSettings = static_cast<unsigned char*>(VirtualAlloc(nullptr, g_sirenIdsCapacity * kSirenIdsSettingSize, MEM_RESERVE | MEM_COMMIT,
 		PAGE_READWRITE));
@@ -2816,7 +2959,9 @@ static void SirenIdsSetup(int argc, wchar_t** argv)
 	SirenIdsRel32(g_sirenIdsD2, 18, HasOption(argc, argv, L"sijz") ? ImageEnd() + 0x71000 : const_cast<const unsigned char*>(g_sirenIdsD2 + 37));
 	SirenIdsRel32(g_sirenIdsR1, 4, table + (HasOption(argc, argv, L"sifill") ? 0xE0 : 0xF0));
 	SirenIdsRel32(g_sirenIdsR1, 14, HasOption(argc, argv, L"sicallhooked") ? ImageEnd() + 0x72000 : reinterpret_cast<const unsigned char*>(&SirenIdsBaseLoader));
-	SirenIdsRel32(g_sirenIdsH1, 22, const_cast<const unsigned char*>(g_sirenIdsH1 + 38));	// the jz of an empty name, to the epilogue
+	SirenIdsRel32(g_sirenIdsH1, 22, const_cast<const unsigned char*>(g_sirenIdsH1 + 38));	// the jz of a file that did not parse, to the epilogue
+	SirenIdsRel32(g_sirenIdsH3, 26 + 3, &g_sirenIdsStructurePointer);
+	SirenIdsRel32(g_sirenIdsH3, 26 + 47, HasOption(argc, argv, L"sifilehooked") ? static_cast<const void*>(ImageEnd() + 0x77000) : reinterpret_cast<const void*>(&SirenIdsOpenFile));
 	SirenIdsRel32(g_sirenIdsRun, 0x8D, const_cast<const unsigned char*>(g_sirenIdsC3));
 
 	for (size_t i = 0; i < kSirenIdsSites; i++)
@@ -2827,6 +2972,10 @@ static void SirenIdsSetup(int argc, wchar_t** argv)
 			g_sirenIdsCopy[i][at] = site.bytes[at];
 	}
 	g_sirenIdsDataPlaced = SirenIdsData();
+	for (size_t i = 0; i < sizeof(g_sirenIdsH3Placed); i++)
+		g_sirenIdsH3Placed[i] = g_sirenIdsH3[i];
+	for (size_t i = 0; i < sizeof(g_sirenIdsH4Placed); i++)
+		g_sirenIdsH4Placed[i] = g_sirenIdsH4[i];
 }
 
 // The moved table as TweaksV left it, read before the game's init can fill it
@@ -2872,8 +3021,68 @@ static void SirenIdsLater()
 				SirenIdsVariation(id, false);
 		}
 		if (g_sirenIdsFlood)
+		{
+			const SirenIdsVariations none = { nullptr, 0 };
 			for (int i = 0; i < 20001; i++)
+			{
 				SirenIdsMountPack(g_sirenIdsFiles[2]);
+				SirenIdsVariationsCall(none, true);
+			}
+		}
+		if (g_sirenIdsOptions.badFiles)
+			for (const SirenIdsFile& file : g_sirenIdsBadFiles)
+				SirenIdsMountPack(file);
+		if (g_sirenIdsOptions.nameBad)
+			SirenIdsMountPack(g_sirenIdsFiles[2], true);
+		if (g_sirenIdsOtherObject)
+			SirenIdsMountPack(g_sirenIdsFiles[2]);
+		if (g_sirenIdsOptions.profile)
+		{
+			static SirenIdsFile profile = {};
+			const DWORD length = GetEnvironmentVariableA("USERPROFILE", profile.name, 90);
+			if (length > 0 && length < 90)
+			{
+				strcpy_s(profile.name + length, sizeof(profile.name) - length, "\\pack\\carcols.meta");
+				SirenIdsMountPack(profile);
+			}
+		}
+		if (g_sirenIdsOptions.variations)
+		{
+			static const SirenIdsVehicle vehicles[] = { { "sicar0", 1 }, { "sicar1", 777 }, { "sicar2", -1 }, { "sicar3", 13 }, { "sicar4", 2000 } };
+			SirenIdsLoadVariations(vehicles, sizeof(vehicles) / sizeof(vehicles[0]));
+		}
+		if (g_sirenIdsOptions.varMany)
+		{
+			static char names[40][8];
+			static SirenIdsVehicle vehicles[40];
+			for (size_t i = 0; i < 40; i++)
+			{
+				sprintf_s(names[i], "sim%02zu", i);
+				vehicles[i] = { names[i], 777 };
+			}
+			SirenIdsLoadVariations(vehicles, 40);
+		}
+		if (g_sirenIdsOptions.varBad)
+		{
+			const SirenIdsVariations none = { nullptr, 0 };
+			SirenIdsVariationsCall(none, false);
+		}
+		if (g_sirenIdsOptions.varUnreadable)
+		{
+			const SirenIdsVariations unreadable = { g_sirenIdsNoAccess, 1 };
+			SirenIdsVariationsCall(unreadable, true);
+		}
+		if (g_sirenIdsOptions.varNames)
+		{
+			// the end of a page whose next cannot be read: its last two bytes a name that runs into it
+			const auto page = static_cast<unsigned char*>(VirtualAlloc(nullptr, 2 * 4096, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE));
+			DWORD old = 0;
+			VirtualProtect(page + 4096, 4096, PAGE_NOACCESS, &old);
+			memcpy(page + 4094, "ab", 2);
+			const SirenIdsVehicle vehicles[] = { { reinterpret_cast<const char*>(g_sirenIdsNoAccess), 777 }, { reinterpret_cast<const char*>(page + 4094), 777 }, { "si\xE4r", 777 },
+				{ "s123456789012345678901234567890123456789012345678901234567890123456789", 777 }, { "", 777 } };
+			SirenIdsLoadVariations(vehicles, 5);
+		}
 		if (g_sirenIdsBigPack)
 		{
 			g_sirenIdsFileSettings = static_cast<unsigned char*>(VirtualAlloc(nullptr, g_sirenIdsBigFile.count * kSirenIdsSettingSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE));
@@ -3100,6 +3309,25 @@ static void SirenIdsReport()
 	wprintf(L"siren ids: sites as placed %d of %d, data %ls | ", asPlaced, static_cast<int>(kSirenIdsSites),
 		SirenIdsData() != g_sirenIdsDataPlaced ? L"NOT as placed" : typesPlaced ? L"as placed" : typesWidened ? L"widened" : L"types CHANGED");
 	wprintf(L"siren array: 0x%llX | ", static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(g_sirenIdsSettings)));
+	// "siren files: the call as placed, the callback as placed, opened 0, ...": I-E-H3's site but its call's rel32, and I-E-H4's but a hook's jump;
+	// where the call leads, a stub's not in the other parts' count; the file opener's calls and the carvariations callback's
+	bool h3Same = true, h4Same = true;
+	for (size_t i = 0; i < sizeof(g_sirenIdsH3Placed); i++)
+		if (g_sirenIdsH3[i] != g_sirenIdsH3Placed[i] && (i < 26 + 47 || i >= 26 + 51))
+			h3Same = false;
+	const bool h4Hooked = g_sirenIdsH4[1] == 0xE9;
+	for (size_t i = h4Hooked ? 7 : 0; i < sizeof(g_sirenIdsH4Placed); i++)
+		if (g_sirenIdsH4[i] != g_sirenIdsH4Placed[i])
+			h4Same = false;
+	const Site fileCall = { g_sirenIdsH3, 26 + 47, 0 };
+	const unsigned char* const fileTarget = Rel32Target(fileCall);
+	const bool toOpener = fileTarget == reinterpret_cast<const unsigned char*>(&SirenIdsOpenFile);
+	const bool toStub = !toOpener && !InImage(fileTarget) && ProtectionOf(fileTarget) == PAGE_EXECUTE_READ && memcmp(fileTarget, "\xFF\x25\x00\x00\x00\x00", 6) == 0;
+	CheckData(g_sirenIdsH3, sizeof(g_sirenIdsH3));
+	CheckData(g_sirenIdsH4, sizeof(g_sirenIdsH4));
+	wprintf(L"siren files: the call %ls, the callback %ls, opened %d, with their arguments %d, back %d; variations back %d of %d, bodies %d | ",
+		!h3Same ? L"CHANGED" : toOpener ? L"as placed" : toStub ? L"to a stub, RX" : L"elsewhere", !h4Same ? L"CHANGED" : h4Hooked ? L"hooked" : L"as placed", g_sirenIdsOpened,
+		g_sirenIdsOpenedAsHanded, g_sirenIdsOpenedKept, g_sirenIdsVariationsKept, g_sirenIdsVariationCalls, g_sirenIdsVariationBodies);
 	SirenIdsReportWrites();
 	SirenIdsReportCode();
 	if (g_sirenIdsLoad)

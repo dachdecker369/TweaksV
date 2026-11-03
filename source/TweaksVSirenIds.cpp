@@ -23,7 +23,10 @@
 //                    one setting and the IDs themselves in their settings' order; and the settings the game drops and
 //                    moves, per file: a hook on a pack's carcols callback and one on the base builder, and a pack's
 //                    dedupe's load of an ID through a stub, which keeps the IDs the pack's file gave, since the file
-//                    is read inside the callback. With LARGE_SIREN_IDS=0 or the part off the measurement goes on, through
+//                    is read inside the callback; the file's name, which nothing on the way to the callback keeps, through
+//                    the carcols mount's call of the game's file opener, redirected; and a hook on a pack's carvariations
+//                    callback, for each vehicle whose siren setting ID finds no setting, named once, at load, nothing per
+//                    frame. With LARGE_SIREN_IDS=0 or the part off the measurement goes on, through
 //                    the table of the parts measured first, over the game's own table and IDs of a byte, nothing written, so
 //                    that the base game's settings and IDs can be compared with the part off and on: what the
 //                    game's PSO loader makes of a member wider than its binary file's rests on that comparison.
@@ -65,6 +68,7 @@
 #include <vector>
 
 #include "TweaksVConflicts.h"
+#include "TweaksVLock.h"
 #include "TweaksVLog.h"
 #include "TweaksVMeasure.h"
 #include "TweaksVPatch.h"
@@ -913,19 +917,39 @@ namespace TweaksV
 			return IsReadable(g_carcolsPointer, sizeof(void*)) ? *reinterpret_cast<const uint8_t* const volatile*>(g_carcolsPointer) : nullptr;
 		}
 
-		// A pack's file's name for its line: its data file entry holds it at +0, read bounded and safely, as it comes from the
-		// game; printable ASCII, anything else a '?'
-		std::string FileName(const void* entry)
+		// The file the game's file opener was last asked for, by the carcols mount's call (I-E-H3): the text of its data file entry's
+		// name, inline at +0 of the entry, 128 bytes with its NUL, copied since an entry moves, and the parsed object the same call is
+		// given, the one a pack's callback finds. Nothing else on the way to the callback keeps the name.
+		struct OpenedFile
 		{
+			const void* object = nullptr;
+			bool readable = false;
 			char name[128] = {};
-			if (!entry || !CopyMemorySafely(name, entry, sizeof(name) - 1))
-				return "(a name that cannot be read)";
-			if (name[0] == '\0')
+		};
+		OpenedFile g_opened;
+		SRWLOCK g_openedLock = SRWLOCK_INIT;
+
+		// A pack's file's name for its line, by the parsed object its callback was given: the opened file's if the object is the one
+		// noted there, so that it can never be a wrong file's, whatever the order or the thread; printable ASCII, anything else a '?'
+		std::string FileName(const void* const* object)
+		{
+			const void* parsed = nullptr;
+			if (!CopyMemorySafely(&parsed, object, sizeof(parsed)) || !parsed)
 				return "(no name)";
-			return Printable(name);
+			char name[sizeof(g_opened.name)];
+			{
+				const ExclusiveLock lock(g_openedLock);
+				if (g_opened.object != parsed)
+					return "(no name)";
+				if (!g_opened.readable)
+					return "(a name that cannot be read)";
+				memcpy(name, g_opened.name, sizeof(name));
+			}
+			return name[0] == '\0' ? std::string("(no name)") : Printable(name);
 		}
 
-		std::atomic<uint64_t> g_fileLines{ 0 };		// the lines per file written
+		std::atomic<uint64_t> g_fileLines{ 0 };			// the lines per file written
+		std::atomic<uint64_t> g_variationLines{ 0 };	// and those of a pack's carvariations, a kind of their own
 
 		// Counts a line per file; true while the kind still gets lines of its own
 		bool LineLeft()
@@ -933,6 +957,14 @@ namespace TweaksV
 			const uint64_t n = g_fileLines.fetch_add(1, std::memory_order_relaxed) + 1;
 			if (n == kMaxLinesPerKind + 1)
 				Note(std::to_string(kMaxLinesPerKind) + " lines of carcols files written - from now on they are only counted; the summary every minute has the numbers.");
+			return n <= kMaxLinesPerKind;
+		}
+
+		bool VariationLineLeft()
+		{
+			const uint64_t n = g_variationLines.fetch_add(1, std::memory_order_relaxed) + 1;
+			if (n == kMaxLinesPerKind + 1)
+				Note(std::to_string(kMaxLinesPerKind) + " lines of carvariations files written - from now on they are only counted.");
 			return n <= kMaxLinesPerKind;
 		}
 
@@ -995,12 +1027,91 @@ namespace TweaksV
 					(movedList.empty() ? std::string() : " (" + movedList + ")") + ", " + std::to_string(given) + " without an ID given one.");
 		}
 
-		// The game's two functions behind the hooks, with whatever arguments they have: the registers passed on, the result back
+		// A pack's file the game could not read or parse, its callback given a false byte: it does nothing and says nothing.
+		bool NotParsed(const uint8_t* ok)
+		{
+			uint8_t parsed = 1;
+			return CopyMemorySafely(&parsed, ok, sizeof(parsed)) && parsed == 0;
+		}
+
+		// What a pack's carvariations callback leaves: the parsed object still stands, its variations in an array at +0, a word at +8
+		// their count, 0x50 bytes each, a pointer to its model's name at +0 and its setting's position, a byte, at +0x49
+		constexpr size_t kVariationsCountAt = 8, kVariationSize = 0x50, kVariationPositionAt = 0x49;
+		constexpr size_t kVehicleNameRead = 64;
+
+		// A vehicle's name for a line: a string of the file's, read a byte at a time, bounded and safely, since nothing says how far its
+		// memory goes; printable ASCII, anything else a '?'
+		std::string VehicleName(const char* name)
+		{
+			std::string text;
+			for (size_t i = 0; i < kVehicleNameRead; i++)
+			{
+				char c = 0;
+				if (!CopyMemorySafely(&c, name + i, sizeof(c)))
+				{
+					if (i == 0)
+						return "(a name that cannot be read)";
+					break;
+				}
+				if (c == '\0')
+					break;
+				text += c;
+			}
+			return text.empty() ? std::string("(no name)") : Printable(text);
+		}
+
+		// The vehicles of a pack's carvariations whose siren setting ID finds no setting: the callback took a free entry of the ID table
+		// for its position, 0xFF, which the game's getter takes for a place past its array. Each named once, at most so many to a line;
+		// a variation that names no ID keeps its index and does not show.
+		void LogVariations(const void* const* object)
+		{
+			const uint8_t* parsed = nullptr;
+			const uint8_t* array = nullptr;
+			uint16_t count = 0;
+			std::vector<std::string> vehicles;
+			bool readable = CopyMemorySafely(&parsed, object, sizeof(parsed)) && parsed && CopyMemorySafely(&array, parsed, sizeof(array)) &&
+				CopyMemorySafely(&count, parsed + kVariationsCountAt, sizeof(count));
+			for (size_t i = 0; readable && i < count; i++)
+			{
+				uint8_t position = 0;
+				const char* name = nullptr;
+				readable = CopyMemorySafely(&position, array + i * kVariationSize + kVariationPositionAt, sizeof(position)) &&
+					CopyMemorySafely(&name, array + i * kVariationSize, sizeof(name));
+				if (readable && position == kNone)
+					vehicles.push_back(VehicleName(name));
+			}
+			if (!VariationLineLeft())
+				return;
+			if (!readable)
+			{
+				Note("a pack's carvariations could not be read here: no count of its vehicles.");
+				return;
+			}
+			constexpr const char* kNoSetting = " a siren setting ID that finds no setting";
+			std::string line = "a pack's carvariations brought " + std::to_string(count) + " vehicles: " + (vehicles.empty() ? std::string("none names") :
+				std::to_string(vehicles.size()) + (vehicles.size() == 1 ? " names" : " name")) + kNoSetting;
+			for (size_t i = 0; i < vehicles.size(); i++)
+			{
+				if (i != 0 && i % kListedPerLine == 0)
+				{
+					Note(line + ".");
+					line = "a pack's carvariations, more vehicles naming" + std::string(kNoSetting);
+				}
+				line += (i % kListedPerLine != 0 ? ", " : ": ") + vehicles[i];
+			}
+			Note(line + ".");
+		}
+
+		// The game's functions behind the hooks. The base builder's and the base loader's arguments were not read: the registers passed
+		// on, the result back. A pack's callback is the call slot of the callable its mount hands the parser: itself, a pointer to a
+		// byte that says the file parsed, a pointer to the parsed object's pointer.
 		using GameFunction = uint64_t (*)(uint64_t, uint64_t, uint64_t, uint64_t);
-		GameFunction g_packCarcols = nullptr, g_baseBuilder = nullptr;
+		using PackCallback = uint64_t (*)(void*, const uint8_t*, const void* const*);
+		GameFunction g_baseBuilder = nullptr;
+		PackCallback g_packCarcols = nullptr, g_packVariations = nullptr;
 
 		// On the thread that loads the game's files: nothing throws out of them, and the game's last error stands.
-		uint64_t HookedPackCarcols(uint64_t self, uint64_t entry, uint64_t third, uint64_t fourth)
+		uint64_t HookedPackCarcols(void* self, const uint8_t* ok, const void* const* object)
 		{
 			std::vector<uint16_t> before;
 			bool ready = false;
@@ -1012,19 +1123,59 @@ namespace TweaksV
 			catch (...)
 			{
 			}
-			const uint64_t result = g_packCarcols(self, entry, third, fourth);
+			const uint64_t result = g_packCarcols(self, ok, object);
 			const DWORD lastError = GetLastError();
 			try
 			{
 				std::vector<uint16_t> after;
-				if (ready && ReadIds(LoadedCarcols(), after))
-					LogPack(FileName(reinterpret_cast<const void*>(entry)), before, after, g_record->read);
+				if (NotParsed(ok))
+				{
+					if (LineLeft())
+						Note("a pack's carcols, " + FileName(object) + ", could not be read or parsed: the game takes no siren setting from it.");
+				}
+				else if (ready && ReadIds(LoadedCarcols(), after))
+					LogPack(FileName(object), before, after, g_record->read);
 			}
 			catch (...)
 			{
 			}
 			SetLastError(lastError);
 			return result;
+		}
+
+		uint64_t HookedPackVariations(void* self, const uint8_t* ok, const void* const* object)
+		{
+			const uint64_t result = g_packVariations(self, ok, object);
+			const DWORD lastError = GetLastError();
+			try
+			{
+				if (!NotParsed(ok))
+					LogVariations(object);
+				else if (VariationLineLeft())
+					Note("a pack's carvariations could not be read or parsed: the game takes no vehicle from it.");
+			}
+			catch (...)
+			{
+			}
+			SetLastError(lastError);
+			return result;
+		}
+
+		// The carcols mount's call of the game's file opener, redirected: the name copied and the object noted, then the game's function,
+		// with its nine arguments as they came and its result back, last, so that its last error stands. The copy reads within the entry's
+		// name and can fault no further than this call, and nothing here can throw.
+		using FileOpener = uint64_t (*)(uint64_t, const char*, uint64_t, uint64_t, const void*, uint64_t, uint64_t, uint64_t, uint64_t);
+		FileOpener g_fileOpener = nullptr;
+
+		uint64_t NoteOpenedFile(uint64_t parser, const char* name, uint64_t extension, uint64_t structure, const void* object, uint64_t callable, uint64_t seventh,
+			uint64_t eighth, uint64_t ninth)
+		{
+			{
+				const ExclusiveLock lock(g_openedLock);
+				g_opened.object = object;
+				g_opened.readable = CopyMemorySafely(g_opened.name, name, sizeof(g_opened.name) - 1);
+			}
+			return g_fileOpener(parser, name, extension, structure, object, callable, seventh, eighth, ninth);
 		}
 
 		uint64_t HookedBaseBuilder(uint64_t carcols, uint64_t second, uint64_t third, uint64_t fourth)
@@ -1056,20 +1207,41 @@ namespace TweaksV
 		// The two functions' starts, found and checked: null, logged, if they cannot be hooked
 		constexpr const GamePattern& kPackPattern = Pattern("I-E-H1");
 		constexpr const GamePattern& kBuilderPattern = Pattern("I-E-H2");
+		constexpr const GamePattern& kFilePattern = Pattern("I-E-H3");			// the carcols mount's call of the file opener, whatever the two say
+		constexpr const GamePattern& kVariationsPattern = Pattern("I-E-H4");	// a pack's carvariations callback, on its own
+
+		constexpr size_t kFileCallAt = 46;		// H3: "call rel32", with the name in rdx and the parsed object at [rsp+0x20]
+		static_assert(PatternByte(kFilePattern, 40) == 0x4C && PatternByte(kFilePattern, 42) == 0xFA && PatternByte(kFilePattern, kFileCallAt) == 0xE8,
+			"TweaksV: I-E-H3 holds the name's mov into rdx, then the call of the file opener");
+		constexpr size_t kVariationsOkAt = 27;	// H4: "cmp byte [rdx], 0", the byte that says the file parsed
+		static_assert(PatternByte(kVariationsPattern, kVariationsOkAt) == 0x80 && PatternByte(kVariationsPattern, kVariationsOkAt + 1) == 0x3A &&
+			PatternByte(kVariationsPattern, 43) == static_cast<int>(kVariationsCountAt), "TweaksV: I-E-H4 reads the byte its second argument points to, then the variations' count at +8");
 
 		struct DropHooks
 		{
 			uint8_t* pack = nullptr;
 			uint8_t* builder = nullptr;
+			uint8_t* fileCall = nullptr;		// the file opener's call, null if a pack's lines will name no file
 		};
 
-		bool CheckFunctionStart(const uint8_t* start, const char* what, const char* label)
+		// A pack's lines go on without their file's name: the name is an aid to an aid.
+		void NotNamed(const std::string& why)
+		{
+			Note("a pack's carcols files are not named: " + why);
+		}
+
+		void VehiclesNotCounted(const std::string& why)
+		{
+			Note("the vehicles whose siren setting ID finds no setting are not counted: " + why);
+		}
+
+		bool CheckFunctionStart(const uint8_t* start, const char* what, const char* label, std::string& why)
 		{
 			std::string detail;
 			const bool isStart = IsFunctionStart(start, detail);
 			Note(std::string(what) + " at " + DescribeAddress(start) + ", " + detail + " (" + label + ")");
 			if (!isStart)
-				NotCounted(std::string(label) + " at " + DescribeAddress(start) + " is not where a function starts: " + detail + ".");
+				why = std::string(label) + " at " + DescribeAddress(start) + " is not where a function starts: " + detail + ".";
 			return isStart;
 		}
 
@@ -1084,10 +1256,46 @@ namespace TweaksV
 				NotCounted(notFound + ".");
 				return {};
 			}
-			if (!CheckFunctionStart(hooks.pack, "a pack's carcols callback", kPackPattern.label) ||
-				!CheckFunctionStart(hooks.builder, "the base builder", kBuilderPattern.label))
+			std::string why;
+			if (!CheckFunctionStart(hooks.pack, "a pack's carcols callback", kPackPattern.label, why) ||
+				!CheckFunctionStart(hooks.builder, "the base builder", kBuilderPattern.label, why))
+			{
+				NotCounted(why);
 				return {};
+			}
+			std::string noFile;
+			uint8_t* const site = Scanner::FindOnce(kFilePattern, noFile);
+			if (!noFile.empty())
+			{
+				NotNamed(noFile + ".");
+				return hooks;
+			}
+			uint8_t* const call = site + kFileCallAt;
+			const uint8_t* const opener = CallTarget(call);
+			Note("the file opener's call at " + DescribeAddress(call) + " -> " + (opener ? DescribeAddress(opener) : std::string("not a call")) + " (" + kFilePattern.label + ")");
+			if (!opener || !IsInsideGameImage(opener))
+				NotNamed("the file opener's call at " + DescribeAddress(call) + " is not a call into the game (another mod may have hooked it already) (" + kFilePattern.label + ").");
+			else
+				hooks.fileCall = call;
 			return hooks;
+		}
+
+		// A pack's carvariations callback, found and checked, whatever the other hooks' sites say: null, logged, if it cannot be hooked
+		uint8_t* FindVariationsHook()
+		{
+			std::string why;
+			uint8_t* const variations = Scanner::FindOnce(kVariationsPattern, why);
+			if (!why.empty())
+			{
+				VehiclesNotCounted(why + ".");
+				return nullptr;
+			}
+			if (!CheckFunctionStart(variations, "a pack's carvariations callback", kVariationsPattern.label, why))
+			{
+				VehiclesNotCounted(why);
+				return nullptr;
+			}
+			return variations;
 		}
 
 		// ---- the base loader's call: the moved table filled whenever the game fills its own
@@ -1152,7 +1360,8 @@ namespace TweaksV
 			return writes;
 		}
 
-		// With DIAGNOSTIC_MODE the settings dropped and moved: the two hooks, an aid - a part whose hooks cannot be made still does its job
+		// With DIAGNOSTIC_MODE the settings dropped and moved: the two hooks, an aid - a part whose hooks cannot be made still does its job -
+		// and the call that names a pack's file, an aid to them
 		void HookDrops(const DropHooks& hooks)
 		{
 			if (!hooks.pack)
@@ -1168,6 +1377,26 @@ namespace TweaksV
 			g_hooked = true;
 			Note("a pack's carcols callback at " + DescribeAddress(hooks.pack) + " (" + kPackPattern.label + ") and the base builder at " + DescribeAddress(hooks.builder) + " (" +
 				kBuilderPattern.label + ") are hooked, and a pack's dedupe load goes through a stub: the settings dropped and moved are logged per file.");
+			if (!hooks.fileCall)
+				return;
+			const std::vector<CallRedirect> redirect = { { hooks.fileCall, reinterpret_cast<const void*>(&NoteOpenedFile), "file opener's call", reinterpret_cast<void**>(&g_fileOpener) } };
+			if (RedirectCalls(redirect, {}, kTag))
+				Note("the file opener's call at " + DescribeAddress(hooks.fileCall) + " (" + kFilePattern.label + ") is redirected: a pack's lines name its carcols file.");
+			else
+				NotNamed("the file opener's call at " + DescribeAddress(hooks.fileCall) + " could not be redirected (details above).");
+		}
+
+		// With DIAGNOSTIC_MODE the vehicles whose siren setting ID finds no setting: one hook, an aid of its own
+		void HookVariations(uint8_t* variations)
+		{
+			if (!variations)
+				return;
+			const std::vector<FunctionHook> function = {
+				{ variations, reinterpret_cast<const void*>(&HookedPackVariations), reinterpret_cast<void**>(&g_packVariations), "A pack's carvariations callback" } };
+			if (HookFunctions(function, kTag))
+				Note("a pack's carvariations callback at " + DescribeAddress(variations) + " (" + kVariationsPattern.label + ") is hooked: the vehicles whose siren setting ID finds no setting are logged per file.");
+			else
+				VehiclesNotCounted("the function could not be hooked (details above).");
 		}
 	}
 
@@ -1251,14 +1480,16 @@ namespace TweaksV
 			return;
 		}
 
-		// 3. with DIAGNOSTIC_MODE, the two hooks' sites and the dedupe's stub: an aid, nothing of it stops the part
+		// 3. with DIAGNOSTIC_MODE, the hooks' sites and the dedupe's stub: an aid, nothing of it stops the part
 		const bool diagnostic = IsDiagnosticMode();
 		const bool dryRun = IsDryRun();
 		DropHooks hooks;
+		uint8_t* variations = nullptr;
 		uint8_t* dedupeStub = nullptr;
 		if (diagnostic)
 		{
 			hooks = FindDropHooks();
+			variations = FindVariationsHook();
 			if (hooks.pack && !dryRun)
 			{
 				dedupeStub = MakeDedupeStub();
@@ -1277,6 +1508,10 @@ namespace TweaksV
 		if (dryRun && hooks.pack)
 			WriteLog(kTag, "DRY_RUN: would hook a pack's carcols callback at " + DescribeAddress(hooks.pack) + " and the base builder at " + DescribeAddress(hooks.builder) +
 				" and take a pack's dedupe load through a stub, to count the settings dropped and moved.");
+		if (dryRun && hooks.fileCall)
+			WriteLog(kTag, "DRY_RUN: would redirect the file opener's call at " + DescribeAddress(hooks.fileCall) + ", to name a pack's carcols file.");
+		if (dryRun && variations)
+			WriteLog(kTag, "DRY_RUN: would hook a pack's carvariations callback at " + DescribeAddress(variations) + ", to count the vehicles whose siren setting ID finds no setting.");
 		if (!ApplyRelocation(kSpec, plan, writes, redirects, " and widen the IDs' " + std::to_string(kIdCodeWrites) + " loads and stores, a pack's dedupe's loop, the 3 constructors' "
 			"defaults and the 2 parser members' types, and redirect the base loader call at " + DescribeAddress(loaderCall)))
 		{
@@ -1298,7 +1533,10 @@ namespace TweaksV
 
 		// 5. with DIAGNOSTIC_MODE, the hooks and the measurement over the table in use
 		if (!dryRun)
+		{
 			HookDrops(hooks);
+			HookVariations(variations);
+		}
 		AnnounceMeasurement();
 	}
 }

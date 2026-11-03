@@ -12,10 +12,12 @@
 # else, every page's protection its own, the sites run as code; the table moved at its fixed size on the relocation core;
 # the plain game; the part off; DRY_RUN; each check failing on its own and a site another mod changed, a problem with nothing
 # written; the game's init and its load through the redirected call, IDs past 255 kept whole; the drops and moves per file with
-# DIAGNOSTIC_MODE, a file past what the stub of its dedupe keeps, that stub or the hooks not to be made; and a start without the part
-# against one with it. Fake LOCALAPPDATA: the real one is never touched.
+# DIAGNOSTIC_MODE, a file past what the stub of its dedupe keeps, that stub or the hooks not to be made; a pack's file named through the
+# file opener's call, redirected with them, the name copied, bounded and printable, by the object, never a wrong file's, a file that does not
+# parse said so; the vehicles whose ID finds no setting named at load through a pack's carvariations callback, an aid of its own; and a
+# start without the part against one with it. Fake LOCALAPPDATA: the real one is never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
-CHECKS=125
+CHECKS=146
 cd "$B" || exit 1
 cp "$R/x64/Release/TweaksV.asi" TweaksV.asi
 cp "$R/object/Test/Release/TweaksV.asi" TweaksV_test.asi
@@ -27,7 +29,7 @@ RVA='RVA 0x[0-9A-F]*'
 # its 14 patterns, for the scanner's lines
 LABELS='I-E-(P[1-3]|T[1-4]|D[12]|C[1-3]|R1|M1)'
 # untouched: TweaksV wrote nothing into the fake's siren sites and data, and every page has its own protection back
-untouched() { has 'siren ids: sites as placed 17 of 17, data as placed' && has 'table not moved' && has 'protect: all restored (RX)'; }
+untouched() { has 'siren ids: sites as placed 17 of 17, data as placed' && has 'siren files: the call as placed, the callback as placed' && has 'table not moved' && has 'protect: all restored (RX)'; }
 # measure_ini: the file for the measurement alone, DIAGNOSTIC_MODE on and the part's job off
 measure_ini() { fresh_ini; setkey DIAGNOSTIC_MODE 1; setkey LARGE_SIREN_IDS 0 SIRENSETTINGS; }
 # lines LINE...: every line is in the log, word for word
@@ -203,7 +205,7 @@ check "the 17 sites as the part must leave them, byte for byte: the 4 lea to one
 check "the 2 members' types a word's, their page its own, RW; the data's other bytes as placed" "has 'data widened' && has 'types 0x3 and 0x3, member data RW'"
 check "the table outside the game, read/write, the game's 256 entries copied, the rest free" "has \"table moved, RW, the game's 256 copied, the rest 0xFF\""
 check "the sites run as code: every load a word's, every store too, the loop by words, the constructors' defaults; other bytes the same" "has 'siren code: loads and stores 11 words 0 bytes, loop words, constructors 3 words 0 bytes'"
-check "the base loader's call through a stub of its own, read+execute, no stub added to the other parts' count" "has 'base loader call to a stub, RX' && has 'stubs: 8, all RX'"
+check "the base loader's call through a stub of its own, read+execute, no stub added to the other parts' count" "has 'base loader call to a stub, RX' && has 'stubs: 8, all RX' && has 'siren files: the call as placed, the callback as placed'"
 
 echo "== W2 the part off, [SIRENSETTINGS] ENABLED=0: off in the header, nothing of it"
 fresh_ini; setkey ENABLED 0 SIRENSETTINGS; out=$(game full_game.exe)
@@ -223,6 +225,7 @@ echo "== W5 DRY_RUN=1 with DIAGNOSTIC_MODE=1: the hooks named, not made; the mea
 fresh_ini; setkey DRY_RUN 1; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe wait)
 check "the would line of the hooks; every pattern found, H1 and H2 among them; nothing written" "log_line \"${P}DRY_RUN: would hook a pack's carcols callback at $RVA and the base builder at $RVA and take a pack's dedupe load through a stub, to count the settings dropped and moved.\$\" && [ \$(grep -c -E 'Pattern I-E-(P[1-3]|T[1-4]|D[12]|C[1-3]|R1|M1|H1|H2) found: .* 1 match,' TweaksV.log) -eq 16 ] && untouched"
 check "the announcement and the summary at the game's sizes" "measured && summary 24 24 0 0"
+check "the would lines of the file opener's call and of a pack's carvariations callback, both found; neither made" "log_line \"${P}DRY_RUN: would redirect the file opener's call at $RVA, to name a pack's carcols file.\$\" && log_line \"${P}DRY_RUN: would hook a pack's carvariations callback at $RVA, to count the vehicles whose siren setting ID finds no setting.\$\" && [ \$(grep -c -E 'Pattern I-E-H[34] found: .* 1 match,' TweaksV.log) -eq 2 ] && untouched"
 
 echo "== W6 the plain game: reported, the pattern named"
 fresh_ini; out=$(game plain_game.exe)
@@ -283,6 +286,8 @@ check "the hooks' site lines and their line, word for word" "lines \"a pack's ca
 check "the base file's line through the hook; the summary past 256 IDs and the IDs in their order" "lines 'the base carcols brought 24 siren settings: 0 moved, 0 without an ID given one.' 'siren settings loaded: 24 (vehicles can use 255 at most); siren setting IDs in use: 24 of 65536, 0 of them past 255; settings past position 255, which no vehicle can reach: 0; IDs given to more than one setting: 0; settings the game dropped so far: 0, moved: 0.' 'siren setting IDs of settings 0 to 23 of 24: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24'"
 check "the write lines with their old and new bytes, the announcement of 65536 IDs; no problem" "lines 'siren setting ID load at $RVA: 0F B6 2C 0F -> 0F B7 2C 0F' 'pack dedupe.s siren setting ID load through a stub at $RVA: 43 0F B6 54 3D 00 -> E9 [0-9A-F ]* 90' \"variation's siren setting ID member's type at $RVA: 01 -> 03\" 'base loader call at $RVA: E8 [0-9A-F ]* -> E8 [0-9A-F ]*' \"the siren settings, through the carcols pointer at $RVA (I-E-M1), and the siren setting ID table at 0x[0-9A-F]* (outside the game), 65536 IDs (I-E-T1 to I-E-T4): the settings loaded and the IDs in use are logged after 10 seconds, then every minute while the numbers change.\" && log_lacks 'PROBLEM'"
 
+check "the file opener's call and a pack's carvariations callback: their site lines and their own lines, word for word; the call through a stub of its own, no stub added to the other parts' count, the callback's own hook" "lines \"the file opener's call at $RVA -> $RVA (I-E-H3)\" \"a pack's carvariations callback at $RVA, no unwind data, byte before it 90 (I-E-H4)\" \"file opener's call at $RVA: E8 [0-9A-F ]* -> E8 [0-9A-F ]*\" \"the file opener's call at $RVA (I-E-H3) is redirected: a pack's lines name its carcols file.\" \"a pack's carvariations callback at $RVA (I-E-H4) is hooked: the vehicles whose siren setting ID finds no setting are logged per file.\" && has 'siren files: the call to a stub, RX, the callback hooked'"
+
 echo "== W12 the init twice: the moved table free both times"
 fresh_ini; out=$(game full_game.exe siload sitwice)
 check "the loader twice, the table free each time" "has 'siren load: 2 inits, loader 2 calls, 2 with its table free, 2 with their arguments, 2 of them back with result and last error, builder 2 back'"
@@ -298,11 +303,26 @@ check "each pack's line, word for word" "lines \"a pack's carcols, $PACK1, broug
 check "the summary: 31 settings, 31 of 65536 IDs, 4 past 255, 2 dropped, 1 moved; the IDs whole, in their order" "lines 'siren settings loaded: 31 (vehicles can use 255 at most); siren setting IDs in use: 31 of 65536, 4 of them past 255; settings past position 255, which no vehicle can reach: 0; IDs given to more than one setting: 0; settings the game dropped so far: 2, moved: 1.' 'siren setting IDs of settings 0 to 30 of 31: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 300, 1534, 40, 0, 511, 767, 25'"
 check "the callback back with its result and last error each time, every register the dedupe's stub must keep kept, the variations at their settings" "has \"packs 3 of 3 back, dedupe's registers kept 9 of 9, variations 8 of 8\""
 
+check "each name through the file opener's call, the fake's entry written over right after it, so that they are copies: its nine arguments as handed through the stub, its result and last error back" "has 'opened 3, with their arguments 3, back 3'"
+
 echo "== W14b a pack's file of 4,097 settings of one ID, one past the 4,096 IDs the stub of its dedupe keeps: the stub's branch for no room runs on the game's load path"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe siload sibigpack)
 taken=$(printf '6000, %.0s' $(seq 1 16))
 check "the pack's line, word for word: all 4,097 counted, the taken IDs listed up to their cap" "lines \"a pack's carcols, dlcpacks:/sibig/data/carcols.meta, brought 4097 siren settings: 1 added, 4096 dropped, their IDs taken (${taken}...), 0 moved.\""
 check "the callback back with its result and last error; all 4,097 loads through the stub with every register it must keep kept" "has \"packs 1 of 1 back, dedupe's registers kept 4097 of 4097\""
+
+echo "== W14c a pack's files the game cannot read or parse, and names not as the others': the byte its callback is given, the name by the object, copied bounded and printable"
+fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe siload sibadfiles)
+digits=$(printf '0123456789%.0s' $(seq 1 11))
+check "a file that does not parse, and one whose read cannot start, its callback inside the mount's call: each its line, word for word, with its name" "lines \"a pack's carcols, dlcpacks:/sibad/data/carcols.meta, could not be read or parsed: the game takes no siren setting from it.\" \"a pack's carcols, dlcpacks:/sinoread/data/carcols.meta, could not be read or parsed: the game takes no siren setting from it.\""
+check "a name with a byte past ASCII that runs past the entry's 127: a '?', cut at 127" "lines \"a pack's carcols, dlcpacks:/silong/d?ta/${digits:0:105}, brought 0 siren settings: 0 added, 0 dropped, 0 moved.\""
+check "each opened through the stub, its arguments as handed; no problem" "has 'opened 3, with their arguments 3, back 3' && log_lacks '${P}PROBLEM'"
+fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe siload sinamebad)
+check "a name that cannot be read: said so, the game's function called all the same" "lines \"a pack's carcols, (a name that cannot be read), brought 0 siren settings: 0 added, 0 dropped, 0 moved.\" && has 'opened 1, with their arguments 1, back 1'"
+fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe siload siotherobject)
+check "a callback given another object than the call was: no name, never a wrong file's" "lines \"a pack's carcols, (no name), brought 0 siren settings: 0 added, 0 dropped, 0 moved.\""
+fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe siload siprofile)
+check "a name that holds the user's profile folder: the log's rule on personal data holds for it" "lines \"a pack's carcols, %USERPROFILE%.pack.carcols.meta, brought 0 siren settings: 0 added, 0 dropped, 0 moved.\" && log_lacks -F \"\$USERPROFILE\""
 
 echo "== W15 the same with LARGE_SIREN_IDS=0: the comparison a start without the part gives - IDs cut to their low byte, no hook, nothing written"
 measure_ini; out=$(game full_game.exe siload sipacks wait)
@@ -312,17 +332,26 @@ check "no hook, nothing written, the code as bytes, the variations' cut IDs lead
 echo "== W16 more settings than the lines per kind: 20,001 packs' carcols, the 20,001st line the cap's"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe siload siflood)
 check "20,000 lines, the base file's among them; then the cap's, word for word, once" "[ \$(ecount \"${L}(a pack's carcols, |the base carcols brought)\") -eq 20000 ] && [ \$(count \"${L}20000 lines of carcols files written - from now on they are only counted; the summary every minute has the numbers.\") -eq 1 ]"
+check "and as many of carvariations, of no vehicles: 20,000 lines, a kind of their own; then its cap's, word for word, once" "[ \$(ecount \"${L}a pack's carvariations brought 0 vehicles: none names a siren setting ID that finds no setting.\") -eq 20000 ] && [ \$(count \"${L}20000 lines of carvariations files written - from now on they are only counted.\") -eq 1 ]"
 
 echo "== W17 the hooks an aid: I-E-H1 not found, or neither function where a function starts - logged, no problem, the part written"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; setkey ERROR_POPUP 1; addkey TEST_BREAK_PATTERN I-E-H1; out=$(ASI=TweaksV_test.asi game full_game.exe wait)
 check "not found: the line, word for word; no box; the part written with a word's load, no hook; the measurement announced" "lines 'the siren settings dropped and moved are not counted: I-E-H1 was not found.' && no_box && written && a_word && measured_wide"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe sibyte0)
-check "no function start: the line, word for word; the part written, no hook" "lines 'the siren settings dropped and moved are not counted: I-E-H1 at $RVA is not where a function starts: no unwind data, byte before it 00.' && written && a_word"
+check "no function start: each line, word for word; the part written, no hook" "lines 'the siren settings dropped and moved are not counted: I-E-H1 at $RVA is not where a function starts: no unwind data, byte before it 00.' 'the vehicles whose siren setting ID finds no setting are not counted: I-E-H4 at $RVA is not where a function starts: no unwind data, byte before it 00.' && written && a_word && has 'the call as placed, the callback as placed'"
 
 echo "== W17b the hooks an aid: the callback's page not executable while TweaksV starts, so that MinHook refuses it - logged, no problem, the part written, the stub at work"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe siload sipacks sihooknoexec)
 check "the hook's line and the part's, word for word; no problem of the part; no line per pack" "log_line \"${P}A pack's carcols callback could not be hooked (MinHook: MH_ERROR_NOT_EXECUTABLE) - none of the 2 hooks is on.\$\" && lines 'the siren settings dropped and moved are not counted: the two functions could not be hooked (details above).' && log_lacks '${P}PROBLEM' && log_lacks \"${L}a pack's carcols, \""
 check "the part written, a pack's dedupe's load through the stub, no hook; the stub keeps every register; the measurement announced" "written && has \"a pack's dedupe's load through a stub, RX, 0 hooks\" && has \"dedupe's registers kept 9 of 9\" && measured_wide"
+
+echo "== W17c the name and the count aids of their own: I-E-H3 or I-E-H4 not found, the file opener's call another mod's - logged, no problem, the rest at work"
+fresh_ini; setkey DIAGNOSTIC_MODE 1; setkey ERROR_POPUP 1; addkey TEST_BREAK_PATTERN I-E-H3; out=$(ASI=TweaksV_test.asi game full_game.exe siload sipacks sivariations)
+check "I-E-H3 not found: its line, word for word; a pack's line with no name; the hooks and the count at work; no box" "lines 'a pack.s carcols files are not named: I-E-H3 was not found.' \"a pack's carcols, (no name), brought 6 siren settings: 4 added, 2 dropped, their IDs taken (5, 300), 0 moved.\" \"a pack's carvariations brought 5 vehicles: 2 name a siren setting ID that finds no setting: sicar1, sicar4.\" && has 'siren files: the call as placed, the callback hooked' && no_box"
+fresh_ini; setkey DIAGNOSTIC_MODE 1; setkey ERROR_POPUP 1; addkey TEST_BREAK_PATTERN I-E-H4; out=$(ASI=TweaksV_test.asi game full_game.exe siload sipacks sivariations)
+check "I-E-H4 not found: its line, word for word; no count; a pack's line with its name, the hooks at work; no box" "lines 'the vehicles whose siren setting ID finds no setting are not counted: I-E-H4 was not found.' \"a pack's carcols, $PACK1, brought 6 siren settings: 4 added, 2 dropped, their IDs taken (5, 300), 0 moved.\" && log_lacks \"${L}a pack's carvariations\" && has 'siren files: the call to a stub, RX, the callback as placed' && no_box"
+fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe sifilehooked)
+check "the file opener's call another mod's: its two lines, word for word; the call as it was, the part written, no problem" "lines \"the file opener's call at $RVA -> 0x[0-9A-F]* (outside the game) (I-E-H3)\" \"a pack's carcols files are not named: the file opener's call at $RVA is not a call into the game (another mod may have hooked it already) (I-E-H3).\" && written && has 'siren files: the call elsewhere, the callback hooked' && log_lacks '${P}PROBLEM'"
 
 echo "== W18 the test build's summary again when the numbers change: past 256 IDs, a pack's 6 settings at 12 s"
 export TWEAKSV_TEST_SUMMARY_MS=500
@@ -349,6 +378,25 @@ measure_ini; out=$(ASI=TweaksV_test.asi game full_game.exe siload)
 check "the game's load after TweaksV has started, the carcols pointer null while the module looks: nothing yet" "accessor_nothing"
 measure_ini; out=$(game full_game.exe)
 check "the release build has no such line" "log_lacks 'accessor'"
+
+echo "== W20 the vehicles whose siren setting ID finds no setting, at load, each named once, through a pack's carvariations callback - with SIRENS_PER_VEHICLE=20, as base.ini has it"
+names() { local i n t=; for ((i = $1; i <= $2; i++)); do printf -v n 'sim%02d' "$i"; t+="${t:+, }$n"; done; echo "$t"; }
+fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe siload sivariations)
+check "the line, word for word: two of five by name, the one with no ID and the two with a setting not among them" "lines \"a pack's carvariations brought 5 vehicles: 2 name a siren setting ID that finds no setting: sicar1, sicar4.\""
+check "the callback through its hook, its result and last error back; no problem" "has 'variations back 1 of 1, bodies 1' && has 'the callback hooked' && log_lacks '${P}PROBLEM'"
+fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe siload sivarmany)
+check "40 of them: 16 a line, each named once" "lines \"a pack's carvariations brought 40 vehicles: 40 name a siren setting ID that finds no setting: $(names 0 15).\" \"a pack's carvariations, more vehicles naming a siren setting ID that finds no setting: $(names 16 31).\" \"a pack's carvariations, more vehicles naming a siren setting ID that finds no setting: $(names 32 39).\""
+fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe siload sivarbad)
+check "a file that does not parse: its line, word for word; the game's body not run" "lines \"a pack's carvariations could not be read or parsed: the game takes no vehicle from it.\" && has 'variations back 1 of 1, bodies 0'"
+fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe siload sivarunreadable)
+check "variations in memory that cannot be read: its line, word for word; nothing thrown into the game" "lines \"a pack's carvariations could not be read here: no count of its vehicles.\" && has 'variations back 1 of 1, bodies 1'"
+fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe siload sivarnames)
+long=s$(printf '1234567890%.0s' $(seq 1 7))
+check "names that cannot be read, run into memory that cannot be read, have a byte past ASCII, run past 64, are empty: each said so" "lines \"a pack's carvariations brought 5 vehicles: 5 name a siren setting ID that finds no setting: (a name that cannot be read), ab, si?r, ${long:0:64}, (no name).\""
+fresh_ini; out=$(game full_game.exe siload sivariations)
+check "no DIAGNOSTIC_MODE: nothing looked for, no line; the callback as placed, its body run" "log_lacks 'I-E-H' && log_lacks 'carvariations' && has 'the callback as placed, opened 0' && has 'bodies 1'"
+measure_ini; out=$(game full_game.exe siload sivariations)
+check "LARGE_SIREN_IDS=0: the hooks are the part's: none looked for, no line" "log_lacks 'I-E-H[34]' && log_lacks 'carvariations' && has 'the callback as placed'"
 
 echo
 echo "SIREN IDS SCENARIOS: $pass passed, $fail failed"
