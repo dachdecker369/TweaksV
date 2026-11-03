@@ -34,7 +34,7 @@ From my proof's start 5 unless said; starts 4 and 5 read minute by minute, 32 mi
 | The corona store | 1088 of 1088 in 1 minute of 32, 317 to 917 else | Raised to 4096, the key `CORONA_STORE` (D35) |
 | The ray traced list | 1024 of 1024 in 2 minutes of 32, 531 to 945 else | A count of what it refuses, no sort (D36) |
 | The ray traced upload | past 512 in nearly every sample | Cannot be raised (8.2) |
-| `MaxStreamingResources` | 98,343 of 98,304, in one minute of driving | A key, 131072 by default on my proof's number, and my boot (D37) |
+| `MaxStreamingResources` | 98,343 of 98,304, in one minute of driving | A key, 131072 by default on my proof's number (D37) |
 | The texture budget | about 4,700 of 6,000, the most 5,576, the flag down | 6000 by default (D33) |
 | The vehicle model budget | at the stop 95% of the time, 1,224 of 429 | My `gameconfig.xml` (D-V5), once the stores are in |
 | The ped model budget | 505.8 of 561, at the stop in 0 of 1716 samples in start 4 | No raise (D43) |
@@ -187,7 +187,8 @@ the pass (`staticbounds2_findings_for_the_clean_room_build.txt`) found the size 
   The counters under `DIAGNOSTIC_MODE` (the findings' 7.1 and 7.2), beside a job's most and the ray traced list's count; the LOD job's own 1088 left as it is.
   A corona pattern missing refuses the part as a whole, since the job's clamp must move with the store or the game faults, which with D39 holds the sirens at 20, and the line says why.
 - **D36, the ray traced list:** no sort in 2.8.0, since it was full in 2 of those 32 minutes and a light past it still lights surfaces directly (the lighting capacity's findings, 3.4 and 8.2); a count of what it refuses under `DIAGNOSTIC_MODE`, by a stub as `G-E-C1`'s, and the sort only if my proof's number asks for it.
-- **D37, `MaxStreamingResources`** (2026-11-03, on `streamedobjects`' findings): one boot of mine with 131072 in my own `gameconfig.xml` on the build of 7fa28da.
+- **D37, `MaxStreamingResources`** (2026-11-03, on `streamedobjects`' findings).
+the proof's start of the object limit is that test.
   The key `STREAMED_OBJECTS` under `[RESOURCES]`, its default 131072 on my proof's descriptor number, 0 if fewer than 16,384 are free at the highest reading, its maximum 147456, 3/4 of the heap read at run time; a `gameconfig.xml` value above that is left as it is, with one problem line.
   The descriptor walk under `DIAGNOSTIC_MODE`, with `Q-E-T6` and `Q-E-T7`; no raise of the heap; no watch, so the heap's end stays an open issue in NOTES.md.
 - **D38, `SIRENS_PER_VEHICLE`'s default** (D23): 32, proven on the tagged build by my proof; a vehicle with no lights past 20 pays one lookup.
@@ -256,9 +257,6 @@ Then 2.8.0 set - the project's version, the specification's header example and i
 
 ## The boots
 
-**The object limit's boot** (D37): the build of 7fa28da as it stands in the game folder, `MaxStreamingResources` at 131072 in my own `gameconfig.xml`, `VIDEO_MEMORY_BUDGET=6000`, `DIAGNOSTIC_MODE=1`, the drive of my start 5: the objects past 100,000 in the log, no "at the most objects", the bytes past 4,714 MB, and my LOD switching by eye.
-  A crash there brings the value down and costs one start.
-
 **2.8.0's proof,** on the Release build, my usual mods folder and trainer, a backup of my Profiles folder first, `DIAGNOSTIC_MODE=1` but for the last start; each start holds a load past the game's own number for what it proves:
 
 1. **The sirens, at night:** `hp16fpiu1`, `lspdcvpi08` and `policelv` side by side, sirens on: the whole lightbar lit, lights 21 to 32 flashing as their carcols says, by my eye.
@@ -269,8 +267,9 @@ Then 2.8.0 set - the project's version, the specification's header example and i
 2. **The stores, the same start:** about 30 of those cars spawned in one place, sirens on, from outside the group so that all 30 are in view, since a light out of view takes no room (the lighting capacity's findings, 3.2).
    The log: vehicle lights past 400, vehicle coronas past 928, a job's most past 80 lights, how many a job refused, the scene store at its room, the coronas past 1088 with none refused, the ray traced list's refused lights; no crash, and the frame rate as I see it (its 8.4).
    A job past 200 coronas is not sure, as five cars at 37 are 185 (its 3.5): if the log stays at or under 200, the 300 stands with no load past the game's number, its layout proven by the lights past 80 behind it, and I decide then.
-3. **The budgets, a start of its own:** `Level3Kb` at 98,500 in my `gameconfig.xml` (D-V5), `MaxStreamingResources` back at 98304 there, so that `STREAMED_OBJECTS` does the raise, a drive of 20 minutes through the city at night and on to the tunnel: the vehicle budget's share at the stop against 95%, the objects past 100,000, the descriptors in use, whose highest reading with at least 16,384 free settles the key's default (D37), the ray tracing buffer, my LOD switching by eye.
-4. **The build as it ships:** a fresh `TweaksV.ini` from the build's defaults, no `DIAGNOSTIC_MODE`: line 1 names 2.8.0 and the commit without `-dirty`, the one `PROBLEM` `lfpolice`'s Legacy box, every part applied, `VIDEO_MEMORY_BUDGET` at 6000 and `STREAMED_OBJECTS` at its default.
+3. **The object limit, a start of its own:** the build's defaults with `DIAGNOSTIC_MODE=1`, `STREAMED_OBJECTS` doing the raise, `MaxStreamingResources` left at 98304 in my `gameconfig.xml`, the drive of my start 5: `are raised to 131072 by STREAMED_OBJECTS`, the objects past 100,000, the descriptors' number at its highest with at least 16,384 free, which settles the key's default (D37), no ` - at the most objects`, the bytes past 4,714 MB, my LOD switching by eye against start 5.
+4. **The vehicle budget, a start of its own:** that and `Level3Kb` at 98,500 in my `gameconfig.xml` (D-V5), `MaxStreamingResources` left at 98304 there, a drive of 20 minutes through the city at night and on to the tunnel: the vehicle budget's share at the stop against 95%, the ray tracing buffer, the lights.
+5. **The build as it ships:** a fresh `TweaksV.ini` from the build's defaults, no `DIAGNOSTIC_MODE`: line 1 names 2.8.0 and the commit without `-dirty`, the one `PROBLEM` `lfpolice`'s Legacy box, every part applied, `VIDEO_MEMORY_BUDGET` at 6000 and `STREAMED_OBJECTS` at its default.
    This is the build that is tagged.
 
 Then the tag 2.8.0, the searches and one atomic push.
@@ -323,4 +322,4 @@ It takes the sirens per vehicle as the hybrid at 32 by default (D23, D38), the l
 The ray traced list gets a count and no sort (D36), and the ped pool, the render queues and the ped budget stay as they are (D43).
 The open issues are T-HARDEN, T-DIAG, T-FREEZE, T-PEDPROPS and T-DESCRIPTORS.
 
-**Decisions waiting on me:** none; my boot with 131072 comes (D37). The dumps, `GameData-*.bin` and the `work-*` folders stay (D28).
+**Decisions waiting on me:** none before my proof. The dumps, `GameData-*.bin` and the `work-*` folders stay (D28).
