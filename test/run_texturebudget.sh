@@ -25,13 +25,14 @@
 # game; DRY_RUN alike; and in every run nothing written: the fake's sites and data as they were, no call redirected, every
 # page's protection its own. STREAMED_OBJECTS the same way: 0 said in one line, 1 and 98303 raised to 98304 and reported, 98304, 131072
 # and 147456 taken and 147457 clamped by the settings; the most raised in the same call, under the same flag, a gameconfig.xml's
-# above the key left, one above 3/4 of the descriptor heap left with one problem, a heap of no size and a top not above the game's
+# above the key left, one above 3/4 of the descriptor heap left with one problem, its top bit set among them, a heap of no size and a top not above the game's
 # own each one problem and nothing written, a smaller heap's top cutting the key and said; each check of the key's own failing with
 # the budgets still raised, those it shares refusing both; DRY_RUN; and the descriptor walk with DIAGNOSTIC_MODE=1, in use against the
 # list's end, near that end, a new high alone, a cycle, an index past the size, a list that cannot be read and the walk's own patterns
-# not as they must be, each ending the walk alone. Fake LOCALAPPDATA: the real one is never touched.
+# not as they must be, each ending the walk alone; the summary's words at the most objects, below, at and past it, raised and not. Fake
+# LOCALAPPDATA: the real one is never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
-CHECKS=152
+CHECKS=158
 cd "$B" || exit 1
 cp "$R/x64/Release/TweaksV.asi" TweaksV.asi
 cp "$R/object/Test/Release/TweaksV.asi" TweaksV_test.asi
@@ -408,10 +409,12 @@ beside() {
 }
 at() { B=$game_folder/beside/$1; cd "$B" || exit 1; out=$(tr -d '\r' < harness.out); }
 for value in 1 98303 98304 147456 147457; do beside "value$value" "most_key $value"; done
-for option in tbconfig140000 tbconfig147456 tbconfig200000 tbheapsmall tbheapedge tbheaptiny; do beside $option 'most_key 131072' $option; done
+for option in tbconfig140000 tbconfig147456 tbconfig200000 tbconfig4294967295 tbheapsmall tbheapedge tbheaptiny; do beside $option 'most_key 131072' $option; done
 for option in tbheapnone tbt6twice tbsizeout tbsizeodd tbheapout tbheapodd tbmakerhooked tbwritemost; do beside $option 'most_key 131072 6000' $option; done
 for option in tbfree16384 tbfree16383 tblistcycle tblistpast tblistunreadable tblistnull tblistodd tbheaphuge; do beside $option 'fresh_ini; setkey DIAGNOSTIC_MODE 1' $option wait; done
 for option in tbt7twice tbmakermoved tbheadstores; do beside walk$option 'most_key 131072; setkey DIAGNOSTIC_MODE 1' $option; done
+for objects in 98303 98304 98343; do beside objects$objects 'fresh_ini; setkey DIAGNOSTIC_MODE 1' tbobjects$objects wait; done
+for objects in 98343 131072; do beside raised$objects 'most_key 131072; setkey DIAGNOSTIC_MODE 1' tbobjects$objects wait; done
 wait
 
 echo "== TB62 the key's values: below the game's own raised to it and reported, the game's own and the top taken, past the top the settings' clamp"
@@ -433,6 +436,8 @@ at tbconfig147456
 check "147456, the top itself: left, no problem" "left_most 147456 131072 && has ', the most 147456' && log_lacks 'PROBLEM'"
 at tbconfig200000
 check "200000: left, its one problem, word for word, no line of a raise" "log_line '\[Resources\] PROBLEM: MaxStreamingResources of gameconfig.xml, 200000, is above 147456, 3/4 of the game.s descriptor heap of 196608: that heap has no check at its end, and a load that reaches it crashes. It is left as it is.\$' && [ \$(count '\[Resources\] PROBLEM') -eq 1 ] && has ', the most 200000' && log_lacks 'The most streamed objects of gameconfig.xml'"
+at tbconfig4294967295
+check "4294967295, its top bit set, which a signed compare would take for below the key and write over: left, the same problem, word for word; the game's function saw it" "log_line '\[Resources\] PROBLEM: MaxStreamingResources of gameconfig.xml, 4294967295, is above 147456, 3/4 of the game.s descriptor heap of 196608: that heap has no check at its end, and a load that reaches it crashes. It is left as it is.\$' && [ \$(count '\[Resources\] PROBLEM') -eq 1 ] && log_lacks 'The most streamed objects of gameconfig.xml' && startup 'a TweaksV stub' '1500, 1500, 3000 and 3000' 4294967295 && has ', the most 4294967295'"
 
 echo "== TB64 the heap's size: none, a top that cuts the key, a top not above the game's own"
 at tbheapnone
@@ -497,6 +502,23 @@ walk_off() { at "walk$1"; check "$1: $2" "log_line \"\${NOT_WALKED}$3\$\" && rai
 walk_off tbt7twice "Q-E-T7 twice" "the game code holds Q-E-T7 2 or more times, not the expected 1."
 walk_off tbmakermoved "the maker's stores a byte further in" "the descriptor heap.s stores at \$(rva maker 0x37) (Q-E-T7) do not lie 0x36 bytes into its maker at \$(rva maker) (Q-E-T6)."
 walk_off tbheadstores "the store past them another offset's" "the code after Q-E-T7 at \$(rva maker 0xD4) is not the store of the descriptor heap.s head: 89 7E 24 89 7E 28."
+
+echo "== TB70b the summary at the most objects, raised and not, which D37's boot reads by its absence: said at the most and past it, not below it, against the most in force"
+AT_MOST=' - at the most objects: the streaming engine evicts what it cannot place (texture loss)'
+RAISED=': 98304, raised by STREAMED_OBJECTS'
+# objects_are N MOST GAME TEXTURES [END]: the summary's objects, word for word, and how it ends
+objects_are() { log_line "\[Resources\] DIAGNOSTIC: texture budget: .* $1 of the $2 objects allowed (MaxStreamingResources$3) - $4 textures, 1234 buffers; .*flag is down${5:-}\.\$"; }
+at objects98303
+check "98303 of the game's 98304: no word of it" "objects_are 98303 98304 '' 97069 && log_lacks 'at the most objects'"
+at objects98304
+check "98304 of 98304: at the most, word for word" "objects_are 98304 98304 '' 97070 '$AT_MOST'"
+at objects98343
+check "98343 of 98304, past it by the files reserved, as in my boots: the same" "objects_are 98343 98304 '' 97109 '$AT_MOST'"
+at raised98343
+check "the same 98343 with the most raised to 131072: no word of it, what D37's boot reads" "objects_are 98343 131072 '$RAISED' 97109 && log_lacks 'at the most objects'"
+at raised131072
+check "131072 of the raised 131072: at the most again, word for word" "objects_are 131072 131072 '$RAISED' 129838 '$AT_MOST'"
+
 cd "$game_folder" || exit 1
 B=$game_folder
 rm -rf beside

@@ -17,7 +17,7 @@
 # parse said so; the vehicles whose ID finds no setting named at load through a pack's carvariations callback, an aid of its own; and a
 # start without the part against one with it. Fake LOCALAPPDATA: the real one is never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
-CHECKS=146
+CHECKS=149
 cd "$B" || exit 1
 cp "$R/x64/Release/TweaksV.asi" TweaksV.asi
 cp "$R/object/Test/Release/TweaksV.asi" TweaksV_test.asi
@@ -384,6 +384,12 @@ names() { local i n t=; for ((i = $1; i <= $2; i++)); do printf -v n 'sim%02d' "
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe siload sivariations)
 check "the line, word for word: two of five by name, the one with no ID and the two with a setting not among them" "lines \"a pack's carvariations brought 5 vehicles: 2 name a siren setting ID that finds no setting: sicar1, sicar4.\""
 check "the callback through its hook, its result and last error back; no problem" "has 'variations back 1 of 1, bodies 1' && has 'the callback hooked' && log_lacks '${P}PROBLEM'"
+fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe siload sivar255 sivariations)
+check "255 settings, the last at position 254: 0xFF still past them, the two named" "lines \"a pack's carvariations brought 5 vehicles: 2 name a siren setting ID that finds no setting: sicar1, sicar4.\""
+fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe siload sivar256 sivariations)
+check "256 settings: 0xFF a real place, the last one's: none named" "lines \"a pack's carvariations brought 5 vehicles: none names a siren setting ID that finds no setting.\""
+fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe siload sivarnocarcols sivariations)
+check "the settings' count that cannot be read, the carcols pointer null: its line, word for word; no vehicle named on a guess" "lines \"a pack's carvariations could not be read here: no count of its vehicles.\" && log_lacks \"${L}a pack's carvariations brought\""
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe siload sivarmany)
 check "40 of them: 16 a line, each named once" "lines \"a pack's carvariations brought 40 vehicles: 40 name a siren setting ID that finds no setting: $(names 0 15).\" \"a pack's carvariations, more vehicles naming a siren setting ID that finds no setting: $(names 16 31).\" \"a pack's carvariations, more vehicles naming a siren setting ID that finds no setting: $(names 32 39).\""
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe siload sivarbad)

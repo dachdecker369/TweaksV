@@ -228,6 +228,10 @@
 //   sivarunreadable with siload: one whose variations lie in memory that cannot be read
 //   sivarnames    with siload: one whose vehicles' names cannot be read, run into memory that cannot be read, have a byte past ASCII,
 //                 run past 64 or are empty, all five finding no setting
+//   sivar255, sivar256
+//                 with siload: 255 or 256 settings when a pack's carvariations come, each with an ID of its own: from 256 on position 0xFF is a
+//                 real place
+//   sivarnocarcols with siload: the carcols pointer null when they come, so that the settings' count cannot be read
 //   sifilehooked  the file opener's call already leads outside the game (another mod's hook); no pack is mounted through it then
 //   sihooknoexec  the page of a pack's carcols callback not executable while TweaksV starts, so that MinHook refuses to hook it
 //   sibyte0       the byte before the three hooked functions a 00: none where a function starts
@@ -412,8 +416,11 @@
 //                  a writer of the most, no writer of the budgets; without it it leads to the dummy
 // The descriptor heap's sites are there too: the device's start with the two dwords of its size, its lea and the call of its maker,
 // and the maker. It holds 196608 descriptors, the first 30000 in use, as the game's start-up has it - with "tblate" all 0 until then.
-//   tbconfig140000, tbconfig147456, tbconfig200000
-//                  the start-up's gameconfig.xml gives the most objects 140000, 147456 or 200000, not 98304
+//   tbconfig140000, tbconfig147456, tbconfig200000, tbconfig4294967295
+//                  the start-up's gameconfig.xml gives the most objects 140000, 147456, 200000 or 4294967295, its top bit set, not 98304
+//   tbobjects98303, tbobjects98304, tbobjects98343, tbobjects131072
+//                  so many objects counted, the textures' number making them up: below, at and past the game's own most, and at the
+//                  most STREAMED_OBJECTS' default makes it
 //   tbheapnone     the heap's two dwords both 0 when the start-up stores the most
 //   tbheapsmall, tbheapedge, tbheaptiny
 //                  they say 159744, whose 3/4 cut a key of 131072 to 119808; 131072, whose 3/4 are the game's own 98304; 98304, whose
@@ -2841,7 +2848,7 @@ static void SirenIdsHookProtect(int argc, wchar_t** argv, DWORD protection)
 }
 
 // What the options ask of a pack's files and carvariations once the base files are read, and the two sites' bytes as placed, for the report
-static struct { bool badFiles, nameBad, profile, variations, varMany, varBad, varUnreadable, varNames; } g_sirenIdsOptions = {};
+static struct { bool badFiles, nameBad, profile, variations, varMany, varBad, varUnreadable, varNames, var255, var256, varNoCarcols; } g_sirenIdsOptions = {};
 static unsigned char g_sirenIdsH3Placed[sizeof(g_sirenIdsH3)], g_sirenIdsH4Placed[sizeof(g_sirenIdsH4)];
 
 // The sites as the game has them, as the options change them, and the data: 24 siren settings with the IDs 1 to 24 (simany: 300,
@@ -2969,11 +2976,12 @@ static void SirenIdsSetup(int argc, wchar_t** argv)
 	g_sirenIdsBigPack = HasOption(argc, argv, L"sibigpack");
 	g_sirenIdsOtherObject = HasOption(argc, argv, L"siotherobject");
 	g_sirenIdsOptions = { HasOption(argc, argv, L"sibadfiles"), HasOption(argc, argv, L"sinamebad"), HasOption(argc, argv, L"siprofile"), HasOption(argc, argv, L"sivariations"),
-		HasOption(argc, argv, L"sivarmany"), HasOption(argc, argv, L"sivarbad"), HasOption(argc, argv, L"sivarunreadable"), HasOption(argc, argv, L"sivarnames") };
+		HasOption(argc, argv, L"sivarmany"), HasOption(argc, argv, L"sivarbad"), HasOption(argc, argv, L"sivarunreadable"), HasOption(argc, argv, L"sivarnames"),
+		HasOption(argc, argv, L"sivar255"), HasOption(argc, argv, L"sivar256"), HasOption(argc, argv, L"sivarnocarcols") };
 	g_sirenIdsNoAccess = static_cast<unsigned char*>(VirtualAlloc(nullptr, 2 * 4096, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE));
 	DWORD noAccessOld = 0;
 	VirtualProtect(g_sirenIdsNoAccess, 4096, PAGE_NOACCESS, &noAccessOld);
-	g_sirenIdsCapacity = many ? 304 : 64;
+	g_sirenIdsCapacity = many || g_sirenIdsOptions.var255 || g_sirenIdsOptions.var256 ? 304 : 64;
 	g_sirenIdsSettings = static_cast<unsigned char*>(VirtualAlloc(nullptr, g_sirenIdsCapacity * kSirenIdsSettingSize, MEM_RESERVE | MEM_COMMIT,
 		PAGE_READWRITE));
 	if (!g_sirenIdsLoad)
@@ -3099,11 +3107,22 @@ static void SirenIdsLater()
 				SirenIdsMountPack(profile);
 			}
 		}
+		if (g_sirenIdsOptions.var255 || g_sirenIdsOptions.var256)
+		{
+			const size_t settings = g_sirenIdsOptions.var256 ? 256 : 255;
+			for (size_t i = SirenIdsCounted(); i < settings; i++)
+				SirenIdsGive(i, static_cast<unsigned>(1000 + i));
+			SirenIdsCount(settings);
+		}
+		if (g_sirenIdsOptions.varNoCarcols)
+			g_sirenIdsPointer[0] = nullptr;
 		if (g_sirenIdsOptions.variations)
 		{
 			static const SirenIdsVehicle vehicles[] = { { "sicar0", 1 }, { "sicar1", 777 }, { "sicar2", -1 }, { "sicar3", 13 }, { "sicar4", 2000 } };
 			SirenIdsLoadVariations(vehicles, sizeof(vehicles) / sizeof(vehicles[0]));
 		}
+		if (g_sirenIdsOptions.varNoCarcols)
+			g_sirenIdsPointer[0] = g_sirenIdsCarcols;
 		if (g_sirenIdsOptions.varMany)
 		{
 			static char names[40][8];
@@ -4765,6 +4784,7 @@ alignas(4096) static unsigned char g_textureBudgetIndexPage[4096];	// where the 
 alignas(4096) static unsigned char g_textureBudgetTwoPages[2 * 4096];	// where the data lie with "tbhalfraise"
 static bool g_textureBudgetHoldRaise = false;
 static uint32_t g_textureBudgetSizes[2] = { 0x10000, 0x20000 };		// the two dwords the game adds up, as the game's start-up has them
+static uint32_t g_textureBudgetObjects = 23456;						// the objects counted, 1234 of them buffers
 static TextureBudgetHeap g_textureBudgetHeapMade = {};				// the heap as the game's device makes it, laid out in main
 static unsigned char g_textureBudgetSitesAsPlaced[sizeof(g_textureBudgetStores) + sizeof(g_textureBudgetGetter) +
 	sizeof(g_textureBudgetPlacement) + sizeof(g_textureBudgetUpdate) + sizeof(g_textureBudgetWriters) + sizeof(g_textureBudgetHeapSite) + sizeof(g_textureBudgetMaker)];
@@ -4857,7 +4877,7 @@ static void TextureBudgetSetAsTheGame(TextureBudgetData& data)
 	data.counters.buffers = (389ull << 20) + 12345;
 	data.counters.textures = (2456ull << 20) + 54321;
 	data.counters.buffersNumber = 1234;
-	data.counters.texturesNumber = 22222;
+	data.counters.texturesNumber = g_textureBudgetObjects - data.counters.buffersNumber;
 	data.counters.highest = 2900ull << 20;
 	data.index = 2;
 	data.flag = 0;
@@ -11776,8 +11796,13 @@ int wmain(int argc, wchar_t** argv)
 			g_textureBudgetSizes[1] = 0x10000;
 		if (HasOption(argc, argv, L"tbheaptiny"))	// 98304
 			g_textureBudgetSizes[1] = 0x8000;
-		g_textureBudgetConfigMost = HasOption(argc, argv, L"tbconfig140000") ? 140000 : HasOption(argc, argv, L"tbconfig147456") ? 147456 :
-			HasOption(argc, argv, L"tbconfig200000") ? 200000 : 98304;
+		g_textureBudgetConfigMost = HasOption(argc, argv, L"tbconfig140000") ? 140000u : HasOption(argc, argv, L"tbconfig147456") ? 147456u :
+			HasOption(argc, argv, L"tbconfig200000") ? 200000u : HasOption(argc, argv, L"tbconfig4294967295") ? 4294967295u : 98304u;
+		const struct { const wchar_t* option; uint32_t objects; } counted[] = { { L"tbobjects98303", 98303 }, { L"tbobjects98304", 98304 }, { L"tbobjects98343", 98343 },
+			{ L"tbobjects131072", 131072 } };
+		for (const auto& objects : counted)
+			if (HasOption(argc, argv, objects.option))
+				g_textureBudgetObjects = objects.objects;
 		if (!HasOption(argc, argv, L"tblate"))
 			TextureBudgetSetAsTheGame(data);
 		if (HasOption(argc, argv, L"tbnoindex"))	// a texture quality's index outside 0 to 3

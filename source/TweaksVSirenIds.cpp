@@ -1061,23 +1061,27 @@ namespace TweaksV
 		}
 
 		// The vehicles of a pack's carvariations whose siren setting ID finds no setting: the callback took a free entry of the ID table
-		// for its position, 0xFF, which the game's getter takes for a place past its array. Each named once, at most so many to a line;
-		// a variation that names no ID keeps its index and does not show.
+		// for its position, 0xFF, which the game's getter takes for a place past its array - but for an array of 256 settings or more, where
+		// 0xFF is a real place, the last setting's or the game's own wrong link, no hazard. So by the bound the part's getter has: a position
+		// that is not 0 and not below the array's count now. Each named once, at most so many to a line; a variation that names no ID keeps
+		// its index and does not show.
 		void LogVariations(const void* const* object)
 		{
 			const uint8_t* parsed = nullptr;
 			const uint8_t* array = nullptr;
 			uint16_t count = 0;
+			const uint8_t* const carcols = LoadedCarcols();
+			Settings settings{};
 			std::vector<std::string> vehicles;
 			bool readable = CopyMemorySafely(&parsed, object, sizeof(parsed)) && parsed && CopyMemorySafely(&array, parsed, sizeof(array)) &&
-				CopyMemorySafely(&count, parsed + kVariationsCountAt, sizeof(count));
+				CopyMemorySafely(&count, parsed + kVariationsCountAt, sizeof(count)) && carcols && ReadSettings(carcols, settings);
 			for (size_t i = 0; readable && i < count; i++)
 			{
 				uint8_t position = 0;
 				const char* name = nullptr;
 				readable = CopyMemorySafely(&position, array + i * kVariationSize + kVariationPositionAt, sizeof(position)) &&
 					CopyMemorySafely(&name, array + i * kVariationSize, sizeof(name));
-				if (readable && position == kNone)
+				if (readable && position != 0 && position >= settings.count)
 					vehicles.push_back(VehicleName(name));
 			}
 			if (!VariationLineLeft())
