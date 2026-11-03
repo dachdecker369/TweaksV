@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // TweaksV - the sirens per vehicle's damage (see TweaksVSirenDamage.h).
 //
-// A model's bone structure names the bones of siren1 to siren20 and of their glass by signed bytes, and six functions of the
+// A model's bone structure names the bones of siren1 to siren20 and of their glass by signed bytes, and eight functions of the
 // game's damage code run over those bytes: a hit near a siren breaks it, an impact marks it and another function hides what
-// the impact marked, a wreck breaks every siren whose bone exists, and four loops give the glass's fragment children their
+// the impact marked, a wreck breaks every siren whose bone exists, and four give the glass's fragment children their
 // flags. None of them reads anything else sized by 20 - only the bytes, the bits of the 32-bit sets and the bones - so they
 // are raised by constants alone (PATTERNS.md, "SirenSettings", the sirens per vehicle's damage):
 //   the room        the structures' pool's stride and the allocation grow by 64 bytes, kRoomSirenBonesAt on
@@ -281,10 +281,11 @@ namespace TweaksV
 
 		// The room, each access violation caught - false then: the room to 0xFF, the game's bytes copied in, then the game's own fill.
 		// What the fill leaves in a byte is the low byte of a bone's index, so a bone past 127 reads below 0: past siren20 it becomes
-		// -1, a bone not there, since the raised loops ask for -1 and no such byte ever reached them before; and for parity with the
-		// game's own code, which clears the bits of the bones with IDs, a bone it names has its bit of the set cleared (no reader of
-		// that set was found: a hint, PATTERNS.md). A fill that faults leaves all of them -1, whatever it had written.
-		bool FillSafely(const uint8_t* model, uint8_t* structure)
+		// -1, a bone not there, since the raised loops ask for -1 and no such byte ever reached them before, and is counted in lost,
+		// sirens then glass; and for parity with the game's own code, which clears the bits of the bones with IDs, a bone it names has
+		// its bit of the set cleared (no reader of that set was found: a hint, PATTERNS.md). A fill that faults leaves all of them -1,
+		// whatever it had written.
+		bool FillSafely(const uint8_t* model, uint8_t* structure, int* lost)
 		{
 			__try
 			{
@@ -305,10 +306,12 @@ namespace TweaksV
 			{
 				filled = false;
 			}
-			for (const int32_t kind : { kRoomSirens, kRoomGlass })
+			for (int kind = 0; kind < 2; kind++)
 				for (int k = kGameSirens; k < kRoomBones; k++)
 				{
-					int8_t& bone = reinterpret_cast<int8_t&>(structure[kind + k]);
+					int8_t& bone = reinterpret_cast<int8_t&>(structure[(kind ? kRoomGlass : kRoomSirens) + k]);
+					if (filled && bone < -1)
+						lost[kind]++;
 					if (!filled || bone < 0)
 						bone = -1;
 					else
@@ -317,8 +320,9 @@ namespace TweaksV
 			return filled;
 		}
 
-		// With DIAGNOSTIC_MODE=1: a line for each model the room gives bones past siren20, which says that the game's fill found them.
-		void LogRoom(uint32_t hash, const uint8_t* structure)
+		// With DIAGNOSTIC_MODE=1: a line for each model the room gives bones past siren20, which says that the game's fill found them,
+		// or that loses some past bone 127, which a signed byte cannot name.
+		void LogRoom(uint32_t hash, const uint8_t* structure, const int* lost)
 		{
 			int found[2] = {}, highest[2] = {};
 			for (int kind = 0; kind < 2; kind++)
@@ -328,7 +332,7 @@ namespace TweaksV
 						found[kind]++;
 						highest[kind] = k + 1;
 					}
-			if (!found[0] && !found[1])
+			if (!found[0] && !found[1] && !lost[0] && !lost[1])
 				return;
 			const uint64_t line = g_roomLines.fetch_add(1, std::memory_order_relaxed) + 1;
 			if (line == kMaxLinesPerKind + 1)
@@ -338,8 +342,13 @@ namespace TweaksV
 			char model[32];
 			snprintf(model, sizeof(model), "vehicle model 0x%08X", hash);
 			const auto upTo = [&](int kind, const char* name) { return highest[kind] ? name + std::to_string(highest[kind]) : "no " + std::string(name); };
-			WriteLog(kTag, std::string("DIAGNOSTIC: the room of ") + model + " holds " + std::to_string(found[0]) + " siren and " + std::to_string(found[1]) +
-				" glass bones past siren20, up to " + upTo(0, "siren") + " and " + upTo(1, "siren_glass") + ".");
+			std::string text = std::string("DIAGNOSTIC: the room of ") + model + " holds " + std::to_string(found[0]) + " siren and " + std::to_string(found[1]) +
+				" glass bones past siren20";
+			if (found[0] || found[1])
+				text += ", up to " + upTo(0, "siren") + " and " + upTo(1, "siren_glass");
+			if (lost[0] || lost[1])
+				text += "; lost past bone 127: " + std::to_string(lost[0]) + " siren and " + std::to_string(lost[1]) + " glass";
+			WriteLog(kTag, text + ".");
 		}
 
 		// What keeps a model from its room is said once, in the box of a part that stopped working; such a model's sirens past 20
@@ -361,12 +370,13 @@ namespace TweaksV
 				uint32_t hash = 0;
 				CopyMemorySafely(&hash, model + kNameHashAt, sizeof(hash));
 				uint8_t* structure = nullptr;
+				int lost[2] = {};
 				if (!ReadStructure(model, structure))
 					RoomNotFilled(hash, "has a bone structure that cannot be read (the model info's +0xB0)");
-				else if (structure && !FillSafely(model, structure))
+				else if (structure && !FillSafely(model, structure, lost))
 					RoomNotFilled(hash, "faulted while its room was filled (an access violation)");
 				else if (structure && IsDiagnosticMode())
-					LogRoom(hash, structure);
+					LogRoom(hash, structure, lost);
 			}
 			catch (...)
 			{
@@ -406,8 +416,14 @@ namespace TweaksV
 			else
 			{
 				found[i] = Scanner::FindAll(*kSites[i].pattern, kSites[i].matches + 1);
-				if (found[i].size() != kSites[i].matches && notFound.empty())
-					notFound = Scanner::NotAsOften(*kSites[i].pattern, found[i].size(), kSites[i].matches);
+				if (found[i].size() != kSites[i].matches)
+				{
+					const std::string why = Scanner::NotAsOften(*kSites[i].pattern, found[i].size(), kSites[i].matches);
+					if (notFound.empty())
+						notFound = why;
+					else if (!found[i].empty())		// the problem names the first; the scanner logs only a miss
+						WriteLog(kTag, why + ".");
+				}
 			}
 		if (!notFound.empty())
 		{
@@ -450,22 +466,25 @@ namespace TweaksV
 			return false;
 		}
 
-		// 4. the pool not made yet: every structure must be made with the room, and one asked of a pool of the old stride traps. The
-		// load before the allocation is read by its shape, since no pattern pins it; another shape leaves this check unmade, said.
+		// 4. the pool not made yet: every structure must be made with the room, and one asked of a pool of the old stride traps. No
+		// pattern pins the load before the allocation, so it is read by its shape, and any other is a site not as the research has it.
 		const uint8_t* const load = allocation - sizeof(kPoolLoad) - sizeof(int32_t);
 		const uint8_t* const pool = IsReadable(load, sizeof(kPoolLoad) + sizeof(int32_t)) && memcmp(load, kPoolLoad, sizeof(kPoolLoad)) == 0 ?
 			Rel32Target(load + sizeof(kPoolLoad)) : nullptr;
-		const bool poolRead = pool && IsInsideGameImage(pool) && IsReadable(pool, sizeof(uint64_t));
-		const uint64_t poolHolds = poolRead ? ValueAt<uint64_t>(pool) : 0;
-		if (poolHolds)
+		if (!pool || !IsInsideGameImage(pool) || !IsReadable(pool, sizeof(uint64_t)))
+		{
+			SirensNotRaised("the bone structures' pool cannot be read: no load of it before the allocation at " + DescribeAddress(allocation) +
+				At(*kSites[kAllocation].pattern) + ". Vehicles keep 20 sirens.");
+			return false;
+		}
+		if (ValueAt<uint64_t>(pool))
 		{
 			SirensNotRaised("the bone structures' pool at " + DescribeAddress(pool) + " is made already, so TweaksV has started too late to give its structures their "
 				"room" + At(*kSites[kAllocation].pattern) + ". Vehicles keep 20 sirens.");
 			return false;
 		}
 		if (IsDiagnosticMode())
-			WriteLog(kTag, poolRead ? "DIAGNOSTIC: the bone structures' pool at " + DescribeAddress(pool) + " is not made yet" + At(*kSites[kAllocation].pattern) :
-				"DIAGNOSTIC: the bone structures' pool cannot be read: no load of it before the allocation at " + DescribeAddress(allocation) + At(*kSites[kAllocation].pattern));
+			WriteLog(kTag, "DIAGNOSTIC: the bone structures' pool at " + DescribeAddress(pool) + " is not made yet" + At(*kSites[kAllocation].pattern));
 
 		// 5. the game's fill: a function start by the game's unwind data, as the wrapper calls it
 		const uint8_t* const filling = FunctionStartOf(fill);
