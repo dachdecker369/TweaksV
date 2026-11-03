@@ -148,6 +148,7 @@ namespace TweaksV
 			"Ray tracing buffer for moving objects in vertices, 0 = the game's own - Maximum 26843545"),
 
 		Switch(kLightCapacitySection, "ENABLED", true),
+		Number(kLightCapacitySection, "CORONA_STORE", 4096, 1088, 8192, "Number of coronas a frame holds, 1088 = the game's own - Maximum 8192"),
 
 		Switch(kSirenSettingsSection, "ENABLED", true),
 		Switch(kSirenSettingsSection, "LARGE_SIREN_IDS", true, "Siren setting IDs up to 65535 (game: 255)"),
@@ -157,7 +158,7 @@ namespace TweaksV
 		Number(kStaticBoundsSection, "STATICBOUNDS_SIZE", 16000, 1, 32767, "Number of static collision bounds - Maximum 32767"),
 	};
 
-	// The keys the default TweaksV.ini holds: layout 5 has 45.
+	// The keys the default TweaksV.ini holds: layout 5 has 46.
 	consteval size_t IniKeyCount()
 	{
 		size_t keys = 0;
@@ -166,7 +167,7 @@ namespace TweaksV
 				keys++;
 		return keys;
 	}
-	static_assert(IniKeyCount() == 45, "TweaksV: layout 5 of TweaksV.ini has 45 keys - a new key means a new layout");
+	static_assert(IniKeyCount() == 46, "TweaksV: layout 5 of TweaksV.ini has 46 keys - a new key means a new layout");
 
 	// The column at which a key's comment starts in the default file, the same for every key.
 	inline constexpr size_t kIniCommentColumn = 28;
@@ -235,6 +236,7 @@ namespace TweaksV
 	inline constexpr const Setting& kWeaponComponentsSize = FindSetting(kWeaponLimitsSection, "WEAPON_COMPONENTS_SIZE");
 	inline constexpr const Setting& kVideoMemoryBudget = FindSetting(kResourcesSection, "VIDEO_MEMORY_BUDGET");
 	inline constexpr const Setting& kDynamicBvhVertices = FindSetting(kRayTracingSection, "DYNAMIC_BVH_VERTICES");
+	inline constexpr const Setting& kCoronaStore = FindSetting(kLightCapacitySection, "CORONA_STORE");
 	inline constexpr const Setting& kLargeSirenIds = FindSetting(kSirenSettingsSection, "LARGE_SIREN_IDS");
 	inline constexpr const Setting& kSirensPerVehicle = FindSetting(kSirenSettingsSection, "SIRENS_PER_VEHICLE");
 	inline constexpr const Setting& kStaticBoundsSize = FindSetting(kStaticBoundsSection, "STATICBOUNDS_SIZE");

@@ -38,15 +38,15 @@ skip() { echo "SKIP  $1"; pass=$((pass+1)); }
 # TweaksV.ini in B, with CRLF line endings, as TweaksV writes it.
 # fresh_ini [FILE]: a copy of FILE from this folder (default $INI), without message boxes; with PEDPROPS_ON set, in
 # a suite that runs that part, which ships off and which base.ini has off as the default file does, with [PEDPROPS] on.
-# base.ini has [LIGHTCAPACITY] off and SIRENS_PER_VEHICLE at 20, unlike the default file, so that a suite about something else
-# meets the game's sites and the call stubs it has always met: with STORES_ON set, [LIGHTCAPACITY] on; with SIRENS_ON set, that
-# and SIRENS_PER_VEHICLE at 32, as the default file has them.
+# base.ini has [LIGHTCAPACITY] off, CORONA_STORE at 1088 and SIRENS_PER_VEHICLE at 20, unlike the default file, so that a suite about
+# something else meets the game's sites and the call stubs it has always met: with STORES_ON set, [LIGHTCAPACITY] on; with SIRENS_ON
+# set, that, CORONA_STORE at 4096 and SIRENS_PER_VEHICLE at 32, as the default file has them.
 # setkey KEY VALUE [SECTION [FILE]]: the first KEY in the file, or the KEY in [SECTION] ("" for the first
 # KEY), in FILE (default TweaksV.ini).
 # addkey KEY VALUE: a key under [TWEAKSV] that the file does not have yet.
 INI=base.ini
 fresh_ini() { sed 's/$/\r/' "$T/${1:-$INI}" > TweaksV.ini; setkey ERROR_POPUP 0; [ -z "${PEDPROPS_ON:-}" ] || setkey ENABLED 1 PEDPROPS
-	[ -z "${STORES_ON:-}${SIRENS_ON:-}" ] || setkey ENABLED 1 LIGHTCAPACITY; [ -z "${SIRENS_ON:-}" ] || setkey SIRENS_PER_VEHICLE 32 SIRENSETTINGS; }
+	[ -z "${STORES_ON:-}${SIRENS_ON:-}" ] || setkey ENABLED 1 LIGHTCAPACITY; [ -z "${SIRENS_ON:-}" ] || { setkey CORONA_STORE 4096 LIGHTCAPACITY; setkey SIRENS_PER_VEHICLE 32 SIRENSETTINGS; }; }
 setkey() {
 	if [ -n "${3:-}" ]; then sed -b -i "/^\[$3\]/,/^\[/s/^$1=.*\r\$/$1=$2\r/" "${4:-TweaksV.ini}"
 	else sed -b -i "0,/^$1=.*\r\$/s//$1=$2\r/" "${4:-TweaksV.ini}"; fi

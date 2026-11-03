@@ -126,6 +126,7 @@
     <ClCompile Include="TweaksVBlips.cpp" />
     <ClCompile Include="TweaksVBoxStreamer.cpp" />
     <ClCompile Include="TweaksVConflicts.cpp" />
+    <ClCompile Include="TweaksVCoronaStore.cpp" />
     <ClCompile Include="TweaksVDecals.cpp" />
     <ClCompile Include="TweaksVDirectStorage.cpp" />
     <ClCompile Include="TweaksVDump.cpp" />
@@ -181,6 +182,7 @@
     <ClInclude Include="TweaksVBlips.h" />
     <ClInclude Include="TweaksVBoxStreamer.h" />
     <ClInclude Include="TweaksVConflicts.h" />
+    <ClInclude Include="TweaksVCoronaStore.h" />
     <ClInclude Include="TweaksVDecals.h" />
     <ClInclude Include="TweaksVDirectStorage.h" />
     <ClInclude Include="TweaksVDump.h" />

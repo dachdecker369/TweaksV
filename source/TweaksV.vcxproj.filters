@@ -22,6 +22,9 @@
     <ClCompile Include="TweaksVConflicts.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
+    <ClCompile Include="TweaksVCoronaStore.cpp">
+      <Filter>TweaksV</Filter>
+    </ClCompile>
     <ClCompile Include="TweaksVDecals.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
@@ -148,6 +151,9 @@
       <Filter>TweaksV</Filter>
     </ClInclude>
     <ClInclude Include="TweaksVConflicts.h">
+      <Filter>TweaksV</Filter>
+    </ClInclude>
+    <ClInclude Include="TweaksVCoronaStore.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
     <ClInclude Include="TweaksVDecals.h">
