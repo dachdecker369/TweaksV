@@ -164,7 +164,7 @@ echo "== SB16 the store made before TweaksV loaded, never again (test build, TWE
 export TWEAKSV_TEST_STATICBOUNDS_CHECK=2
 fresh_ini; setkey ERROR_POPUP 1; out=$(ASI=TweaksV_test.asi game full_game.exe sbearly script sbwait)
 check "the problem, word for word, once" "log_line '$NOT_ASKED' && [ \$(count 'did not ask') -eq 1 ]"
-check "shown after the start-up summary, in a box of its own" "log_has 'Showing a problem after the start-up summary (1 problem(s)).' && log_has 'TEST BUILD: message box not shown (TWEAKSV_TEST_NO_BOXES=1): TweaksV: a part stopped working after the start-up:'"
+check "shown after the start-up summary, in a box of its own" "log_has 'Showing a problem after the start-up summary (1 problem(s)).' && log_has 'TEST BUILD: message box not shown (TWEAKSV_TEST_NO_BOXES=1): A module stopped working after launch:'"
 check "the store through the game's lookup before TweaksV, the redirect made all the same, no sizes line, no read-back" "has '${STUB}$(store_is 12000)' && [ \$(said) -eq 0 ] && log_lacks 'after all, after the check' && no_back"
 
 echo "== SB17 the store never made, the others made (test build): reported"
@@ -223,7 +223,7 @@ check "the conflict check's line and the part's, word for word; no hook of the s
 # a check that cannot be made: its problem, word for word but for the reason, once; the start-up summary's box with N problems; no check made; no hook of the script programs made by the part
 NOT_CHECKED="${TAG}PROBLEM: The check that the game asks for the static bounds store.s size is not done this session: "
 not_checked() { log_line "${NOT_CHECKED}$1\$" && [ $(count 'size is not done this session: ') -eq 1 ]; }
-boxed() { log_has "Showing the start-up summary ($1 problem(s))." && log_has 'TEST BUILD: message box not shown (TWEAKSV_TEST_NO_BOXES=1): TweaksV could not apply everything:'; }
+boxed() { log_has "Showing the start-up summary ($1 problem(s))." && log_has 'TEST BUILD: message box not shown (TWEAKSV_TEST_NO_BOXES=1): There was an error and TweaksV couldn.t apply all patches\.'; }
 unchecked() { log_lacks 'The static bounds check waits' && log_lacks 'did not ask'; }
 unhooked() { log_lacks 'natives. resolution call at RVA 0x[0-9A-F]* is redirected' && has 'through the game function'; }
 

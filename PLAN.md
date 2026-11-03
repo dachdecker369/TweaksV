@@ -276,13 +276,15 @@ Then 2.8.0 set - the project's version, the specification's header example and i
 - **The airport, three attempts with real cars:** no load, which D44 answers: at most 143 vehicle lights, 225 vehicle coronas, scene lights 511, a job's 82 coronas.
   The first ended in the game's trap at `+0x127C32F`, a Legacy `lfpolice` car I spawned ("Packs", below), at none of the raises' sites.
 
-**What is left:**
+- **Start 5, the load,** 6 minutes, the test build of 4226c6d (D44), `TEST_SIREN_PASSES=16` for one start's margin, about 10 cars of `hp16fpiu1`, sirens on, all in view: no crash, the one `PROBLEM` `lfpolice`'s Legacy box, my folder's name gone from the log.
+  Past the game's numbers, at last: vehicle lights 1,023 of 10,800, vehicle coronas 2,027 of 18,000, coronas 2,507 of 4,096, none refused, a job's lists at their room, 180 and 300, 2,252,028 lights refused as the load asks, and the scene store at its 1,024 with the sort list marked in 3,575 of 30,090 samples.
+  By my eye the lights flicker hard and the frame rate is about half, the overload's own.
+- **Start 6, the build as it ships,** 5 minutes, the Release build of 4226c6d, no `TweaksV.ini`: `Created TweaksV.ini with the default settings.`, the one `PROBLEM` `lfpolice`'s Legacy box, every part applied, no `TEST BUILD` line, no user name.
 
-5. **The load, a start of its own,** the test build (D44), `DIAGNOSTIC_MODE=1`, `TEST_SIREN_PASSES=8` under `[TWEAKSV]`, about 6 to 10 cars of `hp16fpiu1`, sirens on, all in view from outside the group.
-   The log: vehicle lights past 400, vehicle coronas past 928, a job past 200 coronas, how many a job refused, the scene store at its room with the sort list marked; no crash.
-   Fewer than that: `TEST_SIREN_PASSES` higher, up to 31.
-6. **The build as it ships:** the rebuilt Release build, a fresh `TweaksV.ini` from the build's defaults, no `DIAGNOSTIC_MODE`: line 1 names 2.8.0 and the commit without `-dirty`, the one `PROBLEM` `lfpolice`'s Legacy box, every part applied, `VIDEO_MEMORY_BUDGET` at 6000 and `STREAMED_OBJECTS` at its default.
-   This is the build that is tagged.
+no key, value or `PROBLEM` text changed.
+
+**What is left:** one short boot of the Release build with those words, no `TweaksV.ini`: line 1 names 2.8.0 and the commit without `-dirty`, the one `PROBLEM` `lfpolice`'s Legacy box, every part applied, the new file in the game folder.
+This is the build that is tagged.
 
 Then the tag 2.8.0, the searches and one atomic push.
 The hat of T-PEDPROPS is a start of its own.
@@ -330,7 +332,8 @@ The hat of T-PEDPROPS is a start of its own.
 
 **State:** 2.7.0, phase C's first build, is tagged on 7fa28da and pushed, my proof passed on it, and 2.2.1 stays the last one published.
 2.8.0 is planned from my proof's numbers (D34 to D43) and its round runs now: the three research passes, the five coding tracks and the one review are done and merged on main, every fix in.
-2.8.0 is set here, with its proof on the merged tree, 2986 checks; starts 1 to 4 of my boots passed on the build of b14ece2, and the load on the test build comes next (D44), then the build as it ships on the rebuilt Release, the tag and one atomic push.
+2.8.0 is set here, with its proof on the merged tree, 2986 checks; my boots' six starts passed, the load past the stores' numbers among them (D44), and the new wording of the default file and the popups came after them.
+One short boot of that build comes next, then the tag and one atomic push.
 It takes the sirens per vehicle as the hybrid at 32 by default (D23, D38), the light stores as a sixteenth part (D30, D39), `VIDEO_MEMORY_BUDGET` at 6000 by default (D33), `STREAMED_OBJECTS` at 131072 on my proof's number (D37), `CORONA_STORE` at 4096 (D35), and the vehicle budget's raise in my `gameconfig.xml` in my proof (D-V5).
 The ray traced list gets a count and no sort (D36), and the ped pool, the render queues and the ped budget stay as they are (D43).
 The open issues are T-HARDEN, T-DIAG, T-FREEZE, T-PEDPROPS and T-DESCRIPTORS.

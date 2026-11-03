@@ -271,7 +271,7 @@ check "the sites and the data as placed, every page's protection its own, no pro
 
 echo "== PP38 no TweaksV.ini: the file TweaksV writes has the part off and says it is experimental, and the part does nothing"
 rm -f TweaksV.ini; out=$(game full_game.exe)
-check "[PEDPROPS] in the new file: ENABLED=0 with its comment, word for word" "[ \"\$(tr -d '\r' < TweaksV.ini | sed -n '/^\[PEDPROPS\]/{n;p}')\" = 'ENABLED=0                   //EXPERIMENTAL & UNTESTED - USE AT YOUR OWN RISK!!!' ]"
+check "[PEDPROPS] in the new file: ENABLED=0 with its comment, word for word" "[ \"\$(tr -d '\r' < TweaksV.ini | sed -n '/^\[PEDPROPS\]/{n;p}')\" = 'ENABLED=0                       //HIGHLY EXPERIMENTAL & UNTESTED - USE AT YOUR OWN RISK!!!' ]"
 check "the part off in the header, no line of it, the sites as placed, no problem" "log_has 'Features: .*, PedProps off, Resources' && log_lacks '\[PedProps\]' && has '$ASIS' && log_lacks 'PROBLEM'"
 
 echo

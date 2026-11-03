@@ -91,10 +91,10 @@ namespace TweaksV
 		Switch(kTweaksVSection, "LOG", true, "Writes to TweaksV.log"),
 		Switch(kTweaksVSection, "DIAGNOSTIC_MODE", false, "TESTING ONLY: logs patterns, sites and measurements"),
 		Switch(kTweaksVSection, "DRY_RUN", false, "TESTING ONLY: turns off game patching"),
-		Switch(kTweaksVSection, "CONSOLE", false, "Console window showing .log while the game is running"),
+		Switch(kTweaksVSection, "CONSOLE", false, "Shows a console window with the log while the game is running"),
 		Switch(kTweaksVSection, "ERROR_POPUP", true, "Shows error message popups"),
-		Switch(kTweaksVSection, "CONFLICT_CHECK", true, "Turns off TweaksV parts while other plugins that do the same thing are installed"),
-		Number(kTweaksVSection, "VERSION", kIniLayoutVersion, kIniFirstLayout, 1000000, "This file's version - leave this line alone!"),
+		Switch(kTweaksVSection, "CONFLICT_CHECK", true, "Turns off TweaksV modules while other duplicate plugins are installed"),
+		Number(kTweaksVSection, "VERSION", kIniLayoutVersion, kIniFirstLayout, 1000000, "This file's version - LEAVE THIS ALONE!"),
 		TestText(kTweaksVSection, "TEST_BREAK_PATTERN"),
 		TestText(kTweaksVSection, "TEST_TWICE_PATTERN"),
 		TestText(kTweaksVSection, "TEST_LOG_LIMIT_KB"),
@@ -105,7 +105,7 @@ namespace TweaksV
 
 		Switch(kHeapSection, "ENABLED", true),
 		Number(kHeapSection, "HEAP_SIZE", 2000, 1, 2047, "Heap size in MB - Maximum 2047"),
-		Number(kHeapSection, "POOL_MEMORY", 256, 136, 2047, "Memory budget of the game's pools in MB - Maximum 2047"),
+		Number(kHeapSection, "POOL_MEMORY", 256, 136, 2047, "Memory budget of game pools in MB - Maximum 2047"),
 
 		Switch(kModkitSection, "ENABLED", true),
 		Number(kModkitSection, "MODKITARRAY_SIZE", 65536, 1, 65536, "Number of modkit IDs - Maximum 65536"),
@@ -121,7 +121,7 @@ namespace TweaksV
 
 		Switch(kRageOpenVSection, "ENABLED", true),
 		Switch(kRageOpenVSection, "MODS_FOLDER", true, "Loads \"mods\" folder in game directory"),
-		Switch(kRageOpenVSection, "OPEN_RPF", true, "Allows unencrypted (\"OPEN\") RPF archives"),
+		Switch(kRageOpenVSection, "OPEN_RPF", true, "Allows loading unencrypted (\"OPEN\") RPF archives"),
 		Switch(kRageOpenVSection, "SKIP_RPF_CACHE_CHECK", true, "Skips game RPF cache check"),
 
 		Switch(kStoryModeSection, "ENABLED", true),
@@ -130,31 +130,31 @@ namespace TweaksV
 		Switch(kStoryModeSection, "SKIP_LANDING_PAGE", true, "Skips Landing Page"),
 
 		Switch(kDirectStorageSection, "ENABLED", true),
-		Switch(kDirectStorageSection, "UNLOCK_FILES", true, "Keeps game directory files writable (not .rpf/.cache)"),
+		Switch(kDirectStorageSection, "UNLOCK_FILES", true, "Keeps game directory files writable - not .rpf & .cache"),
 
 		Switch(kBlipsSection, "ENABLED", true),
-		Number(kBlipsSection, "ACTIVE_BLIP_LIMIT", 1900, 150, 1997, "Number of map blips before the game stops adding its own - Maximum 1997"),
+		Number(kBlipsSection, "ACTIVE_BLIP_LIMIT", 1900, 150, 1997, "Number of map blips before game stops adding its own - Maximum 1997"),
 
 		Switch(kWeaponLimitsSection, "ENABLED", true),
 		Number(kWeaponLimitsSection, "WEAPON_INFO_FILES", 1024, 160, 16384, "Number of weapons.meta files - Maximum 16384"),
 		Number(kWeaponLimitsSection, "WEAPON_COMPONENTS_SIZE", 1024, 470, 16384, "Number of weapon component definitions - Maximum 16384"),
 
-		Switch(kPedPropsSection, "ENABLED", false, "EXPERIMENTAL & UNTESTED - USE AT YOUR OWN RISK!!!"),
+		Switch(kPedPropsSection, "ENABLED", false, "HIGHLY EXPERIMENTAL & UNTESTED - USE AT YOUR OWN RISK!!!"),
 
 		Switch(kResourcesSection, "ENABLED", true),
-		Number(kResourcesSection, "VIDEO_MEMORY_BUDGET", 6000, 0, 16384, "Video memory for streamed textures in MB, 0 = the game's own - Maximum 16384"),
-		Number(kResourcesSection, "STREAMED_OBJECTS", 131072, 0, 147456, "Most streamed textures and buffers, 0 = the game's own (98304) - Maximum 147456"),
+		Number(kResourcesSection, "VIDEO_MEMORY_BUDGET", 6000, 0, 16384, "Video memory of streamed textures in MB - Maximum 16384 (0 = game controlled)"),
+		Number(kResourcesSection, "STREAMED_OBJECTS", 131072, 0, 147456, "Most streamed textures and buffers - Maximum 147456 (0 = game controlled)"),
 
 		Switch(kRayTracingSection, "ENABLED", true),
 		Number(kRayTracingSection, "DYNAMIC_BVH_VERTICES", 0, 0, 26843545,
-			"Ray tracing buffer for moving objects in vertices, 0 = the game's own - Maximum 26843545"),
+			"Ray tracing buffer of moving objects in vertices - Maximum 26843545 (0 = game controlled)"),
 
 		Switch(kLightCapacitySection, "ENABLED", true),
-		Number(kLightCapacitySection, "CORONA_STORE", 4096, 1088, 8192, "Number of coronas a frame holds, 1088 = the game's own - Maximum 8192"),
+		Number(kLightCapacitySection, "CORONA_STORE", 4096, 1088, 8192, "Number of coronas a single frame holds - Maximum 8192 (1088 = game controlled)"),
 
 		Switch(kSirenSettingsSection, "ENABLED", true),
-		Switch(kSirenSettingsSection, "LARGE_SIREN_IDS", true, "Siren setting IDs up to 65535 (game: 255)"),
-		Number(kSirenSettingsSection, "SIRENS_PER_VEHICLE", 32, 20, 32, "Number of sirens a vehicle lights, 20 = the game's own - Maximum 32"),
+		Switch(kSirenSettingsSection, "LARGE_SIREN_IDS", true, "Allows siren setting IDs up to 65535"),
+		Number(kSirenSettingsSection, "SIRENS_PER_VEHICLE", 32, 20, 32, "Number of siren lights per vehicle - Maximum 32 (20 = game controlled)"),
 
 		Switch(kStaticBoundsSection, "ENABLED", true),
 		Number(kStaticBoundsSection, "STATICBOUNDS_SIZE", 16000, 1, 32767, "Number of static collision bounds - Maximum 32767"),
@@ -172,7 +172,7 @@ namespace TweaksV
 	static_assert(IniKeyCount() == 47, "TweaksV: layout 5 of TweaksV.ini has 47 keys - a new key means a new layout");
 
 	// The column at which a key's comment starts in the default file, the same for every key.
-	inline constexpr size_t kIniCommentColumn = 28;
+	inline constexpr size_t kIniCommentColumn = 32;
 
 	// Every KEY=default that carries a comment ends short of the comment column, so that at least one
 	// blank stands before the comment; a key too long for it does not build.

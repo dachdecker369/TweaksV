@@ -60,8 +60,8 @@ field() { has "weapon infos: limits $1, loader $2, the rest as laid, array $3, f
 # problems by their words, never every line of the tag, a box's count of problems or every problem of a run.
 # boxed: the start-up summary shown, its box kept off the screen by the test build; late: the guard's finding, one box of
 # its own; quiet: no problem of this half - its two jobs' and its report's
-boxed() { log_has 'Showing the start-up summary (' && log_has 'TEST BUILD: message box not shown (TWEAKSV_TEST_NO_BOXES=1): TweaksV could not apply everything:'; }
-late() { [ "$(count 'Showing a finding (')" -eq 1 ] && log_line 'TEST BUILD: message box not shown (TWEAKSV_TEST_NO_BOXES=1): TweaksV: WeaponLimits refused files the game has no room for: \.\.\. The game continues without the files refused\.$'; }
+boxed() { log_has 'Showing the start-up summary (' && log_has 'TEST BUILD: message box not shown (TWEAKSV_TEST_NO_BOXES=1): There was an error and TweaksV couldn.t apply all patches\.'; }
+late() { [ "$(count 'Showing a finding (')" -eq 1 ] && log_line 'TEST BUILD: message box not shown (TWEAKSV_TEST_NO_BOXES=1): WeaponLimits refused some files because there is no room: \.\.\. The game will continue without the refused files\.$'; }
 quiet() { log_lacks "$W PROBLEM: The weapon info blob limit" && log_lacks "$W PROBLEM: The weapons.meta file"; }
 # failing: TweaksV.ini for a run of the test build with DIAGNOSTIC_MODE=1 and ERROR_POPUP=1; run_test OPTION...: that run
 failing() { fresh_ini; setkey DIAGNOSTIC_MODE 1; setkey ERROR_POPUP 1; }

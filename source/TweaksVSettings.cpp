@@ -215,14 +215,14 @@ namespace TweaksV
 	{
 		// the header, and a short comment after each key's value: README.md explains the keys in full
 		std::string text =
-			"; ===========================================================================\r\n"
+			"; =================================================================================\r\n"
 			"; TweaksV.asi Configuration File (GTA V Enhanced)\r\n"
-			"; 1 = on, 0 = off (true/false also work)\r\n"
-			"; TweaksV.ini in the game folder takes priority over %LOCALAPPDATA%\\TweaksV\\\r\n"
-			"; Delete this file to get a fresh one with default values on next game boot\r\n"
-			"; Missing settings are added back by TweaksV with the default value\r\n"
-			"; For more details on what each setting does, check the README.md\r\n"
-			"; ===========================================================================\r\n";
+			"; 1 = on, 0 = off ('true'/'false' also work)\r\n"
+			"; TweaksV.ini in game directory always takes priority over %LOCALAPPDATA%\\TweaksV\\\r\n"
+			"; Delete this file to get a fresh one with default values on next game launch\r\n"
+			"; Missing settings are added back automatically with the default values\r\n"
+			"; More details on what each setting does can be found in the \"README.md\"\r\n"
+			"; =================================================================================\r\n";
 		for (const SettingsSection* section : kSections)
 		{
 			text += "\r\n[" + std::string(section->name) + "]\r\n";

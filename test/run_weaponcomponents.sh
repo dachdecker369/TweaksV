@@ -148,12 +148,12 @@ unset TWEAKSV_TEST_SUMMARY_MS
 check "the load leads to the game's own list again: 16 loads to the moved list, 1 to the game's" "has 'wc: loads 16 moved 1 game 0 other, moved list RW, copied then 0, other bytes as placed'"
 check "the problem, word for word, once" "[ \$(count 'is not kept this session') -eq 1 ] && log_line '${TAG}PROBLEM: The weapon components limit is not kept this session: the load of the weapon component list at $RVA leads to the game.s own list at RVA 0x[0-9A-F]* again, not to the moved list at 0x[0-9A-F]* (outside the game) - the game has put it back, and a search through it reads the game.s own list, empty since the move: the game is likely to crash.\$'"
 check "the summary again, with the load put back, word for word" "summary 412 23 ', this one 1024).' && summary 412 23 ', this one 1024) - a load of the list has changed, reported above.' && [ \$(summaries) -eq 2 ]"
-check "the box of a part that stopped working after the start-up" "log_has 'Showing a problem after the start-up summary (' && log_has 'TEST BUILD: message box not shown (TWEAKSV_TEST_NO_BOXES=1): TweaksV: a part stopped working after the start-up:'"
+check "the box of a part that stopped working after the start-up" "log_has 'Showing a problem after the start-up summary (' && log_has 'TEST BUILD: message box not shown (TWEAKSV_TEST_NO_BOXES=1): A module stopped working after launch:'"
 
 echo "== W13 TEST_BREAK_PATTERN=W-E-C1 (test build, ERROR_POPUP=1): the problem in the start-up summary, nothing written"
 fresh_ini; setkey ERROR_POPUP 1; addkey TEST_BREAK_PATTERN W-E-C1; out=$(ASI=TweaksV_test.asi game full_game.exe)
 check "the scanner's line and the problem, word for word" "log_has 'TEST BUILD: pattern W-E-C1 is treated as not found (TEST_BREAK_PATTERN).' && refused 'W-E-C1 was not found.'"
-check "the start-up summary's box" "log_has 'Showing the start-up summary (' && log_has 'TEST BUILD: message box not shown (TWEAKSV_TEST_NO_BOXES=1): TweaksV could not apply everything:'"
+check "the start-up summary's box" "log_has 'Showing the start-up summary (' && log_has 'TEST BUILD: message box not shown (TWEAKSV_TEST_NO_BOXES=1): There was an error and TweaksV couldn.t apply all patches\.'"
 check "the size call to the game's lookup" "has '$GAME'"
 
 echo "== W14 TEST_BREAK_PATTERN=W-E-C4 (test build): the last of the four, refused by its label"
@@ -219,7 +219,7 @@ check "the test build's line once, the guard's room the game's own 470, word for
 check "the loader's head, word for word" "log_line '${DIAG}the weapon components. loader at $RVA (W-E-C5 - 0x13): no unwind data, byte before it 90\$'"
 check "files 01 to 07 let in while fewer than 470 are loaded, 08 to 11 refused, a line each" "[ \$(file 0[1-7] 'let in') -eq 7 ] && [ \$(file '\(08\|09\|10\|11\)' refused) -eq 4 ] && [ \$(count 'definitions loaded, the room') -eq 11 ]"
 check "the first refused file's problem, word for word, once" "[ \$(count 'Weapon component files are refused this session') -eq 1 ] && log_line '${GUARD_PROBLEM}08/common/data/weaponcomponents.meta, the first, came once 472 definitions were loaded, the room being 470, the test build.s (TWEAKSV_TEST_GUARD_ROOM=1) - the weapon components of the files refused are missing in the game. The log names every file refused.\$'"
-check "the box for the first file refused, its heading and last line those of a guard's refusal (the test build's line in its place)" "log_line 'TEST BUILD: message box not shown (TWEAKSV_TEST_NO_BOXES=1): TweaksV: WeaponLimits refused files the game has no room for: \.\.\. The game continues without the files refused\.\$' && [ \$(count 'Showing a finding (1 finding(s))\.') -eq 1 ]"
+check "the box for the first file refused, its heading and last line those of a guard's refusal (the test build's line in its place)" "log_line 'TEST BUILD: message box not shown (TWEAKSV_TEST_NO_BOXES=1): WeaponLimits refused some files because there is no room: \.\.\. The game will continue without the refused files\.\$' && [ \$(count 'Showing a finding (1 finding(s))\.') -eq 1 ]"
 check "7 files loaded, every callback destroyed once - the refused ones by the guard - the list's count 472; the mounter's last error found for all 11, at the loader's entry for those let in, on the return for those refused" "has 'files mounted 11, loaded 7, destroyed 11 (0 on the heap), list 472, last error kept 11, callables left 0'"
 check "the game made the pool before the files: its line before the guard's first, no problem of the pool's size" "replaced 470 1494 && [ \$(grep -n 'for the weapon components, 470, is replaced by 1494' TweaksV.log | cut -d: -f1) -lt \$(grep -n -m1 'definitions loaded, the room' TweaksV.log | cut -d: -f1) ] && log_lacks 'PROBLEM: The weapon components. pool size'"
 

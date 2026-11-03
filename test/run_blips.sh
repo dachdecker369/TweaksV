@@ -99,7 +99,7 @@ check "one problem, shown after the start-up summary; the second placement a lin
 
 echo "== L16 a problem after the start-up summary, test build, ERROR_POPUP=1: a box of its own"
 fresh_ini; setkey ERROR_POPUP 1; out=$(ASI=TweaksV_test.asi game full_game.exe script bliptwice)
-check "the box of a part that stopped working after the start-up" "log_has 'Showing a problem after the start-up summary (1 problem(s)).' && log_has 'TEST BUILD: message box not shown (TWEAKSV_TEST_NO_BOXES=1): TweaksV: a part stopped working after the start-up:'"
+check "the box of a part that stopped working after the start-up" "log_has 'Showing a problem after the start-up summary (1 problem(s)).' && log_has 'TEST BUILD: message box not shown (TWEAKSV_TEST_NO_BOXES=1): A module stopped working after launch:'"
 
 echo "== L17 another program placed first: left alone; blip_controller raised as the game's 2nd program"
 fresh_ini; out=$(game full_game.exe scriptother)

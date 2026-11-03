@@ -505,7 +505,7 @@ check "DRY_RUN: the call found and checked, its would line, nothing redirected o
 mkdir -p $d; echo "not a copy" > victim.txt
 fresh_ini; setkey ERROR_POPUP 1; setkey ENABLED 0 BLIPS; setkey ENABLED 0 STATICBOUNDS; addkey TEST_DUMP_SCRIPT blip_controller; rm -f script_placed_*.bin; ln victim.txt $f
 out=$(ASI=TweaksV_test.asi game full_game.exe script)
-check "Script-blip_controller-1.bin a hard link to another file: that file left alone; a problem, shown in a box of its own after the start-up summary" "[ \"\$(cat victim.txt)\" = 'not a copy' ] && log_has 'PROBLEM: TEST_DUMP_SCRIPT: Script-blip_controller-1.bin was not saved: it is a hard link' && log_has 'TEST BUILD: message box not shown (TWEAKSV_TEST_NO_BOXES=1): TweaksV: a part stopped working after the start-up:'"
+check "Script-blip_controller-1.bin a hard link to another file: that file left alone; a problem, shown in a box of its own after the start-up summary" "[ \"\$(cat victim.txt)\" = 'not a copy' ] && log_has 'PROBLEM: TEST_DUMP_SCRIPT: Script-blip_controller-1.bin was not saved: it is a hard link' && log_has 'TEST BUILD: message box not shown (TWEAKSV_TEST_NO_BOXES=1): A module stopped working after launch:'"
 rm -f victim.txt
 
 fresh_ini; setkey ENABLED 0 BLIPS; setkey ENABLED 0 STATICBOUNDS; addkey TEST_DUMP_SCRIPT blip_controller; rm -rf $d; rm -f script_placed_*.bin; out=$(game full_game.exe script)
@@ -517,7 +517,7 @@ echo "== I18 a half of WeaponLimits throws in place of starting (the test build'
 # half's problem, word for word and once, the run's only problem, in the start-up summary, and nothing that says the part is skipped.
 # parts_after: the parts after WeaponLimits started all the same, every page its own protection.
 half_run() { fresh_ini; setkey ERROR_POPUP 1; out=$(TWEAKSV_TEST_WEAPON_HALF_THROWS=$1 ASI=TweaksV_test.asi game full_game.exe); }
-half_ended() { [ "$(count "\[WeaponLimits\] TEST BUILD: the $2. half throws in place of starting (TWEAKSV_TEST_WEAPON_HALF_THROWS=$1).")" -eq 1 ] && log_line "\[WeaponLimits\] PROBLEM: The $2. half is not done this session: an unexpected exception ended it.\$" && [ "$(count PROBLEM)" -eq 1 ] && log_has 'Showing the start-up summary (1 problem(s)).' && log_has 'TEST BUILD: message box not shown (TWEAKSV_TEST_NO_BOXES=1): TweaksV could not apply everything:' && log_lacks 'this part is skipped'; }
+half_ended() { [ "$(count "\[WeaponLimits\] TEST BUILD: the $2. half throws in place of starting (TWEAKSV_TEST_WEAPON_HALF_THROWS=$1).")" -eq 1 ] && log_line "\[WeaponLimits\] PROBLEM: The $2. half is not done this session: an unexpected exception ended it.\$" && [ "$(count PROBLEM)" -eq 1 ] && log_has 'Showing the start-up summary (1 problem(s)).' && log_has 'TEST BUILD: message box not shown (TWEAKSV_TEST_NO_BOXES=1): There was an error and TweaksV couldn.t apply all patches\.' && log_lacks 'this part is skipped'; }
 parts_after() { has 'pedprops: sites widened' && has 'static bounds: call through a stub, the rest as placed, the store made: 16000 slots' && has 'protect: all restored (RX)'; }
 
 half_run 1
@@ -535,9 +535,9 @@ echo "== I19 the reports after the start-up summary, test build, ERROR_POPUP=1: 
 # late_ini: TweaksV.ini for the test build's boxes, with TEST_DUMP_SCRIPT, so that each placement of the fake's latefailures is a problem
 late_ini() { fresh_ini; setkey ERROR_POPUP 1; setkey ENABLED 0 BLIPS; addkey TEST_DUMP_SCRIPT blip_controller; }
 NO_BOX='TEST BUILD: message box not shown (TWEAKSV_TEST_NO_BOXES=1): '
-PART_BOX="${NO_BOX}TweaksV: a part stopped working after the start-up: \.\.\. The game continues without the affected parts\."
-REFUSED_BOX="${NO_BOX}TweaksV: WeaponLimits refused files the game has no room for: \.\.\. The game continues without the files refused\."
-SUMMARY_BOX="${NO_BOX}TweaksV could not apply everything: \.\.\. The game continues without the affected parts\."
+PART_BOX="${NO_BOX}A module stopped working after launch: \.\.\. The game will continue without the affected modules\."
+REFUSED_BOX="${NO_BOX}WeaponLimits refused some files because there is no room: \.\.\. The game will continue without the refused files\."
+SUMMARY_BOX="${NO_BOX}There was an error and TweaksV couldn.t apply all patches\. \.\.\. The game continues without the affected modules\."
 NOT_SAVED='PROBLEM: TEST_DUMP_SCRIPT: Script-blip_controller-[0-9]*.bin was not saved: its code length'
 late_ini; out=$(TWEAKSV_TEST_GUARD_ROOM=1 ASI=TweaksV_test.asi game full_game.exe wcmount latefailures 5)
 check "a guard's refusal: a box of its own, with its own heading and last line, its finding not counted as a problem" "[ \$(count '$REFUSED_BOX') -eq 1 ] && [ \$(count 'Showing a finding (1 finding(s))\.') -eq 1 ]"
@@ -582,17 +582,18 @@ echo "== I22 a message box's whole text, which the test build logs on one line i
 # the log's path stands as the box has it.
 # wrong_keys N: the first N keys of TweaksV.ini but VERSION take a value no key takes, each a problem, each using its default, ERROR_POPUP's 1 among them.
 box_text() { tr -d '\r' < "${1:-TweaksV.log}" | sed -n 's/^.*TEST BUILD: the text of that box: //p'; }
-box_end() { echo "$1 Details are in TweaksV.log: | $2\\TweaksV.log | To stop this message, set ERROR_POPUP=0 in TweaksV.ini."; }
+box_end() { echo "$1 Details can be found in TweaksV.log: | $2\\TweaksV.log | To stop these messages, set ERROR_POPUP=0 in TweaksV.ini."; }
 box_run() { out=$(TWEAKSV_TEST_NO_BOXES=2 USERPROFILE='C:\NoProfile' ASI=TweaksV_test.asi game full_game.exe "$@"); }
 wrong_keys() {
 	local last
 	last=$(grep -n '^[A-Z_]*=' TweaksV.ini | grep -v ':VERSION=' | sed -n "$1p" | cut -d: -f1)
 	sed -b -i "1,$last{/^VERSION=/!s/=.*\r\$/=x\r/}" TweaksV.ini
 }
-SUMMARY_HEAD='TweaksV could not apply everything: | '
-SUMMARY_END=$(box_end 'The game continues without the affected parts.' "$bw")
+SUMMARY_HEAD="There was an error and TweaksV couldn't apply all patches. | "
+SUMMARY_END=$(box_end 'The game continues without the affected modules.' "$bw")
+PART_END=$(box_end 'The game will continue without the affected modules.' "$bw")
 fresh_ini; setkey ERROR_POPUP 1; setkey HEAP_SIZE 5000; box_run
-check "one problem: the start-up summary's heading, the item, its last line, the log's path and how to stop the box, word for word, its bullet's bytes too; beside the line that names heading and last line alone" "[ \"\$(box_text)\" = \"${SUMMARY_HEAD}• [TweaksV] TweaksV.ini: [HEAP_ADJUSTER] HEAP_SIZE=5000 is outside 1..2047 - using 2047. | \$SUMMARY_END\" ] && [ \$(count 'TEST BUILD: message box not shown (TWEAKSV_TEST_NO_BOXES=2): TweaksV could not apply everything: \.\.\. The game continues without the affected parts\.') -eq 1 ]"
+check "one problem: the start-up summary's heading, the item, its last line, the log's path and how to stop the box, word for word, its bullet's bytes too; beside the line that names heading and last line alone" "[ \"\$(box_text)\" = \"${SUMMARY_HEAD}• [TweaksV] TweaksV.ini: [HEAP_ADJUSTER] HEAP_SIZE=5000 is outside 1..2047 - using 2047. | \$SUMMARY_END\" ] && [ \$(count 'TEST BUILD: message box not shown (TWEAKSV_TEST_NO_BOXES=2): There was an error and TweaksV couldn.t apply all patches\. \.\.\. The game continues without the affected modules\.') -eq 1 ]"
 fresh_ini; setkey ERROR_POPUP 1; setkey HEAP_SIZE 5000; out=$(ASI=TweaksV_test.asi game full_game.exe)
 check "TWEAKSV_TEST_NO_BOXES=1, as every other run has it: that line alone, so that a problem's words stand once in the log, as the suites count them" "[ \$(count '$SUMMARY_BOX') -eq 1 ] && log_lacks 'the text of that box' && [ \$(count 'HEAP_SIZE=5000 is outside') -eq 1 ]"
 fresh_ini; wrong_keys 41; box_run
@@ -600,14 +601,14 @@ check "41 problems, past the 2 KB of a Release log's line: all 41 in the log and
 fresh_ini; wrong_keys 40; box_run
 check "40 problems: the 40 items, no ... and N more." "[ \$(count 'PROBLEM') -eq 40 ] && log_has 'Showing the start-up summary (40 problem(s))\.' && [ \$(box_text | grep -o '• ' | wc -l) -eq 40 ] && [[ \"\$(box_text)\" != *'... and '* ]] && [[ \"\$(box_text)\" == *\" | \$SUMMARY_END\" ]]"
 late_ini; box_run latefailures 1
-check "a part that stopped working after the start-up: its box's heading and item, word for word, the summary's last line" "[ \"\$(box_text)\" = \"TweaksV: a part stopped working after the start-up: | • [TweaksV] TEST_DUMP_SCRIPT: Script-blip_controller-1.bin was not saved: its code length, 16777217 bytes, is beyond 16 MB. | \$SUMMARY_END\" ]"
+check "a part that stopped working after the start-up: its box's heading, item and last line, word for word" "[ \"\$(box_text)\" = \"A module stopped working after launch: | • [TweaksV] TEST_DUMP_SCRIPT: Script-blip_controller-1.bin was not saved: its code length, 16777217 bytes, is beyond 16 MB. | \$PART_END\" ]"
 fresh_ini; setkey ERROR_POPUP 1; TWEAKSV_TEST_GUARD_ROOM=1 box_run wcmount
 REFUSED_ITEM="• [WeaponLimits] Weapon component files are refused this session: dlcpacks:/weaponpack08/common/data/weaponcomponents.meta, the first, came once 472 definitions were loaded, the room being 470, the test build's (TWEAKSV_TEST_GUARD_ROOM=1) - the weapon components of the files refused are missing in the game. The log names every file refused."
-REFUSED_END=$(box_end 'The game continues without the files refused.' "$bw")
-check "a guard's finding: its box's heading, item and last line, word for word" "[ \"\$(box_text)\" = \"TweaksV: WeaponLimits refused files the game has no room for: | \$REFUSED_ITEM | \$REFUSED_END\" ]"
+REFUSED_END=$(box_end 'The game will continue without the refused files.' "$bw")
+check "a guard's finding: its box's heading, item and last line, word for word" "[ \"\$(box_text)\" = \"WeaponLimits refused some files because there is no room: | \$REFUSED_ITEM | \$REFUSED_END\" ]"
 fresh_ini; setkey ERROR_POPUP 1; rm -rf appdata/TweaksV; echo "an older log" > TweaksV.log
 cp full_game.exe GTA5_Enhanced.exe; TWEAKSV_TEST_NO_BOXES=2 USERPROFILE='C:\NoProfile' run_fake GTA5_Enhanced.exe TweaksV_test.asi lockedlog
-HELD_END=$(box_end 'The game continues without the affected parts.' "$AW\\TweaksV")
+HELD_END=$(box_end 'The game continues without the affected modules.' "$AW\\TweaksV")
 check "the game folder's log held by another program: the box names the log in use, in %LOCALAPPDATA%\\TweaksV" "[[ \"\$(box_text appdata/TweaksV/TweaksV.log)\" == *\" | \$HELD_END\" ]]"
 rm -f TweaksV.log; rm -rf appdata/TweaksV
 

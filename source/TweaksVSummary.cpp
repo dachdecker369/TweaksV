@@ -41,9 +41,9 @@ namespace TweaksV
 		constexpr const char* kFinding = "finding";
 		constexpr const char* kFindings = "finding(s)";
 		LateReport g_late[] = {	// the findings in the order of their enum, then the part that stopped working
-			{ L"TweaksV: its check of the packs in the mods folder found:", L"The game continues with the packs as they are.", kFinding, kFindings },
-			{ L"TweaksV: WeaponLimits refused files the game has no room for:", L"The game continues without the files refused.", kFinding, kFindings },
-			{ L"TweaksV: a part stopped working after the start-up:", L"The game continues without the affected parts.",
+			{ L"The check of the packs in the mods folder found:", L"The game will continue without changing the packs.", kFinding, kFindings },
+			{ L"WeaponLimits refused some files because there is no room:", L"The game will continue without the refused files.", kFinding, kFindings },
+			{ L"A module stopped working after launch:", L"The game will continue without the affected modules.",
 				"problem after the start-up summary", "problem(s)" },
 		};
 		constexpr size_t kPartStopped = std::size(g_late) - 1;
@@ -57,7 +57,7 @@ namespace TweaksV
 				text += L"• " + FromUtf8(item) + L"\n\n";
 			if (dropped > 0)
 				text += L"• ... and " + std::to_wstring(dropped) + L" more.\n\n";
-			text += lastLine + L" Details are in TweaksV.log:\n" + GetLogPathW() + L"\n\nTo stop this message, set ERROR_POPUP=0 in TweaksV.ini.";
+			text += lastLine + L" Details can be found in TweaksV.log:\n" + GetLogPathW() + L"\n\nTo stop these messages, set ERROR_POPUP=0 in TweaksV.ini.";
 #ifdef TWEAKSV_TEST_BUILD
 			// test builds only: TWEAKSV_TEST_NO_BOXES=1 in the environment keeps the box off the screen, for
 			// unattended test runs - also those in which TweaksV.ini is not read and cannot turn boxes off. With 2 in its
@@ -315,7 +315,7 @@ namespace TweaksV
 		}
 
 		WriteLog("TweaksV", "Showing the start-up summary (" + std::to_string(items.size() + dropped) + " problem(s)).");
-		ShowBox(L"TweaksV could not apply everything:", L"The game continues without the affected parts.", items, dropped);
+		ShowBox(L"There was an error and TweaksV couldn't apply all patches.", L"The game continues without the affected modules.", items, dropped);
 	}
 
 	void ShowStartupSummaryLater()
