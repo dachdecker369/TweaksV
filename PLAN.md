@@ -168,6 +168,7 @@ a pass that finds its limit sharing code with a neighbour's may read the neighbo
   It comes after 2.7.0's boot gives its baseline, with the measurement on, and goes out again if the lights' peak nears 400.
   I make the change myself; no session writes in the game folder.
   It waits for 2.8.0's stores, and by its own rule: my proof's start 5, with the texture budget raised, saw the vehicle lights at 327 of 400.
+  My proof's start 4 ran it, and `Level3Kb` stays in my file: 600 MB read, at the stop in 82% of the samples against 95%, and it never brought the lights near 400.
 the pass (`staticbounds2_findings_for_the_clean_room_build.txt`) found the size read once, from one call.
   The part is one call redirect at RVA 0x3433E through `C-E-L1`, raising hash 0x2CDFE406 alone, the larger of the game's and the key's, in the way of `W-E-C4`; `C-E-P1`, `C-E-A1` and both hooks go; `CheckBudget` and the track check stay.
   `STATICBOUNDS_SIZE`'s maximum is 32767, past which a slot comes out negative in an interior proxy and, past 65535, two counts wrap; the default stays 16000.
@@ -187,6 +188,8 @@ the pass (`staticbounds2_findings_for_the_clean_room_build.txt`) found the size 
   The counters under `DIAGNOSTIC_MODE` (the findings' 7.1 and 7.2), beside a job's most and the ray traced list's count; the LOD job's own 1088 left as it is.
   A corona pattern missing refuses the part as a whole, since the job's clamp must move with the store or the game faults, which with D39 holds the sirens at 20, and the line says why.
 - **D36, the ray traced list:** no sort in 2.8.0, since it was full in 2 of those 32 minutes and a light past it still lights surfaces directly (the lighting capacity's findings, 3.4 and 8.2); a count of what it refuses under `DIAGNOSTIC_MODE`, by a stub as `G-E-C1`'s, and the sort only if my proof's number asks for it.
+  The number, my proof's start 4 on the build of b14ece2: 172,943 refused, 165,438 of them in the tunnel's one minute, where starts 1 and 2 refused 12,828 in 19 minutes.
+  No sort in this build, a research pass in a later one.
 - **D37, `MaxStreamingResources`** (2026-11-03, on `streamedobjects`' findings).
 the proof's start of the object limit is that test.
   The key `STREAMED_OBJECTS` under `[RESOURCES]`, its default 131072 on my proof's descriptor number, 0 if fewer than 16,384 are free at the highest reading, its maximum 147456, 3/4 of the heap read at run time; a `gameconfig.xml` value above that is left as it is, with one problem line.
@@ -201,6 +204,10 @@ the proof's start of the object limit is that test.
   With `SIRENS_PER_VEHICLE=20` the getter is not redirected and the count stands.
 - **D42, the hat of T-PEDPROPS:** out of this round unless I have a small clean single-prop pack by the proof, then one start of its own; no code unless it passes, and then one default.
 - **D43, no raise of the ped pool, the render queues or the ped budget:** my proof's numbers do not ask for one (D30, D31).
+
+  At the airport, 16 `hp16fpiu1` lit and in view gave at most 124 vehicle lights, about 7 a car, under a spawn cap of 17.
+  `TEST_SIREN_PASSES`, test build only, 0 by default, up to 31 (SPECIFICATIONS.md, section 13.1): the raise's wrapper repeats the game's call of the renderer and the second call that many more times in each pass, so that real records go the game's own way into a job's lists, the moved stores and the scene store.
+  A job holds 180 lights, so about 8 cars across 3 or more jobs at 8 passes more give about 500 lights, past 400.
 
 ## The items
 
@@ -257,19 +264,24 @@ Then 2.8.0 set - the project's version, the specification's header example and i
 
 ## The boots
 
-**2.8.0's proof,** on the Release build, my usual mods folder and trainer, a backup of my Profiles folder first, `DIAGNOSTIC_MODE=1` but for the last start; each start holds a load past the game's own number for what it proves:
+**2.8.0's proof,** my usual mods folder and trainer, a backup of my Profiles folder first; each start holds a load past the game's own number for what it proves.
 
-1. **The sirens, at night:** `hp16fpiu1`, `lspdcvpi08` and `policelv` side by side, sirens on: the whole lightbar lit, lights 21 to 32 flashing as their carcols says, by my eye.
-   One shot at a light past 20, one ram, one wreck: those lights out, their glass gone.
-   One repair through the trainer: they come back.
-   One plane with retractable gear, gear up and down: its doors work as ever.
-   The log: the models lit past 20 with their bones found, `real lights in N`, no table full.
-2. **The stores, the same start:** about 30 of those cars spawned in one place, sirens on, from outside the group so that all 30 are in view, since a light out of view takes no room (the lighting capacity's findings, 3.2).
-   The log: vehicle lights past 400, vehicle coronas past 928, a job's most past 80 lights, how many a job refused, the scene store at its room, the coronas past 1088 with none refused, the ray traced list's refused lights; no crash, and the frame rate as I see it (its 8.4).
-   A job past 200 coronas is not sure, as five cars at 37 are 185 (its 3.5): if the log stays at or under 200, the 300 stands with no load past the game's number, its layout proven by the lights past 80 behind it, and I decide then.
-3. **The object limit, a start of its own:** the build's defaults with `DIAGNOSTIC_MODE=1`, `STREAMED_OBJECTS` doing the raise, `MaxStreamingResources` left at 98304 in my `gameconfig.xml`, the drive of my start 5: `are raised to 131072 by STREAMED_OBJECTS`, the objects past 100,000, the descriptors' number at its highest with at least 16,384 free, which settles the key's default (D37), no ` - at the most objects`, the bytes past 4,714 MB, my LOD switching by eye against start 5.
-4. **The vehicle budget, a start of its own:** that and `Level3Kb` at 98,500 in my `gameconfig.xml` (D-V5), `MaxStreamingResources` left at 98304 there, a drive of 20 minutes through the city at night and on to the tunnel: the vehicle budget's share at the stop against 95%, the ray tracing buffer, the lights.
-5. **The build as it ships:** a fresh `TweaksV.ini` from the build's defaults, no `DIAGNOSTIC_MODE`: line 1 names 2.8.0 and the commit without `-dirty`, the one `PROBLEM` `lfpolice`'s Legacy box, every part applied, `VIDEO_MEMORY_BUDGET` at 6000 and `STREAMED_OBJECTS` at its default.
+**Starts 1 to 4 passed,** 2026-11-03, the Release build of b14ece2, `DIAGNOSTIC_MODE=1`, the one `PROBLEM` `lfpolice`'s Legacy box in each:
+- **Starts 1 and 2, the sirens and the stores,** 19 minutes: three models lit past 20 by my eye and the log; a shot, a ram and a wreck put those lights out and their glass, a repair brings them back, a plane's gear works as ever.
+  Past the game's numbers: coronas 1,588 of 4,096, none refused; a job's 97 of 180 lights; objects 117,269, descriptors 140,933 of 196,608.
+  Not past them: vehicle lights 217, vehicle coronas 270, scene lights 616, a job's coronas 72, with 10 cars.
+- **Start 3, the object limit,** 9 minutes: objects 104,437, descriptors 127,881, no ` - at the most objects`, the bytes at 5,415 MB, my LOD switching fixed completely by my eye and no texture flicker, so D37's 131072 stands.
+- **Start 4, the vehicle budget,** 13 minutes, `Level3Kb` at 98,500: 600 MB read, at the stop in 607 of 741 samples, 141 models at once, `VehicleStruct` 141 of 200; objects 124,634, descriptors 149,438, 47,170 free; ray tracing buffer at most 3.39 million vertices, none refused; the ray traced list as in D36.
+  Five stars and the drive gave no load: vehicles 48, vehicle lights 193, scene lights 557, coronas 705.
+- **The airport, three attempts with real cars:** no load, which D44 answers: at most 143 vehicle lights, 225 vehicle coronas, scene lights 511, a job's 82 coronas.
+  The first ended in the game's trap at `+0x127C32F`, a Legacy `lfpolice` car I spawned ("Packs", below), at none of the raises' sites.
+
+**What is left:**
+
+5. **The load, a start of its own,** the test build (D44), `DIAGNOSTIC_MODE=1`, `TEST_SIREN_PASSES=8` under `[TWEAKSV]`, about 6 to 10 cars of `hp16fpiu1`, sirens on, all in view from outside the group.
+   The log: vehicle lights past 400, vehicle coronas past 928, a job past 200 coronas, how many a job refused, the scene store at its room with the sort list marked; no crash.
+   Fewer than that: `TEST_SIREN_PASSES` higher, up to 31.
+6. **The build as it ships:** the rebuilt Release build, a fresh `TweaksV.ini` from the build's defaults, no `DIAGNOSTIC_MODE`: line 1 names 2.8.0 and the commit without `-dirty`, the one `PROBLEM` `lfpolice`'s Legacy box, every part applied, `VIDEO_MEMORY_BUDGET` at 6000 and `STREAMED_OBJECTS` at its default.
    This is the build that is tagged.
 
 Then the tag 2.8.0, the searches and one atomic push.
@@ -318,7 +330,7 @@ The hat of T-PEDPROPS is a start of its own.
 
 **State:** 2.7.0, phase C's first build, is tagged on 7fa28da and pushed, my proof passed on it, and 2.2.1 stays the last one published.
 2.8.0 is planned from my proof's numbers (D34 to D43) and its round runs now: the three research passes, the five coding tracks and the one review are done and merged on main, every fix in.
-2.8.0 is set here, with its proof on the merged tree, 2979 checks; my boots of it come next, then the tag and one atomic push.
+2.8.0 is set here, with its proof on the merged tree, 2986 checks; starts 1 to 4 of my boots passed on the build of b14ece2, and the load on the test build comes next (D44), then the build as it ships on the rebuilt Release, the tag and one atomic push.
 It takes the sirens per vehicle as the hybrid at 32 by default (D23, D38), the light stores as a sixteenth part (D30, D39), `VIDEO_MEMORY_BUDGET` at 6000 by default (D33), `STREAMED_OBJECTS` at 131072 on my proof's number (D37), `CORONA_STORE` at 4096 (D35), and the vehicle budget's raise in my `gameconfig.xml` in my proof (D-V5).
 The ray traced list gets a count and no sort (D36), and the ped pool, the render queues and the ped budget stay as they are (D43).
 The open issues are T-HARDEN, T-DIAG, T-FREEZE, T-PEDPROPS and T-DESCRIPTORS.
