@@ -317,7 +317,8 @@ The hat of T-PEDPROPS is a start of its own.
 ## Next steps
 
 **State:** 2.7.0, phase C's first build, is tagged on 7fa28da and pushed, my proof passed on it, and 2.2.1 stays the last one published.
-2.8.0 is planned from my proof's numbers (D34 to D43) and its round runs now: the three research passes and the five coding tracks are done and merged on main, each track's branch checked and its fixes in, the full run green at 2939 checks; the one review comes next, then the version commit, the proof and my boots.
+2.8.0 is planned from my proof's numbers (D34 to D43) and its round runs now: the three research passes, the five coding tracks and the one review are done and merged on main, every fix in.
+2.8.0 is set here, with its proof on the merged tree, 2978 checks; my boots of it come next, then the tag and one atomic push.
 It takes the sirens per vehicle as the hybrid at 32 by default (D23, D38), the light stores as a sixteenth part (D30, D39), `VIDEO_MEMORY_BUDGET` at 6000 by default (D33), `STREAMED_OBJECTS` at 131072 on my proof's number (D37), `CORONA_STORE` at 4096 (D35), and the vehicle budget's raise in my `gameconfig.xml` in my proof (D-V5).
 The ray traced list gets a count and no sort (D36), and the ped pool, the render queues and the ped budget stay as they are (D43).
 The open issues are T-HARDEN, T-DIAG, T-FREEZE, T-PEDPROPS and T-DESCRIPTORS.
