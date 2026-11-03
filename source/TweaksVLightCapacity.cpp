@@ -842,4 +842,13 @@ namespace TweaksV
 		Note(g_sampling.load() ? "the lighting capacity is measured: its numbers are sampled every 10 ms and logged after 10 seconds, then every minute while they change." :
 			"the lighting capacity is measured, its numbers not sampled: the rest is logged after 10 seconds, then every minute while it changes.");
 	}
+
+	void InitLightCapacity()
+	{
+	}
+
+	bool LightStoresRaised()
+	{
+		return IsFeatureOn(kLightCapacitySection);
+	}
 }

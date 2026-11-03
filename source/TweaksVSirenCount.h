@@ -11,4 +11,9 @@ namespace TweaksV
 	// call of the siren lights' renderer. Called by the table of the parts measured first, with
 	// DIAGNOSTIC_MODE=1 only.
 	void MeasureSirenCount();
+
+	// The sirens per vehicle (D23, D38), started by the SirenSettings part's entry of the feature table, after InitSirenIds:
+	// SIRENS_PER_VEHICLE above 20 asks D40's check and the light stores, then both halves find and check their sites, and all
+	// of it is one write.
+	void InitSirensPerVehicle();
 }

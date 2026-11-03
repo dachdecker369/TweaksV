@@ -100,6 +100,9 @@
     <ClCompile Include="TweaksVSirenCount.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
+    <ClCompile Include="TweaksVSirenDamage.cpp">
+      <Filter>TweaksV</Filter>
+    </ClCompile>
     <ClCompile Include="TweaksVSirenIds.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
@@ -234,7 +237,13 @@
     <ClInclude Include="TweaksVSirenCount.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
+    <ClInclude Include="TweaksVSirenDamage.h">
+      <Filter>TweaksV</Filter>
+    </ClInclude>
     <ClInclude Include="TweaksVSirenIds.h">
+      <Filter>TweaksV</Filter>
+    </ClInclude>
+    <ClInclude Include="TweaksVSirenRoom.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
     <ClInclude Include="TweaksVStaticBounds.h">

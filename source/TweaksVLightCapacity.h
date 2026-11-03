@@ -11,4 +11,12 @@ namespace TweaksV
 	// Finds and checks the lighting capacity's sites, starts its measurement and redirects the one jump its count of refused
 	// lights rests on. Called by the table of the parts measured first, with DIAGNOSTIC_MODE=1 only.
 	void MeasureLightCapacity();
+
+	// The light stores (D30, D39), started by its entry of the feature table, from DllMain, while [LIGHTCAPACITY] is on: the
+	// frame's stores moved, the scene store's byte index fixed and a job's lists raised, every site checked first, all of it one
+	// write.
+	void InitLightCapacity();
+
+	// True once that one write is done; the sirens per vehicle ask, after this part's start, and stay at 20 without it.
+	bool LightStoresRaised();
 }

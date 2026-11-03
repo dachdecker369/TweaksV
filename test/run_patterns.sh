@@ -27,6 +27,7 @@ cd "$B" || exit 1
 game_folder=$B
 cp "$R/object/Test/Release/TweaksV.asi" TweaksV_test.asi
 PEDPROPS_ON=1
+SIRENS_ON=1
 # held_too_often LABEL, in the background: its run with every part looking, in a game folder of its own; a fixed 2 seconds
 # each, so that the runs go side by side, half as many at a time as the suites, and the suite stays short
 held_too_often() {

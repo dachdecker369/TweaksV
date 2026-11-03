@@ -40,12 +40,17 @@
 #include <vector>
 
 #include "TweaksVConflicts.h"
+#include "TweaksVGame.h"
+#include "TweaksVLightCapacity.h"
 #include "TweaksVLog.h"
 #include "TweaksVMeasure.h"
 #include "TweaksVPatch.h"
 #include "TweaksVPatterns.h"
 #include "TweaksVScanner.h"
 #include "TweaksVSettings.h"
+#include "TweaksVSirenDamage.h"
+#include "TweaksVSirenRoom.h"
+#include "TweaksVSummary.h"
 
 namespace TweaksV
 {
@@ -87,7 +92,6 @@ namespace TweaksV
 		static_assert(PatternByte(kGlassReadPattern, kGlassBonesRead) == kGlassBonesAt, "TweaksV: I-E-B3 reads siren_glass1's byte at +0xAD");
 		static_assert(PatternByte(kFindBonePattern, kBoneCountRead) == kBoneCountAt, "TweaksV: I-E-B4 tests the bone count at +0x5E first");
 
-		constexpr int kGameSirens = 20;				// siren1 to siren20: the sirens the game lights, and the glass bones it names
 		constexpr int kLookedUp = 32;				// siren1 to siren32: what packs made for more name, the top of the game's 32-bit sets
 		constexpr int kNameableBones = 128;			// a bone's index as a signed byte: 0 to 127
 		static_assert(kGlassBonesAt == kSirenBonesAt + kGameSirens, "TweaksV: the glass bones' bytes follow the sirens'");
@@ -416,6 +420,76 @@ namespace TweaksV
 		{
 			WriteLog(kTag, "DIAGNOSTIC: the siren count is not measured: " + why);
 		}
+
+		// ---- the raise
+
+		// The lights' half of the part's one write: finds and checks its sites and adds its writes to the list, writing nothing.
+		// False, reported through SirensNotRaised, at the first site that is not as the findings have it.
+		bool FindSirenLights(int, SirenWrites&)
+		{
+			return true;
+		}
+	}
+
+	void SirensNotRaised(const std::string& why)
+	{
+		ReportFailure(kTag, "The sirens per vehicle are not raised this session: " + why);
+	}
+
+	void InitSirensPerVehicle()
+	{
+		const int sirens = GetNumber(kSirensPerVehicle);
+		if (sirens <= kGameSirens)
+			return;
+
+		// 1. the game's build: no pattern proves that the renderer reads nothing new of its stand-ins, so the raise runs only on
+		// a build whose renderer was read (D40)
+		constexpr GameVersion kRendererReadOn{ 1, 0, 1158, 16 };
+		GameVersion version;
+		const bool known = ReadGameVersion(version);
+		if (version.Number() != kRendererReadOn.Number())
+		{
+			SirensNotRaised("this game build is " + (known ? std::to_string(version.major) + "." + std::to_string(version.minor) + "." +
+				std::to_string(version.build) + "." + std::to_string(version.revision) : std::string("not known")) + ", and TweaksV has read the "
+				"siren lights' renderer of 1.0.1158.16 only. Vehicles keep 20 sirens until a new TweaksV.");
+			return;
+		}
+
+		// 2. the light stores: the game's own lose lights, and overflow, at more sirens than its 20 (D39)
+		if (!LightStoresRaised())
+		{
+			SirensNotRaised("the light stores are not raised ([LIGHTCAPACITY] in TweaksV.ini), and the game's own do not take " + std::to_string(sirens) +
+				" sirens a vehicle. Vehicles keep 20 sirens.");
+			return;
+		}
+
+		// 3. every site of both halves found and checked, nothing written yet
+		SirenWrites list;
+		if (!FindSirenLights(sirens, list) || !FindSirenDamage(sirens, list))
+			return;
+		if (list.writes.empty() && list.redirects.empty() && list.hooks.empty())
+			return;
+
+		// 4. one write, all or nothing: the hooks first, since a hook can be taken back, then the calls and the constants together
+		const bool dryRun = IsDryRun();
+		if (dryRun)
+			for (const FunctionHook& hook : list.hooks)
+				WriteLog(kTag, "DRY_RUN: would hook " + std::string(hook.what) + " at " + DescribeAddress(hook.function) + ".");
+		else if (!list.hooks.empty() && !HookFunctions(list.hooks, kTag))
+		{
+			SirensNotRaised("the functions could not be hooked (details above). Nothing is changed.");
+			return;
+		}
+		if (!RedirectCalls(list.redirects, list.writes, kTag))
+		{
+			if (!dryRun)
+				for (const FunctionHook& hook : list.hooks)
+					DisableHook(hook.function, kTag);
+			SirensNotRaised("its writes could not be made (details above). Nothing is changed.");
+			return;
+		}
+		if (!dryRun)
+			WriteLog(kTag, "The sirens per vehicle are raised to " + std::to_string(sirens) + ".");
 	}
 
 	void MeasureSirenCount()

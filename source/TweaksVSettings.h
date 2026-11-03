@@ -34,14 +34,15 @@ namespace TweaksV
 	inline constexpr SettingsSection kPedPropsSection{ "PEDPROPS", "PedProps" };
 	inline constexpr SettingsSection kResourcesSection{ "RESOURCES", "Resources" };
 	inline constexpr SettingsSection kRayTracingSection{ "RAYTRACING", "RayTracing" };
+	inline constexpr SettingsSection kLightCapacitySection{ "LIGHTCAPACITY", "LightCapacity" };
 	inline constexpr SettingsSection kSirenSettingsSection{ "SIRENSETTINGS", "SirenSettings" };
 	inline constexpr SettingsSection kStaticBoundsSection{ "STATICBOUNDS", "StaticBounds" };
 
 	// The sections in file order; every one but the first is a part of TweaksV with an ENABLED key.
 	inline constexpr const SettingsSection* kSections[] = { &kTweaksVSection, &kHeapSection, &kModkitSection,
 		&kPackfileSection, &kBoxStreamerSection, &kDecalsSection, &kRageOpenVSection, &kStoryModeSection, &kDirectStorageSection,
-		&kBlipsSection, &kWeaponLimitsSection, &kPedPropsSection, &kResourcesSection, &kRayTracingSection, &kSirenSettingsSection,
-		&kStaticBoundsSection };
+		&kBlipsSection, &kWeaponLimitsSection, &kPedPropsSection, &kResourcesSection, &kRayTracingSection, &kLightCapacitySection,
+		&kSirenSettingsSection, &kStaticBoundsSection };
 
 	// The layout of TweaksV.ini this build writes and reads: VERSION, the last key of [TWEAKSV]. A file
 	// without VERSION has the layout of TweaksV 1.x and is replaced (TweaksVIni.h); a file with a higher
@@ -49,7 +50,7 @@ namespace TweaksV
 	// static_assert on IniKeyCount below), and when a key changes its meaning or moves. An older file is
 	// carried forward: from kIniFirstLayout on, it gets the keys it lacks and then the current number
 	// written back (TweaksVIni.h). Layout 2 came with TweaksV 2.0.0, layout 3 with the Blips part, layout 4
-	// with the WeaponLimits, PedProps, Resources and RayTracing parts, layout 5 with the SirenSettings and
+	// with the WeaponLimits, PedProps, Resources and RayTracing parts, layout 5 with the LightCapacity, SirenSettings and
 	// StaticBounds parts and POOL_MEMORY.
 	inline constexpr int kIniLayoutVersion = 5;
 	inline constexpr int kIniFirstLayout = 2;		// the first layout with VERSION, the oldest one carried forward
@@ -146,14 +147,17 @@ namespace TweaksV
 		Number(kRayTracingSection, "DYNAMIC_BVH_VERTICES", 0, 0, 26843545,
 			"Ray tracing buffer for moving objects in vertices, 0 = the game's own - Maximum 26843545"),
 
+		Switch(kLightCapacitySection, "ENABLED", true),
+
 		Switch(kSirenSettingsSection, "ENABLED", true),
 		Switch(kSirenSettingsSection, "LARGE_SIREN_IDS", true, "Siren setting IDs up to 65535 (game: 255)"),
+		Number(kSirenSettingsSection, "SIRENS_PER_VEHICLE", 32, 20, 32, "Number of sirens a vehicle lights, 20 = the game's own - Maximum 32"),
 
 		Switch(kStaticBoundsSection, "ENABLED", true),
 		Number(kStaticBoundsSection, "STATICBOUNDS_SIZE", 16000, 1, 32767, "Number of static collision bounds - Maximum 32767"),
 	};
 
-	// The keys the default TweaksV.ini holds: layout 5 has 43.
+	// The keys the default TweaksV.ini holds: layout 5 has 45.
 	consteval size_t IniKeyCount()
 	{
 		size_t keys = 0;
@@ -162,7 +166,7 @@ namespace TweaksV
 				keys++;
 		return keys;
 	}
-	static_assert(IniKeyCount() == 43, "TweaksV: layout 5 of TweaksV.ini has 43 keys - a new key means a new layout");
+	static_assert(IniKeyCount() == 45, "TweaksV: layout 5 of TweaksV.ini has 45 keys - a new key means a new layout");
 
 	// The column at which a key's comment starts in the default file, the same for every key.
 	inline constexpr size_t kIniCommentColumn = 28;
@@ -232,6 +236,7 @@ namespace TweaksV
 	inline constexpr const Setting& kVideoMemoryBudget = FindSetting(kResourcesSection, "VIDEO_MEMORY_BUDGET");
 	inline constexpr const Setting& kDynamicBvhVertices = FindSetting(kRayTracingSection, "DYNAMIC_BVH_VERTICES");
 	inline constexpr const Setting& kLargeSirenIds = FindSetting(kSirenSettingsSection, "LARGE_SIREN_IDS");
+	inline constexpr const Setting& kSirensPerVehicle = FindSetting(kSirenSettingsSection, "SIRENS_PER_VEHICLE");
 	inline constexpr const Setting& kStaticBoundsSize = FindSetting(kStaticBoundsSection, "STATICBOUNDS_SIZE");
 
 	// Reads every setting once, after CreateOrUpdateIni() has chosen TweaksV.ini. A value that is not

@@ -33,10 +33,12 @@ SUITES=(
 	pedprops
 	texturebudget
 	raytracing
-	sirenids
-	staticbounds
-	sirencount
 	lightcapacity
+	# [corona store]
+	sirenids
+	sirencount
+	# [siren damage]
+	staticbounds
 	population
 	pedpool
 	renderqueues

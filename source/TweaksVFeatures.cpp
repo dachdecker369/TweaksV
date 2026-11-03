@@ -45,12 +45,12 @@ namespace TweaksV
 		// Resource Extensions [Enhanced] by Koukol, closed source, raises many of the game's capacities - its page
 		// names the archive count, the story blips' threshold and extra capacity for the ray tracing of moving geometry
 		// among them and asks to remove the heap and packfile adjusters. It stays for the jobs TweaksV does not do, so
-		// the four parts whose jobs it does too are off while it is there, and nothing is patched twice.
+		// the five parts whose jobs it does too are off while it is there, and nothing is patched twice.
 		constexpr PeerPlugin kResourceExtensions{ L"ResourceExtensions.asi", "Resource Extensions [Enhanced]" };
 
 		// The five original plugins in the order an ASI loader loaded their .asi files (alphabetical),
 		// TweaksV's own box streamer and decal definitions parts among the limit adjusters, then its
-		// DirectStorage part, its Blips part, the four parts of the parts' coding round and the two of phase C. ZHeapAdjuster.asi
+		// DirectStorage part, its Blips part, the four parts of the parts' coding round and the three of phase C. ZHeapAdjuster.asi
 		// is the rename the HeapAdjuster author recommends; OpenRPF.asi and OpenIV.asi do RageOpenV's job,
 		// alloc8or's DirectStorageFix.asi that of the DirectStorage part, rootBrz's BlipLimitFix.asi that of
 		// the Blips part, Nochala's Static Bounds Limit Adjuster - StaticBoundLimitAdjuster.asi on its page,
@@ -128,8 +128,10 @@ namespace TweaksV
 				[] { InitTextureBudget(); return false; } },
 			{ &kRayTracingSection, {}, { &kResourceExtensions },
 				[] { InitRayTracing(); return false; } },
+			{ &kLightCapacitySection, {}, { &kResourceExtensions },
+				[] { InitLightCapacity(); return false; } },
 			{ &kSirenSettingsSection, {}, {},
-				[] { InitSirenIds(); return false; } },
+				[] { InitSirenIds(); InitSirensPerVehicle(); return false; } },
 			{ &kStaticBoundsSection, { L"StaticBoundLimitAdjuster.asi", L"StaticBoundsLimitAdjuster.asi" }, {},
 				[] { InitStaticBounds(); return false; } },
 		};
@@ -159,7 +161,6 @@ namespace TweaksV
 		constexpr std::initializer_list<MeasuredFirst> kMeasuredFirst = {
 			// the siren IDs' measurement goes on while their job, LARGE_SIREN_IDS, is off, for a start with it and one without (11.14)
 			{ "SirenSettings", MeasureSirenIdsWhileOff },
-			// [siren count]
 			{ "SirenSettings", MeasureSirenCount },
 			{ "LightCapacity", MeasureLightCapacity },
 			{ "Population", MeasurePopulation },

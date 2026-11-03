@@ -4,7 +4,7 @@
 # pattern deliberately broken per plugin with the TEST build, another game exe, no C runtime DLLs, a renamed
 # .asi, no code changes allowed, the user name kept out of the log, the log's limit, links, a read-only game
 # folder, a held log, the code dump, the copy of a script program, a half of WeaponLimits that throws. Every part
-# on, PedProps too, which ships off (PEDPROPS_ON).
+# on, PedProps too, which ships off (PEDPROPS_ON), and the light stores, which base.ini has off (STORES_ON).
 # Fake LOCALAPPDATA: the real one is never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 CHECKS=196
@@ -13,6 +13,7 @@ cp "$R/x64/Release/TweaksV.asi" TweaksV.asi
 cp "$R/object/Test/Release/TweaksV.asi" TweaksV_test.asi
 mkdir -p appdata mods/test scripts plugins
 PEDPROPS_ON=1
+STORES_ON=1
 echo hi > mods/test/file.txt
 
 ALL_ON_HEAP='heap: 1024 MB'
@@ -42,7 +43,7 @@ re_item() { tr -d '\r' < TweaksV.log | grep -c -- "PROBLEM: .*TestRun.ResourceEx
 # features_say [PART...]: the log header's Features: line says off for each PART and on for every other part
 features_say() {
 	local want="Features:" part sep=" "
-	for part in HeapAdjuster ModkitLimit PackfileLimit BoxStreamer Decals RageOpenV StraightToStoryMode DirectStorage Blips WeaponLimits PedProps Resources RayTracing SirenSettings StaticBounds; do
+	for part in HeapAdjuster ModkitLimit PackfileLimit BoxStreamer Decals RageOpenV StraightToStoryMode DirectStorage Blips WeaponLimits PedProps Resources RayTracing LightCapacity SirenSettings StaticBounds; do
 		if [[ " $* " == *" $part "* ]]; then want+="$sep$part off"; else want+="$sep$part on"; fi
 		sep=", "
 	done
@@ -85,11 +86,11 @@ for dir in "" scripts plugins; do
 	check "in $at: the header's Features: line says off for RageOpenV and StraightToStoryMode and on for the rest, the check's lines stand after the header" "features_say RageOpenV StraightToStoryMode && after_header 'is installed and does this job too'"
 done
 
-echo "== I1c ResourceExtensions.asi, Resource Extensions [Enhanced], in the game folder: HeapAdjuster, PackfileLimit, Blips and RayTracing off while it is there"
+echo "== I1c ResourceExtensions.asi, Resource Extensions [Enhanced], in the game folder: HeapAdjuster, PackfileLimit, Blips, RayTracing and LightCapacity off while it is there"
 fresh_ini; touch ResourceExtensions.asi; out=$(game full_game.exe); rm -f ResourceExtensions.asi
-check "HeapAdjuster, PackfileLimit, Blips and RayTracing off, the other parts applied, DirectStorage on" "has '$GAME_HEAP' && has '$PACK_OFF' && log_lacks '\[Blips\]' && log_lacks '\[RayTracing\]' && has '$MODKIT_ON' && has '$BOX_ON' && has '$DECAL_ON' && has '$ROV_ON' && has '$STORY_ON' && log_has '\[DirectStorage\]'"
-check "one item per part, word for word, the only four problems of one summary" "[ \$(re_item HeapAdjuster HEAP_ADJUSTER) -eq 1 ] && [ \$(re_item PackfileLimit PACKFILE_LIMIT) -eq 1 ] && [ \$(re_item Blips BLIPS) -eq 1 ] && [ \$(re_item RayTracing RAYTRACING) -eq 1 ] && log_has 'Start-up summary not shown (ERROR_POPUP=0): 4 problem' && summary_once"
-check "the header's Features: line says off for HeapAdjuster, PackfileLimit, Blips and RayTracing and on for the rest, the check's lines stand after the header" "features_say HeapAdjuster PackfileLimit Blips RayTracing && after_header 'is installed and does this job too'"
+check "HeapAdjuster, PackfileLimit, Blips, RayTracing and LightCapacity off, the other parts applied, DirectStorage on" "has '$GAME_HEAP' && has '$PACK_OFF' && log_lacks '\[Blips\]' && log_lacks '\[RayTracing\]' && has '$MODKIT_ON' && has '$BOX_ON' && has '$DECAL_ON' && has '$ROV_ON' && has '$STORY_ON' && log_has '\[DirectStorage\]'"
+check "one item per part, word for word, the only five problems of one summary" "[ \$(re_item HeapAdjuster HEAP_ADJUSTER) -eq 1 ] && [ \$(re_item PackfileLimit PACKFILE_LIMIT) -eq 1 ] && [ \$(re_item Blips BLIPS) -eq 1 ] && [ \$(re_item RayTracing RAYTRACING) -eq 1 ] && [ \$(re_item LightCapacity LIGHTCAPACITY) -eq 1 ] && log_has 'Start-up summary not shown (ERROR_POPUP=0): 5 problem' && summary_once"
+check "the header's Features: line says off for HeapAdjuster, PackfileLimit, Blips, RayTracing and LightCapacity and on for the rest, the check's lines stand after the header" "features_say HeapAdjuster PackfileLimit Blips RayTracing LightCapacity && after_header 'is installed and does this job too'"
 
 echo "== I2 all old plugins at once, in the game folder, scripts\\ and plugins\\: everything skipped"
 fresh_ini

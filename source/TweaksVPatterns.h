@@ -196,7 +196,6 @@ namespace TweaksV
 		{ "I-E-H1", "41 57 41 56 41 55 41 54 56 57 55 53 48 83 EC 68 80 3A 00 0F 84 ? ? ? ?" },
 		{ "I-E-H2", "41 57 41 56 41 55 41 54 56 57 55 53 48 83 EC 28 49 89 CE 0F B7 71 10 89" },
 
-		// [siren count]
 		// SirenSettings, the siren count (TweaksVSirenCount.cpp): the vehicle lights' calls of the siren lights' renderer, which the
 		// measurement redirects, and of the siren settings getter (B1); the renderer's read of a siren's bone through the model info's
 		// bone structure (B2); a read of a siren's glass bone (B3); the start of find-bone-by-name, which tests the bone count first (B4)
@@ -204,6 +203,8 @@ namespace TweaksV
 		{ "I-E-B2", "48 8B 87 B0 00 00 00 48 85 C0 74 ? 48 8B 00 48 85 C0 74 ? 0F BE 84 28 99 00 00 00" },
 		{ "I-E-B3", "0F BE 94 18 AD 00 00 00 48 8B 8E C0 09 00 00" },
 		{ "I-E-B4", "41 57 41 56 41 55 41 54 56 57 53 48 83 EC 20 66 83 79 5E 00" },
+		// [siren lights]
+		// [siren damage]
 
 		// PedProps (TweaksVPedProps.cpp): the eleven narrowings to 8 bits the part widens - an anchor's total in the check
 		// the set-prop native asks (T1) and in the helmet code after its four calls of the per-anchor count (T2..T5), a
@@ -275,6 +276,8 @@ namespace TweaksV
 		{ "G-E-G2", "44 8B 81 00 CC 00 00 49 81 F8 3F 04 00 00 0F 87" },
 		{ "G-E-H1", "B8 58 80 01 00 E8 ? ? ? ? 48 29 C4" },
 		{ "G-E-H2", "48 8D 44 24 50 49 89 04 24 4C 89 E1 41 FF 54 24 60" },
+		// [light stores]
+		// [corona store]
 		// The two model budgets (TweaksVPopulation.cpp), measured first: the crash context's line, which leads to the population object and both getters (C1); the vehicle pass's sites, the check before a request (V1, V2), the pool's test (V3), the tables' set-up's head (V4), the ambient cars (V5), and a writing half's call and stores (V6, V7); the ped pass's, the sum, the gate, the lists, a model's peds (P1 to P4), and a writing half's stores and the variety's store (P5 to P8)
 		{ "O-E-C1", "8B 35 ? ? ? ? C1 FE 14 8B 3D ? ? ? ? C1 FF 14 48 8D 1D ? ? ? ? 48 89 D9 E8 ? ? ? ? 89 C5 C1 FD 14 48 89 D9 E8 ? ? ? ? 89 C3 C1 FB 14 48 8D 0D" },
 		{ "O-E-V1", "8B 05 ? ? ? ? 0F B6 0D ? ? ? ? 4C 8D 35 ? ? ? ? 48 8D 1D ? ? ? ? EB" },

@@ -86,7 +86,7 @@ check "the sites as placed, the buffer made by the game's set-up at the game's o
 
 echo "== R2 [RAYTRACING] ENABLED=0, with DIAGNOSTIC_MODE=1 and DYNAMIC_BVH_VERTICES=8388608: the part does nothing"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; setkey ENABLED 0 RAYTRACING; setkey DYNAMIC_BVH_VERTICES 8388608; out=$(game full_game.exe)
-check "no line of the part, no pattern looked for; the header says it is off and gives its value" "log_lacks '\[RayTracing\]' && log_lacks 'T-E-' && log_line 'Features: .*, Resources on, RayTracing off, SirenSettings on, StaticBounds on\$' && log_line '\[TweaksV\] RayTracing: DYNAMIC_BVH_VERTICES=8388608\$'"
+check "no line of the part, no pattern looked for; the header says it is off and gives its value" "log_lacks '\[RayTracing\]' && log_lacks 'T-E-' && log_line 'Features: .*, Resources on, RayTracing off, LightCapacity off, SirenSettings on, StaticBounds on\$' && log_line '\[TweaksV\] RayTracing: DYNAMIC_BVH_VERTICES=8388608\$'"
 check "nothing written: the sites as placed, the buffer at the game's own size" "has '$GAME_BUFFER' && has '$GAME_SITES' && has 'protect: all restored (RX)'"
 
 echo "== R3 DYNAMIC_BVH_VERTICES=8388608: the buffer's count and its two checks raised, nothing else written"

@@ -612,6 +612,8 @@
 //   rqlatest       the latest numbers change after the first summary, and no most, for 5 s
 //   rqbad:WHAT:N   the site WHAT, N the pool, the family or the call it asks for, as RqSetUp has them, not as the research found it; no site runs then
 //   rqrvas         the report's "rq rvas: ..." field, with every site's RVA, for the suite to compare with the log
+// [siren damage]
+// [corona store]
 #include <windows.h>
 #include <winternl.h>
 #include <cstddef>
@@ -1425,6 +1427,8 @@ static Site g_rqSites[] = { SITE(g_rqMakeS1, 0), SITE(g_rqMakeS2, 0), SITE(g_rqM
 	SITE(g_rqManagerMade, 0), SITE(g_rqNotData, 0) };
 #pragma section(".rqedge", read, execute)
 __declspec(allocate(".rqedge")) volatile unsigned char g_rqEdge[0x2000] = { 0xCC };
+// [siren damage]
+// [corona store]
 #pragma data_seg()
 
 // The game's own modkit array (1024 entries of 2 bytes) and packfile array (4500 entries of 8 bytes). The
@@ -2953,7 +2957,8 @@ static void SirenIdsReport()
 // SirenCountFindBone - so that TweaksV checks both by the unwind data, as it does the game's, and neither is on the stack while
 // the fake's own code runs. The models lie at the game's offsets: the hash of a model's name at +0x18, the holder of its bone
 // structure at +0xB0, the bone structure's signed byte at 0x10 + a hierarchy ID, the skeleton data at the skeleton's +0x00, its
-// bone count at +0x5E, and a bone's index at +0x42.
+// bone count at +0x5E, and a bone's index at +0x42. Their bone structures have the room the part gives them in the game, filled
+// from the start (TweaksVSirenRoom.h), so that the second call's scenarios need no fill, whose own proof is on the merged tree.
 static void SetRel32(const Site& site, const void* target);
 static const unsigned char* Rel32Target(const Site& site);
 static const unsigned char* ImageEnd();
@@ -2969,8 +2974,11 @@ struct SirenCountModel
 };
 struct SirenCountBones
 {
-	signed char ids[0x10 + 0x284];			// at 0x10 + a hierarchy ID, the index of its bone; -1 for none
+	signed char ids[0x34C];					// at 0x10 + a hierarchy ID, the index of its bone; -1 for none
+	signed char room[2][32];				// +0x34C siren1's bone to siren32's, +0x36C siren_glass1's to siren_glass32's; -1 for none
 };
+static_assert(offsetof(SirenCountBones, room) == 0x34C && sizeof(SirenCountBones::room[0]) == 0x20 && sizeof(SirenCountBones) == 0x38C,
+	"the bone structure with its room, as the part raises it");
 struct SirenCountBone
 {
 	char name[0x42];
@@ -3017,26 +3025,30 @@ static SirenCountModel* volatile g_sirenCountMany = g_sirenCountManyStorage;
 
 // A model: the hash of its name, its skeleton's bones, and its siren and glass bones by name - siren1 to siren<sirens> at the
 // bones from firstSiren on, siren_glass1 to siren_glass<glass> from firstGlass on. Its bone structure names those of siren1 to
-// siren20 - hierarchy IDs 0x89 to 0x9C, their glass 0x9D to 0xB0 - whose index a signed byte holds, as the game's does.
+// siren20 - hierarchy IDs 0x89 to 0x9C, their glass 0x9D to 0xB0 - whose index a signed byte holds, as the game's does, and its
+// room all of them.
 static void SirenCountMake(SirenCountVehicle& v, uint32_t hash, uint16_t bones, int sirens, int firstSiren, int glass, int firstGlass)
 {
 	memset(&v, 0, sizeof(v));
-	memset(v.structure.ids, 0xFF, sizeof(v.structure.ids));
+	memset(&v.structure, 0xFF, sizeof(v.structure));
 	v.model.hash = hash;
 	v.holder = &v.structure;
 	v.model.bones = &v.holder;
 	v.data.bones = bones;
 	v.data.list = v.list;
 	v.skeleton.data = &v.data;
-	const struct { const char* name; int count; int first; int id; } kinds[2] = { { "siren", sirens, firstSiren, 0x88 },
-		{ "siren_glass", glass, firstGlass, 0x9C } };
+	const struct { const char* name; int count; int first; int id; int room; } kinds[2] = { { "siren", sirens, firstSiren, 0x88, 0 },
+		{ "siren_glass", glass, firstGlass, 0x9C, 1 } };
 	for (const auto& kind : kinds)
 		for (int n = 1; n <= kind.count; n++)
 		{
 			SirenCountBone& bone = v.list[v.data.named++];
 			snprintf(bone.name, sizeof(bone.name), "%s%d", kind.name, n);
 			bone.index = static_cast<uint16_t>(kind.first + n - 1);
-			if (n <= 20 && bone.index < 128)
+			if (bone.index >= 128)
+				continue;
+			v.structure.room[kind.room][n - 1] = static_cast<signed char>(bone.index);
+			if (n <= 20)
 				v.structure.ids[0x10 + kind.id + n] = static_cast<signed char>(bone.index);
 		}
 }
@@ -7004,6 +7016,9 @@ static void RqReport(int argc, wchar_t** argv)
 	wprintf(L" D1=0x%llX D2=0x%llX D3=0x%llX MG=0x%llX | ", rva(g_rqReferences + 11), rva(g_rqRotation), rva(g_rqManagerMade + 5), rva(&g_rqData.manager));
 }
 
+// [siren damage]
+// [corona store]
+
 // The game's two tree searches behind the box streamer's four calls: the first and the third call lead
 // to the first search, the second and the fourth to the second. Each writes the number of entries the
 // harness asks for - at most 16 short of the capacity it is handed, where the game's searches stop - and
@@ -7493,6 +7508,8 @@ static void ForEachSite(void (*fn)(const Site&))
 	static Site poolMemorySite = SITE(g_poolMemorySite, 0);
 	fn(poolMemorySite);
 	for (const Site& site : g_rqSites) fn(site);
+	// [siren damage]
+	// [corona store]
 }
 
 static void MakeSitesReadExecute()
@@ -9088,6 +9105,8 @@ int wmain(int argc, wchar_t** argv)
 	PedPoolSetUpSites(argc, argv);
 	PoolMemorySetUpSite(argc, argv);
 	RqSetUp(argc, argv);
+	// [siren damage]
+	// [corona store]
 
 	RovSetup(argc, argv);
 	ForEachSite(TouchSite);
@@ -9253,6 +9272,8 @@ int wmain(int argc, wchar_t** argv)
 	PedPoolActions(argc, argv);
 	PoolMemoryActions(argc, argv);
 	RqActions(argc, argv);
+	// [siren damage]
+	// [corona store]
 	if (HasOption(argc, argv, L"wait"))
 		Sleep(11000);	// TweaksV's UNLOCK_FILES summary comes 10 s after the first open it counts, the OpenFile summary 10 s
 						// after the first OpenFile, the interface check 10 s after the request
@@ -9340,6 +9361,8 @@ int wmain(int argc, wchar_t** argv)
 	PedPoolReport();
 	PoolMemoryReport();
 	RqReport(argc, argv);
+	// [siren damage]
+	// [corona store]
 	CheckStub(Rel32Target(g_packCallSite));
 	CheckStub(Rel32Target(g_scriptCallSite));
 	CheckStub(Rel32Target(Site{ g_staticBoundsInit, kSbLookupRel, 0 }));
