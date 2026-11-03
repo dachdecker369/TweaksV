@@ -33,10 +33,11 @@ With it: every pack's line of the siren IDs' log names its file `?`, as `FileNam
 Ideas from the page of [Resource Extensions [Enhanced]](https://www.gta5-mods.com/scripts/resource-extensions) 2.4 by Koukol, read on 2026-11-01: closed source and its redistribution forbidden, so the page's words alone, its plugin never read.
 Each has a research pass in the dump (PLAN.md, D20) and a measurement before any raise, in 2.7.0; a raise the numbers ask for comes in 2.8.0.
 
-- The vehicle model budget and the ped model budget: researched, each a budget in bytes, 429 MB and 561 MB at the Population Variety slider's top, measured first in `TweaksVPopulation` (SPECIFICATIONS.md, section 11.16.4); a raise goes by my own `gameconfig.xml`'s block for my load (the vehicles' after 2.7.0's boot, PLAN.md, D-V5), a key of a part only if other people's loads are to get it, and only from the numbers.
-- The ped pool: measured in 2.7.0, not raised; 2.8.0 only if the numbers ask, with the render queues' raise first (PLAN.md, D31).
-- The render queues: measured in 2.7.0; a raise waits for the boot's numbers, its design in the findings' section 8.
-- The lighting capacity: measured in 2.7.0; the raises of its findings' 8.1 A, B and C go in 2.8.0, with the sirens per vehicle (PLAN.md, D23, D30).
-- The corona store and the ray traced list: at their room in my proof, 1088 and 1024, and in none of 8.1 A, B or C; the plan of 2.8.0 settles them.
+- The vehicle model budget and the ped model budget: researched, each a budget in bytes, 429 MB and 561 MB at the Population Variety slider's top, measured first in `TweaksVPopulation` (SPECIFICATIONS.md, section 11.16.4); a raise goes by my own `gameconfig.xml`'s block for my load (the vehicles' in 2.8.0's proof, PLAN.md, D-V5; the peds' not, D43), a key of a part only if other people's loads are to get it, and only from the numbers.
+- The ped pool: measured in 2.7.0, not raised: my proof's numbers do not ask for it (PLAN.md, D31, D43).
+- The render queues: measured in 2.7.0, not raised: my proof's numbers do not ask for it (PLAN.md, D43); a raise's design is in the findings' section 8.
+- The lighting capacity: measured in 2.7.0; the raises of its findings' 8.1 A, B and C go in 2.8.0, with the sirens per vehicle, as a part of their own (PLAN.md, D23, D30, D39).
+- The corona store: at its room in my proof, 1088, and in none of 8.1 A, B or C; researched, and raised in 2.8.0 if its findings allow it (PLAN.md, D35).
+- The ray traced list: at its room in my proof, 1024, in 2 of 32 minutes; a count of what it refuses in 2.8.0, no sort unless that number asks (PLAN.md, D36).
 - The texture budget: `VIDEO_MEMORY_BUDGET` at 6000 by default in 2.8.0 (PLAN.md, D33).
-- The streamed objects: `MaxStreamingResources`, 98,304 in `gameconfig.xml`, binds on my load once the texture budget is raised; what else reads it is not researched yet.
+- The streamed objects: `MaxStreamingResources`, 98,304 in `gameconfig.xml`, binds on my load once the texture budget is raised; researched for 2.8.0, then a boot in my own file, a key only if other people's loads need it (PLAN.md, D37).

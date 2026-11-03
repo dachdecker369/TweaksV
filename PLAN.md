@@ -2,66 +2,66 @@
 
 The order of work for a change to TweaksV, phase by phase, each ending with its proof, a commit and my boot.
 What came before phase C is in the git history and in NOTES.md's Versions; the passes' findings and reviews are in my research tools' `output-1158.16\`.
-Phase C, planned on 2026-11-01, is two builds (D19): 2.7.0, with six research passes side by side, StaticBounds anew through the original's two hooks, the siren setting IDs, the population's limits and the lighting capacity measured, and the open issues the round takes; then 2.8.0, the sirens per vehicle (D23) and the raises 2.7.0's numbers ask for, planned from those numbers.
+Phase C, planned on 2026-11-01, is two builds (D19): 2.7.0, tagged on 7fa28da, and 2.8.0, the sirens per vehicle (D23) and the raises 2.7.0's numbers ask for, planned on 2026-11-03 from those numbers (D34 to D43); 2.7.0's tracks and items are in the git history up to 81f47ac.
 
 ## How the work runs
 
-The work runs as my rules for every project have them since 2026-11-01 (D29): the three levels of tracks, the fastest split, short plans, one proof on the merged tree, small state files, few messages.
+The work runs as my rules for every project have them (D29): the three levels of tracks, the fastest split, short plans, one proof on the merged tree, small state files, few messages.
 This section holds only what is this round's.
 
-- **The overview** (the overview) reads the weekly limits and starts the merge.
-  It checks each research pass's findings from their summary, on paper, before anything is built on them (D20), and brings me the decisions they ask for.
-  It has the merged diff reviewed once, asks for my boots, reads them, tags 2.7.0 and pushes.
-- **The merge** (the merge) makes the scaffold and the reflow on main (D27), writes one short plan per track and starts the tracks in its track.
 
-- **Eleven tracks at the go** - five coding tracks and six research passes - each on a branch of its own from main at the reflow's commit.
-  The later ones - one measurement for each limit its findings confirm (D25) - start from main once the overview has checked the findings and I have decided on them, each.
+  It has the merged diff reviewed once, asks for my boots, reads them, tags 2.8.0 and pushes.
+- **The merge** (the merge) makes the scaffold on main, writes one short plan per track and starts the tracks in its track.
 
-Every coding track builds from what its item names: the findings file in my research tools' folder, `C:\_DEVELOPMENT\_Tools\TweaksV-research\output-1158.16\<topic>_findings_for_the_clean_room_build.txt`, with the decisions below where they change the design and the review beside it, `<topic>_review.md`; the static bounds track from the original's source (D24); the sweeps from the open issues' entries in NOTES.md.
+- **Three coding tracks at the go,** each on a branch of its own from main at the scaffold's commit.
+  The sweep and, if its findings allow it, the corona store start from main once the overview has checked the findings and I have decided on them, the same go if those are in by then.
+
+Every coding track builds from what its item names: the findings file in my research tools' folder, `C:\_DEVELOPMENT\_Tools\TweaksV-research\output-1158.16\<topic>_findings_for_the_clean_room_build.txt`, with the decisions below where they change the design and the review beside it, `<topic>_review.md`.
 No track reads code of an original whose license does not allow it (D2) - Resource Extensions' plugin and SirenSetting Limit Adjuster's code least of all.
-Only the research passes analyse the dump (D20): a fact a coding track lacks goes up as a question.
+Only the research passes analyse the dump (D2, D34): a fact a coding track lacks goes up as a question.
 No committed file and no commit message names a local folder or a branch.
+
+## What the numbers ask
+
+From my proof's start 5 unless said; starts 4 and 5 read minute by minute, 32 minutes in all, for how often a peak comes.
+
+| Limit | The most | Verdict |
+|---|---|---|
+| The frame's vehicle lights | 327 of 400, unchecked past it | Moved (the lighting capacity's 8.1 A, D30) |
+| The frame's vehicle coronas | 439 of 928, unchecked past it | Moved (8.1 A) |
+| A job's lists | 0 refused of 80 lights; coronas not seen | Raised to 180 and 300 (8.1 C, D23) |
+| The scene store | 642 of 1024, marked in 0 samples | Not raised (8.2); its byte index fixed (8.1 B, D30) |
+| The corona store | 1088 of 1088 in 1 minute of 32, 317 to 917 else | Researched, raised if its findings allow it (D35) |
+| The ray traced list | 1024 of 1024 in 2 minutes of 32, 531 to 945 else | A count of what it refuses, no sort (D36) |
+| The ray traced upload | past 512 in nearly every sample | Cannot be raised (8.2) |
+| `MaxStreamingResources` | 98,343 of 98,304, in one minute of driving | Researched, then my boot (D37) |
+| The texture budget | about 4,700 of 6,000, the most 5,576, the flag down | 6000 by default (D33) |
+| The vehicle model budget | at the stop 95% of the time, 1,224 of 429 | My `gameconfig.xml` (D-V5), once the stores are in |
+| The ped model budget | 505.8 of 561, at the stop in 0 of 1716 samples in start 4 | No raise (D43) |
+| The ped pool | 97 of 256 | No raise (D43) |
+| The render queues | peds 15 of 120, props 5 of 120, vehicles 4 of 100, references 4,571 of 10,368 | No raise (D43) |
+| The ray tracing buffer | 3.73 of 4.19 million vertices, none refused | No change; watched in my proof, since D-V5 brings more vehicles, and its key is there |
+| The siren count | 3 models past `siren20`, half a lightbar dark | The hybrid (D23) |
 
 ## The tracks
 
-The fastest split the work allows (D29): research by topic, since it runs no suites and merges nothing; a coding track for about an hour of work or more, small items together in a sweep, the tracks about as long as the longest.
-Each table is in the order of the merge.
-
-**The research, at the go** (D20):
-
-| Track | Track | Owns |
-|---|---|---|
-| The sirens' bones and parser | | `sirencount2_findings_for_the_clean_room_build.txt` in my research tools' `output-1158.16\`, its work folder `work-sirencount2` there |
-| The lighting capacity | | `lightcapacity_findings_for_the_clean_room_build.txt`, `work-lightcapacity` |
-| The vehicle model budget | | `vehiclemodelbudget_findings_for_the_clean_room_build.txt`, `work-vehiclemodelbudget` |
-| The ped model budget | | `pedmodelbudget_findings_for_the_clean_room_build.txt`, `work-pedmodelbudget` |
-| The ped pool | | `pedpool_findings_for_the_clean_room_build.txt`, `work-pedpool` |
-| The render queues | | `renderqueues_findings_for_the_clean_room_build.txt`, `work-renderqueues` |
+The fastest split the work allows (D29): the sirens' design is the longest item by far and falls apart at its one seam, the room of its findings' 8.7, which the second call reads only as offsets; small items together in a sweep.
+Each table is in the order of the merge; the lengths are rough.
 
 **The coding, at the go:**
 
 | Track | Track | Length | Owns | Joined by |
 |---|---|---|---|---|
-| Data window | | short, on its own since the sirens' pass needs its boot early | `source\TweaksVDump.cpp` and `.h`; its block in `test\run_integration.sh` | the switch and its scenarios |
-| Static bounds | | long | `source\TweaksVStaticBounds.cpp` and `.h`; `IsPluginInstalledFor` in `source\TweaksVConflicts.cpp` and `.h`; `test\run_staticbounds.sh` | the part and its suite |
-| Siren IDs | | long | `source\TweaksVSirenIds.cpp` and `.h`; the relocation core's fixed size in `source\TweaksVRelocation.cpp` and `.h`; `test\run_sirenids.sh` | the part's IDs and its suite; the core's change, which the move needs first and no other track uses |
-| Sweep: the code | | about as long | T-COPIES' points in their files, but for `TweaksVSirenIds.cpp`'s, `TweaksVPatch.h` and `.cpp` for the one copies; `PackEntry` and the Legacy check's last line in `source\TweaksVLegacyPacks.cpp`; `source\TweaksVModsFolder.cpp` and `.h`; `source\TweaksVSummary.cpp` and `.h`; the report's one call in the guards and the Legacy check; their blocks in the suites | T-COPIES, T-LEGACYWALK, T-NAMES, T-LATEBOX and T-SUMMARY, none an hour's work alone, and the join does not lengthen the round |
-| Sweep: the tests | | shorter | `test\run_all.sh` and `test\common.sh`; `TEST_TWICE_PATTERN` in `source\TweaksVScanner.cpp`; the test build's line in `source\TweaksVLog.cpp`; TB16's block in `test\run_texturebudget.sh` and its two writers in `test\fake_game_full.cpp`; its block in `test\run_legacypacks.sh` | the suites made fast (D29) and T-TESTGAPS' four points, none an hour's work alone |
+| Light stores | | about 2 to 3 hours | `source\TweaksVLightCapacity.cpp` and `.h`; `test\run_lightcapacity.sh` | the part's 8.1 A, B and C, its measurement over the moved stores, a job's most and the ray traced list's count: one module, since a pattern is used once |
+| Siren lights | | about 3 hours | `source\TweaksVSirenCount.cpp` and `.h`; the accessor of `I-E-C1` and `I-E-P1` in `source\TweaksVSirenIds.cpp` and `.h`; `test\run_sirencount.sh` | the findings' 8.3 A, B and C, one wrapper over one table; the part's one write; D41's count and guard, at the same getter |
+| Siren damage | | about 2 hours | `source\TweaksVSirenDamage.cpp` and `.h`, new; `test\run_sirendamage.sh`, new | the findings' 8.7: the room, its fill and its 19 damage writes, constants and one redirected call, all found and checked before the part's one write |
 
-**The coding, later,** each once the overview has checked its findings and I have decided on them, each; a module's name may change with its findings:
+**The coding, later,** each once the overview has checked its findings and I have decided on them, each:
 
-| Track | Track | Owns | Joined by |
-|---|---|---|---|
-| The lighting capacity, measured | | `source\TweaksVLightCapacity.cpp` and `.h`; `test\run_lightcapacity.sh` | the module and its suite; needs its findings first |
-| The two model budgets, measured | | `source\TweaksVPopulation.cpp` and `.h`; `test\run_population.sh` | one module for both, as they share a block and a site (D31) |
-| The ped pool, measured, and the pool memory raised | | `source\TweaksVPedPool.cpp` and `.h`; `test\run_pedpool.sh`; `POOL_MEMORY` in `source\TweaksVHeapAdjuster.cpp`, its row of `source\TweaksVSettings.h` and the files that pin the layout | the module, its suite and the raise, since they share the site (D31) |
-| The render queues, measured | | `source\TweaksVRenderQueues.cpp` and `.h`; `test\run_renderqueues.sh` | the same |
-
-The scaffold puts an anchor only where two tracks must write in one table, and each track writes right below its own: `source\TweaksVFeatures.cpp`'s `kMeasuredFirst`, `source\TweaksVPatterns.h`, `source\TweaksV.vcxproj` and `.vcxproj.filters`, `test\fake_game_full.cpp`, `test\run_all.sh` and `test\run_integration.sh`'s I3, and PATTERNS.md, whose rows the patterns suite pins to the table.
-`source\TweaksVPatch.h` and `.cpp` need none under this split, since only the code sweep writes there.
-`source\TweaksVSettings.h` and `.cpp` hold the two test keys, the scaffold's (D27), which the tracks read.
-Every other document is the fragments' (D29).
-The counts more than one track changes are the merge's, which takes their sum.
+| Track | Track | Length | Owns | Joined by |
+|---|---|---|---|---|
+| Sweep | | about 1 hour | `source\TweaksVTextureBudget.cpp` and `VIDEO_MEMORY_BUDGET`'s row of `source\TweaksVSettings.h`, with its line of `test\expected_default.ini`; `test\run_texturebudget.sh`; `FileName` in `source\TweaksVSirenIds.cpp` and its block in `test\run_sirenids.sh` | D33's default, the object limit's key if its findings ask for one, a pack's file name: none an hour alone |
+| Corona store | | from its findings | `source\TweaksVCoronaStore.cpp` and `.h`, new; `test\run_coronastore.sh`, new | its own module, since the light stores' track runs then; only if its findings allow it (D35) |
 
 ## Decisions
 
@@ -177,30 +177,43 @@ the pass (`staticbounds2_findings_for_the_clean_room_build.txt`) found the size 
 - **D33, `VIDEO_MEMORY_BUDGET`'s default in 2.8.0** (2026-11-02): 6000, with the light stores' raises, since my proof's start 5 had 327 of 400 lights with it on, the cause not proven.
   Past Windows' budget the game's update check evicts anyway (the texture budget's findings), on paper.
   2.7.0 keeps 0, so that the proof is not disturbed.
+- **D34, 2.8.0's plan and its order** (2026-11-03), 1 to 10 to the ten points, which D34 to D43 carry; its first asked for the research now and the coding after the weekly limit's reset on 2026-11-05.
+  So nothing waits for the reset: research and coding run side by side, what needs a pass's findings starting once they are checked and I have decided on them.
+  The limit on reverse-engineering the game (D2) is lifted by that word for three passes, `streamedobjects`, `coronastore` and `sirenfacts`, and nothing else.
+  The choices kept at that word: the sirens' one track split in two at the room; the corona pass carrying two small facts for the light stores; three passes, since a pass on the ray traced list's gate falls away with D36; `S-E-C0n` and `S-E-D0n` named `I-E-L0n` and `I-E-N0n`, since `I-E-C3` and `I-E-D2` are the IDs' already.
+
+- **D35, the corona store:** researched and raised in this build if its findings allow it: 1088 of 1088 in 1 of the 32 minutes of my starts 4 and 5, and 13 to 16 vehicles at 32 sirens take it past that.
+- **D36, the ray traced list:** no sort in 2.8.0, since it was full in 2 of those 32 minutes and a light past it still lights surfaces directly (the lighting capacity's findings, 3.4 and 8.2); a count of what it refuses under `DIAGNOSTIC_MODE`, by a stub as `G-E-C1`'s, and the sort only if my proof's number asks for it.
+- **D37, `MaxStreamingResources`:** one pass, then one boot of mine with it raised in my own `gameconfig.xml` on the build of 7fa28da; a key only if the findings say other people's loads need it.
+- **D38, `SIRENS_PER_VEHICLE`'s default** (D23): 32, proven on the tagged build by my proof; a vehicle with no lights past 20 pays one lookup.
+- **D39, the light stores a part:** the sixteenth, `[LIGHTCAPACITY]`, `ENABLED` alone, since the sizes stand at the top of what the worker's scratch allows, off beside Resource Extensions.
+  `SIRENS_PER_VEHICLE` above 20 refuses with a problem when the stores are not raised, and the vehicles stay at 20 (the sirens' findings, 8.3).
+- **D40, a build check on the sirens' raise:** no pattern proves that the renderer reads nothing new of its stand-ins, and on other people's PCs nobody reads it again after a game update; so the raise runs only on game builds its renderer was read on, today 1.0.1158.16, through `ReadGameVersion`, with `PROBLEM: The sirens per vehicle are not raised this session: ...` on any other.
+  A game update costs players the raise until a new TweaksV.
+- **D41, a siren setting ID that finds no setting** (SPECIFICATIONS.md, 11.14, risk 3): a count under `DIAGNOSTIC_MODE`, and one guard while the getter is redirected: a position past the array gets a setting of all zeros, no lights, and one line per model, no box, if `sirenfacts` finds that safe.
+  With `SIRENS_PER_VEHICLE=20` the getter is not redirected and only the count stands, by the measurement's wrapper.
+- **D42, the hat of T-PEDPROPS:** out of this round unless I have a small clean single-prop pack by the proof, then one start of its own; no code unless it passes, and then one default.
+- **D43, no raise of the ped pool, the render queues or the ped budget:** my proof's numbers do not ask for one (D30, D31).
 
 ## The items
 
 
 
-**Every research pass** (D20): a work folder of its own, `work-<topic>` in my research tools' folder, begun as a copy of `work-wcloader`'s `ghidra`, `ghidra_quick` and `game\GTA5_Enhanced.exe`, with `TWEAKSV_WORK=work-<topic>`.
-The findings file has the sections of the earlier passes, opens with a one-page summary and keeps a State section after every step: the page and the clean room, the limit in Enhanced, the sites with their candidate patterns and complete sets, the facts no pattern protects, the measurement, what a mod load needs, the design answers, the hand-over.
-Each fact has its evidence, a hint marked as one.
-The tools are those of my research tools' README; a question of mine goes.
+- `[LIGHTCAPACITY]` with `ENABLED` in `kSections` before `[SIRENSETTINGS]`, its row of `kFeatures` with Resource Extensions as its peer and a stub; `SIRENS_PER_VEHICLE` under `[SIRENSETTINGS]`, 32 by default, 20 to 32; layout 5 stays, unreleased, as D31 had it, at 45 keys; `test\expected_default.ini`.
+- `bool LightStoresRaised()` declared, a stub.
+- The part's one write as a skeleton in `TweaksVSirenCount`: D40's check, the question to `LightStoresRaised()`, then `FindSirenLights` and `FindSirenDamage` each adding to one list of writes, then one `WriteCode` and one `RedirectCalls`, so that each siren track runs its suite with the key on, on its own branch.
+- The room's constants in one header, 0x34C, 0x36C and 0x38C; the fake game's model with S at 0x38C and the room filled, so that the second call's suite does not wait for the fill, which `integration` proves on the merged tree.
+- An anchor where two tracks write in one table: `source\TweaksVPatterns.h`, PATTERNS.md, `source\TweaksV.vcxproj` and `.vcxproj.filters`, `test\fake_game_full.cpp`'s regions, `test\run_all.sh`.
+
+Its checks are a build and the suites that pin what it changed; the tracks start right after it.
+
+**Every research pass** (D34): a work folder of its own, `work-<topic>` in my research tools' folder, begun as a copy of `work-wcloader`'s `ghidra`, `ghidra_quick` and `game\GTA5_Enhanced.exe`, with `TWEAKSV_WORK=work-<topic>`; a findings file with a one-page summary and a State section; each fact with its evidence, a hint marked as one.
 What each asks:
 
-- **The sirens' bones and parser** (`sirencount2`, D23), from `sirencount_findings_for_the_clean_room_build.txt`, its sections 3.7, 3.8, 4.3, 4.5 and 8:
-  where the game allocates and fills a model's bone structure - the fill may lie in the protected code - and what it would take to give `siren21` to `siren32` and their glass a place the 13 read sites reach, or a table of the part's own;
-  the parser's member data of the lights' array, at RVA 0x28EE4C8 on the first pass's hint, and the structure's size as the parser keeps it, through the data window (D21), and what a binary `carcols.ymt` does with a longer array;
-  what the parser does today with a 21st light;
-  the stored damage state of 20 bytes (RVA 0x1548A80);
-  every one of the first pass's 82 sites checked again against those answers;
-  a design by layer for `SIRENS_PER_VEHICLE`, 20 to 32, and the smallest raise that lights a 32-siren model's lights, with what each layer left out costs and what a game update does to it;
-  a verdict I can decide on.
-- **The lighting capacity** (`lightcapacity`): how many lights the game keeps for a frame, in which lists and stores, what becomes of a light past them, and whether many vehicles' siren lights reach them - 20 a vehicle, 32 after a raise - the ray traced path included; its measurement; the design of a raise.
-- **The vehicle model budget** (`vehiclemodelbudget`): the budget of vehicle models the game keeps streamed for its traffic - the key `VehicleModelBudget` on the page, 0 for the game's own, raised with care for the video memory: where it is, what sets it, what happens past it, whether add-on vehicles reach it; its measurement; the design of a raise.
-- **The ped model budget** (`pedmodelbudget`): the same for ped models - the page's fewer repeated ped models.
-- **The ped pool** (`pedpool`): the pool of peds, on the page from 256 to 768 slots with 128 kept for missions, peds and animals sharing them: where its size and the missions' share are set, whether `gameconfig.xml` names one, every array and loop sized by it, what the game does when it is full; its measurement; the design of a raise; and D20's question of a pool's memory.
-- **The render queues** (`renderqueues`): the queues that hold streamed peds and vehicles for rendering: where they are, how large, what is dropped past them, whether a load reaches them; their measurement; the design of a raise.
+- **The streamed objects** (`streamedobjects`, D37): every reader of the most objects, RVA 0x481D0A0, and of the configuration's +0x54C; what the placement does at the limit; whatever else counts or is sized by the same objects, so the first hard limit past 98,304 and a safe top; my `gameconfig.xml` for my load, and whether other people's want a key beside `VIDEO_MEMORY_BUDGET`.
+- **The corona store** (`coronastore`, D35): every source that adds to the store at RVA 0x41B4210 and their order in the frame; its readers on to the screen and everything sized by 1088; the smallest raise that puts more coronas on screen, or why not.
+  With it, two facts for the light stores: the two copies at a job's end, as the place to see a job's most, and whether the target of `G-E-F1`'s jump reads flags.
+- **The siren facts** (`sirenfacts`, D41): where a pack's file name is reachable from `I-E-H1`'s arguments; the getter in full, what it gives for position 0xFF, and whether the renderer takes a setting of all zeros safely.
 
 **Every coding track,** each item its own commit:
 
@@ -209,42 +222,47 @@ What each asks:
    It pins at least the plain game; the part off; `DRY_RUN`; each check failing on its own, with nothing written; a site another mod changed; the writes and nothing else, every page's protection its own; the status lines.
 3. The fragment, in the place my rules give it: the words for the specification's rows in 2 and 14.2 and its part's section, README's paragraph, NOTES' line and check count, ROADMAP's entry, CREDITS.md where an original gave the idea or code.
 
-An open issue's track takes the items it needs and asks for its entry in NOTES.md to come out, in its fragment.
 Before its report it makes the builds it needs without a warning and runs the suites its files touch, and it tries its new log lines against the other suites' patterns (my notes on the project's practice); shared code touches the suites of whatever uses it.
 
 **What each track builds:**
 
-- **Data window** (D21): the key in `TweaksVDump`, its reader and its thread beside `TEST_DUMP_CODE`'s; the integration suite's scenarios beside I16: a fake `.data` saved at both moments and each file checked against what the fake holds, a window that leaves `.data`, too many, too large, text that is no window, a hard link in a file's place, the Release build ignoring the key.
-- **Static bounds** (D24, D32): the second pass's design, its last section the suite.
-  The conflict check's two names are the scaffold's; CREDITS.md and THIRD_PARTY_NOTICES.md come back through the fragment, the notice saying what is adapted now.
-- **Siren IDs** (D22; its findings' sections 4.2, 4.3, 8 and 9, the review's two points, PATTERNS.md's "Siren IDs"): the ID table moved on the relocation core to a fixed 65,536 entries of one byte - the core's small change, with its tests - its four `lea` re-pointed and its four limits raised; the 11 byte loads and stores made word ones, the dedupe's loop rewritten inside its padding, the three constructors' defaults, the two parser members' types made words - TweaksV's first write to the game's data, named in the risks - and the base loader's call redirected, so that the new table is filled whenever the game fills its own; all checked first and written together.
-  The index stays a byte, so 255 settings stay the most.
-  The hooks of `I-E-H1` and `I-E-H2` for the drops and moves per pack, with `DIAGNOSTIC_MODE`.
-  The measurement's words past 256 IDs.
-  Its own `<cstdio>` out (T-COPIES).
-- **Sweep: the code** (D26): T-COPIES' points, which change no line of a run; T-LEGACYWALK and T-NAMES as their entries say; for T-LATEBOX a heading per late report in `TweaksVSummary`, each saying whether a part stopped working or what it found, the last line fitting it, and the guards' refusals and the Legacy check's finding reported as findings; for T-SUMMARY the summary's thread tried again with the next problem reported.
-- **Sweep: the tests** (D26, D29): `test\run_all.sh` parallel first, each suite in a folder of its own, its output and its result as they are, `SUITES` still one suite a line; a table of which suites a changed file needs; then T-TESTGAPS' four points.
-  No real timer's switch: it would save about 20 of 345 seconds and add a way to flake, so it is not built (2026-11-02).
-  It runs the full suite, serial and parallel, and gives both times and the same tally of checks; NOTES.md's count is the merge's, so its line is not this track's to pass.
-- **A measurement** (D25): its findings' section 6, the module and its suite as phase A's.
+- **Light stores** (D30, D36, D39; the lighting capacity's findings, 8.1 A, B and C and 8.3, and its review): the part looks for the 22 patterns always, and the measurement reads the addresses from it: over the moved stores its numbers say `of 10800` and `of 18000`, with the part off the game's own.
+  Its checks are the measurement's, as a writing half's, and they refuse: a write pointer not 0 means the frames have begun, so the part refuses with a problem, never writing a rel32 a thread may be reading.
+  `G-E-C4`'s 16 bytes are read by a `movaps`, so they lie 16-aligned.
+  `LightStoresRaised()` is true only once its one write is done.
+  Last, from `coronastore`'s findings once they are checked: a job's most lights and coronas under `DIAGNOSTIC_MODE`, so that my proof can show a job past 80 and past 200, not only that none was refused; the ray traced list's refused lights by a stub as `G-E-C1`'s.
+  PATTERNS.md gets the sites, not an order against the constructor (its review's point 7).
+- **Siren lights** (D23, D38, D40, D41; the sirens' findings, 8.3's A, B and C as 8.7 keeps them, `I-E-Z8` out, and its review's three points): the two tables each reported once when full, the own settings published whole with no lock on the hot path.
+  `SIRENS_PER_VEHICLE=20` looks for nothing and writes nothing of this, and the measurement goes on as now; with `DIAGNOSTIC_MODE` the lines of the findings' section 6, the one that says which models are lit past 20 being my proof's.
+  Last, from `sirenfacts`' findings once they are checked: D41's count and guard.
+- **Siren damage** (D23; the sirens' findings, 8.7 and 8.8): the room, its fill and the 19 damage writes; `I-E-L0n` and `I-E-N0n` (D34); a hit, an impact and a wreck on lights past 20 in the fake game, the room's mirror on a plane's IDs, each site failing alone with nothing written.
+  The findings' `S-E-C06`, `S-E-D07` and `S-E-D08` stay as they are.
+- **Sweep** (D33, D37): `VIDEO_MEMORY_BUDGET` at 6000 with its comment, README and the suites that pin 0; the object limit's key if `streamedobjects`' findings ask for one; a pack's file name from `sirenfacts`' findings.
+- **Corona store** (D35): from `coronastore`'s findings, if they allow it.
 
-**The merge** (the merge): the long tracks verified from their branches as they finish, a sweep's diff read itself.
-All the tracks' commits cherry-picked in the order of the tables onto main, scripted; each code file checked to hold exactly both sides' changes; the anchors removed; the fragments folded into the documents in one commit; the counts summed; T-COPIES' points in `TweaksVSirenIds.cpp` (its `ReadAt` and any left) a small commit of the merge's.
+**The merge** (the merge): the long tracks verified from their branches as they finish, the sweep's diff read itself.
+All the tracks' commits cherry-picked in the order of the tables onto main, scripted; each code file checked to hold exactly both sides' changes; the anchors removed; the fragments folded into the documents in one commit; the counts summed; CREDITS.md naming SirenSetting Limit Adjuster for the sirens' idea (D20).
 
 fixes in one or two sweep tracks.
-Then 2.7.0 set - the project's version, the specification's header example and its section 15, NOTES' Versions, ROADMAP.md's entries of the shipped parts taken out - the four builds from scratch without a warning, `run_all.sh` green, the build reported.
+Then 2.8.0 set - the project's version, the specification's header example and its section 15, NOTES' Versions, ROADMAP.md's entries of the shipped parts taken out - the four builds from scratch without a warning, `run_all.sh` green, the build reported.
 
 ## The boots
 
-**The data window's boot,** early in the round: the test build of the data window's track, which the track builds on its branch, the merge copies out and the overview hands me with the INI line naming the windows the sirens' pass asks for.
-I copy it into the game folder, start the game, stay in it for the seconds the line names, quit, and put the build I use back.
-The overview reads `TweaksV.log`; the pass reads the files.
+**The object limit's boot** (D37), once `streamedobjects`' findings are checked and if they find nothing of fixed size behind it: the build of 7fa28da as it stands in the game folder, `MaxStreamingResources` raised in my own `gameconfig.xml` to the value the findings name, `VIDEO_MEMORY_BUDGET=6000`, `DIAGNOSTIC_MODE=1`, the drive of my start 5: the objects past 98,304 in the log and my LOD switching by eye.
 
-**2.7.0's proof,** done on 2026-11-02 (below), on the Release builds of 6042fe7 and, for what D32 rebuilt, of the tagged commit 7fa28da, with `DIAGNOSTIC_MODE=1`, my usual mods folder, my converted emergency packs and a save loaded; `TrainerV.asi` and Collectibles on Map lay beside TweaksV, which only `POOL_MEMORY` makes safe, and the police packs came by the trainer.
-A start with `LARGE_SIREN_IDS=0` and one with `LARGE_SIREN_IDS=1` compared the base game's settings and IDs (D22), about half an hour of driving and shootouts with a wanted level gave the measurements' numbers, the render queues' step (D30) stands in starts 4 and 5, and the store's raise (D32) was proved below and above the game's size.
-It read line 1 naming 2.7.0 and the commit without `-dirty`, the one `PROBLEM` `lfpolice`'s Legacy box, each new pattern at its RVA, each measurement's numbers, no too-late line of `H-E2`'s write, and no crash but the old build's start 3.
-Then came the tag, the searches and one atomic push.
-The next plan, 2.8.0, comes from those numbers.
+**2.8.0's proof,** on the Release build, my usual mods folder and trainer, a backup of my Profiles folder first, `DIAGNOSTIC_MODE=1` but for the last start; each start holds a load past the game's own number for what it proves:
+
+1. **The sirens, at night:** `hp16fpiu1`, `lspdcvpi08` and `policelv` side by side, sirens on: the whole lightbar lit, lights 21 to 32 flashing as their carcols says, by my eye.
+   One shot at a light past 20, one ram, one wreck: those lights out, their glass gone.
+   The log: the models lit past 20 with their bones found, no table full.
+2. **The stores, the same start:** about 30 of those cars spawned in one place, sirens on, the camera among them.
+   The log: vehicle lights past 400, vehicle coronas past 928, a job's most past 80 lights and past 200 coronas, how many a job refused, the scene store at its room, the coronas past 1088 if raised, the ray traced list's refused lights; no crash, and the frame rate as I see it (the lighting capacity's findings, 8.4).
+3. **The budgets, a start of its own:** `Level3Kb` at 98,500 in my `gameconfig.xml` (D-V5), the object limit raised, a drive of 20 minutes through the city at night and on to the tunnel: the vehicle budget's share at the stop against 95%, the objects past 98,304, the ray tracing buffer, my LOD switching by eye.
+4. **The build as it ships:** a fresh `TweaksV.ini` from the build's defaults, no `DIAGNOSTIC_MODE`: line 1 names 2.8.0 and the commit without `-dirty`, the one `PROBLEM` `lfpolice`'s Legacy box, every part applied, `VIDEO_MEMORY_BUDGET` at 6000.
+   This is the build that is tagged.
+
+Then the tag 2.8.0, the searches and one atomic push.
+The hat of T-PEDPROPS is a start of its own.
 
 **What my boots have shown so far** (the full account is in the git history up to 098836c):
 - **2.7.0's proof,** 2026-11-02, first the build of 6042fe7, each start with `DIAGNOSTIC_MODE=1`, my usual mods folder, `TrainerV.asi` and Collectibles on Map in: line 1 clean in all of them, the one `PROBLEM` `lfpolice`'s Legacy box, all 208 patterns of the check at the RVAs of PATTERNS.md's rows.
@@ -287,13 +305,10 @@ The next plan, 2.8.0, comes from those numbers.
 
 ## Next steps
 
-**State:** 2.7.0, phase C's first build, is tagged on 7fa28da and pushed, this document with it: StaticBounds anew at its one call, SirenSettings' IDs past 255, `POOL_MEMORY`, and the lighting capacity, the two model budgets, the ped pool and the render queues measured.
-It has fifteen parts, `TweaksV.ini`'s layout 5 with its 43 keys, 228 patterns and 2382 checks, the full run about 9 minutes side by side.
-My proof passed on it ("The boots"), and 2.2.1 stays the last one published.
-All six research passes and the second one on StaticBounds are done and decided (D23, D30, D31, D32).
-Next: the plan of 2.8.0, from the numbers of my proof, with what is decided: the sirens per vehicle as the hybrid (D23), the lighting capacity's 8.1 A, B and C (D23, D30), `VIDEO_MEMORY_BUDGET` at 6000 by default (D33), and the vehicle budget's raise in my `gameconfig.xml` once the stores are in (D-V5); `MaxStreamingResources`, which now binds, has no finding yet on what else reads it.
-The plan also settles what those decisions do not reach: the corona store, 1088 of 1088 in my proof and in none of 8.1 A, B or C, and the ray traced list, 1024 of 1024, first come with vehicles last, whose gate's sort is not designed (the lighting capacity's findings, 8.2).
-Beside them: a count of the vehicles whose siren setting ID finds no setting (SPECIFICATIONS.md, 11.14), a pack's file name, which its line gives as `?` on the game, and, the one hat that answers T-PEDPROPS.
+**State:** 2.7.0, phase C's first build, is tagged on 7fa28da and pushed, my proof passed on it, and 2.2.1 stays the last one published.
+2.8.0 is planned from my proof's numbers (D34 to D43) and its round runs now: the three research passes, the scaffold, three coding tracks, then the sweep and the corona store once the passes' findings are checked and I have decided on them, one merge, one proof.
+It takes the sirens per vehicle as the hybrid at 32 by default (D23, D38), the light stores as a sixteenth part (D30, D39), `VIDEO_MEMORY_BUDGET` at 6000 by default (D33), and the vehicle budget's raise in my `gameconfig.xml` in my proof (D-V5).
+The corona store and the object limit wait for their passes (D35, D37), the ray traced list gets a count and no sort (D36), and the ped pool, the render queues and the ped budget stay as they are (D43).
 The open issues are T-HARDEN, T-DIAG, T-FREEZE and T-PEDPROPS.
 
-**Decisions waiting on me:** none. The dumps, `GameData-*.bin` and the `work-*` folders stay (D28).
+**Decisions waiting on me:** none before the three passes' findings. The dumps, `GameData-*.bin` and the `work-*` folders stay (D28).
