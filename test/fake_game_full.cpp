@@ -296,6 +296,11 @@
 //   srreset        with srdraw: after the first pass every car's first state made anew, its start time another, and one more pass
 //   srrace         with srdraw: a thread replaces one setting's lights past 20 again and again while this one draws its model
 //   srnofirst      with srdraw: no first pass on this thread: each model's first pass comes with both threads drawing it, each its own car
+//   srreused       with srdraw: the 32-siren car's block is the one the heap gives back from an earlier car of the model, its start 0 too, drawn once and freed
+//   srnostate      with srdraw: the 32-siren car has no state at all
+//   srpadding      the parser's objects hold other bytes in the lights' padding at each read, and the game's merge copies the members alone
+//   srbadnode      a lights array's node whose first child cannot be read, which the game's reader never walks here, then a good setting
+//   srbadobject    a lights array read into an object that cannot be read, which the game's reader never writes here, then a good setting
 //   srmany         300 settings of 21 items each, more than TweaksV's table of 255 holds
 //   srflood        20,001 twins of one setting of 21 items
 //   srfault        one setting's 26th item faults in the reader of an element, and the next setting reads as ever
@@ -3906,6 +3911,7 @@ static uint64_t SirenCountHash(uint64_t hash, const volatile void* bytes, size_t
 	return hash;
 }
 
+static bool g_sirenParsePadding = false;	// srpadding
 // The tree reader as the fake's game has it: a member object's reader of a node into an object, the node with its children; the member data at the game's offsets.
 struct SirenParseNode
 {
@@ -3949,11 +3955,17 @@ constexpr uint64_t kSirenParseResult = 0x5EADE5F00D000001ull;
 constexpr DWORD kSirenParseLastError = 0x5158;
 
 // The reader of an element of the lights, and of the other array's: what the game's reads of a file's item come to
+static bool SirenLightPadding(size_t at)
+{
+	return at == 0x13 || at == 0x27 || (at >= 0x35 && at < 0x38);
+}
 static uint64_t SirenLightRead(const SirenParseMember*, const SirenParseNode* child, unsigned char* element)
 {
 	if (child->faults)
 		*g_sirenParseNowhere = 1;
-	memcpy(element, child->light, sizeof(child->light));
+	for (size_t i = 0; i < sizeof(child->light); i++)	// its members alone, as the game's reads of them come to
+		if (!SirenLightPadding(i))
+			element[i] = child->light[i];
 	return 1;
 }
 static uint64_t SirenOtherLightRead(const SirenParseMember*, const SirenParseNode*, unsigned char* element)
@@ -3964,8 +3976,15 @@ static uint64_t SirenOtherLightRead(const SirenParseMember*, const SirenParseNod
 
 // The game's reader of an array member, behind its carrier's start: the children counted, the count stored behind the elements, each child read by the
 // element's reader up to the capacity, and a result and a last error of its own.
+static const SirenParseNode* const kSirenParseBadChild = reinterpret_cast<const SirenParseNode*>(uintptr_t{ 0x10 });	// srbadnode
+static unsigned char* const kSirenParseBadObject = reinterpret_cast<unsigned char*>(uintptr_t{ 0x10 });					// srbadobject
 static uint64_t SirenArrayRead(const SirenParseMember* member, const SirenParseNode* node, unsigned char* object)
 {
+	if (node->first == kSirenParseBadChild || object == kSirenParseBadObject)	// what only TweaksV's hook would walk
+	{
+		SetLastError(kSirenParseLastError);
+		return kSirenParseResult;
+	}
 	const SirenParseData& data = *member->data;
 	size_t children = 0;
 	for (const SirenParseNode* child = node->first; child; child = child->next)
@@ -4279,12 +4298,17 @@ static const unsigned char* SirenParse(int items, uint32_t seed, uint32_t pastSe
 	root.first = items ? &nodes[0] : nullptr;
 	unsigned char* const object = static_cast<unsigned char*>(calloc(1, 0x5F0));
 	unsigned char* const copy = static_cast<unsigned char*>(calloc(1, 0x5E8));
+	if (g_sirenParsePadding)	// the heap's bytes, another at each read: only a light's padding keeps them
+		memset(object, 0xA0 + (g_sirenParseCalls & 0x1F), 0x5F0);
 	SetLastError(0);
 	const uint64_t result = g_sirenLightsMember.vtable[1](&g_sirenLightsMember, &root, object);
 	InterlockedIncrement(&g_sirenParseCalls);
 	if (result == kSirenParseResult && GetLastError() == kSirenParseLastError)
 		InterlockedIncrement(&g_sirenParseKept);
-	memcpy(copy + 0x3C, object + g_sirenLightsData->offset, 0x5A0 + 4);	// as the game's merge copies them, to their place in its array, with the count
+	for (size_t i = 0; i < 0x5A0; i++)	// as the game's merge copies them, to their place in its array, members and not padding, with the count
+		if (!SirenLightPadding(i % 0x48))
+			copy[0x3C + i] = object[g_sirenLightsData->offset + i];
+	memcpy(copy + 0x3C + 0x5A0, object + g_sirenLightsData->offset + 0x5A0, 4);
 	for (int i = 0; i < 8; i++)
 	{
 		const float scalar = static_cast<float>(scalars ? scalars : seed) + static_cast<float>(i) * 0.5f;
@@ -4295,6 +4319,14 @@ static const unsigned char* SirenParse(int items, uint32_t seed, uint32_t pastSe
 	free(object);
 	delete[] nodes;
 	return copy;
+}
+
+// A lights array the game's reader does not walk: a node with those children, into that object
+static void SirenParseBroken(const SirenParseNode* first, unsigned char* object)
+{
+	SirenParseNode root{};
+	root.first = first;
+	g_sirenLightsMember.vtable[1](&g_sirenLightsMember, &root, object);
 }
 
 // The array member of another member, which goes through the same reader, 32 items in the room of 8 of its own
@@ -4423,6 +4455,21 @@ static void SirenRaiseActions(int argc, wchar_t** argv)
 	g_sirenLightsData->offset = HasOption(argc, argv, L"srlateoffset") ? 0x44 : g_sirenIdsSettingOffsets[19];
 	g_sirenLightsData->element = &g_sirenLightDataStorage;
 
+	g_sirenParsePadding = HasOption(argc, argv, L"srpadding");
+	if (HasOption(argc, argv, L"srbadnode") || HasOption(argc, argv, L"srbadobject"))
+	{
+		if (HasOption(argc, argv, L"srbadnode"))
+			SirenParseBroken(kSirenParseBadChild, g_sirenIdsSettings);
+		else
+		{
+			SirenParseNode* const nodes = new SirenParseNode[21]();
+			for (int i = 0; i < 20; i++)
+				nodes[i].next = &nodes[i + 1];
+			SirenParseBroken(&nodes[0], kSirenParseBadObject);
+			delete[] nodes;
+		}
+		free(const_cast<unsigned char*>(SirenParse(32, 22, 22, -1)));
+	}
 	if (HasOption(argc, argv, L"srfault") || HasOption(argc, argv, L"srelement"))
 	{
 		free(const_cast<unsigned char*>(SirenParse(32, 21, 21, 25)));
@@ -4473,6 +4520,21 @@ static void SirenRaiseActions(int argc, wchar_t** argv)
 	{
 		const uint32_t broken = (1u << 2) | (1u << 24);
 		memcpy(g_sirenCountVehicles[kSirenCount32].car.bytes + 0x860, &broken, sizeof(broken));
+	}
+	if (HasOption(argc, argv, L"srnostate"))
+		memset(g_sirenCountVehicles[kSirenCount32].car.bytes + kSirenCarStateAt, 0, sizeof(void*));
+	if (HasOption(argc, argv, L"srreused"))
+	{
+		SirenCountVehicle& v = g_sirenCountVehicles[kSirenCount32];
+		static SirenCountCar earlier;
+		earlier = v.car;
+		SirenRaiseGiveState(earlier, 0);
+		SirenCountDraw(g_sirenRaiseLights, &earlier, &v.model, &v.skeleton);
+		unsigned char* const block = SirenField<unsigned char*>(earlier.bytes, kSirenCarStateAt);
+		memset(block, 0, kSirenStateSize);			// the game's constructor makes the first state again, and all behind it stays as the earlier car left it
+		const int32_t beat = -1;
+		memcpy(block + 8, &beat, sizeof(beat));
+		memcpy(v.car.bytes + kSirenCarStateAt, &block, sizeof(block));
 	}
 	if (!noFirstPass)
 		SirenRaisePass(false);	// the first pass, on this thread

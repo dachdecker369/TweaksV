@@ -14,7 +14,7 @@
 # stores and each site failing alone with nothing written, the hook taken back, DRY_RUN, the IDs' job on and off.
 # Fake LOCALAPPDATA: the real one is never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
-CHECKS=132
+CHECKS=138
 cd "$B" || exit 1
 cp "$R/x64/Release/TweaksV.asi" TweaksV.asi
 cp "$R/object/Test/Release/TweaksV.asi" TweaksV_test.asi
@@ -140,6 +140,7 @@ RAISED='The sirens per vehicle are raised to 32.'
 NOT_RAISED='PROBLEM: The sirens per vehicle are not raised this session:'
 SETTINGS_FULL='PROBLEM: Some siren settings. lights past 20 are not kept this session: the table of 255 siren settings with lights past 20 is full, and the next ones keep 20 lights.'
 raised_ini() { SIRENS_ON=1 fresh_ini; }
+second_calls() { grep -qE 'siren lights: second calls [1-9]' <<< "$out"; }	# not the 0 that a run with no raise prints beside its other words
 
 echo "== R1 SIRENS_PER_VEHICLE=32, as the default file has it: the settings' lights past 20 read, each vehicle made for them lit by a second call"
 raised_ini; out=$(game full_game.exe srdraw); echo "      $out"
@@ -189,10 +190,18 @@ check "each second state made twice, each time as the game's constructor leaves 
 
 echo "== R7 a setting's lights past 20 replaced 200 times while its model is drawn: each published whole, no lock on the renderer's path"
 raised_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe srdraw srrace)
-check "never torn, each light of one generation, the scalars carried over; 201 replacing lines" "has 'not torn,' && has '$LIGHTS_OK' && [ \$(count 'so it replaces that one\.') -eq 201 ] && log_lacks 'PROBLEM'"
+check "never torn, each light of one generation, the scalars carried over; 201 replacing lines" "second_calls && has 'not torn,' && has '$LIGHTS_OK' && [ \$(count 'so it replaces that one\.') -eq 201 ] && log_lacks 'PROBLEM'"
 
 raised_ini; out=$(game full_game.exe srdraw srnofirst)
-check "no pass on one thread first: each model's first pass with both threads drawing it, each its own car; no block under way reaches the renderer" "has '$LIGHTS_OK'"
+check "no pass on one thread first: each model's first pass with both threads drawing it, each its own car; no block under way reaches the renderer" "second_calls && has '$LIGHTS_OK' && has '$LIT_32'"
+
+echo "== R7b what a block and a file leave behind them"
+raised_ini; out=$(game full_game.exe srdraw srreused)
+check "a block the heap gives back from an earlier car, both start times 0: the second state made again for this vehicle, not the earlier car's" "has 'second states made 7 clear,' && has '$LIGHTS_OK' && has '$LIT_32'"
+raised_ini; out=$(game full_game.exe srdraw srnostate)
+check "a car with no state: no second call for it, no fault" "has 'siren lights: second calls 1005,' && has '$LIGHTS_OK'"
+raised_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe srdraw srpadding)
+check "other heap bytes in the lights' padding at each read, and a merge that copies the members alone: the key the same at the parser and in the array, the twin still a twin" "has '$LIT_32' && has '$LIGHTS_OK' && [ \$(count 'the twin of one read before, dropped\.') -eq 1 ] && log_lacks 'PROBLEM'"
 
 echo "== R8 300 settings with lights past 20: more than the table of 255 holds"
 raised_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe srmany)
@@ -205,6 +214,12 @@ check "the cap's line, word for word, once; 20,000 lines before it" "sc_line 'DI
 echo "== R10 an item that faults in the reader of an element: the setting keeps 20 lights, the next is read"
 raised_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe srfault)
 check "the problem once, word for word; the next setting kept, the first of the table" "sc_line 'PROBLEM: Some siren settings. lights past 20 are not kept this session: reading the lights past 20 of one ended in an access violation, and such a setting keeps 20 lights.' && sc_line 'DIAGNOSTIC: a siren setting of 32 lights read (key 0x[0-9A-F]\{16\}): 12 past 20 kept in a setting of its own, 1 of 255\.' && [ \$(count 'lights read (key') -eq 1 ] && has 'parser 2 of 2 back,'"
+raised_ini; out=$(game full_game.exe srbadnode)
+check "a node that cannot be read: the problem once, word for word; the next setting read" "sc_line 'PROBLEM: Some siren settings. lights past 20 are not kept this session: a lights array.s node could not be read, and such a setting keeps 20 lights.' && [ \$(count 'Some siren settings. lights past 20') -eq 1 ] && has 'parser 1 of 1 back,'"
+raised_ini; out=$(game full_game.exe srbadobject)
+check "an object that cannot be read: the problem once, word for word; the next setting read" "sc_line 'PROBLEM: Some siren settings. lights past 20 are not kept this session: the siren setting a lights array is read into could not be read, and such a setting keeps 20 lights.' && [ \$(count 'Some siren settings. lights past 20') -eq 1 ] && has 'parser 1 of 1 back,'"
+raised_ini; setkey DIAGNOSTIC_MODE 1; out=$(TWEAKSV_TEST_SIREN_WRITE_FAILS=6 ASI=TweaksV_test.asi game full_game.exe srdraw wait)
+check "no memory for the settings kept (the test build's switch): the problem once, word for word; no second call; each setting that could not be kept counted in the summary" "sc_line 'PROBLEM: The lights past 20 of the siren settings are not kept this session: the memory for them could not be had (Windows error 8), and the vehicles keep 20 sirens.' && has 'siren lights: second calls 0,' && log_has '0 siren settings with lights past 20 in the table of 255, 0 twins dropped, 0 replaced by a later one with the same 20 lights, 10 that did not fit or could not be read;'"
 raised_ini; out=$(game full_game.exe srelement)
 check "an element's member object with another member data: nothing read, the problem once" "sc_line 'PROBLEM: Some siren settings. lights past 20 are not kept this session: a lights array.s element is not the one its member data names, and such a setting keeps 20 lights.' && [ \$(count 'Some siren settings. lights past 20') -eq 1 ] && has 'parser 2 of 2 back,'"
 

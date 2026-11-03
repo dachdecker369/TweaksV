@@ -204,10 +204,8 @@ namespace TweaksV
 		constexpr uint32_t kRaisedStateSize = kStandInAt + kStandInSize;
 		constexpr size_t kStateStartAt = 0x00;		// in a state: an int, the start time
 		constexpr size_t kStateBeatAt = 0x08;		// an int, -1 when it is made
-		constexpr size_t kSecondMadeAt = 0x318;		// in the allocation, behind the second state: what says that the part has made it
-		constexpr uint64_t kSecondMade = 0x5349524E53544154ull;	// "SIRNSTAT", no heap's bytes by chance
-		static_assert(kRaisedStateSize == 0x16A8 && kSecondStateAt >= kGameStateSize && kSecondStateAt + kGameStateSize <= kSecondMadeAt &&
-			kSecondMadeAt + sizeof(kSecondMade) <= kStandInAt && kSecondStateAt % 16 == 0 &&
+		constexpr size_t kSecondOwnerAt = kGameStateSize;	// in the allocation, in the 8 free bytes behind the first state: the vehicle the second was made for
+		static_assert(kRaisedStateSize == 0x16A8 && kSecondOwnerAt + sizeof(void*) <= kSecondStateAt && kSecondStateAt + kGameStateSize <= kStandInAt && kSecondStateAt % 16 == 0 &&
 			kStandInAt % 16 == 0 && kVehicleMatrixAt % 16 == 0, "TweaksV: the state, the second state and the stand-in, whose matrix lies 16-aligned");
 		static_assert(PatternByte(kStateSizePattern, kStateSizeAtZ2) == (kGameStateSize & 0xFF) && PatternByte(kStateSizePattern, kStateSizeAtZ2 + 1) == (kGameStateSize >> 8),
 			"TweaksV: I-E-Z2 holds the state's size, 0x188");
@@ -312,15 +310,23 @@ namespace TweaksV
 		bool g_wouldRaise = false;				// with DRY_RUN: every site found, and the line that would redirect the call written
 		bool g_counting = false;				// the measurement counts, on a first pass in the raise's wrapper too
 
-		// The hash of a siren setting's 20 lights, never 0: false if they cannot be read, since the array's growth can move a setting.
+		// A light's bytes that hold no member, which a copy need not keep and the heap leaves as it likes (the findings' 3.3)
+		constexpr bool IsLightPadding(size_t at)
+		{
+			return at == 0x13 || at == 0x27 || (at >= 0x35 && at < 0x38);
+		}
+
+		// The hash of a siren setting's 20 lights, their members alone, never 0, so that it is the same at the parser and in the game's array, and for one
+		// file read twice: false if they cannot be read, since the array's growth can move a setting.
 		bool KeyOfLights(const uint8_t* lights, uint64_t& key)
 		{
 			uint8_t copy[kLightsBytes];
 			if (!CopyMemorySafely(copy, lights, sizeof(copy)))
 				return false;
 			uint64_t hash = 0xCBF29CE484222325ull;
-			for (const uint8_t byte : copy)
-				hash = (hash ^ byte) * 0x100000001B3ull;
+			for (size_t i = 0; i < sizeof(copy); i++)
+				if (!IsLightPadding(i % kLightSize))
+					hash = (hash ^ copy[i]) * 0x100000001B3ull;
 			key = hash ? hash : 1;
 			return true;
 		}
@@ -508,11 +514,25 @@ namespace TweaksV
 			if (!g_ownObjects)
 			{
 				if (g_ownNoMemory)
+				{
+					g_ownNotFit.fetch_add(1, std::memory_order_relaxed);
 					return;
+				}
 				g_ownObjects = static_cast<uint8_t*>(VirtualAlloc(nullptr, kOwnSettings * kSettingSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE));
+#ifdef TWEAKSV_TEST_BUILD
+				// test builds only: TWEAKSV_TEST_SIREN_WRITE_FAILS=6 takes this memory for none, what no other way reaches
+				wchar_t failure[4]{};
+				if (GetEnvironmentVariableW(L"TWEAKSV_TEST_SIREN_WRITE_FAILS", failure, 4) == 1 && failure[0] == L'6')
+				{
+					VirtualFree(g_ownObjects, 0, MEM_RELEASE);
+					g_ownObjects = nullptr;
+					SetLastError(ERROR_NOT_ENOUGH_MEMORY);
+				}
+#endif
 				if (!g_ownObjects)
 				{
 					g_ownNoMemory = true;
+					g_ownNotFit.fetch_add(1, std::memory_order_relaxed);
 					ReportFailure(kTag, "The lights past 20 of the siren settings are not kept this session: the memory for them could not be had (" + DescribeError(GetLastError()) +
 						"), and the vehicles keep 20 sirens.");
 					return;
@@ -835,8 +855,8 @@ namespace TweaksV
 
 		// The renderer once more, on the part's own stand-ins behind the vehicle's state: the vehicle's bits past 20 are the stand-in's
 		// bits from 0 on, so that its light 1 is siren21. The state of the second call follows the game's: its resets touch the first, so
-		// a first state with another start time than the second's has been made anew, and the second is made anew as the game makes it. So is one
-		// the marker does not name as the part's, since the game's constructor knows nothing of it and the heap's bytes can hold that very start time.
+		// a first state with another start time than the second's has been made anew, and the second is made anew as the game makes it. So is one made
+		// for another vehicle, or in none: the game's constructor knows nothing of it, the heap gives a block back as an earlier car left it, and that can hold this very start time.
 		void SecondCall(const uint8_t* vehicle, float a, float b, float c, uint64_t flag, const ModelBlock* block, const uint8_t* skeleton, uint64_t value, void* coronas)
 		{
 			uint8_t* const state = ValueAt<uint8_t*>(vehicle, kVehicleStateAt);
@@ -845,14 +865,14 @@ namespace TweaksV
 			uint8_t* const second = state + kSecondStateAt;
 			uint8_t* const standIn = state + kStandInAt;
 			const int32_t start = ValueAt<int32_t>(state, kStateStartAt);
-			if (ValueAt<uint64_t>(state, kSecondMadeAt) != kSecondMade || ValueAt<int32_t>(second, kStateStartAt) != start)
+			if (ValueAt<const uint8_t*>(state, kSecondOwnerAt) != vehicle || ValueAt<int32_t>(second, kStateStartAt) != start)
 			{
 				memset(second, 0, kGameStateSize);
 				memset(standIn, 0, kStandInSize);
 				const int32_t beat = -1;
 				memcpy(second + kStateBeatAt, &beat, sizeof(beat));
 				memcpy(second + kStateStartAt, &start, sizeof(start));
-				memcpy(state + kSecondMadeAt, &kSecondMade, sizeof(kSecondMade));
+				memcpy(state + kSecondOwnerAt, &vehicle, sizeof(vehicle));
 			}
 			memcpy(standIn + kVehiclePointerAt, vehicle + kVehiclePointerAt, sizeof(void*));
 			memcpy(standIn + kVehicleKindAt, vehicle + kVehicleKindAt, sizeof(uint16_t));
