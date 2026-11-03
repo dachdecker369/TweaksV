@@ -13,21 +13,24 @@
 // findings have it, or frames that have begun, is a problem and nothing is changed. The sirens per vehicle ask for it.
 // The measurement says which of these layers a mod load reaches:
 //   DIAGNOSTIC_MODE  the measurement: a thread reads the game's counters every 10 ms, aligned values of its .data, and keeps each
-//                    one's most, of the minute and of the session; the jump a job's full list takes leads through a counting stub,
-//                    the measurement's one write, unless the game's frames have begun and its threads may run it; 10 seconds in,
-//                    and then every minute while the numbers change, the log says how far each layer filled, over the moved stores
-//                    when they are moved, how many lights the jobs refused and what the siren settings ask for. A number seen past
-//                    its room is a line of its own at once
+//                    one's most, of the minute and of the session; the jumps a job's full list and the full ray traced list take lead
+//                    through counting stubs, and a job's two copies at its end through stubs that keep its most, the measurement's one
+//                    write, unless the game's frames have begun and its threads may run them; 10 seconds in, and then every minute while
+//                    the numbers change, the log says how far each layer filled, over the moved stores when they are moved, a job's
+//                    most, how many lights the jobs and the ray traced list refused and what the siren settings ask for. A number seen
+//                    past its room is a line of its own at once
 //   DRY_RUN          everything found and checked and the sampling as ever, over the game's own stores; no write of the part and
-//                    the jump left as it is, so the refused lights are not counted
+//                    the jumps and calls left as they are, so what their stubs would count is not counted
 // All 22 patterns are found first, by the part when it is on and else by the measurement, and nothing is looked for with neither,
 // and every site checked: the stores' and the lists' distances, the stores' references by a scan, each site naming what the others
 // name, every address inside the game, every value read aligned and readable; the constants the patterns pin are compared when
 // TweaksV is compiled. For the measurement alone a pattern missing, a site not as expected, a thread that cannot start or a stub
-// that cannot be made is logged, not reported - the measurement is an aid (NOTES.md, T-DIAG).
-// The stub runs on the game's worker threads, so it counts with a lock instruction into a 64-bit counter, keeps every register,
-// uses no stack, changes only the flags, which the jump's target writes anew before anything reads them, and lies near the
-// game, read+execute, its counter on a read/write page of its own. It runs only when a list is full.
+// that cannot be made is logged, not reported - the measurement is an aid (NOTES.md, T-DIAG); G-E-K1 and G-E-K2, which the measurement
+// alone looks for, and the ray traced list's jump, not as the findings have them, cost their own number and nothing else.
+// The stubs run on the game's worker threads, so they count with lock instructions into 64-bit counters and lie near the game,
+// read+execute, their counters on a read/write page of its own. A jump's keeps every register and uses no stack, and changes only the
+// flags, which the jump's target writes anew before anything reads them; it runs only when a list is full. A copy's uses rax, which
+// nothing reads past the call, and goes on to the copy with its arguments and its stack as they were; it runs once a job.
 // Written for TweaksV from the findings of its own research in the game's code (PATTERNS.md); the idea of many siren lights
 // reaching this capacity comes from the page of Resource Extensions [Enhanced] by Koukol, whose plugin was not read (CREDITS.md).
 
@@ -109,7 +112,7 @@ namespace TweaksV
 		constexpr size_t kDrainStoreAt = 3, kDrainPointerAt = 10, kDrainCallAt = 32;							// A2, A3
 		constexpr size_t kVehiclesAt = 2, kVehiclesEnd = 10;													// B1
 		constexpr size_t kKickSizeAt = 4, kLastKickSizeAt = 5;													// B2, B3
-		constexpr size_t kJumpAt = 6, kJumpRelAt = 8, kJumpSize = 6;											// C1: "jae rel32"
+		constexpr size_t kJumpAt = 6, kJumpRelAt = 8, kJumpSize = 6, kJumpRel = kJumpRelAt - kJumpAt;			// C1: "jae rel32"
 		constexpr size_t kCoronaBytesAt = 17, kLightBytesAt = 22, kLightsPastAt = 32, kScratchPastAt = 42, kScratchBytesAt = 47;	// C2
 		constexpr size_t kLightsAddAt = 2, kLightsCompareAt = 9;												// C3
 		constexpr size_t kStartValuesAt = 8;																	// C4
@@ -117,10 +120,18 @@ namespace TweaksV
 		constexpr size_t kStoreBaseAt = 10, kRenderPointerAt = 20, kBufferCountsAt = 27, kRenderCountAt = 38, kReflectionsAt = 52, kReflectionPointerAt = 62;	// E1
 		constexpr size_t kCurrentPointerAt = 20;																// E2; the store as E1's
 		constexpr size_t kRayTracedAt = 10, kRayTracedPointerAt = 21;											// E3
-		constexpr size_t kCheckedPointerAt = 3, kRayTracedLimitAt = 14;											// F1
+		constexpr size_t kCheckedPointerAt = 3, kRayTracedLimitAt = 14, kRayJumpAt = 18;						// F1: "jg rel32", its rel32 past the match
 		constexpr size_t kUploadRecordsImmAt = 11, kUploadImmAt = 16, kUploadCallAt = 20;						// F2
 		constexpr size_t kReflectionLimitAt = 7;																// F3
 		constexpr size_t kCoronaCountRead = 2, kCoronaLimitAt = 9, kCoronaAddLimitAt = 10;						// G1; G2 the limit
+
+		// A job's end, looked for by the measurement alone (PATTERNS.md): the copies of its coronas and of its lights into the frame's
+		// stores, each call right past its pattern's match.
+		constexpr const GamePattern& kCoronaCopy = Pattern("G-E-K1");
+		constexpr const GamePattern& kLightCopy = Pattern("G-E-K2");
+		constexpr size_t kCoronaCopyCallAt = 10, kLightCopyCallAt = 15;
+		static_assert(PatternHolds(kCoronaCopy, kCoronaCopyCallAt, { 0xE8 }) && PatternHolds(kLightCopy, kLightCopyCallAt, { 0xE8 }) && PatternImm32(kLightCopy, 3) == kLightBytes,
+			"TweaksV: G-E-K1 and G-E-K2 end in the call of a job's copies, G-E-K2 with its lights' size");
 
 		// Every constant the measurement counts by is the one its pattern pins.
 		static_assert(PatternHolds(P(kB1), 0, { 0x69, 0x05 }) && PatternHolds(P(kB1), kVehiclesAt + 4, { 0xCD, 0xCC, 0xCC, 0xCC, 0x05, 0x99, 0x99, 0x99, 0x19, 0x3D, 0x32, 0x33, 0x33, 0x33, 0x77 }),
@@ -138,6 +149,7 @@ namespace TweaksV
 		static_assert(PatternImm32(P(kE1), 3) == kSceneBuffer && PatternImm32(P(kE1), 45) == kReflectionBuffer && PatternImm32(P(kE2), 3) == kSceneBuffer &&
 			PatternImm32(P(kE2), 41) == kReflectionBuffer && PatternImm32(P(kE3), 3) == kRayTracedList, "TweaksV: G-E-E1, G-E-E2 and G-E-E3 hold the buffers' sizes");
 		static_assert(kSceneBuffer == kSceneRoom * kLightBytes, "TweaksV: a scene store's buffer holds 1024 lights");
+		static_assert(PatternHolds(P(kF1), kRayJumpAt, { 0x0F, 0x8F }), "TweaksV: G-E-F1 ends in the jump when the ray traced list is full");
 		static_assert(PatternImm32(P(kF1), kRayTracedLimitAt) == kRayTracedRoom - 1 && PatternImm32(P(kF2), kUploadRecordsImmAt) == kUploadRecordsAt && PatternImm32(P(kF2), kUploadImmAt) == kUploadRoom &&
 			PatternImm32(P(kF3), kReflectionLimitAt) == kReflectionRoom - 1, "TweaksV: G-E-F1 checks against 1023, G-E-F2 uploads 512 at +0x70E0, G-E-F3 checks against 767");
 		static_assert(PatternImm32(P(kG1), kCoronaLimitAt) == kCoronaRoom - 1 && PatternImm32(P(kG2), 3) == kCoronaCountAt && PatternImm32(P(kG2), kCoronaAddLimitAt) == kCoronaRoom - 1 &&
@@ -159,6 +171,8 @@ namespace TweaksV
 		// Where the function's jump when full leads, on 1.0.1158.16 (PATTERNS.md): add rsp, 0x20; pop rbx; pop rdi; pop rsi; pop r14; pop r15;
 		// ret. None of them reads a flag, and add writes them anew, which the stub's lock inc rests on.
 		constexpr uint8_t kWayOut[] = { 0x48, 0x83, 0xC4, 0x20, 0x5B, 0x5F, 0x5E, 0x41, 0x5E, 0x41, 0x5F, 0xC3 };
+		// Where the ray traced list's jump when full leads, the same in kind: add rsp, 0x28; pop rbx; pop rdi; pop rsi; pop r12; pop r14; pop r15; ret.
+		constexpr uint8_t kRayWayOut[] = { 0x48, 0x83, 0xC4, 0x28, 0x5B, 0x5F, 0x5E, 0x41, 0x5C, 0x41, 0x5E, 0x41, 0x5F, 0xC3 };
 
 		// What the measurement reads, every one checked before its threads start.
 		struct Reads
@@ -208,22 +222,39 @@ namespace TweaksV
 			return fault.empty() || Fail(std::string("the ") + what + " at " + DescribeAddress(at) + At(P(site)) + " " + fault + ".");
 		}
 
-		// Where a call past its pattern's match leads, that call's rel32 read only once it is known readable; nullptr, logged, if it
-		// cannot be read or leads outside the game.
-		const uint8_t* CallPastMatch(const char* what, const uint8_t* call, Site site)
+		// What keeps a call past its pattern's match from leading into the game, in a sentence; "" when nothing does. Its rel32 is read
+		// only once it is known readable.
+		std::string CallFault(const char* what, const uint8_t* call, const GamePattern& pattern)
 		{
 			if (!IsReadable(call, 5))
+				return std::string("the ") + what + " at " + DescribeAddress(call) + " cannot be read" + At(pattern) + ".";
+			if (!IsInsideGameImage(CallTarget(call)))
+				return std::string("the ") + what + " at " + DescribeAddress(call) + " is not a call into the game (another mod may have hooked it already)" + At(pattern) + ".";
+			return {};
+		}
+
+		// Where a call past its pattern's match leads; nullptr, with the reason, if it cannot be read or leads outside the game.
+		const uint8_t* CallPastMatch(const char* what, const uint8_t* call, Site site)
+		{
+			const std::string fault = CallFault(what, call, P(site));
+			if (!fault.empty())
 			{
-				Fail(std::string("the ") + what + " at " + DescribeAddress(call) + " cannot be read" + At(P(site)) + ".");
+				Fail(fault);
 				return nullptr;
 			}
-			const uint8_t* const target = CallTarget(call);
-			if (!IsInsideGameImage(target))
-			{
-				Fail(std::string("the ") + what + " at " + DescribeAddress(call) + " is not a call into the game (another mod may have hooked it already)" + At(P(site)) + ".");
-				return nullptr;
-			}
-			return target;
+			return CallTarget(call);
+		}
+
+		// What keeps a jump from leading to its function's way out, those bytes, as a sentence about the jump goes on; "" when nothing does.
+		std::string WayOutFault(const uint8_t* wayOut, const uint8_t* bytes, size_t size)
+		{
+			if (!IsInsideGameImage(wayOut))
+				return ", does not lead into the game (another mod may have hooked it already)";
+			if (!IsReadable(wayOut, size))
+				return ", leads to " + DescribeAddress(wayOut) + ", which cannot be read";
+			if (memcmp(wayOut, bytes, size) != 0)
+				return ", leads to " + DescribeAddress(wayOut) + ", which holds " + HexBytes(wayOut, size) + ", not the function's way out";
+			return {};
 		}
 
 		// "the scene store's limit at RVA ... holds 1023 (N-1, G-E-D1) -> game size 1024", as the relocation core logs a limit (SPECIFICATIONS 6.3).
@@ -323,17 +354,13 @@ namespace TweaksV
 			const uint8_t* const check = m.at[kC1];
 			jump = m.at[kC1] + kJumpAt;
 			wayOut = Rel32Target(check + kJumpRelAt);
+			const std::string fault = WayOutFault(wayOut, kWayOut, sizeof(kWayOut));
+			if (!fault.empty())
+				return Fail("the jump when a job's list is full, at " + DescribeAddress(jump) + fault + At(P(kC1)) + ".");
 			const uint8_t* const function = FunctionStartOf(check);
 			const std::string where = function ? "in the function at " + DescribeAddress(function) + " (unwind data)" : std::string("no unwind data");
-			if (!IsInsideGameImage(wayOut))
-				return Fail("the jump when a job's list is full, at " + DescribeAddress(jump) + ", does not lead into the game (another mod may have hooked it already)" + At(P(kC1)) + ".");
-			if (!IsReadable(wayOut, sizeof(kWayOut)))
-				return Fail("the jump when a job's list is full, at " + DescribeAddress(jump) + ", leads to " + DescribeAddress(wayOut) + ", which cannot be read" + At(P(kC1)) + ".");
 			Note("add-to-a-job's-list's check at " + DescribeAddress(check) + ", " + where + "; its jump when full at " + DescribeAddress(jump) + " -> " + DescribeAddress(wayOut) + ": " +
 				HexBytes(wayOut, sizeof(kWayOut)) + At(P(kC1)));
-			if (memcmp(wayOut, kWayOut, sizeof(kWayOut)) != 0)
-				return Fail("the jump when a job's list is full, at " + DescribeAddress(jump) + ", leads to " + DescribeAddress(wayOut) + ", which holds " + HexBytes(wayOut, sizeof(kWayOut)) +
-					", not the function's way out" + At(P(kC1)) + ".");
 			return true;
 		}
 
@@ -509,6 +536,7 @@ namespace TweaksV
 		// CoronaStoreNow() says then.
 		enum Number : size_t { kVehicles, kVehicleLights, kVehicleCoronas, kSceneLights, kRayTraced, kReflections, kCoronas, kNumbers };
 		uint32_t g_room[kNumbers] = { kVehiclesRoom, kStoreLights, kStoreCoronas, kSceneRoom, kRayTracedRoom, kReflectionRoom, kCoronaRoom };
+		uint32_t g_jobLightRoom = kJobLights, g_jobCoronaRoom = kJobCoronas;	// a job's lists', the part's once it has raised them
 		constexpr const char* kNames[kNumbers] = { "vehicles", "vehicle lights", "vehicle coronas", "scene lights", "ray traced list", "reflection lists", "coronas" };
 
 		// The sampling thread's marks since the last reading, each number's most and how many samples saw what.
@@ -523,14 +551,35 @@ namespace TweaksV
 		Sampled g_sampled;
 		std::atomic<bool> g_sampling{ false };			// the sampling thread runs
 
+		// What the stubs keep, on a read/write page of its own: the lights the two full lists refused, and the most bytes one job copied at
+		// its end, of coronas and of lights, each mark exact, since the jobs run side by side.
+		struct Counters
+		{
+			uint64_t jobRefused;
+			uint64_t rayRefused;
+			uint64_t coronaBytes;
+			uint64_t lightBytes;
+		};
+
 		enum class Counting { NotCounted, DryRun, Counted };
-		std::atomic<const uint64_t*> g_refusedCounter{ nullptr };	// the stub's, set once the jump leads to it
+		std::atomic<Counters*> g_counters{ nullptr };		// set once the redirects lead to the stubs
 		std::atomic<Counting> g_counting{ Counting::NotCounted };
+		std::atomic<bool> g_rayCounted{ false };			// of those redirects: the ray traced list's jump, a job's two copies
+		std::atomic<bool> g_mostCounted{ false };
 
 		uint64_t ReadRefused()
 		{
-			const uint64_t* const counter = g_refusedCounter.load(std::memory_order_acquire);
-			return counter ? Load<uint64_t>(counter) : 0;
+			const Counters* const counters = g_counters.load(std::memory_order_acquire);
+			return counters ? Load<uint64_t>(&counters->jobRefused) : 0;
+		}
+
+		// A job's most as records, since the last taking: its mark starts anew, for the next stretch of time.
+		uint32_t TakeMost(uint64_t Counters::* mark, uint32_t recordBytes)
+		{
+			Counters* const counters = g_counters.load(std::memory_order_acquire);
+			if (!counters)
+				return 0;
+			return static_cast<uint32_t>(static_cast<uint64_t>(InterlockedExchange64(reinterpret_cast<volatile LONG64*>(&(counters->*mark)), 0)) / recordBytes);
 		}
 
 		// A number's first value past its room is a line of its own, at once, and no mark: what lies there then is no count of the game's.
@@ -629,6 +678,9 @@ namespace TweaksV
 			uint64_t markedAtRoom = 0;
 			uint64_t pastUpload = 0;
 			uint64_t refused = 0;
+			uint64_t rayRefused = 0;
+			uint32_t jobLights = 0;		// a job's most
+			uint32_t jobCoronas = 0;
 			uint64_t storeRefused = 0;	// the corona store's refusals, while it counts them, and the LOD lights' job's
 			uint64_t lodRefused = 0;
 			uint32_t lodLights = 0;
@@ -687,7 +739,7 @@ namespace TweaksV
 		bool SameNews(const Marks& a, const Marks& b)
 		{
 			return memcmp(a.most, b.most, sizeof(a.most)) == 0 && (a.markedAtRoom != 0) == (b.markedAtRoom != 0) && (a.pastUpload != 0) == (b.pastUpload != 0) && a.refused == b.refused &&
-				a.storeRefused == b.storeRefused && a.lodRefused == b.lodRefused && a.lodLights == b.lodLights;
+				a.rayRefused == b.rayRefused && a.jobLights == b.jobLights && a.jobCoronas == b.jobCoronas && a.storeRefused == b.storeRefused && a.lodRefused == b.lodRefused && a.lodLights == b.lodLights;
 		}
 
 		// Changes with every reading that has something new to say: the first; a most of the minute or of the session other than the
@@ -704,6 +756,11 @@ namespace TweaksV
 			minute.samples = g_sampled.samples.exchange(0, std::memory_order_relaxed);
 			const uint64_t refused = ReadRefused();
 			minute.refused = refused - g_session.refused;
+			const Counters* const counters = g_counters.load(std::memory_order_acquire);
+			const uint64_t rayRefused = counters ? Load<uint64_t>(&counters->rayRefused) : 0;
+			minute.rayRefused = rayRefused - g_session.rayRefused;
+			minute.jobLights = TakeMost(&Counters::lightBytes, kLightBytes);
+			minute.jobCoronas = TakeMost(&Counters::coronaBytes, kCoronaBytes);
 			const CoronaStoreNumbers store = CoronaStoreNow();
 			minute.storeRefused = store.refused - g_session.storeRefused;
 			minute.lodRefused = store.lodRefused - g_session.lodRefused;
@@ -716,6 +773,9 @@ namespace TweaksV
 			session.markedAtRoom += minute.markedAtRoom;
 			session.pastUpload += minute.pastUpload;
 			session.refused = refused;
+			session.rayRefused = rayRefused;
+			session.jobLights = std::max(session.jobLights, minute.jobLights);
+			session.jobCoronas = std::max(session.jobCoronas, minute.jobCoronas);
 			session.storeRefused = store.refused;
 			session.lodRefused = store.lodRefused;
 			session.lodLights = std::max(session.lodLights, minute.lodLights);
@@ -744,8 +804,8 @@ namespace TweaksV
 			const uint32_t rayTraced = marks.most[kRayTraced];
 			return number(kVehicles) + ", " + number(kVehicleLights) + ", " + number(kVehicleCoronas) + ", " + number(kSceneLights) + " (at its room with the sort list marked in " +
 				std::to_string(marks.markedAtRoom) + " of " + std::to_string(marks.samples) + " samples), " + number(kRayTraced) + " (past " + std::to_string(kUploadRoom) + " in " +
-				std::to_string(marks.pastUpload) + " samples" + (rayTraced > kUploadRoom ? ", by " + std::to_string(rayTraced - kUploadRoom) + " at most" : std::string()) + "), " +
-				number(kReflections) + ", " + number(kCoronas) + (g_storeCounted ? ", refused " + std::to_string(marks.storeRefused) + " (LOD's own " + std::to_string(kGameCoronas) + ": " +
+				std::to_string(marks.pastUpload) + " samples" + (rayTraced > kUploadRoom ? ", by " + std::to_string(rayTraced - kUploadRoom) + " at most" : std::string()) +
+				(g_rayCounted.load() ? ", " + std::to_string(marks.rayRefused) + " refused" : std::string()) + "), " + number(kReflections) + ", " + number(kCoronas) + (g_storeCounted ? ", refused " + std::to_string(marks.storeRefused) + " (LOD's own " + std::to_string(kGameCoronas) + ": " +
 				std::to_string(marks.lodRefused) + "), LOD lights " + std::to_string(marks.lodLights) : std::string()) + ", ";
 		}
 
@@ -754,7 +814,8 @@ namespace TweaksV
 			switch (g_counting.load())
 			{
 			case Counting::Counted:
-				return "a job's refused lights " + std::to_string(marks.refused);
+				return (g_mostCounted.load() ? "a job's most " + std::to_string(marks.jobLights) + " of " + std::to_string(g_jobLightRoom) + " lights and " + std::to_string(marks.jobCoronas) + " of " +
+					std::to_string(g_jobCoronaRoom) + " coronas, " : std::string()) + "a job's refused lights " + std::to_string(marks.refused);
 			case Counting::DryRun:
 				return "a job's refused lights are not counted (DRY_RUN)";
 			case Counting::NotCounted:
@@ -776,20 +837,100 @@ namespace TweaksV
 		// The first summary 10 seconds in, then one every minute that has something new to say.
 		constexpr Measurement kMeasurement = { "lighting capacity summary", kFirstSummaryMs, &Numbers, &LogSummary };
 
-		// ---- the counting stub
+		// ---- the counting stubs
 
-		// The light refused counted, then on to the function's way out - 22 bytes, every register as it was, rsp untouched, the counter
-		// reached rip-relative.
-		constexpr uint8_t kStub[] = {
+		// A full list's light refused counted, then on to the function's way out - 22 bytes, every register as it was, rsp untouched, the
+		// counter reached rip-relative.
+		constexpr uint8_t kCountStub[] = {
 			0xF0, 0x48, 0xFF, 0x05, 0, 0, 0, 0,		// lock inc qword [rip+disp32]: the light refused
 			0xFF, 0x25, 0, 0, 0, 0,					// jmp qword [rip+0]: on to the function's way out,
 			0, 0, 0, 0, 0, 0, 0, 0 };				// whose address follows
-		constexpr size_t kCounterDispAt = 4, kCounterEnd = 8, kTargetAt = 14;
-		static_assert(sizeof(kStub) == kTargetAt + sizeof(uint64_t), "TweaksV: the counting stub ends in its target");
+		constexpr size_t kCountDispAt = 4, kCountEnd = 8, kCountTargetAt = 14;
+		static_assert(sizeof(kCountStub) == kCountTargetAt + sizeof(uint64_t), "TweaksV: the counting stub ends in its target");
+
+		// A job's whole count at its end kept as its most, then on to the copy with r8, the bytes, and the arguments as they were - rax is
+		// free at this call (the findings' 8.1), rsp untouched, the mark exact, however many jobs end at once.
+		constexpr uint8_t kMostStub[] = {
+			0x48, 0x8B, 0x05, 0, 0, 0, 0,				// mov rax, [rip+disp32]: the most so far
+			0x49, 0x39, 0xC0,							// again: cmp r8, rax
+			0x76, 0x0B,									// jbe on
+			0xF0, 0x4C, 0x0F, 0xB1, 0x05, 0, 0, 0, 0,	// lock cmpxchg [rip+disp32], r8
+			0x75, 0xF0,									// jne again, rax the mark as another job left it
+			0xFF, 0x25, 0, 0, 0, 0,						// on: jmp qword [rip+0]: on to the copy,
+			0, 0, 0, 0, 0, 0, 0, 0 };					// whose address follows
+		constexpr size_t kMostLoadDispAt = 3, kMostLoadEnd = 7, kMostSwapDispAt = 17, kMostSwapEnd = 21, kMostTargetAt = 29;
+		static_assert(sizeof(kMostStub) == kMostTargetAt + sizeof(uint64_t), "TweaksV: a job's most's stub ends in its target");
+
+		// What the measurement leads through stubs, each checked before any is made. No site: not as the findings have it, so that number
+		// is not counted. Each stub has its room on the block's first page.
+		struct Redirected
+		{
+			uint8_t* site = nullptr;			// the jump or the call
+			size_t relAt = 0;					// its rel32, in it
+			const uint8_t* onTo = nullptr;		// where it leads now
+			const char* what = nullptr;
+		};
+		enum Redirect : size_t { kJobFull, kRayFull, kCoronaEnd, kLightEnd, kRedirects };
+		Redirected g_redirects[kRedirects];
+		constexpr size_t kStubRoom = 64;
+		static_assert(sizeof(kCountStub) <= kStubRoom && sizeof(kMostStub) <= kStubRoom && kRedirects * kStubRoom <= 4096, "TweaksV: the stubs fit their rooms, and those a page");
 
 		void NotCounted(const std::string& why)
 		{
-			Note("a job's refused lights are not counted: " + why);
+			Note("the counting stubs are not made: " + why);
+		}
+
+		// F1's jump when the list is full, as C1's: its rel32 past the match, read only once it is known readable, leading to the function's
+		// way out, which reads no flags. Not so: that one number is not counted, a line says why.
+		void CheckRayJump()
+		{
+			uint8_t* const jump = g_matches.at[kF1] + kRayJumpAt;
+			const uint8_t* wayOut = nullptr;
+			std::string fault = ", cannot be read";
+			if (IsReadable(jump, kJumpSize))
+			{
+				wayOut = Rel32Target(jump + kJumpRel);
+				fault = WayOutFault(wayOut, kRayWayOut, sizeof(kRayWayOut));
+			}
+			if (!fault.empty())
+			{
+				Note("the ray traced list's refused lights are not counted: the jump when the ray traced list is full, at " + DescribeAddress(jump) + fault + At(P(kF1)) + ".");
+				return;
+			}
+			Note("the jump when the ray traced list is full at " + DescribeAddress(jump) + At(P(kF1)) + " -> " + DescribeAddress(wayOut) + ": " + HexBytes(wayOut, sizeof(kRayWayOut)));
+			g_redirects[kRayFull] = { jump, kJumpRel, wayOut, "jump when the ray traced list is full" };
+		}
+
+		// K1 and K2, looked for here alone: a job's two copies, one function. Not so: a job's most is not counted, a line says why.
+		void CheckJobCopies()
+		{
+			const auto notCounted = [](const std::string& why) { Note("a job's most is not counted: " + why); };
+			std::string notFound;
+			uint8_t* const coronas = Scanner::FindOnce(kCoronaCopy, notFound);
+			uint8_t* const lights = Scanner::FindOnce(kLightCopy, notFound);
+			if (!notFound.empty())
+			{
+				notCounted(notFound + ".");
+				return;
+			}
+			uint8_t* const coronaCall = coronas + kCoronaCopyCallAt;
+			uint8_t* const lightCall = lights + kLightCopyCallAt;
+			for (const std::string& fault : { CallFault("call of a job's coronas' copy", coronaCall, kCoronaCopy), CallFault("call of a job's lights' copy", lightCall, kLightCopy) })
+				if (!fault.empty())
+				{
+					notCounted(fault);
+					return;
+				}
+			const uint8_t* const copy = CallTarget(coronaCall);
+			Note("a job's coronas' copy at " + DescribeAddress(coronas) + ": its call at " + DescribeAddress(coronaCall) + " -> " + DescribeAddress(copy) + At(kCoronaCopy));
+			Note("a job's lights' copy at " + DescribeAddress(lights) + ": its call at " + DescribeAddress(lightCall) + " -> " + DescribeAddress(CallTarget(lightCall)) + At(kLightCopy));
+			if (CallTarget(lightCall) != copy)
+			{
+				notCounted("a job's two copies call different functions: " + DescribeAddress(copy) + " and " + DescribeAddress(CallTarget(lightCall)) + At(kLightCopy) + ".");
+				return;
+			}
+			g_redirects[kCoronaEnd] = { coronaCall, 1, copy, "call of a job's coronas' copy" };
+			g_redirects[kLightEnd] = { lightCall, 1, copy, "call of a job's lights' copy" };
 		}
 
 #ifdef TWEAKSV_TEST_BUILD
@@ -807,9 +948,43 @@ namespace TweaksV
 		}
 #endif
 
-		// The stub on the first page of a block near the game, its counter on its second, read/write; the first page read+execute once
-		// written, never writable and executable at once. Null, logged, if it cannot be made.
-		uint8_t* MakeStub(const uint8_t* wayOut, size_t page)
+		// A stub's reach to its counter: the disp32 of an instruction that ends at end. Within one block of two pages: always within reach.
+		void PutDisp(uint8_t* stub, size_t dispAt, size_t end, const uint64_t* counter)
+		{
+			const int32_t disp = static_cast<int32_t>(reinterpret_cast<const uint8_t*>(counter) - (stub + end));
+			memcpy(stub + dispAt, &disp, sizeof(disp));
+		}
+
+		void PutOnTo(uint8_t* stub, size_t targetAt, const uint8_t* onTo)
+		{
+			const uint64_t target = reinterpret_cast<uintptr_t>(onTo);
+			memcpy(stub + targetAt, &target, sizeof(target));
+		}
+
+		void PutCountStub(uint8_t* block, Redirect which, const uint64_t* counter)
+		{
+			if (!g_redirects[which].site)
+				return;
+			uint8_t* const stub = block + which * kStubRoom;
+			memcpy(stub, kCountStub, sizeof(kCountStub));
+			PutDisp(stub, kCountDispAt, kCountEnd, counter);
+			PutOnTo(stub, kCountTargetAt, g_redirects[which].onTo);
+		}
+
+		void PutMostStub(uint8_t* block, Redirect which, const uint64_t* most)
+		{
+			if (!g_redirects[which].site)
+				return;
+			uint8_t* const stub = block + which * kStubRoom;
+			memcpy(stub, kMostStub, sizeof(kMostStub));
+			PutDisp(stub, kMostLoadDispAt, kMostLoadEnd, most);
+			PutDisp(stub, kMostSwapDispAt, kMostSwapEnd, most);
+			PutOnTo(stub, kMostTargetAt, g_redirects[which].onTo);
+		}
+
+		// The stubs on the first page of a block near the game, their counters on its second, read/write; the first page read+execute once
+		// written, never writable and executable at once. Null, logged, if they cannot be made.
+		uint8_t* MakeStubs(size_t page)
 		{
 			uint8_t* block = static_cast<uint8_t*>(AllocateNearGame(2 * page));
 #ifdef TWEAKSV_TEST_BUILD
@@ -821,14 +996,14 @@ namespace TweaksV
 #endif
 			if (!block)
 			{
-				NotCounted("no memory near the game could be had for its stub.");
+				NotCounted("no memory near the game could be had for them.");
 				return nullptr;
 			}
-			memcpy(block, kStub, sizeof(kStub));
-			const int32_t disp = static_cast<int32_t>((block + page) - (block + kCounterEnd));	// within one block of two pages: always within reach
-			const uint64_t target = reinterpret_cast<uintptr_t>(wayOut);
-			memcpy(block + kCounterDispAt, &disp, sizeof(disp));
-			memcpy(block + kTargetAt, &target, sizeof(target));
+			const Counters* const counters = reinterpret_cast<const Counters*>(block + page);
+			PutCountStub(block, kJobFull, &counters->jobRefused);
+			PutCountStub(block, kRayFull, &counters->rayRefused);
+			PutMostStub(block, kCoronaEnd, &counters->coronaBytes);
+			PutMostStub(block, kLightEnd, &counters->lightBytes);
 #ifdef TWEAKSV_TEST_BUILD
 			if (StubSwitch(L"left writable", "the stub is left writable"))
 				return block;
@@ -838,26 +1013,35 @@ namespace TweaksV
 			{
 				const DWORD error = GetLastError();
 				VirtualFree(block, 0, MEM_RELEASE);
-				NotCounted("its stub could not be made read+execute (" + DescribeError(error) + ").");
+				NotCounted("they could not be made read+execute (" + DescribeError(error) + ").");
 				return nullptr;
 			}
 			FlushInstructionCache(GetCurrentProcess(), block, page);
 			return block;
 		}
 
-		// The jump pointed at the stub. In DllMain, and with the game's frames not begun (MeasureLightCapacity): none of its threads runs it yet.
-		bool RedirectJump(uint8_t* jump, const uint8_t* block)
+		// The redirects pointed at their stubs, one write. In DllMain, and with the game's frames not begun (MeasureLightCapacity): none of
+		// its threads runs them yet.
+		bool RedirectAll(const uint8_t* block)
 		{
-			const intptr_t distance = reinterpret_cast<intptr_t>(block) - reinterpret_cast<intptr_t>(jump + kJumpSize);
-			if (distance < INT32_MIN || distance > INT32_MAX)
+			std::vector<CodeWrite> writes;
+			for (size_t i = 0; i < kRedirects; i++)
 			{
-				NotCounted("its stub is out of reach of the jump at " + DescribeAddress(jump) + ".");
-				return false;
+				const Redirected& redirect = g_redirects[i];
+				if (!redirect.site)
+					continue;
+				const intptr_t distance = reinterpret_cast<intptr_t>(block + i * kStubRoom) - reinterpret_cast<intptr_t>(redirect.site + redirect.relAt + sizeof(int32_t));
+				if (distance < INT32_MIN || distance > INT32_MAX)
+				{
+					NotCounted(std::string("the ") + redirect.what + "'s stub is out of reach of it, at " + DescribeAddress(redirect.site) + ".");
+					return false;
+				}
+				std::vector<uint8_t> bytes(redirect.site, redirect.site + redirect.relAt);
+				const std::vector<uint8_t> rel = BytesOf(static_cast<int32_t>(distance));
+				bytes.insert(bytes.end(), rel.begin(), rel.end());
+				writes.push_back({ redirect.site, bytes, redirect.what });
 			}
-			std::vector<uint8_t> bytes = { jump[0], jump[1] };
-			const std::vector<uint8_t> rel = BytesOf(static_cast<int32_t>(distance));
-			bytes.insert(bytes.end(), rel.begin(), rel.end());
-			if (!WriteCode({ { jump, bytes, "jump when a job's list is full" } }, kTag))
+			if (!WriteCode(writes, kTag))
 			{
 				NotCounted("the game code could not be changed (details above).");
 				return false;
@@ -1006,6 +1190,8 @@ namespace TweaksV
 			g_reads.lightStore = lights;
 			g_room[kVehicleCoronas] = kRaisedCoronas;
 			g_room[kVehicleLights] = kRaisedLights;
+			g_jobLightRoom = kRaisedJobLights;
+			g_jobCoronaRoom = kRaisedJobCoronas;
 			Note("the stores moved: the vehicle coronas' at " + DescribeAddress(coronas) + ", the vehicle lights' at " + DescribeAddress(lights) + ", a job's lists' start values at " + DescribeAddress(block));
 			WriteLog(kTag, "The vehicle coronas' store moved and its limit raised " + coronaChange + " entries.");
 			WriteLog(kTag, "The vehicle lights' store moved and its limit raised " + lightChange + " entries.");
@@ -1044,24 +1230,36 @@ namespace TweaksV
 		}
 		g_room[kCoronas] = CoronaStoreNow().room;
 
-		// the stub made, the summary's thread and the sampling thread started, then the jump redirected: a measurement that cannot sum
+		// what its stubs will lead through: a job's full list's jump, checked with the sites; the others on their own, each a number less
+		g_redirects[kJobFull] = { g_jump, kJumpRel, g_wayOut, "jump when a job's list is full" };
+		CheckRayJump();
+		CheckJobCopies();
+		const auto atSite = [](Redirect which, const GamePattern& pattern) { return DescribeAddress(g_redirects[which].site) + At(pattern); };
+		const bool rayFound = g_redirects[kRayFull].site != nullptr, copiesFound = g_redirects[kCoronaEnd].site != nullptr;
+		const std::string job = atSite(kJobFull, P(kC1));
+		const std::string ray = rayFound ? atSite(kRayFull, P(kF1)) : std::string();
+		const std::string copies = copiesFound ? "the calls at " + atSite(kCoronaEnd, kCoronaCopy) + " and " + atSite(kLightEnd, kLightCopy) : std::string();
+
+		// the stubs made, the summary's thread and the sampling thread started, then the redirects written: a measurement that cannot sum
 		// up redirects nothing. A dry run or frames already running redirect nothing, and the numbers are read all the same.
 		uint8_t* block = nullptr;
-		uint8_t* const jump = g_jump;
-		const std::string site = DescribeAddress(jump) + At(P(kC1));
 		if (FramesRun())
-			NotCounted("the game's frames run already - its threads may run the jump while it is rewritten.");
+			NotCounted("the game's frames run already - its threads may run their sites while they are rewritten.");
 		else if (IsDryRun())
 		{
 			g_counting = Counting::DryRun;
-			WriteLog(kTag, "DRY_RUN: would redirect the jump at " + site + " to a counting stub - a job's refused lights are not counted.");
+			WriteLog(kTag, "DRY_RUN: would redirect the jump at " + job + " to a counting stub - a job's refused lights are not counted.");
+			if (rayFound)
+				WriteLog(kTag, "DRY_RUN: would redirect the jump at " + ray + " to a counting stub - the ray traced list's refused lights are not counted.");
+			if (copiesFound)
+				WriteLog(kTag, "DRY_RUN: would redirect " + copies + " to stubs - a job's most is not counted.");
 		}
 		else
-			block = MakeStub(g_wayOut, PageSize());
+			block = MakeStubs(PageSize());
 		if (!StartMeasurement<kMeasurement>())	// its line is written
 		{
 			if (block)
-				VirtualFree(block, 0, MEM_RELEASE);	// no jump leads to it yet
+				VirtualFree(block, 0, MEM_RELEASE);	// nothing leads to it yet
 			Note("the lighting capacity is not measured: its summary thread could not be started.");
 			return;
 		}
@@ -1071,14 +1269,20 @@ namespace TweaksV
 			Note("the lighting capacity's numbers are not sampled: their thread could not be started.");
 		if (block)
 		{
-			if (RedirectJump(jump, block))
+			if (RedirectAll(block))
 			{
-				g_refusedCounter.store(reinterpret_cast<const uint64_t*>(block + PageSize()), std::memory_order_release);
+				g_counters.store(reinterpret_cast<Counters*>(block + PageSize()), std::memory_order_release);
+				g_rayCounted = rayFound;
+				g_mostCounted = copiesFound;
 				g_counting = Counting::Counted;
-				Note("the jump at " + site + " is redirected to a counting stub: every light a job's full list refuses is counted.");
+				Note("the jump at " + job + " is redirected to a counting stub: every light a job's full list refuses is counted.");
+				if (rayFound)
+					Note("the jump at " + ray + " is redirected to a counting stub: every light the full ray traced list refuses is counted.");
+				if (copiesFound)
+					Note(copies + " are redirected to stubs: a job's most coronas and lights are kept.");
 			}
 			else
-				VirtualFree(block, 0, MEM_RELEASE);	// no jump leads to it: WriteCode wrote nothing
+				VirtualFree(block, 0, MEM_RELEASE);	// nothing leads to it: WriteCode wrote nothing
 		}
 		Note(g_sampling.load() ? "the lighting capacity is measured: its numbers are sampled every 10 ms and logged after 10 seconds, then every minute while they change." :
 			"the lighting capacity is measured, its numbers not sampled: the rest is logged after 10 seconds, then every minute while it changes.");

@@ -698,7 +698,7 @@ The patterns, each matching exactly once in both dumps of 2026-10-29 but `G-E-G1
 | G-E-E1 | `48 69 C7 00 00 07 00 48 8D 15 ? ? ? ? 48 01 C2 48 89 15 ? ? ? ? 48 8D 05 ? ? ? ? 44 8B 04 B8 44 89 05 ? ? ? ? 48 69 C7 0C 9A 02 00 48 8D 0D ? ? ? ? 48 01 C1 48 89 0D` | the scene store's render side (in RVA 0x3FB200): +3 0x70000; +10 the store (RVA 0x3AB0250); +20 the render pointer (RVA 0x2888640); +27 the buffers' counts (RVA 0x3D4A520); +38 the render count (RVA 0x3D39ED0); +45 0x29A0C; +52 the reflection lists (RVA 0x3C00250); +62, past the match, their render pointer | found | 0x3FB230 |
 | G-E-E2 | `48 69 C8 00 00 07 00 48 8D 15 ? ? ? ? 48 01 CA 48 89 15 ? ? ? ? 48 8D 0D ? ? ? ? C7 04 81 00 00 00 00 48 69 C8 0C 9A 02 00 48 8D 15` | its update side (in RVA 0x3F30A0): +3 0x70000; +10 the store, `G-E-E1`'s; +20 the current pointer (RVA 0x2888638); +41 0x29A0C | found | 0x3F335F |
 | G-E-E3 | `48 69 C8 10 20 07 00 48 8D 15 ? ? ? ? 48 8D 34 0A 48 89 35 ? ? ? ? 8B 04 11` | +3 0x72010; +10 the ray traced lists (RVA 0x3C53670), a list's count first; +21 their current pointer (RVA 0x28886C0) | found | 0x3F33AE |
-| G-E-F1 | `4C 8B 25 ? ? ? ? 45 8B 34 24 41 81 FE FF 03 00 00 0F 8F` | the ray traced list's add: +3 the same pointer as `G-E-E3`'s; +14 0x3FF | found | 0x3FAEFD |
+| G-E-F1 | `4C 8B 25 ? ? ? ? 45 8B 34 24 41 81 FE FF 03 00 00 0F 8F` | the ray traced list's add: +3 the same pointer as `G-E-E3`'s; +14 0x3FF; +18 the jump when full, `jg rel32`, its rel32 past the match to the function's way out (RVA 0x3FB148) - with `DIAGNOSTIC_MODE=1` through a counting stub | found | 0x3FAEFD |
 | G-E-F2 | `44 0F B6 05 ? ? ? ? 48 81 C1 E0 70 00 00 BA 00 02 00 00 E8` | the upload: +11 0x70E0, the records in its object; +16 512; +20 the call of the builder (RVA 0x3FCEC0), its rel32 past the match | found | 0x492E04 |
 | G-E-F3 | `4B 63 0C 88 48 81 F9 FF 02 00 00` | the reflection lists' add: +7 0x2FF | found | 0x3FAD63 |
 | G-E-G1 | `8B 0D ? ? ? ? 48 81 F9 3F 04 00 00 0F 87` | the corona store, twice, one count: +2 its count (RVA 0x41C0E10); +9 0x43F; the second match at RVA 0xB6ED70 | found | 0xB3A780 |
@@ -713,6 +713,21 @@ A job's lists hold 180 lights and 300 coronas: 0x13B00 and 0x3840 bytes, 0x17340
 The stores hold what the 60 jobs can hand them, 10,800 lights and 18,000 coronas, so no overflow can happen by construction: the constructor keeps the game's own, which nothing reads then, and the records are copied whole and read by value, so the moved stores need no constructor.
 The bases also go into the jobs' parameters +0x30 and +0x38 from the same registers, which the job does not read.
 The index: past 1024 the sort list's entry names the slot to replace; with its 32 bits the farthest light goes, as the code means, and the sort, which moves whole entries, carries them.
+
+The measurement's stubs beside the jump of `G-E-C1`, each costing only its own number if its site is not as here:
+
+- **The ray traced list's jump:** the jump at +18 of `G-E-F1`, RVA 0x3FAF0F, `0F 8F 33 02 00 00`, leads to RVA 0x3FB148: `48 83 C4 28` `add rsp, 0x28`, `5B` `pop rbx`, `5F` `pop rdi`, `5E` `pop rsi`, `41 5C` `pop r12`, `41 5E` `pop r14`, `41 5F` `pop r15`, `C3` `ret`.
+  None of them reads a flag and the first writes them anew, so a counting stub changes nothing the game sees.
+  The same address is reached from RVA 0x3FAF1E, 0x3FAF2C, 0x3FB136 and 0x3FB140 and falls through from 0x3FB146, so redirecting this rel32 alone counts the full list and nothing else.
+- **A job's two copies at its end:** RVA 0xE15ABA `E8 51 44 66 01` and RVA 0xE15AE2 `E8 29 44 66 01`, both calling the game's copy at RVA 0x2479F10: rcx the place in the frame's store, the write pointer's old value by `lock xadd`; rdx what the job holds in its scratch; r8 the bytes, n x 0x30 and n x 0x1C0; rax the pointer's address, and nothing reads rax past the call.
+  Each is skipped when n is 0 and runs once a job, with the job's whole count, after every vehicle of that job, so r8 is what the job produced, and a list holds no more than its capacity.
+  A stub there may use rax, leaves the arguments and rsp as they are and goes on by a tail jump; the jobs run side by side, so it keeps its mark with `lock cmpxchg`, at most 120 times a frame.
+  A job's list itself lives on a worker's stack, so no sampling can read it.
+
+| Label | Pattern | Use | 1.0.1158.16 | RVA |
+|---|---|---|---|---|
+| G-E-K1 | `F0 48 0F C1 08 48 8B 54 24 40 E8` | a job's coronas at its end: `lock xadd` of the write pointer, its coronas into rdx; +10 the call of the copy, its rel32 past the match - with `DIAGNOSTIC_MODE=1` through a stub that keeps a job's most | found, its RVA to check | 0xE15AB0 |
+| G-E-K2 | `4C 69 C6 C0 01 00 00 4C 89 C1 F0 48 0F C1 08 E8` | a job's lights at its end: +3 0x1C0, the bytes of its n, `lock xadd` of the write pointer; +15 the call of the copy, its rel32 past the match - with `DIAGNOSTIC_MODE=1` through a stub that keeps a job's most | found, its RVA to check | 0xE15AD3 |
 
 <!-- [corona store] -->
 

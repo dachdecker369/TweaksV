@@ -277,6 +277,9 @@ namespace TweaksV
 		{ "G-E-H1", "B8 58 80 01 00 E8 ? ? ? ? 48 29 C4" },
 		{ "G-E-H2", "48 8D 44 24 50 49 89 04 24 4C 89 E1 41 FF 54 24 60" },
 		// [light stores]
+		// A job's end, the measurement's alone (TweaksVLightCapacity.cpp): the copies of its coronas (K1) and of its lights (K2) into the frame's stores, each call past the match
+		{ "G-E-K1", "F0 48 0F C1 08 48 8B 54 24 40 E8" },
+		{ "G-E-K2", "4C 69 C6 C0 01 00 00 4C 89 C1 F0 48 0F C1 08 E8" },
 		// [corona store]
 		// The two model budgets (TweaksVPopulation.cpp), measured first: the crash context's line, which leads to the population object and both getters (C1); the vehicle pass's sites, the check before a request (V1, V2), the pool's test (V3), the tables' set-up's head (V4), the ambient cars (V5), and a writing half's call and stores (V6, V7); the ped pass's, the sum, the gate, the lists, a model's peds (P1 to P4), and a writing half's stores and the variety's store (P5 to P8)
 		{ "O-E-C1", "8B 35 ? ? ? ? C1 FE 14 8B 3D ? ? ? ? C1 FF 14 48 8D 1D ? ? ? ? 48 89 D9 E8 ? ? ? ? 89 C5 C1 FD 14 48 89 D9 E8 ? ? ? ? 89 C3 C1 FB 14 48 8D 0D" },
