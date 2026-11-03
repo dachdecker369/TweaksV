@@ -546,7 +546,7 @@ The sites: looked for with `SIRENS_PER_VEHICLE` above 20 alone, each matching ex
 
 The sirens per vehicle's damage (`TweaksVSirenDamage`, SPECIFICATIONS.md section 11.14): the room behind a model's bone structure, its fill, and the game's own damage code raised to read it, so that a hit, an impact and a wreck reach lights 21 to 32 as they do lights 1 to 20.
 Looked for only with `SIRENS_PER_VEHICLE` above 20.
-None of this has run on the game until my boot with a 32-siren pack, its one proof there.
+My proof of 2026-11-03 ran all of it on the game, with 32-siren packs: the lights, a shot, a ram, a wreck, a repair and a plane's gear.
 
 - **The bone structure** is a pool element of 0x34C bytes, made by RVA 0x134DD00, which RVA 0x134D680 (slot 25 of the vtable at `.rdata` RVA 0x2672270) calls at RVA 0x134D709, its one caller, with the model info in rcx.
   It allocates from the pool whose pointer lies at `.data` RVA 0x471D908, loaded right before `I-E-Y2` by `48 8B 0D EB FB 3C 03` at RVA 0x134DD16, which the part reads by that shape to see that the pool is not made yet (its one store is at RVA 0x1349DFC, in the pool's set-up below, about 30 seconds after TweaksV's start: reasoned, my first boot's line its proof) (RVA 0x15A7C0, which traps at a size of 0, a size above the stride or a full pool), runs the constructor RVA 0x13497B0 (+0x00 four dwords of 0xFFFFFFFF, `memset` of 0xFF over +0x10 to +0x2A8, fields to +0x348), stores it at the holder's +0x00, and fills it up to 3 times.
@@ -899,7 +899,7 @@ A number in MB counts 1,000,000 bytes, as the game's defaults do; HINT marks wha
   The names are proved by the parser's hashes in the window `28E0700:900`, a descriptor holding the case-sensitive joaat at +0, the offset at +8 and the type at +0x10: 0xB90C36F2; 0x5734E391, 0x63432F09, 0x754AC6B3, 0x281C138B; 0x4D3F3EC4, 0x4ED77A3E, 0x9EBE88D3.
   The defaults, from the constructor 0x12BC2C0: peds 54,000, 72,000 and 92,000, vehicles 32,000, 56,000 and 70,000, in story mode and a network game alike, which gives the tables at 180 s of the boot exactly.
   So the story budget in MB at the slider's top is (`Level3Kb` / 1000 + 1.5) x 6, "Kb" being a thousand; the merge 0x12BC780 copies a value only when it is not negative, so that a partial block holds.
-  The form, untested: `<ConfigPopulationStreaming><VehiclesSP><Level3Kb value="98500"/></VehiclesSP></ConfigPopulationStreaming>` directly inside a `<Config type="CGameConfig">` that applies on PC.
+  The form, which my proof's start 4 ran, the budget at 600 MB: `<ConfigPopulationStreaming><VehiclesSP><Level3Kb value="98500"/></VehiclesSP></ConfigPopulationStreaming>` directly inside a `<Config type="CGameConfig">` that applies on PC.
   `PedMemoryMultiplier` and `VehicleMemoryMultiplier` (cfg+0x38 and +0x54) have no reader among the 359 loads of the holder, and the tables stood at the defaults with 2,500 and 4,500 in the file: neither is in the budget.
 - **The variety:** the settings' apply 0x5003A0 stores it, at 0x5004F5 for the peds and 0x50050C for the vehicles, the only stores: the setting (+0xB4 `PedVarietyMultiplier`, +0xB8 `VehicleVarietyMultiplier`, the menu's Population Variety, 0 to 1) x 5 + 1, clamped to 0.05 to 10, so 1 to 6.
   The check 0x503380 puts a setting outside 0 to 1 back to its default, so that the clamp's 10 cannot be reached by `settings.xml` (HINT until a boot shows it).

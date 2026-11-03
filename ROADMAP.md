@@ -20,3 +20,4 @@ Each has a research pass in the dump (PLAN.md, D20) and a measurement before any
 - The ped pool: measured in 2.7.0, not raised: my proof's numbers do not ask for it (PLAN.md, D31, D43).
 - The render queues: measured in 2.7.0, not raised: my proof's numbers do not ask for it (PLAN.md, D43); a raise's design is in the findings' section 8.
 - The ray traced list: 2.8.0 counts what it refuses, and my proof's start 4 refused 172,943 lights, 165,438 of them in one minute in the tunnel: no sort in 2.8.0, a research pass in a later build (PLAN.md, D36).
+- Some lights on buildings come on late: by my eye about 50 m from a Gruppe 6 building downtown, a light on the first floor's side turning on and off in sight, with nothing refused in the log and no cutoff near that distance in my `visualsettings.dat`; a hint, not read: the model that holds the light has that LOD distance. To be looked at, no pass planned.
