@@ -269,9 +269,11 @@
 // a reader of the fake's (I-E-Z3), its walk behind it (I-E-Z7); the lights' member data behind I-E-P1's tables, entry 19. Fifteen vehicles in all, each with
 // a car at the game's offsets. Once TweaksV has started the fake registers the member, as the game does, and its parser reads through the array member's slot 1.
 //   srdraw         the parser reads the settings of the models it draws, with 20, 21, 24, 28, 32 and 40 items - a twin among them, and one with the same first 20 lights
-//                  and others past them - and an array of another member; then the vehicles get their states, as big as the allocation's site says, and are
-//                  drawn, one pass on this thread and 100 from each of two threads at once: the renderer's own loop over 20 lights, through the getter's call at its
-//                  site, what each call lights and what it hands on checked against what the file's items say
+//                  and others past them - and an array of another member, each setting then copied into the game's array at its model's position; then the
+//                  vehicles get their states, as big as the allocation's site says, and are drawn, one pass on this thread and 100 from each of two threads at
+//                  once: the renderer's own loop over 20 lights, through the getter's call at its site, what each call lights and what it hands on checked against what
+//                  the file's items say, and the vehicle lights' own call of the getter after it. A model with no setting among them, and only while the two calls lead to a
+//                  TweaksV stub, since the game's getter reads past its array then, one at position 255 and one at a position past the count but below the capacity
 //   srbroken       with srdraw: the 32-siren car's sirens 3 and 25 broken
 //   srreset        with srdraw: after the first pass every car's first state made anew, its start time another, and one more pass
 //   srrace         with srdraw: a thread replaces one setting's lights past 20 again and again while this one draws its model
@@ -288,6 +290,9 @@
 //   sroffset, sroffsetfield, srtype, srsubtype, srsize, srcapacity, srelementtype   the lights' member not as the findings have it: the offsets table's
 //                  entry 19 0x40, the data's offset field 8, its type 0x0E, its subtype 2, its element's size 0x50, its capacity 32, an element's type 0x0B
 //   srnoelement    the lights' member's element's data not there before the game's registration
+//   srnocarcols    with srdraw: the carcols pointer null while it draws, which only TweaksV's guard can take
+//   srlateoffset   the game's registration writes the lights' offset 0x44, and its parser reads them there
+//   srgetterelsewhere   the vehicle lights' call of the getter leads to another function of the game than I-E-M1's
 // Ped props (PedProps): the eleven narrowings with the calls in their matches, A-E-G1's two copies among them, the
 // per-anchor count's start and loop and the model info store's lookup are always there, with the calls no pattern
 // names - the per-anchor count's 7 callers and the metadata lookup's 17 in all - and two calls that lead elsewhere,
@@ -1011,7 +1016,7 @@ volatile unsigned char g_sirenIdsC1[kSirenIdsC1At + 0xD2] = { 0xCC };
 volatile unsigned char g_sirenIdsC2[31] = { 0xCC };
 volatile unsigned char g_sirenIdsC3[35] = { 0xCC };
 volatile unsigned char g_sirenIdsR1[21] = { 0xCC };
-volatile unsigned char g_sirenIdsM1[32] = { 0xCC };
+volatile unsigned char g_sirenIdsM1[34] = { 0xCC };
 volatile unsigned char g_sirenIdsLeaExtra[8] = { 0xCC };
 volatile unsigned char g_sirenIdsH1[64] = { 0xCC };
 volatile unsigned char g_sirenIdsH2[64] = { 0xCC };
@@ -2640,7 +2645,7 @@ static void SirenIdsSetup(int argc, wchar_t** argv)
 	if (HasOption(argc, argv, L"sibadc3"))
 		g_sirenIdsC3[2] = 0x34;
 	SirenIdsPut(g_sirenIdsR1, 0, "66 0F 7F 05 00 00 00 00 E8 00 00 00 00 E8 00 00 00 00 80 3D");
-	SirenIdsPut(g_sirenIdsM1, 0, "0F B6 81 3B 05 00 00 48 85 C0 74 13 48 8B 0D 00 00 00 00 48 69 C0 E8 05 00 00 48 03 41 48 C3");
+	SirenIdsPut(g_sirenIdsM1, 0, "0F B6 81 3B 05 00 00 48 85 C0 74 13 48 8B 0D 00 00 00 00 48 69 C0 E8 05 00 00 48 03 41 48 C3 31 C0 C3");
 	SirenIdsPut(g_sirenIdsLeaExtra, 0, HasOption(argc, argv, L"sififth") ? "48 8D 05 00 00 00 00" : "CC 8D 05 00 00 00 00");
 	// a pack's carcols callback and the base builder: a NOP before each, their prologues, a call of the fake's body, the epilogues
 	const bool byte0 = HasOption(argc, argv, L"sibyte0");
@@ -3050,7 +3055,9 @@ struct SirenCountModel
 	uint32_t hash;							// +0x18: the hash of the model's name
 	unsigned char middle[0xB0 - 0x1C];
 	const void* const* bones;				// +0xB0: the holder of its bone structure
-	unsigned char tail[0x10];
+	unsigned char tail[0x53B - 0xB8];
+	unsigned char position;					// +0x53B: its siren setting's position in the game's array, 0 for none
+	unsigned char end[4];
 };
 struct SirenCountBones
 {
@@ -3076,7 +3083,7 @@ struct SirenCountSkeleton
 	const SirenCountSkeletonData* data;		// +0x00: the skeleton data
 	unsigned char rest[0x18];
 };
-static_assert(offsetof(SirenCountModel, hash) == 0x18 && offsetof(SirenCountModel, bones) == 0xB0 && offsetof(SirenCountBone, index) == 0x42 &&
+static_assert(offsetof(SirenCountModel, hash) == 0x18 && offsetof(SirenCountModel, bones) == 0xB0 && offsetof(SirenCountModel, position) == 0x53B && offsetof(SirenCountBone, index) == 0x42 &&
 	offsetof(SirenCountSkeletonData, bones) == 0x5E && offsetof(SirenCountSkeleton, data) == 0, "the siren count's models lie at the game's offsets");
 
 // A vehicle at the game's offsets: all the renderer reads of it are its +0x48, +0x6C, +0x80, +0xDC, +0x860, +0x986 and the state's pointer at +0x1380.
@@ -3104,6 +3111,7 @@ enum
 	kSirenCountMore32, kSirenCountMore16,								// scmore, later
 	kSirenCountFault,													// scfault
 	kSirenCount21, kSirenCountHoles, kSirenCountShare, kSirenCountReplaced, kSirenCountRace,	// srdraw, with those it draws too
+	kSirenCountNoSetting, kSirenCountPast, kSirenCountSpare,			// and at position 0, 255 and past the count
 	kSirenCountVehicles
 };
 constexpr int kSirenCountMany = 1100;		// scfull: models past what TweaksV's table of 1,024 holds, each the police car's but its hash
@@ -3176,7 +3184,7 @@ static const unsigned char* g_sirenRaiseSettings[kSirenCountVehicles] = {};	// t
 static uint32_t g_sirenRaisePastSeed[kSirenCountVehicles] = {};		// the seed its lights past 20 are made of; 0: any
 static volatile LONG g_sirenRaiseLit[kSirenCountVehicles][2] = {};	// the lights of each call of the last pass
 static volatile LONG g_sirenRaiseSecond = 0, g_sirenRaiseStandInBad = 0, g_sirenRaiseBlockBad = 0, g_sirenRaiseOwnBad = 0, g_sirenRaiseLightBad = 0, g_sirenRaiseMade = 0,
-	g_sirenRaiseDirty = 0, g_sirenRaiseTorn = 0, g_sirenRaiseDefault = 0;
+	g_sirenRaiseDirty = 0, g_sirenRaiseTorn = 0, g_sirenRaiseDefault = 0, g_sirenRaiseGetterBad = 0, g_sirenRaiseEmpty = 0;
 constexpr size_t kSirenStateSize = 0x188, kSirenSecondStateAt = 0x190, kSirenStandInAt = 0x320, kSirenStandInSize = sizeof(SirenCountCar);
 
 template <typename T> static T SirenField(const unsigned char* at, size_t offset)
@@ -3279,12 +3287,44 @@ static bool SirenRaiseOwnOk(const unsigned char* own, const unsigned char* real,
 	return shared || (memcmp(own + 4, real + 4, 0x20) == 0 && own[0x38] == real[0x38]);
 }
 
+// What TweaksV gives a position past the game's settings: read only, zero but for sequencerBpm, 200.
+static bool SirenRaiseIsEmpty(const unsigned char* setting)
+{
+	static const float kBpm = 200.0f;
+	for (size_t i = 0; i < 0x5E8; i++)
+		if (setting[i] != (i >= 0x20 && i < 0x24 ? reinterpret_cast<const unsigned char*>(&kBpm)[i - 0x20] : 0))
+			return false;
+	return ProtectionOf(setting) == PAGE_READONLY;
+}
+
+// What a getter's call must give a model: none at position 0, the array's entry below the count, the empty setting past it. Past it, it comes only from TweaksV.
+static bool SirenRaiseGetterRight(int index, const unsigned char* setting)
+{
+	const int position = g_sirenCountVehicles[index].model.position;
+	if (position == 0)
+		return setting == nullptr;
+	const unsigned char* const carcols = g_sirenIdsPointer[0];
+	if (!carcols || position >= static_cast<int>(SirenField<uint16_t>(carcols, 0x50)))
+		return setting && SirenRaiseIsEmpty(setting);
+	return setting == SirenField<const unsigned char*>(carcols, 0x48) + position * 0x5E8;
+}
+
 // The renderer's loop, as the game's runs: the setting through the getter's call at its site, 20 lights, each that is not broken and has a bone.
 static void SirenRaiseLights(const unsigned char* vehicle, const unsigned char* model, bool second)
 {
 	const int index = SirenRaiseIndexOf(g_sirenCountExpectedModel);
 	const auto getter = reinterpret_cast<const unsigned char* (*)(const void*)>(const_cast<unsigned char*>(Rel32Target(Site{ g_sirenCountRendererGetter, 0, 0 })));
 	const unsigned char* const setting = getter(model);
+	if (!second && index >= 0)
+	{
+		if (!SirenRaiseGetterRight(index, setting))
+			InterlockedIncrement(&g_sirenRaiseGetterBad);
+		if (setting && SirenRaiseIsEmpty(setting))	// it lights nothing, whatever the bones say
+		{
+			InterlockedIncrement(&g_sirenRaiseEmpty);
+			return;
+		}
+	}
 	unsigned char* const state = SirenField<unsigned char*>(vehicle, kSirenCarStateAt);
 	const auto holder = SirenField<const signed char* const*>(model, 0xB0);
 	const signed char* const bones = holder ? *holder : nullptr;
@@ -3373,12 +3413,10 @@ static const unsigned char* SirenCountFindBone(const SirenCountSkeletonData* dat
 	return nullptr;
 }
 
-// The siren settings getter both calls lead to: the setting the parser gave this model, none before that or for one of no vehicle's. The vehicle lights' own call
-// is never run here; the renderer's runs in its loop, and TweaksV's wrapper asks it on a model's first pass.
+// A function of the game that is not the siren settings getter, for the calls an option leads to it: never called. The getter is I-E-M1's site, real code.
 static __declspec(noinline) const void* SirenCountGetter(const void* model)
 {
-	const int index = SirenRaiseIndexOf(model);
-	return index >= 0 ? g_sirenRaiseSettings[index] : nullptr;
+	return model;
 }
 
 // The carriers: functions with frames of their own, so that the fake's unwind data names them, and room for their stand-ins.
@@ -3514,7 +3552,7 @@ struct SirenParseData
 	const SirenParseData* element;	// +0x30
 };
 struct SirenParseMember;
-using SirenMemberRead = uint64_t (*)(const SirenParseMember* member, const SirenParseNode* node, unsigned char* object, void* more);
+using SirenMemberRead = uint64_t (*)(const SirenParseMember* member, const SirenParseNode* node, unsigned char* object);
 struct SirenParseMember
 {
 	const SirenMemberRead* vtable;	// slot 1 the reader
@@ -3529,24 +3567,20 @@ static SirenParseData* volatile g_sirenLightsData = &g_sirenLightsDataStorage;
 static const SirenParseData kSirenLightsDataInRdata = { 0, 0, 0x0D, 0x01, {}, 0x48, 20, 0, nullptr };	// srdatardata
 static SirenMemberRead g_sirenArrayVtable[3], g_sirenLightVtable[3];
 static SirenParseMember g_sirenLightMember, g_sirenLightsMember, g_sirenOtherLightMember, g_sirenOtherMember;
-static char g_sirenParseMoreTag = 0;									// what a call's further argument holds, which the readers hand on
-static void* const g_sirenParseMore = &g_sirenParseMoreTag;
-static volatile LONG g_sirenParseMoreBad = 0, g_sirenParseKept = 0, g_sirenParseCalls = 0;
+static volatile LONG g_sirenParseKept = 0, g_sirenParseCalls = 0;
 static volatile unsigned char* volatile g_sirenParseNowhere = nullptr;	// what a faulting item writes to
 constexpr uint64_t kSirenParseResult = 0x5EADE5F00D000001ull;
 constexpr DWORD kSirenParseLastError = 0x5158;
 
 // The reader of an element of the lights, and of the other array's: what the game's reads of a file's item come to
-static uint64_t SirenLightRead(const SirenParseMember*, const SirenParseNode* child, unsigned char* element, void* more)
+static uint64_t SirenLightRead(const SirenParseMember*, const SirenParseNode* child, unsigned char* element)
 {
-	if (more != g_sirenParseMore)
-		InterlockedIncrement(&g_sirenParseMoreBad);
 	if (child->faults)
 		*g_sirenParseNowhere = 1;
 	memcpy(element, child->light, sizeof(child->light));
 	return 1;
 }
-static uint64_t SirenOtherLightRead(const SirenParseMember*, const SirenParseNode*, unsigned char* element, void*)
+static uint64_t SirenOtherLightRead(const SirenParseMember*, const SirenParseNode*, unsigned char* element)
 {
 	memset(element, 0x77, 8);
 	return 1;
@@ -3554,7 +3588,7 @@ static uint64_t SirenOtherLightRead(const SirenParseMember*, const SirenParseNod
 
 // The game's reader of an array member, behind its carrier's start: the children counted, the count stored behind the elements, each child read by the
 // element's reader up to the capacity, and a result and a last error of its own.
-static uint64_t SirenArrayRead(const SirenParseMember* member, const SirenParseNode* node, unsigned char* object, void* more)
+static uint64_t SirenArrayRead(const SirenParseMember* member, const SirenParseNode* node, unsigned char* object)
 {
 	const SirenParseData& data = *member->data;
 	size_t children = 0;
@@ -3566,19 +3600,20 @@ static uint64_t SirenArrayRead(const SirenParseMember* member, const SirenParseN
 	memcpy(base + ((data.elementSize * capacity + 3) & ~size_t{ 3 }), &count, sizeof(count));
 	size_t i = 0;
 	for (const SirenParseNode* child = node->first; child && i < capacity; child = child->next, i++)
-		member->element->vtable[1](member->element, child, base + i * data.elementSize, more);
+		member->element->vtable[1](member->element, child, base + i * data.elementSize);
 	SetLastError(kSirenParseLastError);
 	return kSirenParseResult;
 }
 
-// What TweaksV may not change: the sites but the rel32 of the renderer's call and of the renderer's call of the getter, the allocation's size and the tree reader's
-// first bytes, each of which the raise writes, the stand-ins, the models and what they lead to.
+// What TweaksV may not change: the sites but the rel32 of the vehicle lights' two calls and of the renderer's call of the getter, the allocation's size and the tree
+// reader's first bytes, each of which the raise writes, the stand-ins, the models and what they lead to.
 static uint64_t SirenCountPlaced()
 {
-	constexpr size_t kRel32At = 14;
+	constexpr size_t kRel32At = 14, kGetterRel32At = 25;
 	uint64_t hash = 0xCBF29CE484222325ull;
 	hash = SirenCountHash(hash, g_sirenCountCallSite, kRel32At);
-	hash = SirenCountHash(hash, g_sirenCountCallSite + kRel32At + 4, sizeof(g_sirenCountCallSite) - kRel32At - 4);
+	hash = SirenCountHash(hash, g_sirenCountCallSite + kRel32At + 4, kGetterRel32At - kRel32At - 4);
+	hash = SirenCountHash(hash, g_sirenCountCallSite + kGetterRel32At + 4, sizeof(g_sirenCountCallSite) - kGetterRel32At - 4);
 	hash = SirenCountHash(hash, g_sirenCountGlassRead, sizeof(g_sirenCountGlassRead));
 	hash = SirenCountHash(hash, g_sirenCountFindBoneCopy, sizeof(g_sirenCountFindBoneCopy));
 	hash = SirenCountHash(hash, g_sirenCountStateSite, 1);
@@ -3665,7 +3700,7 @@ static void SirenCountSetup(int argc, wchar_t** argv)
 			memcpy(renderer + kSirenCountGetterCallAt, kSirenCountGetterCall, sizeof(kSirenCountGetterCall));
 		g_sirenCountRendererGetter = (getterOut ? g_sirenCountOutside : static_cast<volatile unsigned char*>(renderer + kSirenCountGetterCallAt)) + kGetterRel32At;
 		SetRel32(Site{ g_sirenCountRendererGetter, 0, 0 }, HasOption(argc, argv, L"srz1hooked") ? static_cast<const void*>(ImageEnd() + 0x78000) :
-			HasOption(argc, argv, L"srz1other") ? static_cast<const void*>(findBone) : reinterpret_cast<const void*>(&SirenCountGetter));
+			HasOption(argc, argv, L"srz1other") ? static_cast<const void*>(findBone) : const_cast<const unsigned char*>(g_sirenIdsM1));
 		VirtualProtect(renderer, g_sirenCountRendererRoom, old, &unused);
 		FlushInstructionCache(GetCurrentProcess(), renderer, g_sirenCountRendererRoom);
 		if (brokenOut)	// the two reads together, I-E-B2 in it a second time, which nothing looks for without DIAGNOSTIC_MODE
@@ -3708,7 +3743,8 @@ static void SirenCountSetup(int argc, wchar_t** argv)
 	}
 	SetRel32(g_sirenCountRendererCall, hooked ? static_cast<const void*>(ImageEnd() + 0x71000) :
 		elsewhere ? reinterpret_cast<const void*>(&SirenCountGetter) : static_cast<const void*>(renderer));
-	SetRel32(g_sirenCountGetterCall, getterHooked ? static_cast<const void*>(ImageEnd() + 0x72000) : reinterpret_cast<const void*>(&SirenCountGetter));
+	SetRel32(g_sirenCountGetterCall, getterHooked ? static_cast<const void*>(ImageEnd() + 0x72000) :
+		HasOption(argc, argv, L"srgetterelsewhere") ? reinterpret_cast<const void*>(&SirenCountGetter) : const_cast<const unsigned char*>(g_sirenIdsM1));
 	if (noUnwind)
 		g_sirenCountFindBoneCopy[1] = 0x41;
 
@@ -3735,6 +3771,14 @@ static void SirenCountSetup(int argc, wchar_t** argv)
 	SirenCountMake(v[kSirenCountShare], 0x50505050, 90, 32, 50, 0, 0);
 	SirenCountMake(v[kSirenCountReplaced], 0x60606060, 95, 32, 60, 0, 0);
 	SirenCountMake(v[kSirenCountRace], 0x70707070, 96, 32, 70, 0, 0);
+	SirenCountMake(v[kSirenCountNoSetting], 0x80808080, 97, 32, 20, 0, 0);
+	SirenCountMake(v[kSirenCountPast], 0x90909090, 98, 32, 30, 0, 0);
+	SirenCountMake(v[kSirenCountSpare], 0xA0A0A0A0, 99, 32, 35, 0, 0);
+	for (int i = 0; i < kSirenCountVehicles; i++)	// the game's array holds 24 settings and has room for 64
+		v[i].model.position = static_cast<unsigned char>(1 + i);
+	v[kSirenCountNoSetting].model.position = 0;
+	v[kSirenCountPast].model.position = 0xFF;
+	v[kSirenCountSpare].model.position = 30;
 	for (int i = 0; i < kSirenCountMany; i++)
 	{
 		g_sirenCountMany[i] = v[kSirenCountPolice].model;
@@ -3757,7 +3801,9 @@ static const wchar_t* SirenCountWhere()
 	return L"another mod";
 }
 
-// One pass of a vehicle's sirens, as the game's vehicle lights make it: through the call at the site, to wherever it leads.
+// One pass of a vehicle's sirens, as the game's vehicle lights make it: through the call at the site, to wherever it leads, then, once srdraw has set it up and
+// while it leads to the getter or to TweaksV's stub, their call of the getter.
+static const unsigned char* g_sirenRaiseVehicleGetter = nullptr;
 static void SirenCountDraw(const unsigned char* lights, const void* vehicle, const SirenCountModel* model, const SirenCountSkeleton* skeleton)
 {
 	g_sirenCountExpectedVehicle = vehicle;
@@ -3771,6 +3817,17 @@ static void SirenCountDraw(const unsigned char* lights, const void* vehicle, con
 	InterlockedIncrement(&g_sirenCountDrawn);
 	if (result == kSirenCountResult && error == kSirenCountLastError)
 		InterlockedIncrement(&g_sirenCountKept);
+	const int index = SirenRaiseIndexOf(model);
+	if (g_sirenRaiseVehicleGetter && index >= 0)	// the head and tail lights: its four dwords, a null like zeros
+	{
+		const unsigned char* const setting = reinterpret_cast<const unsigned char* (*)(const void*)>(const_cast<unsigned char*>(g_sirenRaiseVehicleGetter))(model);
+		if (!SirenRaiseGetterRight(index, setting))
+			InterlockedIncrement(&g_sirenRaiseGetterBad);
+		if (setting && SirenRaiseIsEmpty(setting))
+			InterlockedIncrement(&g_sirenRaiseEmpty);
+		if (setting && (SirenField<uint32_t>(setting, 0x24) | SirenField<uint32_t>(setting, 0x28) | SirenField<uint32_t>(setting, 0x2C) | SirenField<uint32_t>(setting, 0x30)) == 0 && !SirenRaiseIsEmpty(setting))
+			InterlockedIncrement(&g_sirenRaiseGetterBad);
+	}
 }
 
 // passes passes of the models first to first + count - 1, each the vehicle it is drawn as, the one without a skeleton without one.
@@ -3843,14 +3900,14 @@ static const unsigned char* SirenParse(int items, uint32_t seed, uint32_t pastSe
 		nodes[i].faults = i == faultsAt;
 	}
 	root.first = items ? &nodes[0] : nullptr;
-	unsigned char* const object = static_cast<unsigned char*>(calloc(1, 0x5E8));
+	unsigned char* const object = static_cast<unsigned char*>(calloc(1, 0x5F0));
 	unsigned char* const copy = static_cast<unsigned char*>(calloc(1, 0x5E8));
 	SetLastError(0);
-	const uint64_t result = g_sirenLightsMember.vtable[1](&g_sirenLightsMember, &root, object, g_sirenParseMore);
+	const uint64_t result = g_sirenLightsMember.vtable[1](&g_sirenLightsMember, &root, object);
 	InterlockedIncrement(&g_sirenParseCalls);
 	if (result == kSirenParseResult && GetLastError() == kSirenParseLastError)
 		InterlockedIncrement(&g_sirenParseKept);
-	memcpy(copy, object, 0x5E8);
+	memcpy(copy + 0x3C, object + g_sirenLightsData->offset, 0x5A0 + 4);	// as the game's merge copies them, to their place in its array, with the count
 	for (int i = 0; i < 8; i++)
 	{
 		const float scalar = static_cast<float>(scalars ? scalars : seed) + static_cast<float>(i) * 0.5f;
@@ -3871,7 +3928,7 @@ static void SirenParseOther()
 		nodes[i].next = i + 1 < 32 ? &nodes[i + 1] : nullptr;
 	nodes[32].first = &nodes[0];
 	unsigned char object[0x80] = {};
-	g_sirenOtherMember.vtable[1](&g_sirenOtherMember, &nodes[32], object, g_sirenParseMore);
+	g_sirenOtherMember.vtable[1](&g_sirenOtherMember, &nodes[32], object);
 	delete[] nodes;
 }
 
@@ -3903,21 +3960,38 @@ static const SirenRaiseRow kSirenRaiseRows[] = {
 	{ kSirenCountPolice, 20, 1, 1 }, { kSirenCount32, 32, 2, 2 }, { kSirenCountLost, 24, 3, 3 }, { kSirenCount8, 40, 4, 4 }, { kSirenCountNoStructure, 21, 12, 12 }, { kSirenCountMore32, 40, 5, 5 },
 	{ kSirenCountMore16, 20, 6, 6 }, { kSirenCount21, 21, 7, 7 }, { kSirenCountHoles, 32, 8, 8 }, { kSirenCountShare, 32, 2, 2, 77 }, { kSirenCountReplaced, 24, 9, 9 }, { kSirenCountReplaced, 28, 9, 10 } };
 static const int kSirenRaiseDrawn[] = { kSirenCountPolice, kSirenCount32, kSirenCountLost, kSirenCount8, kSirenCountNoStructure, kSirenCountMore32, kSirenCountMore16, kSirenCount21, kSirenCountHoles,
-	kSirenCountShare, kSirenCountReplaced };
-static const wchar_t* const kSirenRaiseNames[] = { L"police", L"32", L"lost", L"8", L"none", L"more32", L"16", L"21", L"holes", L"share", L"replaced" };
-static_assert(sizeof(kSirenRaiseDrawn) / sizeof(kSirenRaiseDrawn[0]) == sizeof(kSirenRaiseNames) / sizeof(kSirenRaiseNames[0]), "a name for each model srdraw draws");
+	kSirenCountShare, kSirenCountReplaced, kSirenCountNoSetting, kSirenCountPast, kSirenCountSpare };
+static const wchar_t* const kSirenRaiseNames[] = { L"police", L"32", L"lost", L"8", L"none", L"more32", L"16", L"21", L"holes", L"share", L"replaced", L"nosetting", L"past", L"spare" };
+constexpr int kSirenRaiseAll = sizeof(kSirenRaiseDrawn) / sizeof(kSirenRaiseDrawn[0]);
+constexpr int kSirenRaiseUnbounded = 2;		// the last two, which the game's own getter would read past its array for: drawn only through TweaksV's
+static_assert(kSirenRaiseAll == sizeof(kSirenRaiseNames) / sizeof(kSirenRaiseNames[0]), "a name for each model srdraw draws");
 static const unsigned char* g_sirenRaiseLights = nullptr;
+static int g_sirenRaiseCount = 0;			// the models this run draws
 static volatile LONG g_sirenRaceDone = 0;
+
+static void SirenRaisePass()
+{
+	for (int n = 0; n < g_sirenRaiseCount; n++)
+	{
+		SirenCountVehicle& v = g_sirenCountVehicles[kSirenRaiseDrawn[n]];
+		SirenCountDraw(g_sirenRaiseLights, &v.car, &v.model, &v.skeleton);
+	}
+}
 
 static DWORD WINAPI SirenRaiseThread(LPVOID)
 {
 	for (int pass = 0; pass < 100; pass++)
-		for (const int i : kSirenRaiseDrawn)
-		{
-			SirenCountVehicle& v = g_sirenCountVehicles[i];
-			SirenCountDraw(g_sirenRaiseLights, &v.car, &v.model, &v.skeleton);
-		}
+		SirenRaisePass();
 	return 0;
+}
+
+// The game's merge: a setting read, copied into the game's array at its model's position.
+static void SirenRaiseMerge(int vehicle, const unsigned char* setting)
+{
+	unsigned char* const entry = g_sirenIdsSettings + g_sirenCountVehicles[vehicle].model.position * kSirenIdsSettingSize;
+	memcpy(entry, setting, kSirenIdsSettingSize);
+	free(const_cast<unsigned char*>(setting));
+	g_sirenRaiseSettings[vehicle] = entry;
 }
 
 // srrace: a setting's lights past 20 replaced again and again, each generation of one seed in all of them.
@@ -3932,11 +4006,10 @@ static DWORD WINAPI SirenRaceThread(LPVOID)
 	return 0;
 }
 
-// Where the renderer's call of the getter leads now
-static const wchar_t* SirenRaiseGetterWhere()
+// Where a call of the getter leads now
+static const wchar_t* SirenRaiseLeads(const unsigned char* target)
 {
-	const unsigned char* const target = Rel32Target(Site{ g_sirenCountRendererGetter, 0, 0 });
-	if (target == reinterpret_cast<const unsigned char*>(&SirenCountGetter))
+	if (target == const_cast<const unsigned char*>(g_sirenIdsM1))
 		return L"the getter";
 	if (InImage(target))
 		return L"another function of the game";
@@ -3944,6 +4017,11 @@ static const wchar_t* SirenRaiseGetterWhere()
 	if (VirtualQuery(target, &info, sizeof(info)) == sizeof(info) && info.State == MEM_COMMIT && memcmp(target, "\xFF\x25\x00\x00\x00\x00", 6) == 0)
 		return L"a TweaksV stub";
 	return L"another mod";
+}
+
+static const wchar_t* SirenRaiseGetterWhere()
+{
+	return SirenRaiseLeads(Rel32Target(Site{ g_sirenCountRendererGetter, 0, 0 }));
 }
 
 static void SirenRaiseActions(int argc, wchar_t** argv)
@@ -3964,7 +4042,7 @@ static void SirenRaiseActions(int argc, wchar_t** argv)
 	g_sirenOtherMember = { g_sirenArrayVtable, &g_sirenOtherDataStorage, &g_sirenOtherLightMember };
 
 	// the game's registration, after TweaksV's start
-	g_sirenLightsData->offset = g_sirenIdsSettingOffsets[19];
+	g_sirenLightsData->offset = HasOption(argc, argv, L"srlateoffset") ? 0x44 : g_sirenIdsSettingOffsets[19];
 	g_sirenLightsData->element = &g_sirenLightDataStorage;
 
 	if (HasOption(argc, argv, L"srfault") || HasOption(argc, argv, L"srelement"))
@@ -3984,45 +4062,40 @@ static void SirenRaiseActions(int argc, wchar_t** argv)
 	SirenParseOther();
 	for (const SirenRaiseRow& row : kSirenRaiseRows)
 	{
-		const unsigned char* const setting = SirenParse(row.items, row.seed, row.pastSeed, -1, row.scalars);
-		if (g_sirenRaiseSettings[row.vehicle])
-			free(const_cast<unsigned char*>(g_sirenRaiseSettings[row.vehicle]));
-		g_sirenRaiseSettings[row.vehicle] = setting;
+		SirenRaiseMerge(row.vehicle, SirenParse(row.items, row.seed, row.pastSeed, -1, row.scalars));
 		g_sirenRaisePastSeed[row.vehicle] = row.pastSeed;
 	}
 
+	if (HasOption(argc, argv, L"srnocarcols"))
+		g_sirenIdsPointer[0] = nullptr;
 	const wchar_t* const where = SirenCountWhere();
 	const wchar_t* const getterWhere = SirenRaiseGetterWhere();
 	if ((wcscmp(where, L"the renderer") != 0 && wcscmp(where, L"a TweaksV stub") != 0) || (wcscmp(getterWhere, L"the getter") != 0 && wcscmp(getterWhere, L"a TweaksV stub") != 0))
 		return;	// the options that lead the calls elsewhere: nothing the fake can draw through
 	g_sirenRaiseLights = Rel32Target(g_sirenCountRendererCall);
 	g_sirenRaiseOn = true;
+	const wchar_t* const vehicleWhere = SirenRaiseLeads(Rel32Target(g_sirenCountGetterCall));
+	if (wcscmp(vehicleWhere, L"the getter") == 0 || wcscmp(vehicleWhere, L"a TweaksV stub") == 0)
+		g_sirenRaiseVehicleGetter = Rel32Target(g_sirenCountGetterCall);
+	g_sirenRaiseCount = kSirenRaiseAll - (wcscmp(getterWhere, L"a TweaksV stub") == 0 ? 0 : kSirenRaiseUnbounded);
 	int32_t start = 1000;
-	for (const int i : kSirenRaiseDrawn)
-		SirenRaiseGiveState(g_sirenCountVehicles[i], start += 16);
+	for (int n = 0; n < g_sirenRaiseCount; n++)
+		SirenRaiseGiveState(g_sirenCountVehicles[kSirenRaiseDrawn[n]], start += 16);
 	if (HasOption(argc, argv, L"srbroken"))
 	{
 		const uint32_t broken = (1u << 2) | (1u << 24);
 		memcpy(g_sirenCountVehicles[kSirenCount32].car.bytes + 0x860, &broken, sizeof(broken));
 	}
-	for (const int i : kSirenRaiseDrawn)	// the first pass, on this thread
-	{
-		SirenCountVehicle& v = g_sirenCountVehicles[i];
-		SirenCountDraw(g_sirenRaiseLights, &v.car, &v.model, &v.skeleton);
-	}
+	SirenRaisePass();	// the first pass, on this thread
 	if (HasOption(argc, argv, L"srreset"))	// the game's resets touch the first state: made anew, another start time
 	{
-		for (const int i : kSirenRaiseDrawn)
+		for (int n = 0; n < g_sirenRaiseCount; n++)
 		{
-			unsigned char* const state = SirenField<unsigned char*>(g_sirenCountVehicles[i].car.bytes, kSirenCarStateAt);
+			unsigned char* const state = SirenField<unsigned char*>(g_sirenCountVehicles[kSirenRaiseDrawn[n]].car.bytes, kSirenCarStateAt);
 			start += 16;
 			memcpy(state, &start, sizeof(start));
 		}
-		for (const int i : kSirenRaiseDrawn)
-		{
-			SirenCountVehicle& v = g_sirenCountVehicles[i];
-			SirenCountDraw(g_sirenRaiseLights, &v.car, &v.model, &v.skeleton);
-		}
+		SirenRaisePass();
 	}
 	HANDLE threads[2] = {};
 	for (HANDLE& thread : threads)
@@ -4037,7 +4110,7 @@ static void SirenRaiseActions(int argc, wchar_t** argv)
 	if (HasOption(argc, argv, L"srrace"))
 	{
 		SirenCountVehicle& v = g_sirenCountVehicles[kSirenCountRace];
-		g_sirenRaiseSettings[kSirenCountRace] = SirenParse(32, 11, 999, -1);
+		SirenRaiseMerge(kSirenCountRace, SirenParse(32, 11, 999, -1));
 		SirenRaiseGiveState(v, start += 16);
 		SirenCountDraw(g_sirenRaiseLights, &v.car, &v.model, &v.skeleton);	// its first pass, before the setting is replaced
 		const HANDLE thread = CreateThread(nullptr, 0, SirenRaceThread, nullptr, 0, nullptr);
@@ -4055,8 +4128,8 @@ static void SirenRaiseActions(int argc, wchar_t** argv)
 
 // "siren count: stand-ins built | siren draws: 800 through a TweaksV stub, the renderer 800 times, args ok, result and last error
 // kept 800 of 800, 256 lookups in turn | siren sites and data: as placed | " - "siren draws: none, the call leads to ..." when it
-// drew nothing. Then the raise's sites as they stand, and once the parser has read what the renderer's loop found: "siren lights: second calls 2211, stand-ins ok, blocks ok,
-// own settings ok, lights right, second states made 8 clear, not torn, 0 default lights, parser 12 of 12 back, further argument handed on, lit police 20+0, 32 20+12, ... | ".
+// drew nothing. Then the raise's sites as they stand, and once the parser has read what the renderer's loop found: "siren lights: second calls 1206, stand-ins ok, blocks ok,
+// own settings ok, lights right, second states made 6 clear, not torn, 804 default lights, getter calls right, 804 empty settings, parser 12 of 12 back, lit police 20+0, 32 20+12, ... | ".
 static void SirenCountReport()
 {
 	wprintf(L"siren count: stand-ins %ls | ", g_sirenCountBuilt ? L"built" : L"NOT built");
@@ -4068,14 +4141,15 @@ static void SirenCountReport()
 			g_sirenCountDrawn, g_sirenCountLookups, g_sirenCountOutOfTurn == 0 ? L"in turn" : L"OUT OF TURN");
 	wprintf(L"siren sites and data: %ls | ", SirenCountPlaced() == g_sirenCountPlacedHash ? L"as placed" : L"CHANGED");
 	const unsigned char* const reader = SirenCountCode(&SirenCountReaderCarrier);
-	wprintf(L"siren raise sites: state size 0x%X, getter call to %ls, reader %ls | ", SirenRaiseStateSize(), SirenRaiseGetterWhere(),
+	wprintf(L"siren raise sites: state size 0x%X, getter call to %ls, the vehicle lights' to %ls, reader %ls | ", SirenRaiseStateSize(), SirenRaiseGetterWhere(),
+		SirenRaiseLeads(Rel32Target(g_sirenCountGetterCall)),
 		memcmp(reader, g_sirenCountReaderLaid, kSirenCountHookSize) == 0 ? L"as laid" : reader[0] == 0xE9 ? L"hooked" : L"CHANGED");
 	if (g_sirenParseCalls)
 	{
-		wprintf(L"siren lights: second calls %ld, stand-ins %ls, blocks %ls, own settings %ls, lights %ls, second states made %ld%ls, %ls, %ld default lights, parser %ld of %ld back, further argument %ls, lit",
+		wprintf(L"siren lights: second calls %ld, stand-ins %ls, blocks %ls, own settings %ls, lights %ls, second states made %ld%ls, %ls, %ld default lights, getter calls %ls, %ld empty settings, parser %ld of %ld back, lit",
 			g_sirenRaiseSecond, g_sirenRaiseStandInBad == 0 ? L"ok" : L"BAD", g_sirenRaiseBlockBad == 0 ? L"ok" : L"BAD", g_sirenRaiseOwnBad == 0 ? L"ok" : L"BAD",
 			g_sirenRaiseLightBad == 0 ? L"right" : L"WRONG", g_sirenRaiseMade, g_sirenRaiseDirty == 0 ? L" clear" : L" DIRTY", g_sirenRaiseTorn == 0 ? L"not torn" : L"TORN",
-			g_sirenRaiseDefault, g_sirenParseKept, g_sirenParseCalls, g_sirenParseMoreBad == 0 ? L"handed on" : L"LOST");
+			g_sirenRaiseDefault, g_sirenRaiseGetterBad == 0 ? L"right" : L"WRONG", g_sirenRaiseEmpty, g_sirenParseKept, g_sirenParseCalls);
 		for (size_t i = 0; i < sizeof(kSirenRaiseDrawn) / sizeof(kSirenRaiseDrawn[0]); i++)
 			wprintf(L" %ls %ld+%ld,", kSirenRaiseNames[i], g_sirenRaiseLit[kSirenRaiseDrawn[i]][0], g_sirenRaiseLit[kSirenRaiseDrawn[i]][1]);
 		wprintf(L" | ");
@@ -10361,6 +10435,7 @@ int wmain(int argc, wchar_t** argv)
 	SirenCountReport();
 	CheckStub(Rel32Target(g_sirenCountRendererCall));
 	CheckStub(Rel32Target(Site{ g_sirenCountRendererGetter, 0, 0 }));
+	CheckStub(Rel32Target(g_sirenCountGetterCall));
 	{
 		// "pedprops: sites widened, data as placed | " - the sites as placed, as the part leaves them (the eleven B6 made
 		// B7 and nothing else), or changed otherwise; the store's data as placed

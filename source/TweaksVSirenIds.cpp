@@ -214,6 +214,8 @@ namespace TweaksV
 		constexpr size_t kModelIndexAt = 3;		// M1: a model's siren setting index, the disp32 of "movzx eax, byte [rcx+disp32]" (0F B6 81)
 		constexpr size_t kGetterSizeAt = 22;	// M1: a setting's size, the imm32 of "imul rax, rax, imm32" (48 69 C0)
 		constexpr size_t kGetterArrayAt = 29;	// M1: the settings' array, the disp8 of "add rax, [rcx+disp8]" (48 03 41)
+		static_assert(PinsByte(kM1, kModelIndexAt, kModelSirenPositionAt & 0xFF) && PinsByte(kM1, kModelIndexAt + 1, kModelSirenPositionAt >> 8) && kSettingSize == kSirenSettingSize &&
+			kSettingsAt == kCarcolsSirenSettingsAt && kSettingsAt + 8 == kCarcolsSirenCountAt, "TweaksV: I-E-M1 and I-E-T2 hold what the header says of a model and the carcols data");
 		static_assert(Pins(kM1, 0, "0F B6 81") && Pins(kM1, 19, "48 69 C0") && Pins(kM1, kGetterSizeAt, "E8 05 00 00") &&
 			HexDword("E8 05 00 00", 0) == kSettingSize && Pins(kM1, 26, "48 03 41") && PinsByte(kM1, kGetterArrayAt, kSettingsAt),
 			"TweaksV: I-E-M1 holds a setting's size, 0x5E8, and the settings' array at +0x48");
@@ -781,7 +783,7 @@ namespace TweaksV
 		{
 			std::string notFound;
 			for (size_t i = 0; i < kMatchCount; i++)
-				if (!g_matches[i])	// the sirens per vehicle's, which ran before, keep their two
+				if (!g_matches[i])	// the sirens per vehicle's, which ran before, keep their three
 					g_matches[i] = Scanner::FindOnce(*kLimitPatterns[i], notFound);
 			KeepCarcolsPointer();
 			if (!notFound.empty())
@@ -1190,18 +1192,20 @@ namespace TweaksV
 
 	std::optional<SirenSettingSites> FindSirenSettingSites(std::string& why)
 	{
-		for (const Match match : { kC1, kP1 })
+		for (const Match match : { kC1, kP1, kM1 })
 			if (!g_matches[match])
 				g_matches[match] = Scanner::FindOnce(*kLimitPatterns[match], why);
-		if (!g_matches[kC1] || !g_matches[kP1])
+		if (!g_matches[kC1] || !g_matches[kP1] || !g_matches[kM1])
 			return std::nullopt;
-		if (!Readable(g_matches[kP1] + kOffsetsAt, sizeof(int32_t), "lea of the siren settings' offsets table", kLimitPatterns[kP1]->label))
+		const uint8_t* const carcolsPointer = Rel32Target(g_matches[kM1] + kCarcolsAtM1);
+		if (!Readable(g_matches[kP1] + kOffsetsAt, sizeof(int32_t), "lea of the siren settings' offsets table", kLimitPatterns[kP1]->label) ||
+			!Readable(carcolsPointer, sizeof(void*), "carcols pointer the siren settings getter reads", kLimitPatterns[kM1]->label))
 		{
 			if (why.empty())
 				why = g_why;
 			return std::nullopt;
 		}
-		return SirenSettingSites{ g_matches[kC1], Rel32Target(g_matches[kP1] + kMemberTableAt), Rel32Target(g_matches[kP1] + kOffsetsAt) };
+		return SirenSettingSites{ g_matches[kC1], Rel32Target(g_matches[kP1] + kMemberTableAt), Rel32Target(g_matches[kP1] + kOffsetsAt), g_matches[kM1], carcolsPointer };
 	}
 
 	void InitSirenIds()

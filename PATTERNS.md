@@ -490,12 +490,17 @@ The labels are the part's letter `I`; `I-E-B1`, `I-E-C1` and `I-E-P1` are theirs
 
 - **The parser's member objects:** a member object holds its vtable at +0x00, its member data at +0x08 and, for an array, its element's member object at +0x10; slot 1 of the vtable reads a node of the file's tree.
   A node's first child lies at +0x38, its next sibling at +0x30.
+  An array's slot 1 takes the member object in rcx, the node in rdx and in r8 the structure that holds the array, not the array's base (`mov rbx, r8` at RVA 0xAE66A5), and no more: r9's first mention is a write, at RVA 0xAE66F8, and no stack argument is read.
+  The array's base is r8 plus the member data's offset, read at the call.
+  The element's slot 1, called at RVA 0xAE6A00 to 0xAE6A1A: rcx the element's member object, rdx the child, r8 the element's address, no r9 set, and its result is not read.
 - **The member data:** +0x08 the offset, 0 at TweaksV's start and written from the structure's offsets table when the game registers it, after TweaksV's start; +0x10 the type (0x0D an array, 0x0C a structure), +0x11 the subtype, +0x20 the element's size, +0x28 a fixed array's capacity, +0x30 the element's member data.
   The lights' member data lie at RVA 0x28EE4C8, entry 19 of `I-E-P1`'s table: hash 0x7A07C7F6, `sirens`, type 0x0D, subtype 1, flags 0x0009, element size 0x48, capacity 20, offset 0x3C once registered; type, subtype, size and capacity stand from the start, read by the data window's boot of 2026-11-02.
   Their element's lies at RVA 0x28EE488: hash 0x063FA3F2, `Item`, type 0x0C.
   The parent's array of settings keeps its own element size, 0x5E8, in its member data at RVA 0x28EC470, hash 0x9AF814F5, `Sirens`, type 0x0D, subtype 0, a growing array.
 - **A siren setting's members,** each matched by its hash: `id` +0x00, `name` +0x5E0, `timeMultiplier` +0x04, `lightFalloffMax` +0x08, `lightFalloffExponent` +0x0C, `lightInnerConeAngle` +0x10, `lightOuterConeAngle` +0x14, `lightOffset` +0x18, `textureName` +0x1C, `sequencerBpm` +0x20, `leftHeadLight` +0x24, `rightHeadLight` +0x28, `leftTailLight` +0x2C, `rightTailLight` +0x30, `leftHeadLightMultiples` +0x34, right +0x35, `leftTailLightMultiples` +0x36, right +0x37, `useRealLights` +0x38, `sirens` +0x3C.
   A light's: `rotation` +0x00, `flashiness` +0x14, `corona` +0x28, `color` +0x38, `intensity` +0x3C, `lightGroup` +0x40, `scaleFactor` +0x41, `scale` +0x42, `rotate` +0x43, `flash` +0x44, `light` +0x45, `spotLight` +0x46, `castShadows` +0x47.
+  Its rotation and its flashiness have one layout: delta, a float, at +0x00; start, a float, at +0x04; speed at +0x08; sequencer, a dword, at +0x0C; multiples, a byte, at +0x10; direction, a byte, at +0x11, not 0 for reversed; syncToBpm, a byte, at +0x12.
+  Delta, start and direction are read from what the code does with them, the other names by the XML's order and their uses.
 - **The array's tree reader** (RVA 0xAE6630, slot 1 of the array class, its vtable at RVA 0x261E520): it counts the node's children, calls RVA 0xACFCA0 with the member, the object, the count and 7, then reads each child into the array's base plus i x the element's size by the element's slot 1, and for subtypes 1 to 4 and 9 stops when i reaches the capacity.
   RVA 0xACFCA0, for subtype 1, stores min(children, capacity) at ((size x capacity + 3) & ~3) + offset, so a fixed array's count lies behind its elements by rule.
   So item 21 and on of an XML file's setting are dropped, the count 20, no message.
@@ -508,9 +513,20 @@ The labels are the part's letter `I`; `I-E-B1`, `I-E-C1` and `I-E-P1` are theirs
   Coronas and lights go to the job's list, the 9th argument, each with its capacity check.
 - **The siren state:** one allocation, `I-E-Z2`, and one store of its pointer, at RVA 0xDCAA32, nothing copies it; the constructor RVA 0x1363630 leaves it zero but for the beat at +0x08, -1, and the start time at +0x00; its resets touch that state alone; the game frees it whole.
   `operator new` gives 16-aligned memory.
+- **The siren settings getter** (RVA 0x135D220, `I-E-M1`, 34 bytes, no unwind data): the position, a byte at the model info's +0x53B; 0 gives null; else the array at the carcols data's +0x48 + position x 0x5E8, with no upper bound, so that position 0xFF, an ID that found no setting, reads array + 0x5E218.
+  It touches rax and rcx alone, and neither caller holds anything in a volatile register across the call.
+  Its only calls are RVA 0xE9BD4E in the renderer (`I-E-Z1` +24) and RVA 0xE16FA7 right after the renderer returns (`I-E-B1` +24), with no other reference and no absolute pointer to it; the second's uses are the setting's +0x24, +0x28, +0x2C and +0x30, each behind a test for null, null and zero taking the same branches.
+  With the raise both calls lead to one function of the part's, which bounds the position.
+- **The carcols data:** +0x48 the array, +0x50 its count and +0x52 its capacity, words; the array grows by 16 (RVA 0x137A3D0), the spare entries constructed, and the growth stores the pointer first and the count after (RVA 0x1378210), so that a thread that reads the count before the pointer never pairs a new count with an old array.
+  A position is valid when given and the count never falls: below the count is the one right bound.
+- **The renderer with a setting of zeros** (its listing read in full, and emulated): it lights nothing and cannot fault; a `sequencerBpm` of 0 gives +inf by an SSE `divss`, the exceptions masked (the game's only `LDMXCSR` masks more), as a pack's own 0 does today.
+  No value of a setting is an index, a pointer or an integer denominator but a light's group at +0x40, reached only with `light` set and `useRealLights` 0: with bytes from past the array that is a way to a smashed stack (from group 9 it reaches the return address).
+  The constructor's `sequencerBpm` is 200, which the part's empty setting keeps, zero in all else.
+  The renderer never reads a setting's count at +0x5DC or its name at +0x5E0.
 - **What no pattern protects:** that the renderer reads only those 7 fields of the vehicle and 2 of the model, so that after a game update the renderer is read again before these patterns are trusted (D40); that a setting's 20 lights are never changed after their load and are copied whole with their count 20 (RVA 0x1378210, 0x137A3D0), so a hash of their 1,440 bytes is the same at the parser and at the renderer; that the lights' order is the bones', item 20 + k being siren 21 + k; the tree's two fields and the element's call through slot 1.
 
 The sites: looked for with `SIRENS_PER_VEHICLE` above 20 alone, each matching exactly once in both dumps of 1.0.1158.16.
+`I-E-B1` +13 and +24 are redirected with them, and `I-E-M1` gives the carcols pointer the guard reads, its match the function both of the getter's calls must lead to.
 
 | Label | Pattern | Use | 1.0.1158.16 | RVA |
 |---|---|---|---|---|

@@ -19,8 +19,10 @@
 //                    renderer as ever, then looks the model up in the table of 1,024 and, for a model with an own setting and
 //                    bones past siren20 in the room behind its bone structure (TweaksVSirenRoom.h), calls it again with the
 //                    stand-in, the second state and a block of its own that stands in for the model, so that the renderer's
-//                    light 1 is siren21. The renderer's call of the siren settings getter gives such a block its own setting,
-//                    and every other model the game's. A table that is full is reported, once, and what does not fit stays at 20.
+//                    light 1 is siren21. Both calls of the siren settings getter, the renderer's and the vehicle lights', are redirected
+//                    to one plain function: a block gets its own setting, position 0 none, a position below the array's count that entry, and
+//                    any other, an ID that found no setting, an empty setting that lights nothing, so that the game never reads past its
+//                    array (D41). A table that is full is reported, once, and what does not fit stays at 20.
 // Before the part raised anything, the module measured whether a mod load reaches the limit, and it still does:
 //   DIAGNOSTIC_MODE  the measurement, and nothing is looked for without it: the vehicle lights' call of the
 //                    renderer goes through TweaksV's call stub to a wrapper that calls the game's renderer
@@ -49,6 +51,7 @@
 
 #include <array>
 #include <atomic>
+#include <bit>
 #include <cctype>
 #include <cstddef>
 #include <cstdint>
@@ -210,6 +213,7 @@ namespace TweaksV
 		// A siren setting (the findings' 3.3): its scalars, its head and tail lights, whether it uses real lights, its 20 lights
 		constexpr size_t kSettingSize = 0x5E8;
 		constexpr size_t kScalarsAt = 0x04;			// timeMultiplier to sequencerBpm, 8 dwords
+		constexpr size_t kBpmAt = 0x20;				// sequencerBpm, a float, 200 in a new setting
 		constexpr size_t kHeadTailAt = 0x24;		// the head and tail lights' sequencers and multiples, up to the next
 		constexpr size_t kRealLightsAt = 0x38;		// useRealLights, a byte
 		constexpr size_t kLightsAt = 0x3C;
@@ -217,14 +221,15 @@ namespace TweaksV
 		constexpr size_t kLightsBytes = kGameSirens * kLightSize;
 		static_assert(kLightsBytes == 1440 && kLightsAt + kLightsBytes == 0x5DC, "TweaksV: 20 lights of 0x48 bytes up to the count at +0x5DC");
 
-		// In a light, its rotation and its flashiness: delta and start as floats, a byte for the direction reversed.
+		// In a light, its rotation and its flashiness, the same layout: delta and start as floats, a byte not 0 for the direction reversed.
 		constexpr size_t kSequencesAt[2] = { 0x00, 0x14 };
 		constexpr size_t kDeltaAt = 0x00;
 		constexpr size_t kStartAt = 0x04;
 		constexpr size_t kDirectionAt = 0x11;
 
 		// The parser (the findings' 3.3): a member object - the vtable, the member data, an array's element's member object - whose
-		// slot 1 reads a node of the tree into an object; a node's first child and next sibling; the fields of the member data.
+		// slot 1 reads a node of the tree (rdx) into an object (r8): an array's into the structure that holds it, an element's into
+		// the element, no more arguments and no result read; a node's first child and next sibling; the fields of the member data.
 		constexpr size_t kMemberDataAt = 0x08;
 		constexpr size_t kElementMemberAt = 0x10;
 		constexpr size_t kReaderSlot = 1;
@@ -248,9 +253,22 @@ namespace TweaksV
 			PatternByte(kReaderPattern, 34) == 0x49 && PatternByte(kReaderPattern, 35) == 0x89 && PatternByte(kReaderPattern, 36) == 0xCD,
 			"TweaksV: I-E-Z3 keeps rdx, the node, in rdi and rcx, the member object, in r13, which I-E-Z7's walk reads");
 
-		using SettingsGetter = const uint8_t* (*)(const uint8_t* model);
 		using SettingConstructor = void* (*)(uint8_t* setting);
-		using MemberReader = uint64_t (*)(const uint8_t* member, const uint8_t* node, uint8_t* object, void* more);
+		using MemberReader = uint64_t (*)(const uint8_t* member, const uint8_t* node, uint8_t* object);
+
+		// What a position past the game's settings gets in the getter's place (D41), shared by every thread: zero but for sequencerBpm, the
+		// game's own default, which takes the renderer's one division by it away. It lights nothing, and the vehicle lights' head and tail lights go
+		// as with no setting.
+		consteval std::array<uint8_t, kSettingSize> MakeEmptySetting()
+		{
+			std::array<uint8_t, kSettingSize> setting{};
+			const uint32_t bits = std::bit_cast<uint32_t>(200.0f);
+			for (size_t i = 0; i < sizeof(bits); i++)
+				setting[kBpmAt + i] = static_cast<uint8_t>(bits >> (8 * i));
+			return setting;
+		}
+		constexpr std::array<uint8_t, kSettingSize> kEmptySetting = MakeEmptySetting();
+		static_assert(kSettingSize == kSirenSettingSize, "TweaksV: a siren setting's size, as the IDs' module has it");
 
 		// ---- the own settings: read from a file on the parser's thread and kept in a table under a lock; read on the renderer's threads without one
 
@@ -285,25 +303,22 @@ namespace TweaksV
 		const uint8_t* g_lightsData = nullptr;	// the lights' member data, the one array the hook reads on
 		SettingConstructor g_constructor = nullptr;
 		MemberReader g_arrayReader = nullptr;	// the tree reader's trampoline
-		SettingsGetter g_getter = nullptr;		// the game's siren settings getter, set before the renderer's call is redirected
+		const uint8_t* g_getter = nullptr;		// the game's siren settings getter, for the measurement's line once the calls are redirected
+		const uint8_t* g_carcolsPointer = nullptr;	// the game's pointer to its carcols data
 		uint8_t* g_call = nullptr;				// I-E-B1's match, once the raise has looked for it
 		bool g_raised = false;					// the part's one write is done, so that the wrapper in the renderer's call is the raise's
 		bool g_wouldRaise = false;				// with DRY_RUN: every site found, and the line that would redirect the call written
 		bool g_counting = false;				// the measurement counts, on a first pass in the raise's wrapper too
 
-		// A siren setting up to the end of its 20 lights, and the hash of those lights, never 0: false if they cannot be read, since the array's
-		// growth can move a setting, and the getter has no upper bound on a model's position.
-		struct SettingCopy
+		// The hash of a siren setting's 20 lights, never 0: false if they cannot be read, since the array's growth can move a setting.
+		bool KeyOfLights(const uint8_t* lights, uint64_t& key)
 		{
-			uint8_t bytes[kLightsAt + kLightsBytes];
-		};
-		bool CopySetting(const uint8_t* setting, SettingCopy& copy, uint64_t& key)
-		{
-			if (!CopyMemorySafely(copy.bytes, setting, sizeof(copy.bytes)))
+			uint8_t copy[kLightsBytes];
+			if (!CopyMemorySafely(copy, lights, sizeof(copy)))
 				return false;
 			uint64_t hash = 0xCBF29CE484222325ull;
-			for (size_t i = kLightsAt; i < sizeof(copy.bytes); i++)
-				hash = (hash ^ copy.bytes[i]) * 0x100000001B3ull;
+			for (const uint8_t byte : copy)
+				hash = (hash ^ byte) * 0x100000001B3ull;
 			key = hash ? hash : 1;
 			return true;
 		}
@@ -358,7 +373,7 @@ namespace TweaksV
 
 		// The own setting made by the game's constructor in the zeroed memory at own, and into its lights the items past the game's 20, as many
 		// as SIRENS_PER_VEHICLE gives, each by the game's own reader of an element; false on an access violation.
-		bool ReadOwn(uint8_t* own, const uint8_t* element, const uint8_t* node, void* more, int& kept)
+		bool ReadOwn(uint8_t* own, const uint8_t* element, const uint8_t* node, int& kept)
 		{
 			__try
 			{
@@ -368,7 +383,7 @@ namespace TweaksV
 				int item = 0;
 				for (const uint8_t* child = ValueAt<const uint8_t*>(node, kFirstChildAt); child && kept < g_lightsPast; child = ValueAt<const uint8_t*>(child, kNextSiblingAt), item++)
 					if (item >= kGameSirens)
-						read(element, child, own + kLightsAt + kept++ * kLightSize, more);
+						read(element, child, own + kLightsAt + kept++ * kLightSize);
 				return true;
 			}
 			__except (GetExceptionCode() == EXCEPTION_ACCESS_VIOLATION ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH)
@@ -450,7 +465,7 @@ namespace TweaksV
 		}
 
 		// A lights array the game has just read: its items past 20, if it has any, into an own setting.
-		void KeepLightsPast20(const uint8_t* member, const uint8_t* node, const uint8_t* object, void* more)
+		void KeepLightsPast20(const uint8_t* member, const uint8_t* node, const uint8_t* object)
 		{
 			int items = 0;
 			if (!CountItems(node, items))
@@ -466,9 +481,8 @@ namespace TweaksV
 				NotRead("a lights array's element is not the one its member data names");
 				return;
 			}
-			SettingCopy copy;
 			uint64_t key = 0;
-			if (!CopySetting(object, copy, key))
+			if (!KeyOfLights(object + ValueAt<uint64_t>(g_lightsData, kDataOffsetAt), key))	// the offset as registered, at the read
 			{
 				NotRead("the siren setting a lights array is read into could not be read");
 				return;
@@ -476,7 +490,7 @@ namespace TweaksV
 			// read with no lock taken, since the game's reader of an element runs on: it may wait for what another parser's thread holds
 			alignas(16) uint8_t own[kSettingSize] = {};
 			int kept = 0;
-			if (!ReadOwn(own, element, node, more, kept))
+			if (!ReadOwn(own, element, node, kept))
 			{
 				NotRead("reading the lights past 20 of one ended in an access violation");
 				return;
@@ -501,15 +515,15 @@ namespace TweaksV
 
 		// The game's reader of an array member, hooked: the game's first, then one compare per array read in parsing, and only the lights
 		// go further. What the game's reader left in its last error stands.
-		uint64_t HookedArrayReader(const uint8_t* member, const uint8_t* node, uint8_t* object, void* more)
+		uint64_t HookedArrayReader(const uint8_t* member, const uint8_t* node, uint8_t* object)
 		{
-			const uint64_t result = g_arrayReader(member, node, object, more);
+			const uint64_t result = g_arrayReader(member, node, object);
 			if (ValueAt<const uint8_t*>(member, kMemberDataAt) == g_lightsData)
 			{
 				const DWORD lastError = GetLastError();
 				try
 				{
-					KeepLightsPast20(member, node, object, more);
+					KeepLightsPast20(member, node, object);
 				}
 				catch (...)
 				{
@@ -668,6 +682,20 @@ namespace TweaksV
 				}
 		}
 
+		// A model's setting as the game's getter gives it, bounded (D41): none at position 0; below the array's count that entry, the count read
+		// before the pointer, since the array's growth stores the pointer first and the count after; any other position, an ID that found no
+		// setting, the empty setting. One byte, two loads and two compares.
+		const uint8_t* RealSettingOf(const uint8_t* model)
+		{
+			const uint8_t position = model[kModelSirenPositionAt];
+			if (position == 0)
+				return nullptr;
+			const uint8_t* const carcols = Load<const uint8_t*>(g_carcolsPointer);
+			if (!carcols || position >= Load<uint16_t>(carcols + kCarcolsSirenCountAt))
+				return kEmptySetting.data();
+			return Load<const uint8_t*>(carcols + kCarcolsSirenSettingsAt) + position * kSirenSettingSize;
+		}
+
 		// With the raise, on a model's first pass: its block, if the second call is to light it, or the reason it is not. It takes its bones
 		// from the room behind the model's bone structure, and an own setting by the hash of the 20 lights its setting holds.
 		void MakeBlock(ModelSlot& slot, size_t index, const uint8_t* model)
@@ -691,10 +719,20 @@ namespace TweaksV
 				slot.notLit = "it has no bones past siren20 in the room behind its bone structure";
 				return;
 			}
-			const uint8_t* const setting = g_getter(model);
-			SettingCopy copy;
+			const uint8_t* const setting = RealSettingOf(model);
+			if (!setting)
+			{
+				slot.notLit = "it has no siren setting";
+				return;
+			}
+			if (setting == kEmptySetting.data())
+			{
+				slot.notLit = "its siren setting's position lies past the game's settings";
+				return;
+			}
+			uint8_t head[kLightsAt];
 			uint64_t key = 0;
-			if (!setting || !CopySetting(setting, copy, key))
+			if (!CopyMemorySafely(head, setting, sizeof(head)) || !KeyOfLights(setting + kLightsAt, key))
 			{
 				slot.notLit = "its siren setting could not be read";
 				return;
@@ -707,11 +745,11 @@ namespace TweaksV
 			}
 			// its scalars, the last model's where two models with the same 20 lights differ in them, the limit of a key of the lights alone
 			uint8_t* const ownSetting = const_cast<uint8_t*>(own->setting.load(std::memory_order_acquire));
-			const bool asGiven = memcmp(ownSetting + kScalarsAt, copy.bytes + kScalarsAt, kHeadTailAt - kScalarsAt) == 0 && ownSetting[kRealLightsAt] == copy.bytes[kRealLightsAt];
+			const bool asGiven = memcmp(ownSetting + kScalarsAt, head + kScalarsAt, kHeadTailAt - kScalarsAt) == 0 && ownSetting[kRealLightsAt] == head[kRealLightsAt];
 			if (own->scalarsGiven.exchange(true, std::memory_order_relaxed) && !asGiven)
 				g_sharedScalars.fetch_add(1, std::memory_order_relaxed);
 			if (!asGiven)
-				CopyScalars(ownSetting, copy.bytes);
+				CopyScalars(ownSetting, head);
 			ModelBlock& block = g_blocks[index];
 			memset(block.bones, 0xFF, sizeof(block.bones));
 			memcpy(block.bones + kSirenBonesAt, room, past);
@@ -778,12 +816,13 @@ namespace TweaksV
 
 		// ---- the second call
 
-		// The renderer's call of the siren settings getter, redirected: a block gets its own setting, every other model the game's getter.
+		// Both calls of the siren settings getter, redirected: a block, which is no model info, gets its own setting, a model what the game's getter
+		// gives it, bounded. It touches no more than the game's does, and neither caller holds anything in a volatile register across the call.
 		const uint8_t* SirenSettingsOf(const uint8_t* model)
 		{
 			if (reinterpret_cast<uintptr_t>(model) - reinterpret_cast<uintptr_t>(g_blocks) < sizeof(g_blocks))
 				return reinterpret_cast<const ModelBlock*>(model)->own->setting.load(std::memory_order_acquire);
-			return g_getter(model);
+			return RealSettingOf(model);
 		}
 
 		// The renderer once more, on the part's own stand-ins behind the vehicle's state: the vehicle's bits past 20 are the stand-in's
@@ -1063,6 +1102,9 @@ namespace TweaksV
 				return NotRaised("the siren lights' renderer call at " + DescribeAddress(rendererCall) + " is not a call into the game (another mod may have hooked it already) (" + kCallPattern.label + ").");
 			if (!getter || !IsInsideGameImage(getter))
 				return NotRaised("the siren settings getter call at " + DescribeAddress(getterCall) + " is not a call into the game (another mod may have hooked it already) (" + kCallPattern.label + ").");
+			if (getter != sites->getter)
+				return NotRaised("the siren settings getter call at " + DescribeAddress(getterCall) + " leads to " + DescribeAddress(getter) + ", not to the getter at " +
+					DescribeAddress(sites->getter) + " (another mod may have hooked it already) (I-E-M1).");
 
 			// 3. what the second call rests on, each read inside the renderer by the game's unwind data; the renderer's call of the getter the same getter's
 			const struct { const uint8_t* match; const GamePattern& pattern; } inRenderer[] = { { getterMatch, kGetterCallPattern }, { brokenRead, kBrokenReadPattern },
@@ -1106,9 +1148,12 @@ namespace TweaksV
 			// 7. the part's writes, added to the list; the hook and the calls run nothing until they are written
 			g_lightsPast = sirens - kGameSirens;
 			g_constructor = reinterpret_cast<SettingConstructor>(const_cast<uint8_t*>(sites->constructor));
+			g_getter = sites->getter;
+			g_carcolsPointer = sites->carcolsPointer;
 			list.hooks.push_back({ reader, reinterpret_cast<const void*>(&HookedArrayReader), reinterpret_cast<void**>(&g_arrayReader), "The array member's tree reader" });
 			list.redirects.push_back({ rendererCall, reinterpret_cast<const void*>(&SirenLightsTwice), "siren lights' renderer call", reinterpret_cast<void**>(&g_renderer) });
-			list.redirects.push_back({ rendererGetterCall, reinterpret_cast<const void*>(&SirenSettingsOf), "renderer's siren settings getter call", reinterpret_cast<void**>(&g_getter) });
+			list.redirects.push_back({ rendererGetterCall, reinterpret_cast<const void*>(&SirenSettingsOf), "renderer's siren settings getter call", nullptr });
+			list.redirects.push_back({ g_call + kGetterCallAt, reinterpret_cast<const void*>(&SirenSettingsOf), "siren settings getter call", nullptr });
 			list.writes.push_back({ stateSize + kStateSizeAtZ2, BytesOf(kRaisedStateSize), "siren state's size" });
 			return true;
 		}
@@ -1214,7 +1259,7 @@ namespace TweaksV
 		uint8_t* const rendererCall = call + kRendererCallAt;
 		const uint8_t* const getterCall = call + kGetterCallAt;
 		const uint8_t* const renderer = g_raised ? reinterpret_cast<const uint8_t*>(g_renderer) : CallTarget(rendererCall);
-		const uint8_t* const getter = IsReadable(getterCall, kCallSize) ? CallTarget(getterCall) : nullptr;
+		const uint8_t* const getter = g_raised ? g_getter : IsReadable(getterCall, kCallSize) ? CallTarget(getterCall) : nullptr;
 		WriteLog(kTag, "DIAGNOSTIC: siren lights' renderer call at " + DescribeAddress(rendererCall) + " -> " + DescribeAddress(renderer) +
 			", siren settings getter call at " + DescribeAddress(getterCall) + " -> " +
 			(getter ? DescribeAddress(getter) : std::string("cannot be read")) + " (" + kCallPattern.label + ")");
