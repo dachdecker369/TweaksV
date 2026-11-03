@@ -93,7 +93,7 @@ to_table() { tr -d '\r' < TweaksV.log | grep -c -E "${L}reference at RVA 0x[0-9A
 
 echo "== I1 LARGE_SIREN_IDS=0 without DIAGNOSTIC_MODE: nothing looked for, nothing measured"
 fresh_ini; setkey LARGE_SIREN_IDS 0 SIRENSETTINGS; out=$(game full_game.exe); echo "      $out"
-check "none of the 14 patterns looked for, the switch's line alone; nothing written" "[ \$(grep -c -E 'Pattern $LABELS' TweaksV.log) -eq 0 ] && log_line \"\[SirenSettings\] LARGE_SIREN_IDS=0 - the siren setting IDs' limit is not raised.\$\" && [ \$(count '\[SirenSettings\]') -eq 1 ] && untouched"
+check "none of the 14 patterns looked for, the switch's line alone but for SIRENS_PER_VEHICLE's; nothing written" "[ \$(grep -c -E 'Pattern $LABELS' TweaksV.log) -eq 0 ] && log_line \"\[SirenSettings\] LARGE_SIREN_IDS=0 - the siren setting IDs' limit is not raised.\$\" && [ \$(count '\[SirenSettings\]') -eq 2 ] && untouched"
 
 echo "== I2 DIAGNOSTIC_MODE=1, LARGE_SIREN_IDS=0: every pattern found once, every site's line, the announcement, the summary 10 s in"
 measure_ini; out=$(game full_game.exe wait)
