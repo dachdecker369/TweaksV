@@ -1,6 +1,6 @@
 # TweaksV
 
-TweaksV is one ASI plugin for GTA V Enhanced, `TweaksV.asi`, with fifteen parts: a larger memory heap, room for more vehicle modkits and more RPF archives, a larger traversal list for the game's box streamer, more decal definitions, a mods folder with unencrypted archives whose packs are checked for GTA V Legacy, a start straight into Story Mode, the files DirectStorage keeps locked set free, the game's own blips kept on the map next to a mod's, room for more `weapons.meta` files and weapon components, more props per anchor of a ped (experimental, off by default), a larger video memory budget for streamed textures, a larger ray tracing buffer for moving geometry, siren setting IDs past 255 and a larger pool of static collision bounds.
+TweaksV is one ASI plugin for GTA V Enhanced, `TweaksV.asi`, with sixteen parts: a larger memory heap, room for more vehicle modkits and more RPF archives, a larger traversal list for the game's box streamer, more decal definitions, a mods folder with unencrypted archives whose packs are checked for GTA V Legacy, a start straight into Story Mode, the files DirectStorage keeps locked set free, the game's own blips kept on the map next to a mod's, room for more `weapons.meta` files and weapon components, more props per anchor of a ped (experimental, off by default), a larger video memory budget and more objects for streamed textures, a larger ray tracing buffer for moving geometry, room for more of a frame's vehicle lights and coronas, siren setting IDs past 255 and 32 sirens a vehicle, and a larger pool of static collision bounds.
 Five of the parts are written anew from plugins by [Chiheb-Bacha](https://github.com/Chiheb-Bacha), which TweaksV 1.x merged as they were, and one, StaticBounds, from the source of Nochala's Static Bounds Limit Adjuster; since 2.0.0 every part is TweaksV's own code, built on the patterns and the research of the originals.
 Each part has its own section in `TweaksV.ini` and can be switched on or off there.
 
@@ -163,7 +163,7 @@ TweaksV's own part; the idea comes from Zombieguy's [PedProp Limit Adjuster](htt
 
 The game streams the world's textures and buffers into a budget of video memory that its `gameconfig.xml` sets by texture quality - on 1.0.1158.16 1,500 MB at Normal and 3,000 MB at High and Very High, as far as my research tells, whatever your card has - and refuses to place more: what it cannot fit, it drops, and textures go missing even when the card has memory to spare.
 `VIDEO_MEMORY_BUDGET` under `[RESOURCES]` raises that budget, in MB: each of the four budgets below it is raised to it as the game's start-up sets them, and none is lowered, so a `gameconfig.xml` that gives more keeps its own.
-0, the default, keeps the game's own; the lowest raise is 1,500 - a value below it counts as 1,500 and is reported - and the highest 16,384.
+6000 is the default, 0 keeps the game's own; the lowest raise is 1,500 - a value below it counts as 1,500 and is reported - and the highest 16,384.
 Choose it for your card: the budget is the video memory the game may fill with streamed textures, beside what it needs for everything else - at 3840x2160 with ray tracing that is several GB - so a budget past what the card has left only moves the textures' memory out to system memory, which costs speed, and the game's own check, which evicts against what Windows gives it, steps in anyway.
 With 0 the log says `VIDEO_MEMORY_BUDGET=0 - the texture budget is not raised.`; with a raise `The call after the budgets' stores at RVA ... is redirected: the texture budgets below 6000 MB are raised to it when the game's start-up sets them.`, and once the game's start-up has set them `[Resources] The texture budgets of gameconfig.xml (MaxStreamingMemory_0..3_Base: 1500, 1500, 3000 and 3000 MB) are raised to 6000 MB where they are below it: 6000, 6000, 6000 and 6000 MB now; the texture quality's index 2 uses 6000 MB.` - the four the game had, the four now, and the one your texture quality uses.
 A budget the game's own code writes besides its start-up - after a game update, say - is not raised, nor one whose call after the stores another mod has hooked already; the start-up summary says so.
@@ -174,6 +174,10 @@ With `DIAGNOSTIC_MODE=1` the log also says, 10 seconds in and again every minute
 The same budgets can be raised by data instead: `MaxStreamingMemory_2_Base` and `_3_Base` in `ConfigGraphics` of a `gameconfig.xml` in your mods folder.
 
 With `GTAV.ResourceAdjusterEnhanced.asi` installed, TweaksV switches its own Resources part off.
+
+`STREAMED_OBJECTS` raises the other limit in the same place: how many streamed textures and buffers the game places at once, `MaxStreamingResources` in `gameconfig.xml`, 98,304 in the game's own file, which a load reaches at about 4.7 GB of them, so that a higher budget alone stops short of it.
+It is 131072 by default; 0 keeps the game's own, a value from 1 to 98,303 counts as 98,304 and is reported, and 147,456 is the most, 3/4 of the game's descriptor heap, read when the game starts, a top no load has yet proved.
+A `gameconfig.xml` may set it instead: one below the key is raised, one above it kept, and one above that top kept with a line in the start-up summary, since the game does not check that heap's end, and a load that reaches it crashes without a word.
 
 ### RayTracing
 
@@ -188,12 +192,24 @@ TweaksV's own part, written from TweaksV's own findings about the game; the idea
 With `DIAGNOSTIC_MODE=1` the part logs how much of the buffer the frames take - 10 seconds in, then every minute while the most grows - and counts every object the full buffer leaves out: `geometries refused` in its line means the buffer is too small for your load, and none refused while shadows still flicker means another cause.
 It measures with the key at 0 too, so you can see whether your load needs a larger buffer at all.
 
+### LightCapacity
+
+A vehicle's lights, siren lights among them, pass through two lists of the game: each group of 5 vehicles gets 80 lights and 200 coronas, and a light past that simply goes dark; then the frame's stores of 400 lights and 928 coronas, which the game does not check at all, so past them it writes over its own memory and the crash is next.
+This part gives each group 180 lights and 300 coronas, the most the game's working memory allows, and the frame's stores room for all of those, 5.7 MB near the game, so that no load can run over them.
+It also fixes a slip in the game: past its 1024 lights a frame the scene keeps the nearer light as it means to, but over the wrong slot; now the farthest goes.
+It raises nothing you see by itself, and many real lights cost frame rate; the sirens per vehicle need it, and refuse with a problem without it.
+The game also keeps a store of a frame's coronas, the glows around lights, 1088 of them, and past that it drops the rest without a word, the vehicles' first, since they are added last.
+This part moves it to `CORONA_STORE` coronas, 4096 by default, 197 KB near the game, and it costs nothing more for coronas that are not there; at 1088 it stays as it is.
+TweaksV's own part, from TweaksV's own findings about the game; the idea comes from Koukol's Resource Extensions [Enhanced], whose plugin was not read - while `ResourceExtensions.asi` is installed, this part is off (see "Other mods").
 ### SirenSettings
 
 Every siren setting of `carcols.meta` - the lights and pattern of an emergency vehicle's sirens - has an ID that the vehicles name it by, and the game keeps both in one byte: it has 256 IDs and lets vehicles use 255 settings, and it drops or mixes up the settings of packs whose IDs clash, without a word.
 An ID above 255 in a pack's file is cut to its last byte - 300 becomes 44 - so packs that use large IDs clash with each other and with the game's own, and a pack meets the limit long before anyone has 255 settings.
 
 `LARGE_SIREN_IDS` under `[SIRENSETTINGS]` (default 1, or 0) makes the IDs 16 bits on the whole way from the file to the vehicle: a pack may use 0 to 65535 but 255, which stays the game's "none" - and keep 0 and 65535 free too, as the plugin that had the idea first asks.
+`SIRENS_PER_VEHICLE` (default 32, 20 to 32) lights `siren21` to `siren32` of a model made for them, the items past the 20th of its setting in `carcols.meta` in their order, through a second call of the game's own renderer: a vehicle without them costs one lookup per pass.
+Damage reaches them as it does the first 20: a shot or a crash puts one out and breaks its glass, and a wreck puts out all of them. A vehicle whose siren setting ID finds no setting lights nothing, where the game would read past its settings. It needs the light stores raised (`[LIGHTCAPACITY]`), and it runs only on the game build TweaksV was read on: another brings a message, and vehicles keep 20 sirens until a new TweaksV.
+Two settings with the same first 20 lights share the lights past them, the later's.
 A pack's setting whose ID is taken is still dropped, and a clash within one file still moves the later setting; only now the IDs that clash are the IDs the packs chose.
 Packs that relied on the cut - a setting named 372 whose vehicles say 116 - lose their link, as they did with that plugin.
 The 255 settings stay the most: the position in the game's array stays a byte.
@@ -241,8 +257,10 @@ This measurement changes something in the game: the call that draws a vehicle's 
 
 **Lighting capacity** (LightCapacity): a frame's lights pass through layers of fixed room, and many vehicles with real siren lights are where a load may reach them.
 Past some of them a light simply goes dark; past the frame's store of 400 vehicle lights the game writes over its own memory and the crash is next.
-With `DIAGNOSTIC_MODE=1` TweaksV reads how full each layer is about a hundred times a second and logs the most, 10 seconds in and then every minute while it changes, of that minute and of the session: the vehicles, the vehicle lights and coronas, the scene's lights, the ray traced list and how often it passes what its upload takes, the reflection lists, the coronas, and how many lights a job's full list refused; and what your siren settings ask for.
-It changes one thing in the game, with `DIAGNOSTIC_MODE=1` only: the jump a job's list takes when it is full passes through TweaksV to be counted, and costs nothing while the list has room; with `DRY_RUN=1` it stays as it is and those lights are not counted.
+With `DIAGNOSTIC_MODE=1` TweaksV reads how full each layer is about a hundred times a second and logs the most, 10 seconds in and then every minute while it changes, of that minute and of the session: the vehicles, the vehicle lights and coronas, the scene's lights, the ray traced list, how often it passes what its upload takes and how many lights it refused, the reflection lists, the coronas, the most one job held, and how many lights a job's full list refused; and what your siren settings ask for.
+It changes two things in the game, with `DIAGNOSTIC_MODE=1` only: the jumps a job's list and the ray traced list take when they are full pass through TweaksV to be counted, costing nothing while they have room, and a job's two copies at its end through TweaksV to keep the most, a few instructions once a job; with `DRY_RUN=1` they stay as they are and those numbers are not counted.
+With the LightCapacity part on, the vehicle lights and coronas are read from the stores it moved, of 10800 and of 18000.
+The coronas read `coronas 1088 of 4096, refused 0 (LOD's own 1088: 0), LOD lights 640` with the store raised: how many it refused, how many the LOD lights' job's own 1088 refused, and how many that job brought in its most recent batch; a count of 0 refused says that N is enough.
 
 **The model budgets** (Population): the game holds only so many bytes of vehicle models and of ped models - with the Population Variety slider at its top, 429 MB and 561 MB - and past that it asks for no further model, so that traffic and crowds repeat fewer of them than your mods could give, without an error.
 `vehicle model budget:` and `ped model budget:` say how many MB are in use and how many models that holds, and `at the stop in 170 of 171 samples` says how long the game stood at its budget: most of the time means the budget binds on your load.
@@ -264,7 +282,7 @@ TweaksV writes `TweaksV.ini` in the game folder, next to `GTA5_Enhanced.exe`, on
 The file carries a short header and, after each key's value, a short comment from `//` to the end of the line; this is what each key does in full.
 A comment after a value - after `//` or `;` - is never part of it, so you can write your own there.
 A `TweaksV.ini` from an earlier 2.x version is kept as it is, without the comments: delete it to get the commented one, then set your values again.
-One from an earlier version gets the keys it lacks added - those of `[BLIPS]` to a file from before the Blips part, those of `[WEAPON_LIMITS]`, `[PEDPROPS]`, `[RESOURCES]` and `[RAYTRACING]` to one from before 2.6.0, those of `[SIRENSETTINGS]` and `[STATICBOUNDS]` and `POOL_MEMORY` to one from before 2.7.0 - and its `VERSION` raised to 5; its values stay as they are.
+One from an earlier version gets the keys it lacks added - those of `[BLIPS]` to a file from before the Blips part, those of `[WEAPON_LIMITS]`, `[PEDPROPS]`, `[RESOURCES]` and `[RAYTRACING]` to one from before 2.6.0, those of `[SIRENSETTINGS]` and `[STATICBOUNDS]` and `POOL_MEMORY` to one from before 2.7.0, `[LIGHTCAPACITY]` to one from before 2.8.0 - and its `VERSION` raised to 5; its values stay as they are.
 The settings are read once, at start-up: TweaksV's parts patch the game before it runs, so a live panel would change nothing - there is none, by design; a changed file takes effect at the next start.
 
 | Section | Key | Default | What it does |
@@ -295,9 +313,12 @@ The settings are read once, at start-up: TweaksV's parts patch the game before i
 | `[WEAPON_LIMITS]` | `WEAPON_INFO_FILES` | 1024 | the `weapons.meta` files the game can load, 160 to 16384 (the game's own: 160) |
 | | `WEAPON_COMPONENTS_SIZE` | 1024 | the weapon component definitions of all `weaponcomponents.meta` files together, 470 to 16384 (the game's own: 470) |
 | `[PEDPROPS]` | `ENABLED` | 0 | experimental and untested, at your own risk: the props per anchor of a ped model: 255 in the game's own checks, 65535 with the part on |
-| `[RESOURCES]` | `VIDEO_MEMORY_BUDGET` | 0 | the video memory in MB the game may stream textures and buffers into; 0 keeps the game's own budgets, 1500 to 16384 raises each budget below it to it (a value below 1500 counts as 1500) |
+| `[RESOURCES]` | `VIDEO_MEMORY_BUDGET` | 6000 | the video memory in MB the game may stream textures and buffers into; 0 keeps the game's own budgets, 1500 to 16384 raises each budget below it to it (a value below 1500 counts as 1500) |
+| | `STREAMED_OBJECTS` | 131072 | the most streamed textures and buffers; 0 keeps the game's own 98304, 98304 to 147456 raises a lower one to it (a value below 98304 counts as 98304) |
 | `[RAYTRACING]` | `DYNAMIC_BVH_VERTICES` | 0 | the ray tracing buffer for moving objects in vertices, 4194304 to 26843545; 0 keeps the game's own 4194304, a value below it is raised to it and reported; 20 bytes of video memory a vertex, used or not |
+| `[LIGHTCAPACITY]` | `CORONA_STORE` | 4096 | the coronas a frame holds, 1088 to 8192; 1088 keeps the game's own and looks for nothing of it; 48 bytes a corona, used or not |
 | `[SIRENSETTINGS]` | `LARGE_SIREN_IDS` | 1 | siren setting IDs up to 65535, on the whole way from the file to the vehicle; 0 keeps the game's 8 bits |
+| `[SIRENSETTINGS]` | `SIRENS_PER_VEHICLE` | 32 | the sirens a vehicle lights, 20 to 32; 20 keeps the game's own; above 20 it needs `[LIGHTCAPACITY]` on and this game build |
 | `[STATICBOUNDS]` | `STATICBOUNDS_SIZE` | 16000 | the game's static collision bounds, 1 to 32767; a larger number in `gameconfig.xml` is kept; above 16000 it wants `POOL_MEMORY` raised, and a problem says so where it is not |
 
 **Coming from TweaksV 1.x:** the 1.x file has another layout and is not migrated.
@@ -374,7 +395,7 @@ Add these switches to the `msbuild` line above:
    Never go online with mods.
 2. Remove the old plugins TweaksV replaces from the game folder and its `scripts` and `plugins` folders: `HeapAdjuster.asi` (or `ZHeapAdjuster.asi`, the name its author suggests), `ModkitLimitAdjusterEnhanced.asi`, `PackfileLimitAdjusterEnhanced.asi`, `RageOpenV.asi`, `OpenRPF.asi`, `OpenIV.asi`, `StraightToStoryMode.asi`, alloc8or's `DirectStorageFix.asi`, `DecalPatch.asi`, rootBrz's `BlipLimitFix.asi`, `WeaponLimitsAdjusterEnhanced.asi`, `GTAV.ResourceAdjusterEnhanced.asi` and Nochala's `StaticBoundLimitAdjuster.asi` (also named `StaticBoundsLimitAdjuster.asi`) - the fifteen old plugins the conflict check knows.
    While one of them is there, TweaksV switches its matching part off and says so in the start-up message.
-   Two more files it knows stay: NaturalVision Enhanced's loader, `onigiri.asi`, which NVE needs - while it is there, TweaksV's RageOpenV and StraightToStoryMode parts are off - and Koukol's Resource Extensions, `ResourceExtensions.asi` - while it is there, the HeapAdjuster, PackfileLimit, Blips and RayTracing parts are off (see "Other mods").
+   Two more files it knows stay: NaturalVision Enhanced's loader, `onigiri.asi`, which NVE needs - while it is there, TweaksV's RageOpenV and StraightToStoryMode parts are off - and Koukol's Resource Extensions, `ResourceExtensions.asi` - while it is there, the HeapAdjuster, PackfileLimit, Blips, RayTracing and LightCapacity parts are off (see "Other mods").
 3. `TweaksV.asi` goes in the game folder next to `GTA5_Enhanced.exe`.
 4. Add the ASI loader file `xinput1_4.dll` from the [Script Hook V](http://www.dev-c.com/gtav/scripthookv/) download.
    It is the only file needed; Script Hook V itself is not.
@@ -395,9 +416,9 @@ Add these switches to the `msbuild` line above:
   `STATICBOUNDS_SIZE` is the original's own key, with its default: set the value you used in its `StaticBoundsLimitAdjuster.ini` under `[STATICBOUNDS]` in `TweaksV.ini`; a value above 32767 is cut to 32767 and reported.
   The original reads 0 as its default, 16000; TweaksV takes 1 to 32767, so a 0 carried over is reported in the start-up message and used as 1 - which leaves the game's own size, since the part gives the store the larger of the two: set 16000 for the original's default.
 - **Resource Extensions [Enhanced]** by Koukol, a closed-source plugin that raises many of the game's capacities - the archive count, the story blips' threshold and extra room for the ray tracing of moving geometry among them - asks to remove the heap and packfile adjusters.
-  TweaksV leaves those jobs to it: while `ResourceExtensions.asi` is installed, TweaksV's HeapAdjuster, PackfileLimit, Blips and RayTracing parts are off, and the start-up message says so, with the `ENABLED=0` that stops it; the other parts work as usual.
+  TweaksV leaves those jobs to it: while `ResourceExtensions.asi` is installed, TweaksV's HeapAdjuster, PackfileLimit, Blips, RayTracing and LightCapacity parts are off, and the start-up message says so, with the `ENABLED=0` that stops it; the other parts work as usual.
 - **gameconfig.xml:** a gameconfig that raises the archive count has no effect while the Packfile part is on - TweaksV replaces that count with `PACKFILEARRAY_SIZE` when the game reads its configuration, exactly, also when the gameconfig's count is higher.
-  Its pool size for the weapon components (`CWeaponComponentInfo`) is replaced by the WeaponLimits part's, and with `VIDEO_MEMORY_BUDGET` set its texture budgets below it are raised to it (see the parts above).
+  Its pool size for the weapon components (`CWeaponComponentInfo`) is replaced by the WeaponLimits part's, and with `VIDEO_MEMORY_BUDGET` and `STREAMED_OBJECTS` set its texture budgets and its `MaxStreamingResources` below them are raised to them (see the parts above).
   Its static bounds store's size is raised to `STATICBOUNDS_SIZE` where it is lower.
   Everything else in a gameconfig works as usual.
 - **Zolika Patch:** the ModkitLimit Extender's author warned that its modkit patch may not be compatible with Zolika Patch's; the same goes for TweaksV's Modkit part.
