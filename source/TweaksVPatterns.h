@@ -216,6 +216,30 @@ namespace TweaksV
 		{ "I-E-Z6", "41 0F B7 45 6C 83 E0 FD 83 F8 08 74 ? 44 0F 28 3D ? ? ? ? 83 F8 01 75 ? 45 0F 28 BD 80 00 00 00" },
 		{ "I-E-Z7", "48 8B 7F 38 48 85 FF 0F 84 ? ? ? ? 48 8B 75 D0 49 8B 45 08 B9 01 00 00 00 EB ? ? ? ? ? 8B 48 28 49 39 CE 0F 84 ? ? ? ? 48 8B 7F 30 49 8D 4E 01 48 85 FF 0F 84 ? ? ? ? 49 89 CE 4C 8D 41 FF 4C 0F AF 40 20" },
 		// [siren damage]
+		// SirenSettings, the sirens per vehicle's damage (TweaksVSirenDamage.cpp): a hit's loop, by its counter of hierarchy IDs (X1, X2),
+		// its glass (X3) and its read of a bone, checked (X4); an impact's loop (L05, N04, N05); the bones the impact marked, hidden
+		// (L03, N03); a wreck's loop (L04, N02); the glass's fragment children's flags (L07, N06) and the same in three classes, from
+		// -20 (L08, N09, which match 3 times); the room's pool stride and allocation (Y1, Y2), the call of the function that makes
+		// a bone structure (Y3) and the game's fill, called (Y4)
+		{ "I-E-X1", "BF 89 00 00 00 F3 44 0F 10 05 ? ? ? ? 45 0F 57 DB" },
+		{ "I-E-X2", "48 81 FF 9D 00 00 00 0F 84 ? ? ? ? 8D AF 77 FF FF FF 41 BE 01 00 00 00" },
+		{ "I-E-X3", "0F BE 54 39 24 48 8B 88 C0 09 00 00 E8" },
+		{ "I-E-X4", "44 0F B6 64 38 10 41 80 FC FF" },
+		{ "I-E-L05", "48 83 FD 14 0F 84 ? ? ? ? 49 8B 84 24 08 04 00 00" },
+		{ "I-E-N04", "0F BE 94 29 99 00 00 00 BB 01 00 00 00" },
+		{ "I-E-N05", "0F BE 94 29 AD 00 00 00 48 8B 88 C0 09 00 00" },
+		{ "I-E-L03", "48 83 FB 14 74 ? 89 D8 C1 E8 05 8B 84 86 40 04 00 00" },
+		{ "I-E-N03", "0F BE AC 18 99 00 00 00 83 FD FF 74 ?" },
+		{ "I-E-L04", "48 83 F9 14 74 ? 49 8B 87 08 04 00 00" },
+		{ "I-E-N02", "0F BE 94 0D 99 00 00 00 BD 01 00 00 00" },
+		{ "I-E-L07", "48 83 FB 14 74 ? 48 8B 46 20 48 8B 80 B0 00 00 00" },
+		{ "I-E-N06", "0F BE 94 18 AD 00 00 00 83 FA FF 74 ? 48 8B 8E C0 09 00 00 E8 ? ? ? ? 83 F8 FF 74 ? 48 8B 8F 90 00 00 00" },
+		{ "I-E-L08", "48 C7 C3 EC FF FF FF" },
+		{ "I-E-N09", "0F BE 94 18 C1 00 00 00 83 FA FF 74" },
+		{ "I-E-Y1", "C7 44 24 20 4C 03 00 00 4C 8D 05" },
+		{ "I-E-Y2", "BA 4C 03 00 00 E8 ? ? ? ? 48 89 C7 48 89 C1 E8" },
+		{ "I-E-Y3", "48 89 F1 E8 ? ? ? ? 48 89 F1 E8 ? ? ? ? F6 86 4B 05 00 00 10" },
+		{ "I-E-Y4", "41 57 41 56 41 55 41 54 56 57 55 53 48 83 EC 28 45 89 CE 4D 89 C5 48 89 D3 49 89 CF E8" },
 
 		// PedProps (TweaksVPedProps.cpp): the eleven narrowings to 8 bits the part widens - an anchor's total in the check
 		// the set-prop native asks (T1) and in the helmet code after its four calls of the per-anchor count (T2..T5), a

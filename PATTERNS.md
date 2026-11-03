@@ -540,6 +540,53 @@ The sites: looked for with `SIRENS_PER_VEHICLE` above 20 alone, each matching ex
 
 <!-- [siren damage] -->
 
+### Siren damage
+
+The sirens per vehicle's damage (`TweaksVSirenDamage`, SPECIFICATIONS.md section 11.14): the room behind a model's bone structure, its fill, and the game's own damage code raised to read it, so that a hit, an impact and a wreck reach lights 21 to 32 as they do lights 1 to 20.
+Looked for only with `SIRENS_PER_VEHICLE` above 20.
+None of this has run on the game until my boot with a 32-siren pack, its one proof there.
+
+- **The bone structure** is a pool element of 0x34C bytes, made by RVA 0x134DD00, which RVA 0x134D680 (slot 25 of the vtable at `.rdata` RVA 0x2672270) calls at RVA 0x134D709, its one caller, with the model info in rcx.
+  It allocates from the pool whose pointer lies at `.data` RVA 0x471D908, loaded right before `I-E-Y2`, which the part reads to see that the pool is not made yet (RVA 0x15A7C0, which traps at a size of 0, a size above the stride or a full pool), runs the constructor RVA 0x13497B0 (+0x00 four dwords of 0xFFFFFFFF, `memset` of 0xFF over +0x10 to +0x2A8, fields to +0x348), stores it at the holder's +0x00, and fills it up to 3 times.
+  The pool is `VehicleStruct`, set up by RVA 0x1349BD0 with the stride at RVA 0x1349DE0 and its size from the configuration by the name's hash; the one free is at RVA 0x1350623; nothing copies a structure, and the pool takes the stride from its own +0x1C.
+- **The fill** (RVA 0x1353E40, 995 bytes) takes the model info, a table, its tags and a flag: for each entry until a null name the bone by `tags[k]` - 0 for `chassis`'s tag - and, if found, the low byte of the bone's index at the structure's 0x10 + the entry's ID, unchecked.
+  A table's entry is 16 bytes, a name and an ID; the game's tables come from the vehicle factory's virtuals by the model's type at +0x340, flag 0 for the first and 1 for the others, the third for types 8 and 1, whose first glass slots are gear doors.
+- **A tag** (RVA 0xAA0260): letters folded to upper case, an ELF-style hash, modulo 0xFE8F, plus 0x170, so the game's lookup ignores case: `chassis` 0xCD54, `siren1` 0x61A7, `siren20` 0x1642, `siren_glass1` 0xF688, as the data window's boot read them, and by the same rule `siren21` 0x1643, `siren32` 0x1674, `siren_glass21` 0x4055, `siren_glass32` 0x4026; TweaksV makes them when it is compiled, and D40 keeps the raise to the build they were read on.
+- **The set at +0x00** has a bit per bone index; RVA 0x1350360, called last in RVA 0x134D680, clears the bit of each bone whose ID lies in 7..0x2F, 0x38..0x7F, 0x82..0xB0 or 0x1CE..0x1D1 or is below 3, then sets some for two vehicle types.
+  HINT, no reader was found: it does not change how a siren is drawn; the wrapper clears the bits of the bones past `siren20` for parity.
+- **The damage, read in full:** each loop touches only the structure's bytes, the 32-bit sets - the vehicle's +0x860 and the damage object's +0x440, both `i >> 5` = 0 up to 31 - the bone through the game's functions, and the fragment child through RVA 0xFF1B70.
+  None reads a setting, a state or anything else sized by 20.
+  +0x860's other readers: the renderer, by its bound; RVA 0x1543DA0, 20 bits; RVA 0xECE980 copies the dword whole; RVA 0x1DE80A0 its first 3; nothing compares the whole, and +0x865 is only written and copied. The damage object's +0x440: RVA 0xECB990, RVA 0xE7D590 and two resets of the whole dword (RVA 0xE77820, RVA 0xE77A30).
+- **What stays at 20:** the stored damage state, RVA 0x1548A80 (slot 28 of three vtables) and its twin RVA 0x1543DA0: its loop reads 20 bytes of sync data at +0xF4 (`48 83 FD 14 0F 84 ? ? ? ? 41 0F B6 84 2D F4 00 00 00` at RVA 0x15490F3, its glass `0F BE 9C 28 AD 00 00 00 48 8B 06 48 89 F1` at RVA 0x154915A), and past them it would apply other fields as broken sirens; HINT, the network objects' sync data, no path found in story mode.
+  RVA 0x1DE80A0 reads 3 sirens only (`I-E-B3`).
+  The glass loops over 9 and 8 bones (RVA 0xE29321, RVA 0xE4C9E7) stay too.
+- **A loop of another shape** would stay at 20, cosmetic: the research looked for `cmp r64, 0x14`, the three displacements, a start or a bound at the IDs 0x89, 0x9D and 0xB1, a subtraction of those with a compare and lists of those IDs in the read-only data, and found these. After a game update the renderer and these loops are read again before the patterns are trusted, since no pattern proves that nothing new is read or that no loop was added (D40).
+
+The raise writes each operand below: a loop's bound 0x14 to N, `I-E-L08`'s -0x14 to -N; +0x99 to 0x34C, +0xAD to 0x36C, +0xC1 to 0x36C + N; the hit's counter, which counts in hierarchy IDs, so that a siren's byte at +0x10 + the counter and its glass's at +0x24 + it, both 1-byte displacements, reach the room.
+N is `SIRENS_PER_VEHICLE`; the room stays 64 bytes whatever N.
+
+| Label | Pattern | Use | 1.0.1158.16 | RVA |
+|---|---|---|---|---|
+| I-E-X1 | `BF 89 00 00 00 F3 44 0F 10 05 ? ? ? ? 45 0F 57 DB` | a hit near a siren (RVA 0xE7A820), which sets the vehicle's +0x860 bit and +0x865 and breaks the glass's child: +1: 0x89, the counter's start, to 0x33C | found | 0xE7AE6B |
+| I-E-X2 | `48 81 FF 9D 00 00 00 0F 84 ? ? ? ? 8D AF 77 FF FF FF 41 BE 01 00 00 00` | its end and index: +3: 0x9D to 0x33C + N; +15: -0x89 to -0x33C, the `lea` that makes i | found | 0xE7AE93 |
+| I-E-X3 | `0F BE 54 39 24 48 8B 88 C0 09 00 00 E8` | its glass: +4: 0x24 to 0x30, the glass 0x20 behind the sirens in the room | found | 0xE7B04F |
+| I-E-X4 | `44 0F B6 64 38 10 41 80 FC FF` | its read of a siren's bone: +5: 0x10 stays, checked | found | 0xE7AEDD |
+| I-E-L05 | `48 83 FD 14 0F 84 ? ? ? ? 49 8B 84 24 08 04 00 00` | an impact (RVA 0xECB990), which sets the damage object's +0x440 bit and +0x445 and breaks the glass's child: +3: 20 to N | found | 0xECC1C3 |
+| I-E-N04 | `0F BE 94 29 99 00 00 00 BB 01 00 00 00` | its siren: +4: 0x99 to 0x34C | found | 0xECC1F2 |
+| I-E-N05 | `0F BE 94 29 AD 00 00 00 48 8B 88 C0 09 00 00` | its glass: +4: 0xAD to 0x36C | found | 0xECC2A2 |
+| I-E-L03 | `48 83 FB 14 74 ? 89 D8 C1 E8 05 8B 84 86 40 04 00 00` | the bones the impact marked, hidden by a zero matrix (RVA 0xE7D590): +3: 20 to N; +14: 0x440, the damage object's set | found | 0xE7D623 |
+| I-E-N03 | `0F BE AC 18 99 00 00 00 83 FD FF 74 ?` | its siren: +4: 0x99 to 0x34C | found | 0xE7D659 |
+| I-E-L04 | `48 83 F9 14 74 ? 49 8B 87 08 04 00 00` | a wreck, which breaks every siren whose bone exists (RVA 0xDEA730): +3: 20 to N | found | 0xDEA893 |
+| I-E-N02 | `0F BE 94 0D 99 00 00 00 BD 01 00 00 00` | its siren: +4: 0x99 to 0x34C | found | 0xDEA8BE |
+| I-E-L07 | `48 83 FB 14 74 ? 48 8B 46 20 48 8B 80 B0 00 00 00` | the glass's fragment children's flags, 0x17FFFFE0 (RVA 0xDDF580): +3: 20 to N; +13: 0xB0, the model info's holder | found | 0xDDF5B3 |
+| I-E-N06 | `0F BE 94 18 AD 00 00 00 83 FA FF 74 ? 48 8B 8E C0 09 00 00 E8 ? ? ? ? 83 F8 FF 74 ? 48 8B 8F 90 00 00 00` | its glass: +4: 0xAD to 0x36C | found | 0xDDF5D1 |
+| I-E-L08 | `48 C7 C3 EC FF FF FF` | the same in three classes (RVA 0xE20B20, RVA 0xE4DE30, RVA 0xE5E510): +3: -20 to -N; matches 3 times by design | found 3 times | 0xE20B48, 0xE4DE5A, 0xE5E538 |
+| I-E-N09 | `0F BE 94 18 C1 00 00 00 83 FA FF 74` | their glass, read from -20: +4: 0xC1 to 0x36C + N; matches 3 times by design | found 3 times | 0xE20B7D, 0xE4DE8D, 0xE5E56D |
+| I-E-Y1 | `C7 44 24 20 4C 03 00 00 4C 8D 05` | the bone structures' pool: +4: the stride 0x34C to 0x38C | found | 0x1349DE0 |
+| I-E-Y2 | `BA 4C 03 00 00 E8 ? ? ? ? 48 89 C7 48 89 C1 E8` | the allocation, in RVA 0x134DD00 by the unwind data: +1: 0x34C to 0x38C | found | 0x134DD1D |
+| I-E-Y3 | `48 89 F1 E8 ? ? ? ? 48 89 F1 E8 ? ? ? ? F6 86 4B 05 00 00 10` | +3: the call of RVA 0x134DD00, redirected | found | 0x134D706 |
+| I-E-Y4 | `41 57 41 56 41 55 41 54 56 57 55 53 48 83 EC 28 45 89 CE 4D 89 C5 48 89 D3 49 89 CF E8` | +0: the fill, called once more by the wrapper, a function start by the unwind data | found | 0x1353E40 |
+
 ## PedProps
 
 The PedProps part lifts the 255 props per anchor of a ped model to 65535: it widens the eleven narrowings below from 8 to 16 bits once every site and the complete sets have checked out (SPECIFICATIONS.md, section 11.11).
