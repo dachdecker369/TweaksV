@@ -141,7 +141,7 @@ namespace TweaksV
 		Switch(kPedPropsSection, "ENABLED", false, "EXPERIMENTAL & UNTESTED - USE AT YOUR OWN RISK!!!"),
 
 		Switch(kResourcesSection, "ENABLED", true),
-		Number(kResourcesSection, "VIDEO_MEMORY_BUDGET", 0, 0, 16384, "Video memory for streamed textures in MB, 0 = the game's own - Maximum 16384"),
+		Number(kResourcesSection, "VIDEO_MEMORY_BUDGET", 6000, 0, 16384, "Video memory for streamed textures in MB, 0 = the game's own - Maximum 16384"),
 
 		Switch(kRayTracingSection, "ENABLED", true),
 		Number(kRayTracingSection, "DYNAMIC_BVH_VERTICES", 0, 0, 26843545,

@@ -10,9 +10,9 @@
 // however much memory the card has, and an update check evicts ahead of time once the bytes pass a factor of the budget.
 // VIDEO_MEMORY_BUDGET in [RESOURCES] raises each of the four budgets that is below it to it and lowers none
 // (SPECIFICATIONS 11.12):
-//   0                the default: the game's own budgets - nothing is looked for, but with DIAGNOSTIC_MODE=1
+//   0                the game's own budgets - nothing is looked for, but with DIAGNOSTIC_MODE=1
 //   1 to 1499        raised to 1500, the lowest budget the game's own file gives, and reported
-//   1500 to 16384    once Q-E-T1 to Q-E-T4 are found once each and every site checked - the start-up's stores of the most and
+//   1500 to 16384    6000 the default, once Q-E-T1 to Q-E-T4 are found once each and every site checked - the start-up's stores of the most and
 //                    the four budgets and the call after them (T1, T2), the budget's getter with the index (T3), the placement's
 //                    check of the counters (T4), every address inside the game and aligned, the sites agreeing on the counters -
 //                    the scanner's search for stores has found the start-up's two the budgets' only writers, the most and the
@@ -79,8 +79,8 @@ namespace TweaksV
 		// VIDEO_MEMORY_BUDGET: 0, the game's own, or a budget from the lowest the game's own file gives, 1500 MB
 		// (MaxStreamingMemory_0_Base and _1_Base), to the setting's maximum
 		constexpr int kLowestBudgetMb = 1500;
-		static_assert(kVideoMemoryBudget.minValue == 0 && kVideoMemoryBudget.defaultValue == 0 && kVideoMemoryBudget.maxValue > kLowestBudgetMb,
-			"TweaksV: VIDEO_MEMORY_BUDGET is 0, the game's own, or from 1500 MB to its maximum");
+		static_assert(kVideoMemoryBudget.minValue == 0 && kVideoMemoryBudget.defaultValue >= kLowestBudgetMb && kVideoMemoryBudget.maxValue > kLowestBudgetMb,
+			"TweaksV: VIDEO_MEMORY_BUDGET is 0, the game's own, or from 1500 MB to its maximum, its default among them");
 
 		// The update check's switch, a dword, and its three factors, floats, one block of the game's data
 		constexpr size_t kRaiseFactor = 4;			// it evicts once the bytes pass this much of the budget
