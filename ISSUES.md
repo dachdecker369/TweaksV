@@ -1,7 +1,7 @@
 # Issues
 
 Known bugs and open issues in TweaksV, each with what it is, its status and when it goes.
-What each part does is in [NOTES.md](NOTES.md), the design as built in [SPECIFICATIONS.md](SPECIFICATIONS.md).
+What each part does is in [README.md](README.md), the design as built in [SPECIFICATIONS.md](SPECIFICATIONS.md).
 
 ## T-HARDEN: MinHook's trampolines are writable and executable
 
@@ -43,4 +43,4 @@ The game's descriptor heap has no check at its end, so past what my proof shows 
   - A hat past 255 has never been worn.
 - **Status:** accepted for 2.6.0, on 2026-11-01: the raise's code stays and the suites run it switched on, on the fake game, and `[PEDPROPS] ENABLED` ships at 0, saying nothing about being off, as any part that is off, the default file's comment on it: `EXPERIMENTAL & UNTESTED - USE AT YOUR OWN RISK!!!`.
   With `DIAGNOSTIC_MODE=1` its measurement goes on while it is off, so that a load shows whether it needs the part.
-- **When it goes:** a small clean single-prop pack answers it, later: the base game alone holds 255 head props on the male freemode model, so one add-on hat takes it past 255 without a big pack's data; the switch to that model, and that hat worn, say whether the raise works, and the default follows.
+- **When it goes:** a small clean single-prop pack answers it, later. The base game alone holds 255 head props on the male freemode model, so one add-on hat takes it past 255 without a big pack's data; the switch to that model, and that hat worn, say whether the raise works, and the default follows.

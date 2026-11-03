@@ -221,8 +221,6 @@ With `DIAGNOSTIC_MODE=1` the log says, 10 seconds in and then every minute while
 Per `carcols` file it also says what the game did with its settings: `a pack's carcols, dlcpacks:/mypack/data/carcols.meta, brought 6 siren settings: 4 added, 2 dropped, their IDs taken (5, 300), 0 moved.` - a dropped setting's vehicles get the setting that had the ID first, so give it another.
 With `LARGE_SIREN_IDS=0` or the part off the same summary goes on over the game's own 256 IDs, nothing changed in the game, so that you can compare a start with it and one without.
 
-Open until my first boot: the game's binary `.ymt` files go through another loader than the text files, and whether it copes with the wider ID shows only by comparing the base game's settings and IDs with the key on and off.
-
 ### StaticBounds
 
 The game keeps the static collision bounds of the map - every building, prop and interior it places, a heavy map mod's MLOs, custom interiors and expansions among them - in one store, whose size it reads once, from `gameconfig.xml`, or from its own default where the file names none.
@@ -344,7 +342,7 @@ Every kind of line that comes per event stops after 20,000 - also DirectStorage'
 - **Tables:** each setting is one entry in `TweaksVSettings.h`, each byte pattern one in `TweaksVPatterns.h`, each part one in `TweaksVFeatures.cpp`.
   A new part is an entry in these tables plus its own file.
 - **Shared code:** patches to the game's code go through `TweaksVPatch` - one writer for bytes, one for redirected calls, the hooks on a function's start through MinHook - which writes all or nothing and gives every page its own protection back; `TweaksVScanner` finds the patterns in the running game's code; the six parts that move one of the game's arrays describe it in a table and share the relocation core, `TweaksVRelocation`, which finds and checks every site before anything is written and then writes all of it in one go; `TweaksVScripts` holds the one hook where the game places its script programs, for every part that works on one - the Blips part, the StaticBounds part's check, and the test builds' `TEST_DUMP_SCRIPT`.
-- **The whole design:** [SPECIFICATIONS.md](SPECIFICATIONS.md) describes every module, format and log line as built, [NOTES.md](NOTES.md) what each part does and measures, [ISSUES.md](ISSUES.md) what is still open, [PATTERNS.md](PATTERNS.md) every game fact - with this file, the whole truth about the code: enough to fork it or build on it without reading the source first.
+- **The whole design:** [SPECIFICATIONS.md](SPECIFICATIONS.md) describes every module, part, format and rule as built, [PATTERNS.md](PATTERNS.md) every game fact, [ISSUES.md](ISSUES.md) what is still open, [NOTES.md](NOTES.md) the versions and the count of the checks - with this file, enough to fork it or build on it; the source holds the rest, the words of the log and the order of the checks.
 
 ## Building
 

@@ -2,7 +2,7 @@
 
 The order of work for a change to TweaksV, phase by phase, each ending with its proof, a commit and my boot.
 What came before is in the git history and in NOTES.md's Versions; the passes' findings and reviews are in my research tools' `output-1158.16\`.
-Phase C is done: 2.7.0, tagged on 7fa28da, and 2.8.0, tagged on b3a7a1b, both for my own use (D19). Its tracks, items and the decisions' full text are in the git history up to b3a7a1b.
+Phase C is done: 2.7.0, tagged on 7fa28da, for my own use (D19), and 2.8.0, tagged on b3a7a1b, the full version I publish (D7). Its tracks, items and the decisions' full text are in the git history up to b3a7a1b.
 No phase is planned now.
 
 ## Decisions
@@ -28,7 +28,7 @@ D1 to D18, phases A and B, in short; their full text is in the git history up to
 - **D16:** the ray tracing buffer's research and part, as built in SPECIFICATIONS.md; LuminanceV's documents may be read for a pass.
 - **D17:** RageOpenV's check for packs made for GTA V Legacy.
 - **D18, stands:** parts built in one round ship together as one version, tagged on the commit I boot and pushed with main.
-- **D19:** phase C's shape: two builds, each with my boots, for my own use; the next version I publish stays the full one (D7).
+- **D19:** phase C's shape: two builds, each with my boots; the next version I publish stays the full one (D7), which 2.8.0 is.
 - **D20:** the research passes, the limit on reverse-engineering lifted pass by pass; the clean room stays D2's.
 - **D21, stands:** the data window, `TEST_DUMP_DATA`, a test build's key; `.data` as a whole stays out, since it may hold my data.
 - **D22:** the siren setting IDs, `LARGE_SIREN_IDS`, on by default after my comparison boot; the position stays a byte, so 255 settings stay the most.
@@ -90,10 +90,10 @@ The full account is in the git history up to b3a7a1b.
 
 ## Next steps
 
-**State:** 2.8.0, phase C's second and last build, is tagged on b3a7a1b and pushed, this document with it, and my proof passed on it; 2.2.1 stays the last one published.
+**State:** 2.8.0, phase C's second and last build, is tagged on b3a7a1b and pushed, this document with it, and my proof passed on it; it is the full version I publish (D7), after 2.2.1.
 It has sixteen parts, `TweaksV.ini`'s layout 5 with its 47 keys, 274 patterns and 2986 checks, the full run about 10 minutes side by side.
 It takes the sirens per vehicle (D23), the light stores and the corona store as a part (D35, D39), `VIDEO_MEMORY_BUDGET` at 6000 (D33), and `STREAMED_OBJECTS` at 131072 (D37), which ended my LOD switching by my eye.
 Open for a later plan, none asked for now: the ray traced list's sort (D36); some lights on buildings that come on late, about 50 m from a Gruppe 6 building downtown by my eye, with nothing refused in the log (ROADMAP.md); the hat of T-PEDPROPS (D42).
 The open issues, in ISSUES.md, are T-HARDEN, T-DIAG, T-FREEZE, T-PEDPROPS and T-DESCRIPTORS.
 
-**Decisions waiting on me:** whether 2.8.0 is the version I publish, which is my own act. The dumps, `GameData-*.bin` and the `work-*` folders stay (D28).
+**Decisions waiting on me:** none. The dumps, `GameData-*.bin` and the `work-*` folders stay (D28).

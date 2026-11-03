@@ -1,6 +1,6 @@
 # Credits
 
-Five of TweaksV's parts are rewritten from Chiheb-Bacha's plugins below, and StaticBounds takes its key, default and rule from Nochala's Static Bounds Limit Adjuster, the route its own; the other nine - BoxStreamer, Decals, DirectStorage, Blips, WeaponLimits, PedProps, Resources, RayTracing and SirenSettings - are TweaksV's own, from the ideas and the design credited below; the research and the original code are theirs, and what little of their code TweaksV still carries is named in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+Five of TweaksV's parts are rewritten from Chiheb-Bacha's plugins below, and StaticBounds takes its key, default and rule from Nochala's Static Bounds Limit Adjuster, the route its own; the other ten - BoxStreamer, Decals, DirectStorage, Blips, WeaponLimits, PedProps, Resources, RayTracing, SirenSettings and LightCapacity - are TweaksV's own, from the ideas and the design credited below; the research and the original code are theirs, and what little of their code TweaksV still carries is named in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 All credit for them goes to their authors.
 
 ## Chiheb-Bacha - https://github.com/Chiheb-Bacha
