@@ -21,6 +21,10 @@ namespace TweaksV
 	// this session: <why>" - since the LOD lights' job must move with the store or the game faults, and with the part the sirens stay at 20.
 	bool FindCoronaStore(uint8_t* firstInlinedAdd, uint8_t* secondInlinedAdd, std::vector<CodeWrite>& writes, std::string& why);
 
+	// Gives back the memory FindCoronaStore took: the part calls it when, that having said yes, its one write will not come or has failed, so
+	// that nothing leads to that memory. It holds none on a dry run, at the game's own or after a false.
+	void DiscardCoronaStore();
+
 	// What the store's line of the part's measurement says, on any thread.
 	struct CoronaStoreNumbers
 	{

@@ -21,7 +21,7 @@
 // game, read+execute, use no stack and keep every register but the flags, which their targets write anew before anything reads them, and
 // the batch's rax, which the moved lea writes; the counters lie on a read/write page of their own. They run only when a corona is refused,
 // and at each batch. A stub that cannot be made is logged, not reported - an aid (NOTES.md, T-DIAG) - and the raise goes on without it.
-// If the part's write fails the store's memory and the stubs' stay, about 200 KB, unused: the module hears no more of it.
+// If the part refuses after this has said yes it calls DiscardCoronaStore, and the store's memory and the stubs' go back.
 // Written for TweaksV from the findings of its own research in the game's code; the idea of raising what many siren lights reach comes from
 // the page of Resource Extensions [Enhanced] by Koukol, whose plugin was not read (CREDITS.md).
 
@@ -65,7 +65,7 @@ namespace TweaksV
 
 		// The sites' fields, from their matches. J2's last and J3's last lie past their matches.
 		constexpr size_t kAddLeaRelAt = 3, kAddLoadAt = 17, kAddLimitAt = 24, kAddJumpAt = 28, kAddJumpRelAt = 30, kAddExchangeAt = 45;	// I1
-		constexpr size_t kInlinedCountAt = 2, kInlinedLimitAt = 9, kInlinedJumpAt = 13, kInlinedJumpRelAt = 15, kInlinedMatch = 15;			// G1, the part's
+		constexpr size_t kInlinedCountAt = 2, kInlinedLimitAt = 9, kInlinedJumpRelAt = 15;													// G1, the part's
 		constexpr size_t kInlinedStoreAt = 11;																								// I2, I3
 		constexpr size_t kCopyCountAt = 2, kCopyPastAt = 20, kCopyStoreAt = 8;																// I4; I5 the store
 		constexpr size_t kJobStoreAt = 3, kJobCallAt = 17;																					// I6
@@ -82,7 +82,7 @@ namespace TweaksV
 			static_cast<uint32_t>(kCoronaStore.maxValue) + 8 <= 0xFFFF, "TweaksV: CORONA_STORE from the game's own to what a draw's stack and its word of an index take");
 
 		// Every constant the raise rests on is the one its pattern pins: the nop that is rewritten, the instructions around each field, the job's sizes. G-E-G1 is
-		// the part's, and the code names a pattern once, so that its three are read when the part hands its matches over (SitesFault).
+		// the part's, and the code names a pattern once, so that its three fields stand on the suite, which runs both inlined adds through what this writes.
 		static_assert(PatternHolds(P(kI1), 0, { 0x66, 0x66, 0x66, 0x66, 0x66, 0x2E, 0x0F, 0x1F, 0x84, 0, 0, 0, 0, 0 }) && PatternHolds(P(kI1), 14, { 0x44, 0x8B, 0x81 }) &&
 			PatternImm32(P(kI1), kAddLoadAt) == kCountAt && PatternHolds(P(kI1), 21, { 0x49, 0x81, 0xF8 }) && PatternImm32(P(kI1), kAddLimitAt) == kGameCoronas - 1 &&
 			PatternHolds(P(kI1), kAddJumpAt, { 0x0F, 0x87 }) && PatternHolds(P(kI1), 41, { 0xF0, 0x0F, 0xB1, 0xB1 }) && PatternImm32(P(kI1), kAddExchangeAt) == kCountAt && PatternHolds(P(kI1), 49, { 0x75, 0xDB }),
@@ -110,6 +110,8 @@ namespace TweaksV
 		};
 		std::atomic<uint32_t> g_room{ 0 };
 		std::atomic<const Counters*> g_counters{ nullptr };
+		uint8_t* g_storeMemory = nullptr;	// what DiscardCoronaStore gives back; both DllMain's alone
+		uint8_t* g_stubMemory = nullptr;
 
 		// The DIAGNOSTIC lines: this module runs without DIAGNOSTIC_MODE too.
 		void Note(const std::string& line)
@@ -155,10 +157,7 @@ namespace TweaksV
 			Note("the copy to the draw list at " + DescribeAddress(f.at[kI5]) + ": its count at " + DescribeAddress(f.at[kI4] + kCopyCountAt) + At(P(kI4)) + ", its store at " + DescribeAddress(f.at[kI5] + kCopyStoreAt) + At(P(kI5)));
 			for (size_t i = 0; i < std::size(f.inlined); i++)
 			{
-				const uint8_t* const add = f.inlined[i];
-				if (add[0] != 0x8B || add[1] != 0x0D || ValueAt<uint32_t>(add, kInlinedLimitAt) != kGameCoronas - 1 || add[kInlinedJumpAt] != 0x0F || add[kInlinedJumpAt + 1] != 0x87)
-					return std::string(i == 0 ? "the first" : "the second") + " inlined add at " + DescribeAddress(add) + " holds " + HexBytes(add, kInlinedMatch) + ", not its read of the count, its limit of " + std::to_string(kGameCoronas - 1) + " and its jump when full (G-E-G1).";
-				const uint8_t* const read = Rel32Target(add + kInlinedCountAt);
+				const uint8_t* const read = Rel32Target(f.inlined[i] + kInlinedCountAt);
 				if (read != count)
 					return std::string(i == 0 ? "the first" : "the second") + " inlined add reads the count at " + DescribeAddress(read) + ", not the one right behind the 1088 coronas, at " + DescribeAddress(count) + " (G-E-G1).";
 			}
@@ -228,54 +227,49 @@ namespace TweaksV
 			return static_cast<uint8_t*>(AllocateNearGame(bytes));
 		}
 
-		// The rel32 at field leading to target added to writes; false, with why, past its reach.
-		bool AddLead(std::vector<CodeWrite>& writes, uint8_t* field, const uint8_t* target, const char* what, std::string& why)
+		// True if a rel32 or a disp32 that counts from from reaches target.
+		bool WithinReach(const uint8_t* from, const uint8_t* target)
 		{
-			const intptr_t distance = target - (field + kRel32);
-			if (distance < INT32_MIN || distance > INT32_MAX)
-			{
-				why = "the new corona store at " + DescribeAddress(target) + " is out of reach of the game code at " + DescribeAddress(field) + ".";
-				return false;
-			}
-			writes.push_back({ field, BytesOf(static_cast<int32_t>(distance)), what });
-			return true;
+			const intptr_t distance = target - from;
+			return distance >= INT32_MIN && distance <= INT32_MAX;
 		}
 
-		// The 13 writes, in the order of the findings' table; false, with why, if the new store is out of reach of one.
+		// The bytes of the rel32 at field that leads to target, known to be within reach.
+		std::vector<uint8_t> LeadTo(const uint8_t* field, const uint8_t* target)
+		{
+			return BytesOf(static_cast<int32_t>(target - (field + kRel32)));
+		}
+
+		// The 13 writes, in the order of the findings' table; false, with why, if the new store is out of reach of its count. The sites lie in the game with
+		// the count, and near memory is 1 GB from the image at most, far more than a rel32 lacks, so that what reaches the one reaches them.
 		bool AddWrites(const Found& f, uint8_t* store, uint32_t room, std::vector<CodeWrite>& writes, std::string& why)
 		{
 			const uint8_t* const count = f.store + kCountAt;
-			const intptr_t toCount = count - store;
-			if (toCount < INT32_MIN || toCount > INT32_MAX)
+			if (!WithinReach(store, count))
 			{
 				why = "the new corona store at " + DescribeAddress(store) + " is out of reach of its count at " + DescribeAddress(count) + ".";
 				return false;
 			}
-			const std::vector<uint8_t> fromStore = BytesOf(static_cast<int32_t>(toCount));
+			const std::vector<uint8_t> fromStore = BytesOf(static_cast<int32_t>(count - store));
 			const std::vector<uint8_t> limit = BytesOf(room - 1);
 			const std::vector<uint8_t> clamp = BytesOf(room);
 
 			// the nop's 14 bytes: lea rcx, [the new store] and a nop of 7
-			std::vector<CodeWrite> leads;
-			if (!AddLead(leads, f.at[kI1] + kAddLeaRelAt, store, "corona store's lea in its general add", why))
-				return false;
+			const std::vector<uint8_t> lea = LeadTo(f.at[kI1] + kAddLeaRelAt, store);
 			std::vector<uint8_t> nop = { 0x48, 0x8D, 0x0D };
-			nop.insert(nop.end(), leads[0].bytes.begin(), leads[0].bytes.end());
+			nop.insert(nop.end(), lea.begin(), lea.end());
 			nop.insert(nop.end(), { 0x0F, 0x1F, 0x80, 0, 0, 0, 0 });
 			writes.push_back({ f.at[kI1], nop, "corona store's lea in its general add" });
 
 			writes.push_back({ f.at[kI1] + kAddLoadAt, fromStore, "corona store's count in its general add's load" });
 			writes.push_back({ f.at[kI1] + kAddLimitAt, limit, "corona store's limit in its general add" });
 			writes.push_back({ f.at[kI1] + kAddExchangeAt, fromStore, "corona store's count in its general add's exchange" });
-			if (!AddLead(writes, f.at[kI2] + kInlinedStoreAt, store, "corona store in the first inlined add", why))
-				return false;
+			writes.push_back({ f.at[kI2] + kInlinedStoreAt, LeadTo(f.at[kI2] + kInlinedStoreAt, store), "corona store in the first inlined add" });
 			writes.push_back({ f.inlined[0] + kInlinedLimitAt, limit, "corona store's limit in the first inlined add" });
-			if (!AddLead(writes, f.at[kI3] + kInlinedStoreAt, store, "corona store in the second inlined add", why))
-				return false;
+			writes.push_back({ f.at[kI3] + kInlinedStoreAt, LeadTo(f.at[kI3] + kInlinedStoreAt, store), "corona store in the second inlined add" });
 			writes.push_back({ f.inlined[1] + kInlinedLimitAt, limit, "corona store's limit in the second inlined add" });
-			if (!AddLead(writes, f.at[kI5] + kCopyStoreAt, store, "corona store in the copy to the draw list", why) ||
-				!AddLead(writes, f.at[kI6] + kJobStoreAt, store, "corona store in the LOD lights' job's parameters", why))
-				return false;
+			writes.push_back({ f.at[kI5] + kCopyStoreAt, LeadTo(f.at[kI5] + kCopyStoreAt, store), "corona store in the copy to the draw list" });
+			writes.push_back({ f.at[kI6] + kJobStoreAt, LeadTo(f.at[kI6] + kJobStoreAt, store), "corona store in the LOD lights' job's parameters" });
 			writes.push_back({ f.at[kI7] + kHandOutAddAt, fromStore, "corona store's count in what hands it out" });
 			writes.push_back({ f.at[kI8] + kBatchMoveAt, clamp, "corona store's clamp in the LOD lights' batch" });
 			writes.push_back({ f.at[kI8] + kBatchCompareAt, clamp, "corona store's comparison in the LOD lights' batch" });
@@ -443,24 +437,26 @@ namespace TweaksV
 			uint8_t* const block = MakeStubs(jumps, six + kBatchSix, page);
 			if (!block)
 				return;
-			std::vector<CodeWrite> redirects;
-			std::string outOfReach;
+			const uint8_t* const batch = block + kJumps * kStubSlot;
+			bool inReach = WithinReach(six + kBatchJumpBytes, batch);
 			for (size_t i = 0; i < kJumps; i++)
-				if (!AddLead(redirects, jumps[i].rel, block + i * kStubSlot, jumps[i].what, outOfReach))
-					break;
-			const intptr_t distance = (block + kJumps * kStubSlot) - (six + kBatchJumpBytes);
-			if (!outOfReach.empty() || distance < INT32_MIN || distance > INT32_MAX)
+				inReach = inReach && WithinReach(jumps[i].rel + kRel32, block + i * kStubSlot);
+			if (!inReach)
 			{
 				VirtualFree(block, 0, MEM_RELEASE);	// no jump leads to it yet
 				NotCounted("its stubs are out of reach of the game code.");
 				return;
 			}
+			std::vector<CodeWrite> redirects;
+			for (size_t i = 0; i < kJumps; i++)
+				redirects.push_back({ jumps[i].rel, LeadTo(jumps[i].rel, block + i * kStubSlot), jumps[i].what });
 			std::vector<uint8_t> toBatch = { 0xE9 };
-			const std::vector<uint8_t> rel = BytesOf(static_cast<int32_t>(distance));
+			const std::vector<uint8_t> rel = BytesOf(static_cast<int32_t>(batch - (six + kBatchJumpBytes)));
 			toBatch.insert(toBatch.end(), rel.begin(), rel.end());
 			toBatch.push_back(0x90);
 			redirects.push_back({ six, toBatch, "LOD lights' batch's way to its counting stub" });
 			writes.insert(writes.end(), redirects.begin(), redirects.end());
+			g_stubMemory = block;
 			g_counters.store(reinterpret_cast<const Counters*>(block + page), std::memory_order_release);
 			Note("the four jumps when the corona store is full and the LOD lights' batch at " + DescribeAddress(six) + At(P(kI8)) + " are redirected to counting stubs once the part's one write is done.");
 		}
@@ -513,8 +509,21 @@ namespace TweaksV
 			WriteLog(kTag, "DRY_RUN: would move the corona store (5 references) and raise its limit from " + std::to_string(kGameCoronas) + " to " + std::to_string(room) + " (5 sites), with 3 offsets of its count.");
 			return true;
 		}
+		g_storeMemory = store;
 		g_room.store(room, std::memory_order_release);
 		return true;
+	}
+
+	void DiscardCoronaStore()
+	{
+		g_room.store(0, std::memory_order_release);
+		g_counters.store(nullptr, std::memory_order_release);
+		if (g_storeMemory)
+			VirtualFree(g_storeMemory, 0, MEM_RELEASE);
+		if (g_stubMemory)
+			VirtualFree(g_stubMemory, 0, MEM_RELEASE);
+		g_storeMemory = nullptr;
+		g_stubMemory = nullptr;
 	}
 
 	CoronaStoreNumbers CoronaStoreNow()

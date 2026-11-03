@@ -8,7 +8,7 @@
 # store's own reasons and lines, not what the part says around them, whichever part that is: the accessor through the test build's export. Fake LOCALAPPDATA:
 # the real one is never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
-CHECKS=111
+CHECKS=118
 cd "$B" || exit 1
 cp "$R/x64/Release/TweaksV.asi" TweaksV.asi
 cp "$R/object/Test/Release/TweaksV.asi" TweaksV_test.asi
@@ -23,7 +23,7 @@ PLACED='cc sites: as placed | cc jumps: as placed |'
 moved() { echo "cc sites: the store moved, $1 coronas, the 13 writes and nothing else, its memory RW, 16-aligned, $(( $1 * 48 + 384 )) bytes at least |"; }
 ran() {		# ROOM WORDS: what ccrun says at a room, the old store's words
 	local each=$(( $1 / 4 * 3 + $1 % 4 * 3 / 4 ))
-	echo "cc run: parameters name the store and its count; adds $1 added, $(( 2 * each - $1 )) refused, one slot each, the old store $2, count $1; batch at $(( $1 - 100 )) brought 300 placed 100, count $1, its last record in the last slot; its own limit passes 1087, refuses 1088; copy of $1 asked $(( $1 * 48 + 384 )) bytes, as the store; copy of 0 asked 0 |"
+	echo "cc run: parameters name the store and its count; adds $1 added, $(( 2 * each - $1 )) refused, one slot each, count $1; inlined adds in the last two slots, then both refused, count $1, the old store $2; batch at $(( $1 - 100 )) brought 300 placed 100, count $1, its last record in the last slot; its own limit passes 1087, refuses 1088; copy of $1 asked $(( $1 * 48 + 384 )) bytes, as the store; copy of 0 asked 0 |"
 }
 now() { echo "cc now: room $1, counted $2, refused $3, lod own $4, lod lights $5 |"; }
 NOW_GAME=$(now 1088 0 0 0 0)
@@ -52,7 +52,7 @@ check "no pattern of the store looked for, no line of it; its sites and jumps as
 echo "== C2 the part on at the game's own 1088, DIAGNOSTIC_MODE=1: nothing of it looked for or written, and the fake's own code as the game's"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(ASI=TweaksV_test.asi game full_game.exe ccrun); echo "      ${out:0:80}"
 check "no pattern of the store looked for, no line of it; its sites and jumps as placed" "log_lacks 'G-E-[IJ]' && cc_lacks 'The corona store moved' && cc_lacks 'new corona store' && cc_lacks 'general add' && has '$PLACED'"
-check "the run at the game's room: 1088 added and 544 refused, the job's clamp and the copy of 0x180 bytes past the records, all in the game's own store" "has '$(ran 1088 'in use')'"
+check "the run at the game's room: 1088 added and 544 refused, both inlined adds at its end, the job's clamp and the copy of 0x180 bytes past the records, all in the game's own store" "has '$(ran 1088 'in use')'"
 check "the accessor says the game's own, with nothing counted" "has '$NOW_GAME'"
 check "every page its own protection; no problem" "has 'protect: all restored (RX)' && cc_lacks 'PROBLEM'"
 
@@ -64,7 +64,7 @@ echo "== C3 CORONA_STORE=4096, no DIAGNOSTIC_MODE: the store moved, the jumps as
 raise_ini; out=$(ASI=TweaksV_test.asi game full_game.exe ccrun); echo "      ${out:0:80}"
 check "the 13 writes of the findings' table and nothing else, in the sites as placed; the new store read/write, 16-aligned, of 196992 bytes; the part's line of it" "has '$(moved 4096)' && cc_line 'The corona store moved and its limit raised from 1088 to 4096 entries.'"
 check "the jumps and the batch's six bytes as placed: no stub without DIAGNOSTIC_MODE" "has 'cc jumps: as placed |'"
-check "the run: the job's parameters name the new store and the old count; two threads' adds up to 4096, each in a slot of its own, the old store all 0; the batch up to the room; the job's own limit still 1088; the copy of 4096 and the 0x180 past them, as the store" "has '$(ran 4096 'all 0')'"
+check "the run: the job's parameters name the new store and the old count; two threads' adds up to 4096, each in a slot of its own; both inlined adds in the last two slots of the new store and refused past them, the old store all 0; the batch up to the room; the job's own limit still 1088; the copy of 4096 and the 0x180 past them, as the store" "has '$(ran 4096 'all 0')'"
 check "the accessor says the room, nothing counted" "has '$(now 4096 0 0 0 0)'"
 check "every page its own protection; no DIAGNOSTIC line of the store; no problem" "has 'protect: all restored (RX)' && cc_lacks 'DIAGNOSTIC: .*corona store' && cc_lacks 'PROBLEM'"
 
@@ -91,9 +91,9 @@ check "the store's four rel32" "cc_line 'DIAGNOSTIC: corona store in the first i
 check "the jumps' rel32 and the batch's six bytes; the announcement" "cc_line 'DIAGNOSTIC: jump when the corona store is full in its general add at RVA $(rva_plus i1 30): 24 00 00 00 -> $ANY4' && cc_line 'DIAGNOSTIC: jump when the corona store is full in the first inlined add at RVA $(rva_plus first 15): $ANY4 -> $ANY4' && cc_line 'DIAGNOSTIC: jump when the corona store is full in the second inlined add at RVA $(rva_plus second 15): $ANY4 -> $ANY4' && cc_line 'DIAGNOSTIC: jump when the LOD lights. job.s own coronas are full at RVA $(rva_plus i9 13): 0F 00 00 00 -> $ANY4' && cc_line 'DIAGNOSTIC: LOD lights. batch.s way to its counting stub at RVA $(rva_plus i8 56): 29 CA 48 8D 04 49 -> E9 $ANY4 90' && cc_line '$REDIRECTED'"
 check "the writes' lines, each once: 13 of the store, 4 jumps, the batch's" "[ \$(count 'DIAGNOSTIC: corona store') -eq 13 ] && [ \$(count 'DIAGNOSTIC: jump when the \(corona store\|LOD lights\)') -eq 4 ] && [ \$(count 'batch.s way to its counting stub') -eq 1 ]"
 check "the 13 writes and nothing else, with the jumps through their stubs" "has '$(moved 4096)'"
-check "the stubs read+execute, each jump on to where it led, the batch's back past its six bytes; the counters read/write: both threads' 2048 and the batch's 200, the job's own 3, the batch's 300" "has 'cc jumps: 4 and the batch to stubs, RX, on to where each led, their counters RW: refused 2248, lod own 3, lod lights 300 |'"
+check "the stubs read+execute, each jump on to where it led, the batch's back past its six bytes; the counters read/write: both threads' 2048, each inlined add's 1 and the batch's 200, the job's own 3, the batch's 300" "has 'cc jumps: 4 and the batch to stubs, RX, on to where each led, their counters RW: refused 2250, lod own 3, lod lights 300 |'"
 check "the run as without them" "has '$(ran 4096 'all 0')'"
-check "the accessor says the same numbers" "has '$(now 4096 1 2248 3 300)'"
+check "the accessor says the same numbers" "has '$(now 4096 1 2250 3 300)'"
 check "every page its own protection; no problem of the store" "has 'protect: all restored (RX)' && cc_lacks 'PROBLEM'"
 
 echo "== C5 the room at its bounds and past them: each moves, runs and fills to what the setting holds"
@@ -260,7 +260,7 @@ check "the store raised: the sirens do not refuse, every write of the store, its
 
 echo "== C15 the part's measurement reads the store through the accessor: its room and its counters in the summary, the first with the raise written"
 raise_ini; setkey DIAGNOSTIC_MODE 1; out=$(ASI=TweaksV_test.asi game full_game.exe ccrun wait); echo "      ${out:0:80}"
-check "the run's counters in the first summary, in the findings' words" "cc_line 'DIAGNOSTIC: the most so far: .*coronas [0-9]* of 4096, refused 2248 (LOD.s own 1088: 3), LOD lights 300, .*'"
+check "the run's counters in the first summary, in the findings' words" "cc_line 'DIAGNOSTIC: the most so far: .*coronas [0-9]* of 4096, refused 2250 (LOD.s own 1088: 3), LOD lights 300, .*'"
 raise_ini; setkey DIAGNOSTIC_MODE 1; out=$(ASI=TweaksV_test.asi game full_game.exe ccpast); echo "      ${out:0:80}"
 check "a count past the game's 1088, inside the room: a number of the summary, no line of its own" "cc_line 'DIAGNOSTIC: the most so far: .*coronas 1089 of 4096, refused 0 (LOD.s own 1088: 0), LOD lights 0, .*' && cc_lacks 'coronas seen at 1089'"
 check "a count past the room: its line says the room" "cc_line 'DIAGNOSTIC: coronas seen at 4097, past the 4096 the game has room for.'"
@@ -269,13 +269,27 @@ check "a refusal of the store: the part's problem, nothing written, and the meas
 raise_ini; setkey DIAGNOSTIC_MODE 1; setkey DRY_RUN 1; out=$(ASI=TweaksV_test.asi game full_game.exe wait); echo "      ${out:0:80}"
 check "a dry run: the store's would lines in the part's, and the measurement over the game's own room" "[ \$(count 'DRY_RUN: would patch the corona store') -eq 13 ] && has '$PLACED' && has '$NOW_GAME' && cc_line 'DIAGNOSTIC: the most so far: .*coronas 0 of 1088, .*'"
 
-echo "== C16 what stays of the new store: the raise's one region, and nothing of a dry run or of a store out of reach"
+echo "== C16 what stays of the new store and its stubs: the raise's, and nothing of a refusal after the store said yes, of a dry run or of a store out of reach"
 raise_ini; out=$(ASI=TweaksV_test.asi game full_game.exe ccleft); echo "      ${out:0:80}"
-check "the raise: its store is the one region of its size, all 0" "has '$(moved 4096)' && has 'cc left: 1 |'"
+check "the raise: its store is the one region of its size, all 0, and no stubs without DIAGNOSTIC_MODE" "has '$(moved 4096)' && has 'cc left: 1, stubs 0 |'"
+raise_ini; setkey DIAGNOSTIC_MODE 1; out=$(ASI=TweaksV_test.asi game full_game.exe ccleft); echo "      ${out:0:80}"
+check "with DIAGNOSTIC_MODE: its stubs' block too" "has '$(moved 4096)' && has 'cc left: 1, stubs 1 |'"
+for refusal in 'no stores' 'values refused' 'stores out of reach'; do
+	raise_ini; setkey DIAGNOSTIC_MODE 1; out=$(TWEAKSV_TEST_LIGHT_STUB="$refusal" ASI=TweaksV_test.asi game full_game.exe ccleft); echo "      ${out:0:80}"
+	check "the part refuses after the store said yes, by its own memory, $refusal: both given back, nothing written, the accessor says the game's own" "cc_line '$NOT_RAISED .*' && has '$PLACED' && has '$NOW_GAME' && has 'cc left: 0, stubs 0 |'"
+done
+raise_ini; out=$(ASI=TweaksV_test.asi game full_game.exe nodyncode ccleft); echo "      ${out:0:80}"
+check "the part's write refused by Windows after the store said yes: its memory given back, nothing written, the accessor says the game's own" "cc_line \"$NOT_RAISED the game code could not be changed (details .*).\" && has '$PLACED' && has '$NOW_GAME' && has 'cc left: 0, stubs 0 |'"
 raise_ini; setkey DRY_RUN 1; out=$(ASI=TweaksV_test.asi game full_game.exe ccleft); echo "      ${out:0:80}"
-check "a dry run: the store it made for its lines is gone" "has '$PLACED' && has 'cc left: 0 |'"
+check "a dry run: the store it made for its lines is gone" "has '$PLACED' && has 'cc left: 0, stubs 0 |'"
 raise_ini; out=$(TWEAKSV_TEST_CORONA_MEMORY='far' ASI=TweaksV_test.asi game full_game.exe ccleft); echo "      ${out:0:80}"
-check "a store out of reach: refused, and gone" "has '$PLACED' && has 'cc left: 0 |'"
+check "a store out of reach: refused, and gone" "has '$PLACED' && has 'cc left: 0, stubs 0 |'"
+
+echo "== C17 the Release build runs the moved store"
+raise_ini; out=$(game full_game.exe ccrun); echo "      ${out:0:80}"
+check "no DIAGNOSTIC_MODE: every write, the jumps as placed, the run as the test build's; no export read; every page its own protection; no problem of the store" "has '$(moved 4096)' && has 'cc jumps: as placed |' && has '$(ran 4096 'all 0')' && ! has 'cc now:' && has 'protect: all restored (RX)' && cc_lacks 'PROBLEM'"
+raise_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe ccrun); echo "      ${out:0:80}"
+check "DIAGNOSTIC_MODE=1: every write, the jumps through their stubs and counted, the run as ever; no export read; every page its own protection; no problem of the store" "has '$(moved 4096)' && has 'cc jumps: 4 and the batch to stubs, RX, on to where each led, their counters RW: refused 2250, lod own 3, lod lights 300 |' && has '$(ran 4096 'all 0')' && ! has 'cc now:' && has 'protect: all restored (RX)' && cc_lacks 'PROBLEM'"
 
 echo
 echo "CORONA STORE SCENARIOS: $pass passed, $fail failed"

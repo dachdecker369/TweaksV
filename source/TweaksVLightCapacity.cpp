@@ -1168,7 +1168,10 @@ namespace TweaksV
 			const size_t coronaBytes = pagesOf(size_t{ kRaisedCoronas } * kCoronaBytes), lightBytes = pagesOf(size_t{ kRaisedLights } * kLightBytes);
 			uint8_t* const block = MakeRaisedMemory(coronaBytes, lightBytes);
 			if (!block)
+			{
+				DiscardCoronaStore();
 				return;
+			}
 			uint8_t* const coronas = block + page;
 			uint8_t* const lights = coronas + coronaBytes;
 
@@ -1179,11 +1182,13 @@ namespace TweaksV
 				!AddLead(writes, m.at[kC4] + kStartValuesAt, block, "job's lists' start values"))
 			{
 				VirtualFree(block, 0, MEM_RELEASE);	// nothing points at it: nothing was written
+				DiscardCoronaStore();
 				return;
 			}
 			if (!WriteCode(writes, kTag))
 			{
 				VirtualFree(block, 0, MEM_RELEASE);	// nothing points at it: nothing was written
+				DiscardCoronaStore();
 				NotRaised("the game code could not be changed (details in TweaksV.log).");
 				return;
 			}

@@ -733,8 +733,8 @@
 //   sdpoolout      that load leading outside the game
 // The corona store (TweaksVCoronaStore): its sites as the patterns match them, G-E-I1 in g_ccGeneralAdd and G-E-G1 in the lighting capacity's two checks, and its count
 // and records in the lighting capacity's data. The general add, the job's parameters and batch, its own limit and the copy are code the fake runs, only as these ask:
-//   ccrun          once TweaksV has started: the job's parameters; two threads through the general add, 3/4 of the room each; a batch from 100 short of the room that
-//                  brings 300; the job's own limit at 1087 and three times at 1088; the copy at a full store and at 0
+//   ccrun          once TweaksV has started: the job's parameters; two threads through the general add, 3/4 of the room each; both inlined adds for the last two slots and
+//                  once more each past the room; a batch from 100 short of the room that brings 300; the job's own limit at 1087 and three times at 1088; the copy at a full store and at 0
 //   cctrap         in place of ccrun: a batch of 100 from a count of 1500, the first past the game's 1088 that its clamp cannot take
 //   ccpast         in place of ccrun: the count at 1089 until the log has the part's first summary, then one past the room, until the log has its line
 // The checks, each failing on its own, through the lighting capacity's lcout, lcend, lcodd, lcunread and lcother, on any rel32 by the name of the table in CcSetUp:
@@ -743,7 +743,7 @@
 //   ccmodded NAME  what another mod would have changed, a byte of what a pattern pins: i1nop, i4past, i7count, i8move, i8clamp, i9limit or j1scratch
 //   ccrefs         16 more leas of the store, which make 20 with the four of the sites
 //   cccalls        a second call of what hands the store out
-//   ccleft         the report's "cc left: N": the regions of private read/write memory, all 0, of the size of a store of 4096 coronas
+//   ccleft         the report's "cc left: N, stubs M": the regions of private read/write memory, all 0, of the size of a store of 4096 coronas, and the blocks with the store's stubs
 #include <windows.h>
 #include <winternl.h>
 #include <cstddef>
@@ -1633,12 +1633,20 @@ static Site g_sdSites[] = { SITE(g_sdHit, 0), SITE(g_sdImpact, 0), SITE(g_sdHide
 // The corona store's sites. g_ccGeneralAdd, above: G-E-I1, the record's write with the game's movaps, the index it got at [rdx+0x10], the way out at +70; g_ccAddStart its
 // prologue, as the way out wants it, and on to it. The inlined adds' stores, never run, and where their jumps lead. The copy: G-E-I4 at kCcI4, G-E-I5 at kCcI5, the call
 // to CcCopyBytes, NOPs as far as the game's jle and jz reach. The job's parameters, G-E-I6, and what hands the store out, G-E-I7. The batch, G-E-I8, the placed count at
-// [r8] and the store's offset in rax. The job's own limit, G-E-I9, way out at +52. The rest never run.
+// [r8] and the store's offset in rax. The job's own limit, G-E-I9, way out at +52. The inlined adds run through a way in of their own, g_ccFirstInlined and g_ccSecondInlined: the frame
+// their way outs want, the call of G-E-G1 in the lighting capacity's two checks, which CcSetUp ends in a ret, the game's exchange of the count, and the call of G-E-I2 or G-E-I3, each its
+// record's slot: -1 from what the way out leaves, the index otherwise. The rest never run.
 volatile unsigned char g_ccAddStart[] = { 0x56, 0x57, 0x48, 0x83, 0xEC, 0x38, 0x0F, 0x29, 0x34, 0x24, 0x0F, 0x29, 0x7C, 0x24, 0x10, 0x44, 0x0F, 0x29, 0x44, 0x24, 0x20, 0xE9, 0, 0, 0, 0, 0xCC };
-volatile unsigned char g_ccFirstStore[] = { 0x48, 0x8D, 0x04, 0x49, 0x48, 0xC1, 0xE0, 0x04, 0x48, 0x8D, 0x0D, 0, 0, 0, 0, 0x41, 0x0F, 0x28, 0x1E, 0x0F, 0x29, 0x1C, 0x08, 0xCC };
-volatile unsigned char g_ccSecondStore[] = { 0x48, 0x8D, 0x04, 0x49, 0x48, 0xC1, 0xE0, 0x04, 0x48, 0x8D, 0x0D, 0, 0, 0, 0, 0x0F, 0x28, 0x44, 0x24, 0x30, 0x0F, 0x29, 0x04, 0x08, 0xCC };
-volatile unsigned char g_ccFirstWayOut[] = { 0x0F, 0x28, 0x74, 0x24, 0x20, 0x0F, 0x28, 0x7C, 0x24, 0x30, 0x44, 0x0F, 0x28, 0x44, 0x24, 0x40, 0x44, 0x0F, 0x28, 0x4C, 0x24, 0x50, 0x48, 0x83, 0xC4, 0x68, 0xCC };
-volatile unsigned char g_ccSecondWayOut[] = { 0x42, 0xC6, 0x44, 0x2E, 0x6B, 0x00, 0x66, 0x90, 0x48, 0xFF, 0xC3, 0x41, 0x8B, 0x47, 0x04, 0x48, 0x39, 0xC3, 0xCC };
+volatile unsigned char g_ccFirstStore[] = { 0x48, 0x8D, 0x04, 0x49, 0x48, 0xC1, 0xE0, 0x04, 0x48, 0x8D, 0x0D, 0, 0, 0, 0, 0x41, 0x0F, 0x28, 0x1E, 0x0F, 0x29, 0x1C, 0x08, 0xC3, 0xCC };
+volatile unsigned char g_ccSecondStore[] = { 0x48, 0x8D, 0x04, 0x49, 0x48, 0xC1, 0xE0, 0x04, 0x48, 0x8D, 0x0D, 0, 0, 0, 0, 0x0F, 0x28, 0x44, 0x24, 0x30, 0x0F, 0x29, 0x04, 0x08, 0xC3, 0xCC };
+volatile unsigned char g_ccFirstWayOut[] = { 0x0F, 0x28, 0x74, 0x24, 0x20, 0x0F, 0x28, 0x7C, 0x24, 0x30, 0x44, 0x0F, 0x28, 0x44, 0x24, 0x40, 0x44, 0x0F, 0x28, 0x4C, 0x24, 0x50, 0x48, 0x83, 0xC4, 0x68, 0x5B, 0x41, 0x5E, 0xC3, 0xCC };
+volatile unsigned char g_ccSecondWayOut[] = { 0x42, 0xC6, 0x44, 0x2E, 0x6B, 0x00, 0x66, 0x90, 0x48, 0xFF, 0xC3, 0x41, 0x8B, 0x47, 0x04, 0x48, 0x39, 0xC3, 0x48, 0x83, 0xC4, 0x48, 0x5B, 0x5E, 0x41, 0x5D, 0x41, 0x5F, 0xC3, 0xCC };
+volatile unsigned char g_ccFirstInlined[] = { 0x41, 0x56, 0x53, 0x48, 0x83, 0xEC, 0x60, 0x0F, 0x29, 0x74, 0x24, 0x18, 0x0F, 0x29, 0x7C, 0x24, 0x28, 0x44, 0x0F, 0x29, 0x44, 0x24, 0x38, 0x44, 0x0F, 0x29, 0x4C, 0x24, 0x48, 0x49, 0x89, 0xCE,
+	0xB8, 0xFF, 0xFF, 0xFF, 0xFF, 0xE8, 0, 0, 0, 0, 0x8D, 0x51, 0x01, 0x89, 0xC8, 0xF0, 0x0F, 0xB1, 0x15, 0, 0, 0, 0, 0x75, 0xE7,	// +32: -1, the check, the exchange, back when it lost
+	0x89, 0xCB, 0xE8, 0, 0, 0, 0, 0x89, 0xD8, 0x48, 0x83, 0xC4, 0x60, 0x5B, 0x41, 0x5E, 0xC3, 0xCC };
+volatile unsigned char g_ccSecondInlined[] = { 0x41, 0x57, 0x41, 0x55, 0x56, 0x53, 0x48, 0x83, 0xEC, 0x40, 0x0F, 0x28, 0x01, 0x0F, 0x29, 0x44, 0x24, 0x28, 0x48, 0x8D, 0x35, 0, 0, 0, 0, 0x49, 0x89, 0xF7, 0x45, 0x31, 0xED, 0x31, 0xDB,
+	0xE8, 0, 0, 0, 0, 0x8D, 0x51, 0x01, 0x89, 0xC8, 0xF0, 0x0F, 0xB1, 0x15, 0, 0, 0, 0, 0x75, 0xEC,	// +33: the check, the exchange, back when it lost
+	0x89, 0xCB, 0xE8, 0, 0, 0, 0, 0x89, 0xD8, 0x48, 0x83, 0xC4, 0x40, 0x5B, 0x5E, 0x41, 0x5D, 0x41, 0x5F, 0xC3, 0xCC };
 constexpr int kCcAddWayOut = 70, kCcI4 = 12, kCcI5 = 41, kCcI6 = 4, kCcI8 = 17, kCcI9 = 20, kCcLodWayOut = 52;
 volatile unsigned char g_ccCopy[] = { 0x57, 0x53, 0x48, 0x83, 0xEC, 0x28, 0x48, 0x89, 0xD7, 0x49, 0x89, 0xC9,
 	0x8B, 0x05, 0, 0, 0, 0, 0x89, 0x47, 0x10, 0x85, 0xC0, 0x7E, 0x5C, 0x8D, 0x04, 0x40, 0xC1, 0xE0, 0x04, 0x05, 0x80, 0x01, 0x00, 0x00, 0x89, 0xC3, 0x4C, 0x89, 0xC8,	// +12: G-E-I4; ebx the bytes, rax where they go
@@ -1665,7 +1673,7 @@ volatile unsigned char g_ccStackIndices[] = { 0x48, 0x8D, 0x04, 0xBD, 0x0F, 0x00
 constexpr int kCcExtraLeas = 16, kCcLeaBytes = 7;
 volatile unsigned char g_ccExtraLeas[kCcExtraLeas * kCcLeaBytes] = { 0xCC };	// CC, and with ccrefs leas of the store
 volatile unsigned char g_ccExtraCall[] = { 0xCC, 0, 0, 0, 0, 0xCC };			// no call until cccalls makes it one
-static Site g_ccSites[] = { SITE(g_ccExtraLeas, 0), SITE(g_ccExtraCall, 0), SITE(g_ccAddStart, 0), SITE(g_ccFirstStore, 0), SITE(g_ccSecondStore, 0), SITE(g_ccFirstWayOut, 0), SITE(g_ccSecondWayOut, 0), SITE(g_ccCopy, 0), SITE(g_ccParameters, 0), SITE(g_ccHandOut, 0),
+static Site g_ccSites[] = { SITE(g_ccFirstInlined, 0), SITE(g_ccSecondInlined, 0), SITE(g_ccExtraLeas, 0), SITE(g_ccExtraCall, 0), SITE(g_ccAddStart, 0), SITE(g_ccFirstStore, 0), SITE(g_ccSecondStore, 0), SITE(g_ccFirstWayOut, 0), SITE(g_ccSecondWayOut, 0), SITE(g_ccCopy, 0), SITE(g_ccParameters, 0), SITE(g_ccHandOut, 0),
 	SITE(g_ccBatch, 0), SITE(g_ccLodLimit, 0), SITE(g_ccScratch, 0), SITE(g_ccCommand, 0), SITE(g_ccDraw, 0), SITE(g_ccStackRecords, 0), SITE(g_ccStackIndices, 0) };
 #pragma data_seg()
 
@@ -9374,6 +9382,7 @@ struct CcData
 	const void* parameterCount;
 	uint64_t renderPointer;
 	uint32_t renderCount, extras, mark;
+	unsigned char standIn[0x70];	// what the second inlined add's way out reads and writes: its +4 what it then returns
 };
 static CcData g_ccDataStorage;
 static CcData* volatile g_ccData = &g_ccDataStorage;
@@ -9432,6 +9441,15 @@ static void CcSetUp(int argc, wchar_t** argv)
 	SetRel32(SITE(g_ccCopy, kCcI5 + 19), reinterpret_cast<const void*>(&CcCopyBytes));
 	SetRel32(SITE(g_ccParameters, 34), &cc.parameterStore);
 	SetRel32(SITE(g_ccParameters, 46), &cc.parameterCount);
+	SetRel32(SITE(g_ccFirstInlined, 38), site(g_ccFirstCheck, 0));
+	SetRel32(SITE(g_ccFirstInlined, 51), &data.coronas);
+	SetRel32(SITE(g_ccFirstInlined, 60), site(g_ccFirstStore, 0));
+	SetRel32(SITE(g_ccSecondInlined, 21), cc.standIn);
+	SetRel32(SITE(g_ccSecondInlined, 34), site(g_ccSecondCheck, 0));
+	SetRel32(SITE(g_ccSecondInlined, 47), &data.coronas);
+	SetRel32(SITE(g_ccSecondInlined, 56), site(g_ccSecondStore, 0));
+	g_ccFirstCheck[19] = g_ccSecondCheck[19] = 0xC3;	// past G-E-G1's jump: back to the way in
+	memset(cc.standIn + 4, 0xFF, 4);
 
 	// a rel32 on the page rtjumpunread takes away: its match copied to end the first page of g_rtEdge, every rel32 of the copy set, the site's first byte a NOP
 	const struct { const wchar_t* name; volatile unsigned char* site; size_t match; } edges[] = {
@@ -9577,6 +9595,7 @@ struct CcStubs
 	const uint64_t* lodRefused;
 	const uint32_t* lodBrought;
 };
+static const unsigned char kCcBatchHead[] = { 0x89, 0xF0, 0x29, 0xD0, 0x01, 0xC8, 0xF0, 0x48, 0x01, 0x05 };	// where the batch's stub begins, the fifth of a block's slots of 32 bytes
 static CcStubs CcFindStubs()
 {
 	CcStubs stubs{};
@@ -9606,10 +9625,9 @@ static CcStubs CcFindStubs()
 		return stubs;
 	const unsigned char* const batch = Rel32Target(SITE(g_ccBatch, kCcI8 + 57));
 	MEMORY_BASIC_INFORMATION info{};
-	static const unsigned char kHead[] = { 0x89, 0xF0, 0x29, 0xD0, 0x01, 0xC8, 0xF0, 0x48, 0x01, 0x05 };
 	static const unsigned char kMoved[] = { 0x89, 0x35 };
 	static const unsigned char kTail[] = { 0x29, 0xCA, 0x48, 0x8D, 0x04, 0x49, 0xFF, 0x25, 0, 0, 0, 0 };
-	if (VirtualQuery(batch, &info, sizeof(info)) != sizeof(info) || info.Protect != PAGE_EXECUTE_READ || memcmp(batch, kHead, sizeof(kHead)) != 0 || memcmp(batch + 14, kMoved, sizeof(kMoved)) != 0 ||
+	if (VirtualQuery(batch, &info, sizeof(info)) != sizeof(info) || info.Protect != PAGE_EXECUTE_READ || memcmp(batch, kCcBatchHead, sizeof(kCcBatchHead)) != 0 || memcmp(batch + 14, kMoved, sizeof(kMoved)) != 0 ||
 		memcmp(batch + 20, kTail, sizeof(kTail)) != 0)
 		return stubs;
 	int32_t refused = 0, brought = 0;
@@ -9733,11 +9751,26 @@ static void CcActions(int argc, wchar_t** argv)
 		memcpy(&tag, store + size_t{ i } * 0x30, sizeof(tag));
 		slots[tag >> 24 < 3 ? tag >> 24 : 0]++;
 	}
+	CcSay(L"adds %d added, %d refused, %ls, count %u; ", adders[0].added + adders[1].added, 2 * calls - adders[0].added - adders[1].added,
+		slots[1] == adders[0].added && slots[2] == adders[1].added && slots[0] == 0 ? L"one slot each" : L"SLOTS LOST", *count);
+
+	// the two inlined adds: the last two slots, then each once past the room, through its jump when full
+	const auto firstAdd = reinterpret_cast<int (*)(const CcRecord*)>(const_cast<unsigned char*>(g_ccFirstInlined));
+	const auto secondAdd = reinterpret_cast<int (*)(const CcRecord*)>(const_cast<unsigned char*>(g_ccSecondInlined));
+	CcRecord firstRecord{}, secondRecord{};
+	firstRecord.tag = 0xA1;
+	secondRecord.tag = 0xA2;
+	*count = room - 2;
+	const int firstSlot = firstAdd(&firstRecord), secondSlot = secondAdd(&secondRecord);
+	const int firstPast = firstAdd(&firstRecord), secondPast = secondAdd(&secondRecord);
+	uint32_t firstTag = 0, secondTag = 0;
+	memcpy(&firstTag, store + size_t{ room - 2 } * 0x30, sizeof(firstTag));
+	memcpy(&secondTag, store + size_t{ room - 1 } * 0x30, sizeof(secondTag));
 	bool gameStoreEmpty = true;
 	for (size_t i = 0; i < sizeof(data.gameCoronas); i++)
 		gameStoreEmpty = gameStoreEmpty && data.gameCoronas[i] == 0;
-	CcSay(L"adds %d added, %d refused, %ls, the old store %ls, count %u; ", adders[0].added + adders[1].added, 2 * calls - adders[0].added - adders[1].added,
-		slots[1] == adders[0].added && slots[2] == adders[1].added && slots[0] == 0 ? L"one slot each" : L"SLOTS LOST", gameStoreEmpty ? L"all 0" : L"in use", *count);
+	CcSay(L"inlined adds %ls, then %ls, count %u, the old store %ls; ", firstSlot == static_cast<int>(room - 2) && secondSlot == static_cast<int>(room - 1) && firstTag == 0xA1 && secondTag == 0xA2 ? L"in the last two slots" : L"NOT IN PLACE",
+		firstPast == -1 && secondPast == -1 ? L"both refused" : L"NOT REFUSED", *count, gameStoreEmpty ? L"all 0" : L"in use");
 
 	// a batch that reaches the room, its copy as the game makes it
 	static unsigned char batchRecords[300 * 0x30];
@@ -9773,8 +9806,9 @@ static void CcActions(int argc, wchar_t** argv)
 		VirtualFree(target, 0, MEM_RELEASE);
 }
 
-// The regions of private read/write memory, all 0, of the size of a store of 4096 coronas, anywhere: what a raise leaves, and what a dry run or a store out of reach must not.
-static int CcRegionsLeft()
+// The regions of private read/write memory, all 0, of the size of a store of 4096 coronas, anywhere: what a raise leaves, and what a refusal after the store said yes, a dry run or a store
+// out of reach must not; and the blocks with the store's stubs in them, by the batch's.
+static int CcRegionsLeft(int& stubBlocks)
 {
 	const size_t bytes = (size_t{ 4096 } * 0x30 + 0x180 + 0xFFF) & ~size_t{ 0xFFF };
 	SYSTEM_INFO memory{};
@@ -9784,9 +9818,13 @@ static int CcRegionsLeft()
 	for (const unsigned char* at = static_cast<const unsigned char*>(memory.lpMinimumApplicationAddress); at < memory.lpMaximumApplicationAddress && VirtualQuery(at, &info, sizeof(info)) == sizeof(info);
 		at = static_cast<const unsigned char*>(info.BaseAddress) + info.RegionSize)
 	{
-		if (info.State != MEM_COMMIT || info.Type != MEM_PRIVATE || info.Protect != PAGE_READWRITE || info.RegionSize != bytes)
+		if (info.State != MEM_COMMIT || info.Type != MEM_PRIVATE)
 			continue;
 		const unsigned char* const region = static_cast<const unsigned char*>(info.BaseAddress);
+		if (info.Protect == PAGE_EXECUTE_READ && info.RegionSize >= 0x1000 && memcmp(region + 4 * 32, kCcBatchHead, sizeof(kCcBatchHead)) == 0)
+			stubBlocks++;
+		if (info.Protect != PAGE_READWRITE || info.RegionSize != bytes)
+			continue;
 		bool empty = true;
 		for (size_t i = 0; i < bytes && empty; i++)
 			empty = region[i] == 0;
@@ -9842,7 +9880,11 @@ static void CcReport(HMODULE module, int argc, wchar_t** argv)
 	}
 	wprintf(L" | cc run: %ls | ", g_ccRun);
 	if (HasOption(argc, argv, L"ccleft"))
-		wprintf(L"cc left: %d | ", CcRegionsLeft());
+	{
+		int stubBlocks = 0;
+		const int regions = CcRegionsLeft(stubBlocks);
+		wprintf(L"cc left: %d, stubs %d | ", regions, stubBlocks);
+	}
 	const auto now = reinterpret_cast<void (*)(uint64_t*)>(GetProcAddress(module, "TweaksVTestCoronaStoreNow"));
 	if (now)
 	{
