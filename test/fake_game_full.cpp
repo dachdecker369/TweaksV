@@ -1446,6 +1446,10 @@ static const Site kLcRayJumpRel = SITE(g_lcRayAdd, 33), kLcCoronaCallRel = SITE(
 static const Site kLcLeads[] = { SITE(g_lcReset, 3), SITE(g_lcReset, 24), SITE(g_lcDrainCoronas, 3), SITE(g_lcDrainLights, 3), SITE(g_lcStartValuesLoad, 8) };
 constexpr size_t kLcLeadCount = sizeof(kLcLeads) / sizeof(kLcLeads[0]);
 struct LcRaisedBytes { Site site; size_t size; unsigned char bytes[4]; };
+// What the corona store's half writes in these sites: the limits and the count's offsets and, with DIAGNOSTIC_MODE, the jumps' rel32, all left to its own report, `cc sites:`, once that store has
+// moved, which G-E-I1's nop turned into a lea says.
+static const Site kLcCoronaFields[] = { SITE(g_lcCoronaCheck, 9), SITE(g_lcCoronaCheck, 15), SITE(g_lcCoronaCheckToo, 9), SITE(g_lcCoronaCheckToo, 15), SITE(g_lcCoronaAdd, 3), SITE(g_lcCoronaAdd, 10),
+	SITE(g_lcCoronaAdd, 16), SITE(g_lcCoronaAdd, 31) };
 static const LcRaisedBytes kLcRaisedBytes[] = {
 	{ SITE(g_lcKick, 4), 4, { 0x40, 0x73, 0x01, 0x00 } }, { SITE(g_lcLastKick, 5), 4, { 0x40, 0x73, 0x01, 0x00 } },
 	{ SITE(g_lcScratch, 17), 4, { 0x40, 0x38, 0x00, 0x00 } },	// 0x3840, the coronas
@@ -6827,18 +6831,18 @@ static void LcActions(int argc, wchar_t** argv)
 		}
 		SirenIdsCount(0);
 		g_sirenIdsPointer[0] = g_sirenIdsCarcols;
-		const bool none = RtWaitFor("siren settings 0, real lights in 0, up to 0 lights.", 5000);
+		const bool none = RtWaitFor("siren settings 0, real lights in 0, up to 0 of the game's 20 lights.", 5000);
 		SirenIdsCount(33);
-		const bool some = RtWaitFor("siren settings 33, real lights in 11, up to 12 lights.", 5000);
+		const bool some = RtWaitFor("siren settings 33, real lights in 11, up to 12 of the game's 20 lights.", 5000);
 		SirenIdsCount(255);
-		const bool many = RtWaitFor("siren settings 255, real lights in 85, up to 20 lights.", 5000);
+		const bool many = RtWaitFor("siren settings 255, real lights in 85, up to 20 of the game's 20 lights.", 5000);
 		DWORD old = 0;
 		VirtualProtect(g_sirenIdsSettings, g_sirenIdsCapacity * kSirenIdsSettingSize, PAGE_NOACCESS, &old);
 		SirenIdsCount(40);
 		Sleep(1500);
 		const int whileUnread = RtLogHas("siren settings 40,");
 		VirtualProtect(g_sirenIdsSettings, g_sirenIdsCapacity * kSirenIdsSettingSize, PAGE_READWRITE, &old);
-		const bool back = RtWaitFor("siren settings 40, real lights in 14, up to 12 lights.", 5000);
+		const bool back = RtWaitFor("siren settings 40, real lights in 14, up to 12 of the game's 20 lights.", 5000);
 		swprintf(g_lcSteps, stepsSize, L", settings %ls %ls %ls, %d lines while they took no reads, %ls", none ? L"0" : L"no-0", some ? L"33" : L"no-33", many ? L"255" : L"no-255",
 			whileUnread, back ? L"40 after" : L"no-40");
 	}
@@ -6851,11 +6855,12 @@ static bool LcIn(const volatile unsigned char* byte, const Site& site, size_t si
 }
 
 // "lc sites: as placed, jump as placed | lc stores: as placed | lc frame: not run | lc index: not run | lc jobs: not run | lc rvas: ... | " - the sites' bytes but the jump's rel32 as placed, or
-// "raised": every one the part writes as it must and every other as placed; where the jump leads and, if to a stub, how it is and what its counter holds; the stores and the lists' start values the
+// "raised": every one the part writes as it must and every other as placed, but for what the corona store's half writes once it has moved; where the jump leads and, if to a stub, how it is and what its counter holds; the stores and the lists' start values the
 // sites name, how they are and what a job loads; the frame's and the index's runs; the lists' calls; and where the sites and the data lie, for the suite to compare with the log's lines.
 static void LcReport()
 {
 	bool placed = true, raised = LcLed();
+	const bool coronaStoreMoved = g_ccGeneralAdd[0] == 0x48;
 	for (size_t i = 0; i < kLcSites; i++)
 		for (size_t at = 0; at < g_lcSites[i].size && at < sizeof(g_lcPlaced[i]); at++)
 		{
@@ -6866,6 +6871,8 @@ static void LcReport()
 			bool led = false;
 			for (const Site& lead : kLcLeads)
 				led = led || LcIn(byte, lead, 4);
+			for (const Site& field : kLcCoronaFields)
+				led = led || (coronaStoreMoved && LcIn(byte, field, 4));
 			if (led)
 				continue;
 			unsigned char expected = g_lcPlaced[i][at];

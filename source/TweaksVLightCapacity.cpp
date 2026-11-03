@@ -687,7 +687,7 @@ namespace TweaksV
 		};
 
 		// What the siren settings ask for, read at a summary (PATTERNS.md): how many there are, how many give a real light per lit siren,
-		// and the most lights one of those has.
+		// and the most lights one of those has among the game's own 20; those past 20 lie in the sirens per vehicle's settings of their own.
 		struct Sirens
 		{
 			bool read = false;
@@ -831,7 +831,7 @@ namespace TweaksV
 				Note("the most this minute: " + Said(g_minute) + SaidRefused(g_minute) + ".");
 			g_summaryWritten = true;
 			Note("the most so far: " + Said(g_session) + SaidRefused(g_session) + "; " + (g_sirens.read ? "siren settings " + std::to_string(g_sirens.settings) + ", real lights in " +
-				std::to_string(g_sirens.real) + ", up to " + std::to_string(g_sirens.lights) + " lights." : std::string("siren settings not read yet.")));
+				std::to_string(g_sirens.real) + ", up to " + std::to_string(g_sirens.lights) + " of the game's " + std::to_string(kSirenLights) + " lights." : std::string("siren settings not read yet.")));
 		}
 
 		// The first summary 10 seconds in, then one every minute that has something new to say.
