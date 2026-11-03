@@ -9254,7 +9254,7 @@ static void SirenJoinActions(int argc, wchar_t** argv)
 	v.holder = full.holding;
 	SirenRaiseMerge(kSirenCountJoined, SirenParse(32, 14, 14, -1));
 	g_sirenRaisePastSeed[kSirenCountJoined] = 14;
-	SirenRaiseGiveState(v, 9000);
+	SirenRaiseGiveState(v.car, 9000);
 	const auto draw = [&v](int at)
 	{
 		SirenCountDraw(g_sirenRaiseLights, &v.car, &v.model, &v.skeleton);
