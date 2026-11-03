@@ -11,7 +11,7 @@
 # Windows refuses, each check and each pattern again - each a problem with nothing written; the sirens' question through it all. Fake LOCALAPPDATA: the
 # real one is never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
-CHECKS=291
+CHECKS=293
 cd "$B" || exit 1
 cp "$R/x64/Release/TweaksV.asi" TweaksV.asi
 cp "$R/object/Test/Release/TweaksV.asi" TweaksV_test.asi
@@ -246,7 +246,12 @@ check "the problem, word for word; the sites and the stores as placed, a job's l
 part_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe lcrunning lcjobs wait); echo "      $out"
 check "with DIAGNOSTIC_MODE=1: the problem, the measurement's own line, the numbers over the game's own stores" "lc_line '$NOT_RAISED the game.s frames run already - its threads may run the sites while they are rewritten.' && lc_line 'DIAGNOSTIC: the counting stubs are not made: the game.s frames run already - its threads may run their sites while they are rewritten.' && lc_line '$MEASURED' && log_has 'vehicle lights 143 of 400, vehicle coronas 512 of 928'"
 
+part_ini; out=$(game full_game.exe lcrunninglights)
+check "the lights' write pointer alone set: the frames have begun all the same: the problem, word for word; nothing written" "lc_line '$NOT_RAISED the game.s frames run already - its threads may run the sites while they are rewritten.' && has '$PLACED' && has '$STORES_PLACED'"
+
 echo "== G20 what Windows refuses: the game code's pages (its dynamic code policy); the part's memory (the test build's TWEAKSV_TEST_LIGHT_STUB)"
+SIRENS_ON=1 fresh_ini; setkey CORONA_STORE 1088 LIGHTCAPACITY; out=$(game full_game.exe nodyncode)
+check "the write failing with the sirens at 32: the part's problem and the sirens' refusal, so that no 32 sirens run over the game's own stores; nothing written" "lc_line '$NOT_RAISED the game code could not be changed (details in TweaksV.log).' && log_line '$SIREN_REFUSAL' && has '$PLACED' && has '$STORES_PLACED'"
 part_ini; out=$(game full_game.exe lcjobs nodyncode); echo "      $out"
 check "the jump's page refused: WriteCode's line and the problem, word for word; the sites and the stores as placed, a job's lists the game's own" "lc_line \"The game code at RVA 0x[0-9A-F]* could not be made writable (.*\" && lc_line '$NOT_RAISED the game code could not be changed (details in TweaksV.log).' && has '$PLACED' && has '$STORES_PLACED' && has '$JOBS' && lc_lacks 'moved and its limit'"
 part_ini; out=$(TWEAKSV_TEST_LIGHT_STUB='no stores' ASI=TweaksV_test.asi game full_game.exe); echo "      $out"

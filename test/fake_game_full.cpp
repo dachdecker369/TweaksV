@@ -530,6 +530,8 @@
 //   lcsteps        those, and once the first summary is in the log other numbers, some lower, the larger of each two in the second
 //                  buffer and the sort list marked with the store at its room, held 3 s
 //   lcrunning      the write pointers set before TweaksV loads, as the game's frames leave them once they run
+//   lcrunninglights
+//                  the lights' write pointer alone set so
 //   lcfull         every counter at its room, the write pointers at their stores' ends, the moved stores' if the sites name them
 //   lcpast         every counter one past its room, the write pointers one record past their stores' ends: held until the log has
 //                  the lights' pointer's line and every number's line, or 10 s
@@ -6357,6 +6359,8 @@ static void LcSetUp(int argc, wchar_t** argv)
 		LcSetCounts(kLcFirst);
 	if (HasOption(argc, argv, L"lcrunning"))
 		LcSetPointers(kLcFirst);
+	if (HasOption(argc, argv, L"lcrunninglights"))
+		data.lightPointer = reinterpret_cast<uintptr_t>(Rel32Target(kLcLeads[1])) + uint64_t{ kLcFirst.lights } * 0x1C0;
 	if (HasOption(argc, argv, L"lcg1once"))
 		g_lcCoronaCheckToo[0] = 0xCC;
 	if (HasOption(argc, argv, L"lcg1thrice"))

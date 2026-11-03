@@ -1158,6 +1158,8 @@ namespace TweaksV
 				WriteLog(kTag, "DRY_RUN: would lead a job's lists' start values at " + DescribeAddress(m.at[kC4] + kStartValuesAt) + At(P(kC4)) + " to TweaksV's own: 0, 0, " +
 					std::to_string(kRaisedJobCoronas) + ", " + std::to_string(kRaisedJobLights) + ".");
 				g_raised = WriteCode(writes, kTag);
+				if (!g_raised)
+					NotRaised("the game code could not be changed (details in TweaksV.log).");
 				return;
 			}
 
