@@ -20,7 +20,7 @@
 //                      problem after the start-up summary
 //   rovbadarchive      parses an OPEN archive whose entry count is implausible, twice; waits 1.5 s the same way
 //   rovbadtable        parses an OPEN archive whose entry table points at memory that cannot be read, twice; the same wait
-//   rovprofile         asks OpenBulk 1 for a file under %USERPROFILE%, in UTF-8 as the game asks
+//   rovprofile         asks OpenBulk 1 for a file under %USERPROFILE%, in UTF-8 as the game asks, with backslashes and with forward slashes
 //   rovask PATH        asks the eight file functions for PATH in UTF-8, as the game does, and reports how many served it from
 //                      mods/ and how many passed it on untouched; repeatable, reported as "ask 1", "ask 2", ... in the order given
 //   rov1252 PATH       the same, with PATH in code page 1252: a request whose bytes are not UTF-8 (numbered with rovask's)
@@ -30,6 +30,7 @@
 //   rovcwd DIR         runs in DIR, not in its own folder (a shortcut that sets another working folder): it changes
 //                      its current directory before it loads TweaksV.asi
 #include <windows.h>
+#include <algorithm>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
@@ -389,7 +390,9 @@ void RovReport()
 			const std::string path = InCodePage(wide.c_str(), CP_UTF8);
 			if (length > 0 && length < MAX_PATH && path != "?")
 			{
-				const bool untouched = call(path.c_str()) == path;
+				std::string forward = path;	// and with forward slashes, as the game's own paths come
+				std::replace(forward.begin(), forward.end(), '\\', '/');
+				const bool untouched = call(path.c_str()) == path && call(forward.c_str()) == forward;
 				wprintf(L", profile path %ls", untouched ? L"asked" : L"REDIRECTED");
 			}
 			else

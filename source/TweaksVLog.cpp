@@ -5,6 +5,7 @@
 
 #include <windows.h>
 
+#include <algorithm>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
@@ -63,7 +64,8 @@ namespace TweaksV
 		// The user's profile folder (USERPROFILE, e.g. C:\Users\Name) as it appears in log lines, so
 		// that it can be written as %USERPROFILE%: logs get posted in public, and the folder is
 		// usually named after the Windows user. Its short form as well (C:\Users\NAME~1), which %TEMP%
-		// often has. Empty forms are left out; worked out once.
+		// often has. Each with forward slashes too (C:/Users/Name), as the game's own paths come. Empty forms are left
+		// out; worked out once.
 		const std::vector<std::string>& ProfileFolders()
 		{
 			static const std::vector<std::string> folders = []
@@ -84,6 +86,13 @@ namespace TweaksV
 					const std::string shortForm = AsLogFolder(std::wstring_view(shortBuffer, shortLength));
 					if (!shortForm.empty() && _stricmp(shortForm.c_str(), full.c_str()) != 0)
 						forms.push_back(shortForm);
+				}
+				for (size_t i = 0, backslashed = forms.size(); i < backslashed; i++)
+				{
+					std::string forward = forms[i];
+					std::replace(forward.begin(), forward.end(), '\\', '/');
+					if (forward != forms[i])
+						forms.push_back(std::move(forward));
 				}
 				return forms;
 			}();

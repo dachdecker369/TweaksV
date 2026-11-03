@@ -5,7 +5,7 @@
 # TweaksV.asi and then asks for the time once, as the game does. Fake LOCALAPPDATA: the real one
 # is never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
-CHECKS=90
+CHECKS=91
 cd "$B" || exit 1
 cp "$R/x64/Release/TweaksV.asi" .
 cp "$R/object/Test/Release/TweaksV.asi" TweaksV_test.asi
@@ -253,7 +253,8 @@ fi
 
 echo "== R21 DIAGNOSTIC_MODE=1 and a request under a profile folder whose name is not ASCII: written as %USERPROFILE%"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(USERPROFILE='C:\Users\Jürgen' game full_game.exe rovprofile)
-check "the request, in UTF-8 as the game asks, logged under %USERPROFILE% and not redirected; the name nowhere in the log" "has 'profile path asked' && log_has 'OpenBulk 1 asked for %USERPROFILE%.Documents.tweaksv.txt' && log_lacks 'rgen'"
+check "the request, in UTF-8 as the game asks, logged under %USERPROFILE% and not redirected; the name nowhere in the log" "has 'profile path asked' && log_has 'OpenBulk 1 asked for %USERPROFILE%[^/]Documents[^/]tweaksv.txt' && log_lacks 'rgen'"
+check "the same request with forward slashes, as the game's own paths come: under %USERPROFILE% too" "log_has 'OpenBulk 1 asked for %USERPROFILE%/Documents/tweaksv.txt'"
 
 echo
 echo "RAGEOPENV SCENARIOS: $pass passed, $fail failed"
