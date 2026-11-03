@@ -35,6 +35,7 @@ SUITES=(
 	raytracing
 	lightcapacity
 	# [corona store]
+	coronastore
 	sirenids
 	sirencount
 	# [siren damage]
