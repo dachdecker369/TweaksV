@@ -322,6 +322,23 @@ namespace TweaksV
 		{ "G-E-K1", "F0 48 0F C1 08 48 8B 54 24 40 E8" },
 		{ "G-E-K2", "4C 69 C6 C0 01 00 00 4C 89 C1 F0 48 0F C1 08 E8" },
 		// [corona store]
+		// The corona store (TweaksVCoronaStore.cpp), looked for with CORONA_STORE above the game's only: its general add (I1), the store as the two inlined
+		// adds (I2, I3), the copy to the draw list (I4, I5) and the LOD lights' job (I6) name it, what hands it out (I7), the job's batch (I8) and its own limit
+		// (I9); and for the checks alone, the job's scratch (J1), the draw list's command (J2), the draw (J3) and its two stack allocations (J4, J5)
+		{ "G-E-I1", "66 66 66 66 66 2E 0F 1F 84 00 00 00 00 00 44 8B 81 00 CC 00 00 49 81 F8 3F 04 00 00 0F 87 ? ? ? ? 41 8D 70 01 44 89 C0 F0 0F B1 B1 00 CC 00 00 75 DB" },
+		{ "G-E-I2", "48 8D 04 49 48 C1 E0 04 48 8D 0D ? ? ? ? 41 0F 28 1E 0F 29 1C 08" },
+		{ "G-E-I3", "48 8D 04 49 48 C1 E0 04 48 8D 0D ? ? ? ? 0F 28 44 24 30 0F 29 04 08" },
+		{ "G-E-I4", "8B 05 ? ? ? ? 89 47 10 85 C0 7E 5C 8D 04 40 C1 E0 04 05 80 01 00 00" },
+		{ "G-E-I5", "48 85 C0 74 1E 48 8D 15 ? ? ? ? 48 89 C1 49 89 D8 E8" },
+		{ "G-E-I6", "48 8D 0D ? ? ? ? 48 8D 54 24 50 4C 8D 44 24 40 E8 ? ? ? ? 48 8B 44 24 50 48 89 05" },
+		{ "G-E-I7", "48 89 0A 48 81 C1 00 CC 00 00 49 89 08 C3" },
+		{ "G-E-I8", "BD 40 04 00 00 48 8B 9C 24 ? ? ? ? 48 8B B4 24 ? ? ? ? 66 66 66 66 2E 0F 1F 84 00 00 00 00 00 8B 0B 8D 14 31 81 FA 40 04 00 00 0F 43 D5 89 C8 F0 0F B1 13 75 EA 29 CA 48 8D 04 49" },
+		{ "G-E-I9", "81 BC 24 90 00 00 00 3F 04 00 00 0F 87 ? ? ? ? 48 8B 84 24" },
+		{ "G-E-J1", "49 8D 92 00 CC 00 00 BD 00 1C 00 00 4C 29 DD 49 81 C3 FF E3 FF FF 49 81 FB FF 17 FF FF 48 0F 42 D0 41 BD 00 E8 00 00" },
+		{ "G-E-J2", "48 8B 41 08 48 89 05 ? ? ? ? 8B 51 10 89 15 ? ? ? ? 31 D2 48 85 C0 0F 94 C2 C1 E2 03 89 15" },
+		{ "G-E-J3", "F0 FF 05 ? ? ? ? 89 D6 49 89 CC 48 63 3D" },
+		{ "G-E-J4", "48 89 F8 48 C1 E0 05 E8 ? ? ? ? 48 29 C4 49 89 E6 48 83 EC 40" },
+		{ "G-E-J5", "48 8D 04 BD 0F 00 00 00 48 83 E0 F0 E8 ? ? ? ? 48 29 C4 49 89 E5" },
 		// The two model budgets (TweaksVPopulation.cpp), measured first: the crash context's line, which leads to the population object and both getters (C1); the vehicle pass's sites, the check before a request (V1, V2), the pool's test (V3), the tables' set-up's head (V4), the ambient cars (V5), and a writing half's call and stores (V6, V7); the ped pass's, the sum, the gate, the lists, a model's peds (P1 to P4), and a writing half's stores and the variety's store (P5 to P8)
 		{ "O-E-C1", "8B 35 ? ? ? ? C1 FE 14 8B 3D ? ? ? ? C1 FF 14 48 8D 1D ? ? ? ? 48 89 D9 E8 ? ? ? ? 89 C5 C1 FD 14 48 89 D9 E8 ? ? ? ? 89 C3 C1 FB 14 48 8D 0D" },
 		{ "O-E-V1", "8B 05 ? ? ? ? 0F B6 0D ? ? ? ? 4C 8D 35 ? ? ? ? 48 8D 1D ? ? ? ? EB" },

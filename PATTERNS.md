@@ -834,6 +834,50 @@ The measurement's stubs beside the jump of `G-E-C1`, each costing only its own n
 | G-E-K2 | `4C 69 C6 C0 01 00 00 4C 89 C1 F0 48 0F C1 08 E8` | a job's lights at its end: +3 0x1C0, the bytes of its n, `lock xadd` of the write pointer; +15 the call of the copy, its rel32 past the match - with `DIAGNOSTIC_MODE=1` through a stub that keeps a job's most | found, its RVA to check | 0xE15AD3 |
 
 <!-- [corona store] -->
+| G-E-I1 | `66 66 66 66 66 2E 0F 1F 84 00 00 00 00 00 44 8B 81 00 CC 00 00 49 81 F8 3F 04 00 00 0F 87 ? ? ? ? 41 8D 70 01 44 89 C0 F0 0F B1 B1 00 CC 00 00 75 DB` | the general add (in RVA 0xB3A850): +0 a 14-byte nop before its loop, reached only by falling through; +17 and +45 the count's disp, 0xCC00; +24 0x43F; +30 the `ja`'s rel32 to RVA 0xB3A9AF; `G-E-G2` whole at +14 | found | 0xB3A8C2 |
+| G-E-I2 | `48 8D 04 49 48 C1 E0 04 48 8D 0D ? ? ? ? 41 0F 28 1E 0F 29 1C 08` | the first inlined add (in RVA 0xB3A4D0): +11 the store (RVA 0x41B4210) | found | 0xB3A7E2 |
+| G-E-I3 | `48 8D 04 49 48 C1 E0 04 48 8D 0D ? ? ? ? 0F 28 44 24 30 0F 29 04 08` | the second (in RVA 0xB6E6F0): +11 the store | found | 0xB6EDD2 |
+| G-E-I4 | `8B 05 ? ? ? ? 89 47 10 85 C0 7E 5C 8D 04 40 C1 E0 04 05 80 01 00 00` | the copy to the draw list (in RVA 0xB1C510): +2 the count (RVA 0x41C0E10), +20 0x180 | found | 0xB1C587 |
+| G-E-I5 | `48 85 C0 74 1E 48 8D 15 ? ? ? ? 48 89 C1 49 89 D8 E8` | the copy: +8 the store, memcpy's source | found | 0xB1C5D7 |
+| G-E-I6 | `48 8D 0D ? ? ? ? 48 8D 54 24 50 4C 8D 44 24 40 E8 ? ? ? ? 48 8B 44 24 50 48 89 05` | the LOD lights' job's parameters (in RVA 0x314200): +3 the store, +18 the call of `G-E-I7` | found | 0x3145AA |
+| G-E-I7 | `48 89 0A 48 81 C1 00 CC 00 00 49 89 08 C3` | hands the store and its count out as pointers, called once: +6 0xCC00 | found | 0xB3CAA0 |
+| G-E-I8 | `BD 40 04 00 00 48 8B 9C 24 ? ? ? ? 48 8B B4 24 ? ? ? ? 66 66 66 66 2E 0F 1F 84 00 00 00 00 00 8B 0B 8D 14 31 81 FA 40 04 00 00 0F 43 D5 89 C8 F0 0F B1 13 75 EA 29 CA 48 8D 04 49` | the job's batch (in RVA 0x2C15C0): +1 and +41 0x440, its clamp; +56 `29 CA 48 8D 04 49`, with rsi what the job brought, edx the new count, ecx the old | found | 0x2C28AE |
+| G-E-I9 | `81 BC 24 90 00 00 00 3F 04 00 00 0F 87 ? ? ? ? 48 8B 84 24` | the job's own limit: +7 0x43F; +13 the `ja`'s rel32 to RVA 0x2C211C | found | 0x2C1EA4 |
+| G-E-J1 | `49 8D 92 00 CC 00 00 BD 00 1C 00 00 4C 29 DD 49 81 C3 FF E3 FF FF 49 81 FB FF 17 FF FF 48 0F 42 D0 41 BD 00 E8 00 00` | the job's scratch, a check: +3 0xCC00 for coronas, +8 0x1C00 for four lists, +35 0xE800 in all | found | 0x2C1384 |
+| G-E-J2 | `48 8B 41 08 48 89 05 ? ? ? ? 8B 51 10 89 15 ? ? ? ? 31 D2 48 85 C0 0F 94 C2 C1 E2 03 89 15` | command 0xDF's handler, a check: +7 the render pointer (RVA 0x42D5C20), +16 the render count (RVA 0x42D5C28), +33 past the match the extras' count (RVA 0x42D5C2C) | found | 0xB3B050 |
+| G-E-J3 | `F0 FF 05 ? ? ? ? 89 D6 49 89 CC 48 63 3D` | the draw (in RVA 0xB22640), a check: +3 its mark (RVA 0x42D5C38), +15 past the match the render count's read | found | 0xB22681 |
+| G-E-J4 | `48 89 F8 48 C1 E0 05 E8 ? ? ? ? 48 29 C4 49 89 E6 48 83 EC 40` | the draw: `alloca(count x 0x20)`, a check | found | 0xB22811 |
+| G-E-J5 | `48 8D 04 BD 0F 00 00 00 48 83 E0 F0 E8 ? ? ? ? 48 29 C4 49 89 E5` | the draw: `alloca(count x 4)`, a check | found | 0xB2285B |
+
+**The corona store** (`TweaksVCoronaStore`), from `coronastore`'s pass over the dumps of 2026-10-29, first run by my proof of 2.8.0.
+The fourteen patterns are looked for with `CORONA_STORE` above the game's own alone; `G-E-G1` stays the part's, whose two matches `FindCoronaStore` is handed.
+
+- **The object at RVA 0x41B4210:** 1088 records of 0x30 bytes; +0xCC00 the count (RVA 0x41C0E10); +0xCC08 and +0xCC10 two textures; +0xCC18 to +0xCCB8 the visual settings `coronas.*`.
+  A record: +0x00 the position; +0x0C flags in the low 16 bits and two angles above them; +0x10 the direction; +0x1C a float; +0x20 the size; +0x24 the color; +0x28 the intensity; +0x2C the zBias.
+- **Who adds, in the order of a frame:** an effect list in the update (RVA 0xB6E6F0, inlined); the map's light entities (RVA 0x400100); the LOD lights' job, up to 1088 by itself; small sources (RVA 0x1B72530, 0x1840500, 0x233B0, 0x1853C70, 0x1B70EB0, 0xEE3E10, and RVA 0xB3A4D0's list, inlined); some vehicle classes directly in the +0x2E0 loop; and last the drain, every job's corona, sirens' among them (RVA 0xF010B0 to the general add).
+  So the vehicles' coronas are the ones dropped: nothing after the drain reaches an add by a direct call.
+  The LOD job runs beside it on a worker, so it may land later and lose its coronas instead (HINT: rarely).
+- **The general add** (RVA 0xB3A850), eleven callers, lock-free, refused silently at RVA 0xB3A8DE; it does nothing if the size is 0, the intensity not above 0 or the byte at RVA 0x2FA2860 is set.
+  The two inlined adds do the same by rip, with a `lea` of the store of their own.
+- **The LOD lights' job** (kicked in RVA 0x314200, the job RVA 0x2C15C0, its scratch laid out by RVA 0x2C1360): each LOD corona goes into its scratch while its own limit passes, so that a job holds 1088 and the later buckets lose theirs, whatever their distance.
+  At its end one batch: `mov ebp, 0x440`, then `mov ecx, [rbx]`, `lea edx, [rcx+rsi]`, `cmp edx, 0x440`, `cmovnc edx, ebp`, `lock cmpxchg [rbx], edx`, `sub edx, ecx`, and a memcpy of edx x 0x30 to the store + ecx x 0x30, from the store and the count's address its parameters hold, which RVA 0xB3CAA0 handed out.
+- **From the store to the screen:** RVA 0xB1C510 allocates count x 0x30 + 0x180 bytes from the draw list and copies the records, command 0xDF hands the copy on, RVA 0xB6EEB0 adds up to 8 records past the count, which is the 0x180, and RVA 0xB22640 draws: `alloca(count x 0x20)`, `alloca(count x 4)`, quads in batches of 341 of immediate-mode memory, no constant buffer or shader counting coronas.
+  If the allocation fails, that frame has no coronas and nothing crashes.
+  Every record past the copy is read through the copy, so nothing behind the store knows its size.
+  What grows with the count: the stack, 0x24 bytes a corona a draw, of 0x80000 committed on the render threads; the copy; the time.
+  A corona's index is a word, 65535 at most.
+- **The complete set sized by 1088:** 0x43F at RVA 0xB3A789, 0xB6ED79, 0xB3A8DA and 0x2C1EAB; 0x440 at RVA 0x2C28AF and 0x2C28D7; 0xCC00 at RVA 0xB3A8D3, 0xB3A8EF, 0xB3CAA6, 0xB3B8BF and 0x2C1387; 0xE800, -0xE801, 0x1C00 and -0x1C01 at RVA 0x2C13A7, 0x2C139D, 0x2C14E6, 0x2C138C and 0x2C1396, and +0x70 in RVA 0x3146C8; 0xCCB4 at RVA 0xBD9CAA, the constructor's loop.
+  Unrelated, read one by one: 0x43F at RVA 0x763EA5 and the other 156 of 0x440.
+  The store's base is named at 19 sites and the count by 6 rip reads, and by `[reg+0xCC00]` at RVA 0xB3A8D0, 0xB3A8EB and 0xB3B8BD.
+- **The raise, 13 writes:** the nop at `G-E-I1` +0 becomes `lea rcx, [new store]` and a nop of 7, which turns the old store the callers hand it into the new one before the loop; the count's disp at +17 and +45, and `G-E-I7`'s +6, become the count less the new store; the limits at `G-E-I1` +24 and each `G-E-G1` +9 become N - 1 and `G-E-I8`'s +1 and +41 N; the rel32 at `G-E-I2` +11, `G-E-I3` +11, `G-E-I5` +8 and `G-E-I6` +3 lead to the new store.
+  The count and everything past +0xCC00 stay where they are, so the other fifteen references to the old base, the reset at RVA 0xB3B8BD and the constructor stay true; the job's own 1088 stays, since it keeps a city at night from taking more.
+- **The trap:** at a count past 1088 the old clamp gives edx = 0x440 below ecx, the `cmpxchg` lowers the count and `sub edx, ecx` wraps, so memcpy gets about 200 GB and faults (reasoned, not seen: an access violation in memcpy, RVA 0x2479F10, called from RVA 0x2C290B).
+  So the clamp's two writes go with the rest, and any pattern missing refuses the part.
+  A second one: the adds write with `movaps`, so the new store lies 16-aligned.
+- **The counters,** with `DIAGNOSTIC_MODE`: the four jumps, `G-E-I1` +30, each `G-E-G1` +15 and `G-E-I9` +13, and where each leads up to the first instruction that writes the flags, none before it reading one: RVA 0xB3A9AF `0F 28 34 24 0F 28 7C 24 10 44 0F 28 44 24 20 48 83 C4 38`, RVA 0xB3A826 `0F 28 74 24 20 0F 28 7C 24 30 44 0F 28 44 24 40 44 0F 28 4C 24 50 48 83 C4 68`, RVA 0xB6E798 `42 C6 44 2E 6B 00 66 90 48 FF C3 41 8B 47 04 48 39 C3`, RVA 0x2C211C `4C 8B 44 24 58 44 0F 28 DC 0F 28 A4 24 A0 00 00 00 41 0F 50 C1 84 C0`.
+  The batch's six bytes at `G-E-I8` +56: rax is free, since the moved `lea` writes it, and what follows them, `shl rax, 4`, reads no flag.
+- **No pattern protects:** the order of the frame, that the vehicles come last; that the LOD job has no dependency on the drain; that nothing after the general add's record reads rcx (to RVA 0xB3A9C4); that the render threads have 0x80000 of stack committed, by the PE's reserve and `CreateThread`'s flags.
+- **Not settled:** how many each source brings, which the batch's counter tells for the LOD lights; how often the LOD job lands after the drain; the stages of the sources reached through tables; the time and the GPU's cost at a full store; whether 4096 is enough in my heaviest scene, which a count of 0 refused says.
 
 ## Population
 
