@@ -391,6 +391,34 @@
 //                  [rip+disp32], xmm0" of budget 3 after "mov al, 0F3h", "mov [rip+disp32], eax" of budget 2 after "mov eax,
 //                  380F0000h", "movbe [rip+disp32], eax" of budget 3 after "mov al, 0F2h"; without its option each leads to the dummy
 //   tbmisreadload  "movups xmm0, [rip+disp32]" of budget 0, a load whose 10 reads as "adc [rip+disp32], al", so the search counts it
+//   tbwritemost    "vmovdqu [rip+disp32], xmm0" of 16 bytes from 8 bytes before the most objects, which end right before the budgets:
+//                  a writer of the most, no writer of the budgets; without it it leads to the dummy
+// The descriptor heap's sites are there too: the device's start with the two dwords of its size, its lea and the call of its maker,
+// and the maker. It holds 196608 descriptors, the first 30000 in use, as the game's start-up has it - with "tblate" all 0 until then.
+//   tbconfig140000, tbconfig147456, tbconfig200000
+//                  the start-up's gameconfig.xml gives the most objects 140000, 147456 or 200000, not 98304
+//   tbheapnone     the heap's two dwords both 0 when the start-up stores the most
+//   tbheapsmall, tbheapedge, tbheaptiny
+//                  they say 159744, whose 3/4 cut a key of 131072 to 119808; 131072, whose 3/4 are the game's own 98304; 98304, whose
+//                  3/4 are 73728, no raise at all
+//   tbsizeout, tbsizeodd
+//                  the first of the two dwords leads outside the game, or 1 byte past itself
+//   tbheapout, tbheapodd
+//                  the lea of the heap leads outside the game, or 4 bytes past it
+//   tbmakerhooked  the call of its maker leads outside the game (another mod's hook)
+//   tbmakermoved   the maker's stores 1 byte further in than the research found
+//   tbheadstores   the store of the head past them another offset's
+//   tbt6twice, tbt7twice
+//                  the game holds Q-E-T6 or Q-E-T7 twice: a copy of the site's bytes in the update check's NOPs at +0x60
+//   tbfree16383, tbfree16384
+//                  so many descriptors free, the head so near the list's end
+//   tblistcycle    the free list's last entry leads back to its head: a cycle
+//   tblistpast     an entry 11 steps from the head holds an index past the size
+//   tblistunreadable, tblistnull, tblistodd
+//                  the free list in memory that cannot be read, its pointer null, or 1 byte past it
+//   tbheaphuge     the heap's size past what the game's index fields hold
+//   tbhighdesc     once TweaksV's first texture budget summary is in TweaksV.log, 100 descriptors more in use and nothing else
+//                  changed; then it waits for the next summary, 10 seconds at most
 //   lpmake KIND PATH   the Legacy packs check: a crafted RPF7 archive of KIND written at PATH, its folders made, before TweaksV
 //                      starts; repeatable (LpMake has the kinds)
 //   lpmany KIND N DIR  the archive of KIND N times in DIR, p00001.rpf on: the first written, the others hard links to it - 1,023,
@@ -1167,7 +1195,8 @@ static Site g_textureBudgetGetterCall = SITE(g_textureBudgetUpdate, 35);
 static Site g_textureBudgetFlagRef = SITE(g_textureBudgetUpdate, 0x4D);
 static Site g_textureBudgetFactorRefs[] = { SITE(g_textureBudgetUpdate, 0x58), SITE(g_textureBudgetUpdate, 0xA5) };	// the lower, the raise
 // The budgets' neighbours and readers, which the scan for the budgets' writers must not count: "mov [rip+disp32], eax" 4 bytes
-// before them, "mov dword [rip+disp32], imm32" right after them, "vmovdqu [rip+disp32], xmm0" 16 bytes before them, "mov rax",
+// before them, "mov dword [rip+disp32], imm32" right after them, "vmovdqu [rip+disp32], xmm0" 16 bytes before them only with its
+// option (tbwritemost, at +22: those 16 bytes hold the most objects, so it is a writer of the most), "mov rax",
 // "movlps xmm0", "cmp [rip+disp32], rax", "cmp byte [rip+disp32], 0" of their last byte, "movdqu xmm0" and "vmovdqu ymm0" reading
 // them and "mov [rip+disp32], rax" right after them - the loads ones no reading of their bytes takes for a store, since the scan
 // reads the bytes before an operand every way an instruction could start among them (a "movups xmm0", 0F 10, or a "vmovups
@@ -1206,7 +1235,7 @@ volatile unsigned char g_textureBudgetWriters[] = {
 // the option that leads a writer to the budgets
 struct TextureBudgetOperand { Site site; int from; int immediate; const wchar_t* option; };
 static TextureBudgetOperand g_textureBudgetOperands[] = { { SITE(g_textureBudgetWriters, 4), -4, 0, nullptr },
-	{ SITE(g_textureBudgetWriters, 12), 32, 4, nullptr }, { SITE(g_textureBudgetWriters, 26), -16, 0, nullptr },
+	{ SITE(g_textureBudgetWriters, 12), 32, 4, nullptr }, { SITE(g_textureBudgetWriters, 26), -16, 0, L"tbwritemost" },
 	{ SITE(g_textureBudgetWriters, 35), 0, 0, nullptr }, { SITE(g_textureBudgetWriters, 44), 0, 0, nullptr },
 	{ SITE(g_textureBudgetWriters, 53), 0, 0, nullptr }, { SITE(g_textureBudgetWriters, 61), 31, 1, nullptr },
 	{ SITE(g_textureBudgetWriters, 72), 0, 0, nullptr }, { SITE(g_textureBudgetWriters, 82), 0, 0, nullptr },
@@ -1240,6 +1269,15 @@ static TextureBudgetOperand g_textureBudgetMisreadOperands[] = { { SITE(g_textur
 	{ SITE(g_textureBudgetMisread, 18), 8, 0, L"tbmisreadc5" }, { SITE(g_textureBudgetMisread, 30), -8, 0, L"tbmisreadc4" },
 	{ SITE(g_textureBudgetMisread, 42), 24, 0, L"tbmisreadf3" }, { SITE(g_textureBudgetMisread, 55), 16, 0, L"tbmisread38" },
 	{ SITE(g_textureBudgetMisread, 67), 24, 0, L"tbmisreadf2" }, { SITE(g_textureBudgetMisread, 76), 0, 0, L"tbmisreadload" } };
+// The descriptor heap: in the device's start the loads of its size (the rel32 at +3 and +10), the lea of the heap (+30) and the call
+// of its maker (+40); the maker, NOPs laid in main but for its stores of the size and of no free list, 0x36 bytes in, and the store
+// of the head 0x9E past them. What they lead to is below, outside this section, as the game's is.
+volatile unsigned char g_textureBudgetHeapSite[] = { 0x44, 0x8B, 0x05, 0, 0, 0, 0, 0x44, 0x03, 0x05, 0, 0, 0, 0, 0xC6, 0x44, 0x24, 0x28, 0x00,
+	0xC7, 0x44, 0x24, 0x20, 0x00, 0x00, 0x00, 0x00, 0x48, 0x8D, 0x0D, 0, 0, 0, 0, 0x31, 0xD2, 0x45, 0x31, 0xC9, 0xE8, 0, 0, 0, 0, 0xCC };
+volatile unsigned char g_textureBudgetMaker[0xE0] = { 0xCC };
+static Site g_textureBudgetSizeRefs[] = { SITE(g_textureBudgetHeapSite, 3), SITE(g_textureBudgetHeapSite, 10) };
+static Site g_textureBudgetHeapRef = SITE(g_textureBudgetHeapSite, 30);
+static Site g_textureBudgetMakerCall = SITE(g_textureBudgetHeapSite, 40);
 
 // The ray tracing buffer: its sites as code the fake runs. The set-up, a function of its own: "sub rsp, 0x38", then T-E-B1 at +4 -
 // the maker's flags, "mov ecx, 0x400000" (the count's imm32 at +13), "mov edx, 20", "mov r8b, 1", "xor r9d, r9d", the maker's
@@ -4411,7 +4449,12 @@ struct TextureBudgetCounters { uint64_t buffers, textures; uint32_t buffersNumbe
 static_assert(sizeof(TextureBudgetCounters) == 0x48 && offsetof(TextureBudgetCounters, highest) == 0x18 &&
 	offsetof(TextureBudgetCounters, most) == 0x20 && offsetof(TextureBudgetCounters, budgets) == 0x28, "the counters as the game lays them out");
 struct TextureBudgetSwitch { int32_t on; float raise, lower, windows; };
-struct TextureBudgetData { TextureBudgetCounters counters; int32_t index; uint8_t flag; TextureBudgetSwitch updateCheck; };
+// The descriptor heap as the game lays it out, with the free list its +0x18 points to: a dword per descriptor, the index of the next free
+// one, the first free one's at +0x20, the list's size at +0x2C and in the two dwords of its size, which the game adds up
+struct TextureBudgetHeap { void* object; void* cpuStart; void* gpuStart; uint32_t* list; uint32_t head, ringBase, increment, count; uint64_t lock; };
+static_assert(offsetof(TextureBudgetHeap, list) == 0x18 && offsetof(TextureBudgetHeap, head) == 0x20 && offsetof(TextureBudgetHeap, count) == 0x2C,
+	"the heap as the game lays it out");
+struct TextureBudgetData { TextureBudgetCounters counters; int32_t index; uint8_t flag; TextureBudgetSwitch updateCheck; uint32_t heapSizes[2]; TextureBudgetHeap heap; };
 struct TextureBudgetPage { TextureBudgetData data; unsigned char rest[4096 - sizeof(TextureBudgetData)]; };
 static_assert(sizeof(TextureBudgetPage) == 4096, "the data alone on their page");
 alignas(4096) static TextureBudgetPage g_textureBudgetPage;
@@ -4421,17 +4464,20 @@ static uint64_t g_textureBudgetDummy[8];	// where the writers of the budgets lea
 alignas(4096) static unsigned char g_textureBudgetIndexPage[4096];	// where the getter's index lies with "tbindexunreadable"
 alignas(4096) static unsigned char g_textureBudgetTwoPages[2 * 4096];	// where the data lie with "tbhalfraise"
 static bool g_textureBudgetHoldRaise = false;
+static uint32_t g_textureBudgetSizes[2] = { 0x10000, 0x20000 };		// the two dwords the game adds up, as the game's start-up has them
+static TextureBudgetHeap g_textureBudgetHeapMade = {};				// the heap as the game's device makes it, laid out in main
 static unsigned char g_textureBudgetSitesAsPlaced[sizeof(g_textureBudgetStores) + sizeof(g_textureBudgetGetter) +
-	sizeof(g_textureBudgetPlacement) + sizeof(g_textureBudgetUpdate) + sizeof(g_textureBudgetWriters)];
+	sizeof(g_textureBudgetPlacement) + sizeof(g_textureBudgetUpdate) + sizeof(g_textureBudgetWriters) + sizeof(g_textureBudgetHeapSite) + sizeof(g_textureBudgetMaker)];
 static unsigned char g_textureBudgetMisreadAsPlaced[sizeof(g_textureBudgetMisread)];	// the readings' block as placed
 // The game's function the call after the budgets' stores leads to: it counts its calls, checks the four arguments the start-up
-// hands it, keeps the budgets as they are when it runs - after TweaksV's raise when the call is redirected - and gives back a
-// result the start-up checks.
+// hands it, keeps the budgets and the most as they are when it runs - after TweaksV's raise when the call is redirected - and gives
+// back a result the start-up checks.
 constexpr uint64_t kTextureBudgetArguments[] = { 0x1111111111111111ull, 0x2222222222222222ull, 0x3333333333333333ull, 0x4444444444444444ull };
 constexpr uint64_t kTextureBudgetResult = 0x5A5A5A5A5A5A5A5Aull;
 static volatile int g_textureBudgetNextSteps = 0;
 static bool g_textureBudgetArgumentsAsHanded = true;
 static uint64_t g_textureBudgetBudgetsThen[4] = {};
+static uint32_t g_textureBudgetMostThen = 0;
 static __declspec(noinline) uint64_t TextureBudgetNextStep(uint64_t first, uint64_t second, uint64_t third, uint64_t fourth)
 {
 	g_textureBudgetNextSteps = g_textureBudgetNextSteps + 1;
@@ -4440,6 +4486,7 @@ static __declspec(noinline) uint64_t TextureBudgetNextStep(uint64_t first, uint6
 		g_textureBudgetArgumentsAsHanded = false;
 	for (int i = 0; i < 4; i++)
 		g_textureBudgetBudgetsThen[i] = g_textureBudgetData->counters.budgets[i];
+	g_textureBudgetMostThen = g_textureBudgetData->counters.most;
 	return kTextureBudgetResult;
 }
 
@@ -4461,14 +4508,16 @@ static const wchar_t* TextureBudgetCallLeads(const unsigned char* target)
 
 // The game's start-up, after TweaksV's DllMain - with "tbearly" before it: its stores of the most and the four budgets from
 // gameconfig.xml - the game's own file's 98304 objects and 1500, 1500, 3000 and 3000 MB, or with "tbconfigbig" a file that gives
-// budgets 2 and 3 9000 MB - then the call after them, with the four arguments the next step checks: through TweaksV's stub when
-// TweaksV redirected it, to the next step when not, and not made when it leads to another mod.
+// budgets 2 and 3 9000 MB, or with "tbconfig140000" and the like another most - then the call after them, with the four arguments
+// the next step checks: through TweaksV's stub when TweaksV redirected it, to the next step when not, and not made when it leads to
+// another mod.
 static bool g_textureBudgetBigConfig = false;
-static wchar_t g_textureBudgetStartUp[192] = L"start-up: not made";
+static uint32_t g_textureBudgetConfigMost = 98304;
+static wchar_t g_textureBudgetStartUp[224] = L"start-up: not made";
 static void TextureBudgetStartUp()
 {
 	TextureBudgetData& data = *g_textureBudgetData;
-	data.counters.most = 98304;
+	data.counters.most = g_textureBudgetConfigMost;
 	const uint64_t budgetsMb[] = { 1500, 1500, g_textureBudgetBigConfig ? 9000u : 3000u, g_textureBudgetBigConfig ? 9000u : 3000u };
 	for (int i = 0; i < 4; i++)
 		data.counters.budgets[i] = budgetsMb[i] << 20;
@@ -4491,17 +4540,20 @@ static void TextureBudgetStartUp()
 	const uint64_t result = next(kTextureBudgetArguments[0], kTextureBudgetArguments[1], kTextureBudgetArguments[2], kTextureBudgetArguments[3]);
 	const int calls = g_textureBudgetNextSteps;
 	swprintf(g_textureBudgetStartUp, size, L"start-up: through %ls, the next step called %d time%ls, its arguments %ls, its result %ls, the budgets then "
-		L"%llu, %llu, %llu and %llu MB", leads, calls, calls == 1 ? L"" : L"s", g_textureBudgetArgumentsAsHanded ? L"as handed" : L"CHANGED",
+		L"%llu, %llu, %llu and %llu MB, the most then %u", leads, calls, calls == 1 ? L"" : L"s", g_textureBudgetArgumentsAsHanded ? L"as handed" : L"CHANGED",
 		result == kTextureBudgetResult ? L"back" : L"CHANGED", static_cast<unsigned long long>(g_textureBudgetBudgetsThen[0] >> 20),
 		static_cast<unsigned long long>(g_textureBudgetBudgetsThen[1] >> 20), static_cast<unsigned long long>(g_textureBudgetBudgetsThen[2] >> 20),
-		static_cast<unsigned long long>(g_textureBudgetBudgetsThen[3] >> 20));
+		static_cast<unsigned long long>(g_textureBudgetBudgetsThen[3] >> 20), g_textureBudgetMostThen);
 }
 
 // The data as the game has them, at the game's own sizes, but for the most objects and the budgets, which its start-up stores:
 // textures 2456 MB and buffers 389 MB in 22222 and 1234 objects, the mark at 2900 MB, the texture quality's index 2, the update
-// check's flag down and its switch on with its factors 0.9, 0.8 and 0.95
+// check's flag down and its switch on with its factors 0.9, 0.8 and 0.95, and the descriptor heap as the device makes it
 static void TextureBudgetSetAsTheGame(TextureBudgetData& data)
 {
+	data.heapSizes[0] = g_textureBudgetSizes[0];
+	data.heapSizes[1] = g_textureBudgetSizes[1];
+	data.heap = g_textureBudgetHeapMade;
 	data.counters.buffers = (389ull << 20) + 12345;
 	data.counters.textures = (2456ull << 20) + 54321;
 	data.counters.buffersNumber = 1234;
@@ -4512,16 +4564,16 @@ static void TextureBudgetSetAsTheGame(TextureBudgetData& data)
 	data.updateCheck = { 1, 0.9f, 0.8f, 0.95f };
 }
 
-// The five sites' bytes in a row, to keep them as placed or to compare them with that
+// The seven sites' bytes in a row, to keep them as placed or to compare them with that
 static void TextureBudgetSites(unsigned char* to, bool compare, int& asPlaced)
 {
 	const volatile unsigned char* const sites[] = { g_textureBudgetStores, g_textureBudgetGetter, g_textureBudgetPlacement, g_textureBudgetUpdate,
-		g_textureBudgetWriters };
+		g_textureBudgetWriters, g_textureBudgetHeapSite, g_textureBudgetMaker };
 	const size_t sizes[] = { sizeof(g_textureBudgetStores), sizeof(g_textureBudgetGetter), sizeof(g_textureBudgetPlacement), sizeof(g_textureBudgetUpdate),
-		sizeof(g_textureBudgetWriters) };
+		sizeof(g_textureBudgetWriters), sizeof(g_textureBudgetHeapSite), sizeof(g_textureBudgetMaker) };
 	const volatile unsigned char* const call = g_textureBudgetCall.bytes + g_textureBudgetCall.offset;	// its rel32, which the raise redirects
 	asPlaced = 0;
-	for (int i = 0; i < 5; i++)
+	for (int i = 0; i < 7; i++)
 	{
 		bool same = true;
 		for (size_t j = 0; j < sizes[i]; j++, to++)
@@ -4547,17 +4599,18 @@ static int TextureBudgetSummaries()
 	CloseHandle(file);
 	text[read] = '\0';
 	int summaries = 0;
-	for (const char* at = text; (at = strstr(at, " objects allowed (MaxStreamingResources)")) != nullptr; at++)
+	for (const char* at = text; (at = strstr(at, " objects allowed (MaxStreamingResources")) != nullptr; at++)
 		summaries++;
 	return summaries;
 }
 
-// tbgrow, tbhigh and tblate: what the game does with the data once TweaksV's first summary is in its log - the textures grow by
-// 200 MB and 800 objects, past the budget, the game's mark with them, and the update check's flag goes up, as the game's streaming
-// would have it (grow); one new high at a time, each a single store and each once the summary before it is in the log - the
-// textures' bytes by 100 MB, then the game's mark to 2950 MB, then the textures by 400 objects - the flag left down (high); or the
-// data, all 0 so far, set as the game's start-up sets them (late). Each change is followed by the wait for its summary.
-enum class TextureBudgetChange { Grow, High, Late };
+// tbgrow, tbhigh, tblate and tbhighdesc: what the game does with the data once TweaksV's first summary is in its log - the textures
+// grow by 200 MB and 800 objects, past the budget, the game's mark with them, and the update check's flag goes up, as the game's
+// streaming would have it (grow); one new high at a time, each a single store and each once the summary before it is in the log - the
+// textures' bytes by 100 MB, then the game's mark to 2950 MB, then the textures by 400 objects - the flag left down (high); the
+// data, all 0 so far, set as the game's start-up sets them (late); or 100 descriptors more taken from the heap's free list, nothing
+// else changed (descriptors). Each change is followed by the wait for its summary.
+enum class TextureBudgetChange { Grow, High, Late, Descriptors };
 static wchar_t g_textureBudgetLater[64] = L"";
 static bool TextureBudgetWaitFor(int summaries, int ms)
 {
@@ -4586,6 +4639,8 @@ static void TextureBudgetLater(TextureBudgetChange change)
 		TextureBudgetSetAsTheGame(data);
 		TextureBudgetStartUp();
 	}
+	else if (change == TextureBudgetChange::Descriptors)
+		data.heap.head += 100;
 	else
 	{
 		data.counters.textures += 100ull << 20;
@@ -4599,7 +4654,8 @@ static void TextureBudgetLater(TextureBudgetChange change)
 	g_textureBudgetDataAsSet = data;
 	TextureBudgetWaitFor(change == TextureBudgetChange::High ? 4 : 2, 10000);
 	swprintf(g_textureBudgetLater, size, change == TextureBudgetChange::Grow ? L", grown after the first summary" :
-		change == TextureBudgetChange::High ? L", highs raised one at a time after the first summary" : L", set after the first summary");
+		change == TextureBudgetChange::High ? L", highs raised one at a time after the first summary" :
+		change == TextureBudgetChange::Descriptors ? L", descriptors taken after the first summary" : L", set after the first summary");
 }
 
 // tbhalfraise: a write to the second page, the raise's of budget 2, is held 12 seconds, past TweaksV's first summary, 10 seconds in,
@@ -9360,7 +9416,7 @@ static void ForEachSite(void (*fn)(const Site&))
 	fn(g_sirenCountOutsideSite);
 	for (const Site& site : g_pedPropsSites) fn(site);
 	static Site textureBudgetSites[] = { SITE(g_textureBudgetStores, 0), SITE(g_textureBudgetGetter, 0), SITE(g_textureBudgetPlacement, 0),
-		SITE(g_textureBudgetUpdate, 0), SITE(g_textureBudgetWriters, 0), SITE(g_textureBudgetMisread, 0) };
+		SITE(g_textureBudgetUpdate, 0), SITE(g_textureBudgetWriters, 0), SITE(g_textureBudgetMisread, 0), SITE(g_textureBudgetHeapSite, 0), SITE(g_textureBudgetMaker, 0) };
 	for (const Site& site : textureBudgetSites) fn(site);
 	for (const Site& site : g_rtSites) fn(site);
 	for (const Site& site : g_staticBoundsSites) fn(site);
@@ -10848,6 +10904,44 @@ int wmain(int argc, wchar_t** argv)
 			AddVectoredExceptionHandler(1, &TextureBudgetHoldRaise);
 		}
 		TextureBudgetData& data = *g_textureBudgetData;
+		// the descriptor heap and its free list, the first 30000 in use, as the options ask
+		constexpr uint32_t kDescriptors = 0x30000;
+		const auto list = static_cast<uint32_t*>(VirtualAlloc(nullptr, kDescriptors * sizeof(uint32_t), MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE));
+		for (uint32_t i = 0; list && i < kDescriptors; i++)
+			list[i] = i + 1;
+		TextureBudgetHeap& heap = g_textureBudgetHeapMade;
+		heap.list = list;
+		heap.head = 30000;
+		heap.count = kDescriptors;
+		if (HasOption(argc, argv, L"tbfree16383"))
+			heap.head = kDescriptors - 16383;
+		if (HasOption(argc, argv, L"tbfree16384"))
+			heap.head = kDescriptors - 16384;
+		if (list && HasOption(argc, argv, L"tblistcycle"))
+			list[kDescriptors - 1] = heap.head;
+		if (list && HasOption(argc, argv, L"tblistpast"))
+			list[heap.head + 10] = kDescriptors + 5;
+		if (HasOption(argc, argv, L"tblistnull"))
+			heap.list = nullptr;
+		if (HasOption(argc, argv, L"tblistodd"))
+			heap.list = reinterpret_cast<uint32_t*>(reinterpret_cast<unsigned char*>(list) + 1);
+		if (HasOption(argc, argv, L"tbheaphuge"))
+			heap.count = (1u << 24) + 1;
+		if (HasOption(argc, argv, L"tblistunreadable"))
+		{
+			DWORD old = 0;
+			VirtualProtect(list, kDescriptors * sizeof(uint32_t), PAGE_NOACCESS, &old);
+		}
+		if (HasOption(argc, argv, L"tbheapnone"))
+			g_textureBudgetSizes[0] = g_textureBudgetSizes[1] = 0;
+		if (HasOption(argc, argv, L"tbheapsmall"))	// 159744
+			g_textureBudgetSizes[1] = 0x17000;
+		if (HasOption(argc, argv, L"tbheapedge"))	// 131072
+			g_textureBudgetSizes[1] = 0x10000;
+		if (HasOption(argc, argv, L"tbheaptiny"))	// 98304
+			g_textureBudgetSizes[1] = 0x8000;
+		g_textureBudgetConfigMost = HasOption(argc, argv, L"tbconfig140000") ? 140000 : HasOption(argc, argv, L"tbconfig147456") ? 147456 :
+			HasOption(argc, argv, L"tbconfig200000") ? 200000 : 98304;
 		if (!HasOption(argc, argv, L"tblate"))
 			TextureBudgetSetAsTheGame(data);
 		if (HasOption(argc, argv, L"tbnoindex"))	// a texture quality's index outside 0 to 3
@@ -10878,6 +10972,22 @@ int wmain(int argc, wchar_t** argv)
 		SetRel32(g_textureBudgetFactorRefs[0], &data.updateCheck.lower);
 		SetRel32(g_textureBudgetFactorRefs[1], &data.updateCheck.raise);
 		SetRel32(g_textureBudgetGetterCall, const_cast<const unsigned char*>(g_textureBudgetGetter));
+		// the descriptor heap's maker: NOPs, its stores of the size and of no free list 0x36 bytes in (with "tbmakermoved" 0x37), the store
+		// of the head 0x9E past them (with "tbheadstores" another offset's); the device's start leading to all of it
+		const auto maker = const_cast<unsigned char*>(g_textureBudgetMaker);
+		memset(maker, 0x90, sizeof(g_textureBudgetMaker) - 1);
+		maker[sizeof(g_textureBudgetMaker) - 1] = 0xCC;
+		const unsigned char heapStores[] = { 0x44, 0x89, 0x41, 0x2C, 0x84, 0xC0, 0x74, 0x05, 0x48, 0xC7, 0x46, 0x18, 0x00, 0x00, 0x00, 0x00, 0xE9 };
+		const unsigned char headStores[] = { 0x89, 0x7E, 0x24, 0x89, 0x7E, static_cast<unsigned char>(HasOption(argc, argv, L"tbheadstores") ? 0x28 : 0x20) };
+		const size_t heapStoresAt = HasOption(argc, argv, L"tbmakermoved") ? 0x37 : 0x36;
+		memcpy(maker + heapStoresAt, heapStores, sizeof(heapStores));
+		memcpy(maker + heapStoresAt + 0x9E, headStores, sizeof(headStores));
+		const auto heapObject = reinterpret_cast<const unsigned char*>(&data.heap);
+		SetRel32(g_textureBudgetSizeRefs[0], HasOption(argc, argv, L"tbsizeout") ? ImageEnd() + 0x7B000 :
+			reinterpret_cast<const unsigned char*>(&data.heapSizes[0]) + (HasOption(argc, argv, L"tbsizeodd") ? 1 : 0));
+		SetRel32(g_textureBudgetSizeRefs[1], &data.heapSizes[1]);
+		SetRel32(g_textureBudgetHeapRef, HasOption(argc, argv, L"tbheapout") ? ImageEnd() + 0x7D000 : heapObject + (HasOption(argc, argv, L"tbheapodd") ? 4 : 0));
+		SetRel32(g_textureBudgetMakerCall, HasOption(argc, argv, L"tbmakerhooked") ? ImageEnd() + 0x7F000 : const_cast<const unsigned char*>(g_textureBudgetMaker));
 		if (HasOption(argc, argv, L"tbshift"))		// the shift between the two stores of the budgets by 21, not 20
 			g_textureBudgetStores[25] = 0x15;
 		if (HasOption(argc, argv, L"tbcallhooked"))	// another mod hooked the call after the stores already
@@ -10926,7 +11036,7 @@ int wmain(int argc, wchar_t** argv)
 		// a pattern the game holds twice: as many of the site's bytes as the pattern has, copied
 		const struct { const wchar_t* option; const volatile unsigned char* site; size_t size; } twins[] = { { L"tbt1twice", g_textureBudgetStores, 21 },
 			{ L"tbt2twice", g_textureBudgetStores + 34, 41 }, { L"tbt3twice", g_textureBudgetGetter, 13 }, { L"tbt4twice", g_textureBudgetPlacement, 32 },
-			{ L"tbt5twice", g_textureBudgetUpdate, 35 } };
+			{ L"tbt5twice", g_textureBudgetUpdate, 35 }, { L"tbt6twice", g_textureBudgetHeapSite, 40 }, { L"tbt7twice", g_textureBudgetMaker + 0x36, 17 } };
 		for (const auto& twin : twins)
 			if (HasOption(argc, argv, twin.option))
 				memcpy(update + 0x60, const_cast<const unsigned char*>(twin.site), twin.size);
@@ -11113,6 +11223,8 @@ int wmain(int argc, wchar_t** argv)
 		TextureBudgetLater(TextureBudgetChange::High);
 	else if (HasOption(argc, argv, L"tblate"))
 		TextureBudgetLater(TextureBudgetChange::Late);
+	else if (HasOption(argc, argv, L"tbhighdesc"))
+		TextureBudgetLater(TextureBudgetChange::Descriptors);
 	LpWait(argc, argv);
 	// The ray tracing buffer: the game's renderer makes it and its frames take ranges of it - as the options ask, the checks run
 	RtActions(argc, argv);
@@ -11188,10 +11300,10 @@ int wmain(int argc, wchar_t** argv)
 			PedPropsSum(false) == g_pedPropsDataSum ? L"as placed" : L"CHANGED");
 	}
 	{
-		// "texture budget: sites as placed 5 of 5, the call to the next step, data as set, its page RW, budgets 1500, 1500, 3000 and
-		// 3000 MB; start-up: ...; stores RVA 0x..., ... | " - the sites as they were before TweaksV loaded but the call's rel32 and
-		// where the call leads, the data as the harness set it but the budgets and the budgets as they are, the start-up's call,
-		// and where each site and datum lies, for the suite to compare with the log's lines
+		// "texture budget: sites as placed 7 of 7, the call to the next step, data as set, its page RW, budgets 1500, 1500, 3000 and
+		// 3000 MB, the most 98304; start-up: ...; stores RVA 0x..., ... | " - the sites as they were before TweaksV loaded but the call's
+		// rel32 and where the call leads, the data as the harness set it but the budgets and the most and those as they are, the
+		// start-up's call, and where each site and datum lies, for the suite to compare with the log's lines
 		int asPlaced = 0;
 		TextureBudgetSites(g_textureBudgetSitesAsPlaced, true, asPlaced);
 		bool misreadAsPlaced = true;
@@ -11202,22 +11314,24 @@ int wmain(int argc, wchar_t** argv)
 		TextureBudgetData is = data, set = g_textureBudgetDataAsSet;
 		memset(is.counters.budgets, 0, sizeof(is.counters.budgets));
 		memset(set.counters.budgets, 0, sizeof(set.counters.budgets));
+		is.counters.most = set.counters.most = 0;
 		CheckStub(Rel32Target(g_textureBudgetCall));
 		const auto rva = [](const volatile void* p) {
 			return static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(const_cast<const void*>(p)) - reinterpret_cast<uintptr_t>(ImageBase()));
 		};
-		wprintf(L"texture budget: sites as placed %d of 5, the call to %ls, data %ls, its page %ls, budgets %llu, %llu, %llu and %llu MB%ls; %ls; the misread block %ls; ", asPlaced,
+		wprintf(L"texture budget: sites as placed %d of 7, the call to %ls, data %ls, its page %ls, budgets %llu, %llu, %llu and %llu MB, the most %u%ls; %ls; the misread block %ls; ", asPlaced,
 			TextureBudgetCallLeads(Rel32Target(g_textureBudgetCall)), memcmp(&is, &set, sizeof(is)) == 0 ? L"as set" : L"CHANGED",
 			ProtectionOf(&data) == PAGE_READWRITE ? L"RW" : L"not RW", static_cast<unsigned long long>(data.counters.budgets[0] >> 20),
 			static_cast<unsigned long long>(data.counters.budgets[1] >> 20), static_cast<unsigned long long>(data.counters.budgets[2] >> 20),
-			static_cast<unsigned long long>(data.counters.budgets[3] >> 20), g_textureBudgetLater, g_textureBudgetStartUp,
+			static_cast<unsigned long long>(data.counters.budgets[3] >> 20), data.counters.most, g_textureBudgetLater, g_textureBudgetStartUp,
 			misreadAsPlaced ? L"as placed" : L"CHANGED");
 		wprintf(L"stores RVA 0x%llX, getter RVA 0x%llX, placement RVA 0x%llX, "
 			L"update RVA 0x%llX, writers RVA 0x%llX, next step RVA 0x%llX, counters RVA 0x%llX, index RVA 0x%llX, flag RVA 0x%llX, switch RVA 0x%llX, misread RVA 0x%llX, "
-			L"index page RVA 0x%llX | ",
+			L"index page RVA 0x%llX, device start RVA 0x%llX, maker RVA 0x%llX, descriptor heap RVA 0x%llX, heap sizes RVA 0x%llX | ",
 			rva(g_textureBudgetStores), rva(g_textureBudgetGetter),
 			rva(g_textureBudgetPlacement), rva(g_textureBudgetUpdate), rva(g_textureBudgetWriters), rva(reinterpret_cast<const void*>(&TextureBudgetNextStep)),
-			rva(&data.counters), rva(&data.index), rva(&data.flag), rva(&data.updateCheck), rva(g_textureBudgetMisread), rva(g_textureBudgetIndexPage));
+			rva(&data.counters), rva(&data.index), rva(&data.flag), rva(&data.updateCheck), rva(g_textureBudgetMisread), rva(g_textureBudgetIndexPage),
+			rva(g_textureBudgetHeapSite), rva(g_textureBudgetMaker), rva(&data.heap), rva(&data.heapSizes));
 	}
 	LpReport();
 	RtReport();

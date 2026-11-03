@@ -142,6 +142,7 @@ namespace TweaksV
 
 		Switch(kResourcesSection, "ENABLED", true),
 		Number(kResourcesSection, "VIDEO_MEMORY_BUDGET", 6000, 0, 16384, "Video memory for streamed textures in MB, 0 = the game's own - Maximum 16384"),
+		Number(kResourcesSection, "STREAMED_OBJECTS", 131072, 0, 147456, "Most streamed textures and buffers, 0 = the game's own (98304) - Maximum 147456"),
 
 		Switch(kRayTracingSection, "ENABLED", true),
 		Number(kRayTracingSection, "DYNAMIC_BVH_VERTICES", 0, 0, 26843545,
@@ -167,7 +168,7 @@ namespace TweaksV
 				keys++;
 		return keys;
 	}
-	static_assert(IniKeyCount() == 46, "TweaksV: layout 5 of TweaksV.ini has 46 keys - a new key means a new layout");
+	static_assert(IniKeyCount() == 47, "TweaksV: layout 5 of TweaksV.ini has 47 keys - a new key means a new layout");
 
 	// The column at which a key's comment starts in the default file, the same for every key.
 	inline constexpr size_t kIniCommentColumn = 28;
@@ -235,6 +236,7 @@ namespace TweaksV
 	inline constexpr const Setting& kWeaponInfoFiles = FindSetting(kWeaponLimitsSection, "WEAPON_INFO_FILES");
 	inline constexpr const Setting& kWeaponComponentsSize = FindSetting(kWeaponLimitsSection, "WEAPON_COMPONENTS_SIZE");
 	inline constexpr const Setting& kVideoMemoryBudget = FindSetting(kResourcesSection, "VIDEO_MEMORY_BUDGET");
+	inline constexpr const Setting& kStreamedObjects = FindSetting(kResourcesSection, "STREAMED_OBJECTS");
 	inline constexpr const Setting& kDynamicBvhVertices = FindSetting(kRayTracingSection, "DYNAMIC_BVH_VERTICES");
 	inline constexpr const Setting& kCoronaStore = FindSetting(kLightCapacitySection, "CORONA_STORE");
 	inline constexpr const Setting& kLargeSirenIds = FindSetting(kSirenSettingsSection, "LARGE_SIREN_IDS");

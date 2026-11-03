@@ -263,12 +263,15 @@ namespace TweaksV
 		// Resources, the texture budget (TweaksVTextureBudget.cpp): the start-up's store of the most streamed objects and its
 		// load of budgets 0 and 1 (T1), its store of budgets 2 and 3 and the call after the stores (T2), the budget's getter
 		// and the index it reads (T3), a resource's placement and its loads of the counters (T4), the update check and its
-		// switch (T5)
+		// switch (T5), the device's start and its make of the CPU-side descriptor heap with the two dwords its size is the sum
+		// of (T6), and that heap's maker with its stores of the size and the free list (T7)
 		{ "Q-E-T1", "8B 88 4C 05 00 00 89 0D ? ? ? ? 66 0F 38 25 80 50 05 00 00" },
 		{ "Q-E-T2", "66 0F 38 25 80 58 05 00 00 66 0F 73 F0 14 F3 0F 7F 05 ? ? ? ? 4C 8D 35 ? ? ? ? 4C 89 35 ? ? ? ? 48 83 EC 20 E8" },
 		{ "Q-E-T3", "48 63 05 ? ? ? ? 48 8B 44 C1 28 C3" },
 		{ "Q-E-T4", "8B 05 ? ? ? ? 8B 0D ? ? ? ? 01 C1 3B 0D ? ? ? ? 73 ? 48 8B 05 ? ? ? ? 48 8B 35" },
 		{ "Q-E-T5", "83 3D ? ? ? ? 00 0F 84 ? ? ? ? 48 8D 0D ? ? ? ? 48 8B 3D ? ? ? ? 48 8B 35 ? ? ? ? E8" },
+		{ "Q-E-T6", "44 8B 05 ? ? ? ? 44 03 05 ? ? ? ? C6 44 24 28 00 C7 44 24 20 00 00 00 00 48 8D 0D ? ? ? ? 31 D2 45 31 C9 E8" },
+		{ "Q-E-T7", "44 89 41 2C 84 C0 74 ? 48 C7 46 18 00 00 00 00 E9" },
 
 		// RayTracing (TweaksVRayTracing.cpp): the set-up of the ray tracing buffer of moving geometry - its count, its stride, the
 		// call of the buffer maker and the store of the buffer object (B1) - and the two checks of a frame's ranges against its

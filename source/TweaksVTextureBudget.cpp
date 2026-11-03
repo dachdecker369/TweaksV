@@ -31,6 +31,20 @@
 // start-up thread.
 // Windows' own budget for the game's video memory is not read: VIDEO_MEMORY_BUDGET has a documented maximum in its place,
 // since the update check evicts against Windows' budget anyway.
+// STREAMED_OBJECTS in [RESOURCES] raises the most objects in the same call, under the same flag. The number sizes nothing and
+// has one reader, the placement's check, but it is all that stands between a load and the game's CPU-side descriptor heap:
+// every counted object takes a descriptor, what is not counted takes from the same heap, and nothing checks that heap's end.
+// So its top is 3/4 of the heap, read at run time from the two dwords whose sum the game makes it with:
+//   0                the game's own most - nothing is looked for, but with DIAGNOSTIC_MODE=1
+//   1 to 98303       raised to 98304, the game's own file's, and reported
+//   98304 to 147456  131072 the default, once the budgets' checks and its own have passed - Q-E-T6's two dwords and heap inside
+//                    the game and aligned, its call a call into the game, the start-up's store the most's only writer - a
+//                    failure of its own saying so while VIDEO_MEMORY_BUDGET still works; a most below it raised to it, or to
+//                    the top where that cuts it, none lowered; a heap of no size or a top not above 98304 reported, a
+//                    gameconfig.xml's most above the top left as it is and reported
+//   DIAGNOSTIC_MODE  with Q-E-T7 the descriptors in use in the summary, by a walk of the heap's free list at each reading,
+//                    nothing written or called, no lock taken: a race ends the walk early or long by what is taken or freed
+//                    meanwhile, and its bound ends a cycle
 // Written for TweaksV from the findings of its own research in the game's code (PATTERNS.md, "Resources"); the idea of a
 // larger budget is that of zombieguy's Resource Adjuster for the Legacy game, which published no code - none was read.
 
@@ -82,6 +96,20 @@ namespace TweaksV
 		static_assert(kVideoMemoryBudget.minValue == 0 && kVideoMemoryBudget.defaultValue >= kLowestBudgetMb && kVideoMemoryBudget.maxValue > kLowestBudgetMb,
 			"TweaksV: VIDEO_MEMORY_BUDGET is 0, the game's own, or from 1500 MB to its maximum, its default among them");
 
+		// STREAMED_OBJECTS: 0, the game's own, or a most from the game's own file's, 98304 (MaxStreamingResources), to the
+		// setting's maximum, which is the top on this game
+		constexpr int kGameMost = 98304;
+		static_assert(kStreamedObjects.minValue == 0 && kStreamedObjects.defaultValue >= kGameMost && kStreamedObjects.maxValue > kGameMost,
+			"TweaksV: STREAMED_OBJECTS is 0, the game's own, or from 98304 to its maximum, its default among them");
+
+		// The CPU-side descriptor heap, one object of the game's data (PATTERNS.md, "Resources"): offsets from its start
+		constexpr size_t kHeapList = 0x18;			// pointer: its free list, a dword per descriptor, the index of the next free one
+		constexpr size_t kHeapHead = 0x20;			// dword: the index of the first free one; the list's size when none is
+		constexpr size_t kHeapCount = 0x2C;			// dword: how many descriptors it holds, 0 until the game has made it
+		constexpr size_t kHeapFields = kHeapCount + sizeof(uint32_t);
+		constexpr uint32_t kMostDescriptors = 1u << 24;	// a size past what the game's index fields hold is none of the game's: not walked
+		constexpr uint32_t kNearDescriptors = 16384;	// fewer free than this and the summary says so
+
 		// The update check's switch, a dword, and its three factors, floats, one block of the game's data
 		constexpr size_t kRaiseFactor = 4;			// it evicts once the bytes pass this much of the budget
 		constexpr size_t kLowerFactor = 8;			// and stops once they are below this much
@@ -95,6 +123,8 @@ namespace TweaksV
 		constexpr const GamePattern& kGetter = Pattern("Q-E-T3");			// the budget's getter
 		constexpr const GamePattern& kPlacement = Pattern("Q-E-T4");		// a resource's placement: its check of the counters
 		constexpr const GamePattern& kUpdate = Pattern("Q-E-T5");			// the update check
+		constexpr const GamePattern& kHeapSite = Pattern("Q-E-T6");		// the device's start: the descriptor heap, its size and its maker's call
+		constexpr const GamePattern& kHeapMaker = Pattern("Q-E-T7");		// that maker: its stores of the size and of no free list
 
 		// Q-E-T1: "mov ecx, [rax+disp32]", the configuration's most (+2 its offset); "mov [rip+disp32], ecx" (+6, its
 		// rel32 at +8); "pmovsxdq xmm0, [rax+disp32]", budgets 0 and 1 in MB (+12, their offset at +17). Past the
@@ -141,6 +171,20 @@ namespace TweaksV
 			PatternHolds(kUpdate, 20, { 0x48, 0x8B, 0x3D }) && PatternHolds(kUpdate, 27, { 0x48, 0x8B, 0x35 }) && PatternByte(kUpdate, kGetterCallAt) == 0xE8,
 			"TweaksV: Q-E-T5 holds the switch's compare, the loads of the counters and the getter's call");
 
+		// Q-E-T6: "mov r8d, [rip+disp32]" and "add r8d, [rip+disp32]", the two dwords whose sum is the heap's size (their rel32
+		// at +3 and +10); "lea rcx, [rip+disp32]", the heap (+30); the maker's call (+39), its rel32 past the match.
+		constexpr size_t kSizeFirstAt = 3, kSizeSecondAt = 10, kHeapAt = 30, kMakerCallAt = 39;
+		static_assert(PatternHolds(kHeapSite, 0, { 0x44, 0x8B, 0x05 }) && PatternHolds(kHeapSite, 7, { 0x44, 0x03, 0x05 }) &&
+			PatternHolds(kHeapSite, kHeapAt - 3, { 0x48, 0x8D, 0x0D }) && PatternByte(kHeapSite, kMakerCallAt) == 0xE8,
+			"TweaksV: Q-E-T6 holds the loads of the heap's size, the lea of the heap and its maker's call");
+
+		// Q-E-T7, this far into the maker: "mov [rcx+0x2C], r8d", the size (the disp8 at +3), then "mov qword [rsi+0x18], 0", no
+		// free list (+11). Past the match "mov [rsi+0x24], edi" and "mov [rsi+0x20], edi", the head (+0x9E).
+		constexpr size_t kMakerPatternAt = 0x36, kHeadStoresAt = 0x9E;
+		constexpr uint8_t kHeadStores[] = { 0x89, 0x7E, 0x24, 0x89, 0x7E, 0x20 };
+		static_assert(PatternByte(kHeapMaker, 3) == static_cast<int>(kHeapCount) && PatternByte(kHeapMaker, 11) == static_cast<int>(kHeapList) &&
+			kHeadStores[5] == kHeapHead, "TweaksV: Q-E-T7 holds the heap's size at +0x2C and its free list at +0x18, the store past it its head at +0x20");
+
 		// What the checks found, set once everything is checked, before the call is redirected and the measurement's thread
 		// starts
 		const uint8_t* g_counters = nullptr;
@@ -149,17 +193,27 @@ namespace TweaksV
 		const uint8_t* g_flag = nullptr;
 		const uint8_t* g_switch = nullptr;
 		uint8_t* g_budgets = nullptr;					// the four budgets, which the raise writes
+		uint8_t* g_most = nullptr;						// the most objects, which the raise writes too
 		uint8_t* g_call = nullptr;						// the call after the start-up's stores, which the raise redirects
 		size_t g_otherWriters = 0;						// the budgets' writers besides the start-up's two stores
 		const uint8_t* g_firstOtherWriter = nullptr;
+		size_t g_otherMostWriters = 0;					// the most's besides the start-up's one
+		const uint8_t* g_firstOtherMostWriter = nullptr;
+		const uint8_t* g_heap = nullptr;				// the descriptor heap
+		const uint8_t* g_heapSizes[2] = {};				// the two dwords its size is the sum of
+		const uint8_t* g_heapMaker = nullptr;			// its maker, as the device's start calls it
+		bool g_walkDescriptors = false;					// the summary's reading walks the heap's free list
 
-		// The raise: the budget in bytes and the game's function behind the call, both set before the call is redirected,
-		// and the budgets the game had set, kept by the raise for the measurement's summary and published by g_raised;
-		// g_raising is up around the raise's writes, so that a reading among them is made again.
+		// The raise: the budget in bytes, the most in objects, each 0 when it is not raised, and the game's function behind the
+		// call, all set before the call is redirected, and the budgets and the most the game had set, kept by the raise for the
+		// measurement's summary and published by g_raised; g_raising is up around the raise's writes, so that a reading among
+		// them is made again.
 		using NextStep = uint64_t (*)(uint64_t, uint64_t, uint64_t, uint64_t);
 		uint64_t g_raiseTo = 0;
+		uint32_t g_mostTo = 0;
 		NextStep g_nextStep = nullptr;
 		std::atomic<uint64_t> g_gameBudgets[kBudgetCount] = {};
+		std::atomic<uint32_t> g_gameMost{ 0 };
 		std::atomic<bool> g_raising{ false };
 		std::atomic<bool> g_raised{ false };
 
@@ -175,8 +229,8 @@ namespace TweaksV
 
 		// ---- the checks: the raise's and the measurement's
 
-		// The patterns' matches: Q-E-T1 to Q-E-T4 for the raise and the measurement, Q-E-T5 for the measurement alone, with why
-		// the first of the four and why Q-E-T5 have none.
+		// The patterns' matches: Q-E-T1 to Q-E-T4 for the raises and the measurement, Q-E-T5 for the measurement alone, Q-E-T6 for
+		// the most's raise and the walk, Q-E-T7 for the walk alone, with why the first of the four and why each other has none.
 		struct Matches
 		{
 			uint8_t* storeMost = nullptr;
@@ -184,13 +238,17 @@ namespace TweaksV
 			uint8_t* getter = nullptr;
 			uint8_t* placement = nullptr;
 			uint8_t* update = nullptr;
+			uint8_t* heapSite = nullptr;
+			uint8_t* heapMaker = nullptr;
 			std::string sitesWhy;
 			std::string updateWhy;
+			std::string heapSiteWhy;
+			std::string heapMakerWhy;
 		};
 
 		// Every pattern the jobs need, looked for before anything is checked, so that the scanner names each one missing. The
-		// reasons have no point: they take theirs from NotRaised and NotMeasured.
-		Matches FindPatterns(bool measure)
+		// reasons have no point: they take theirs from NotRaised, MostNotRaised, NotMeasured and DescriptorsNotMeasured.
+		Matches FindPatterns(bool raiseMost, bool measure)
 		{
 			Matches found;
 			found.storeMost = Scanner::FindOnce(kStoreMost, found.sitesWhy);
@@ -199,6 +257,10 @@ namespace TweaksV
 			found.placement = Scanner::FindOnce(kPlacement, found.sitesWhy);
 			if (measure)
 				found.update = Scanner::FindOnce(kUpdate, found.updateWhy);
+			if (raiseMost || measure)
+				found.heapSite = Scanner::FindOnce(kHeapSite, found.heapSiteWhy);
+			if (measure)
+				found.heapMaker = Scanner::FindOnce(kHeapMaker, found.heapMakerWhy);
 			return found;
 		}
 
@@ -215,16 +277,49 @@ namespace TweaksV
 			ReportFailure(kTag, "The texture budget is not raised this session: " + why + ".");
 		}
 
+		// The most's raise not done: a problem of the start-up summary, or, from the raise itself, one after it.
+		void MostNotRaised(const std::string& why)
+		{
+			ReportFailure(kTag, "The most streamed objects are not raised this session: " + why + ".");
+		}
+
 		// The measurement not started - logged, not reported, an aid (NOTES.md, T-DIAG).
 		void NotMeasured(const std::string& why)
 		{
 			WriteLog(kTag, "DIAGNOSTIC: the texture budget is not measured: " + why + ".");
 		}
 
-		// Q-E-T1 to Q-E-T4, the sites the raise and the measurement share: each checked as the research found it - every
+		// The measurement without the descriptors in use, the same.
+		void DescriptorsNotMeasured(const std::string& why)
+		{
+			WriteLog(kTag, "DIAGNOSTIC: the descriptors are not measured: " + why + ".");
+		}
+
+		// The writers a scan found besides the start-up's stores: how many, the first and all of them, for its line.
+		struct OtherWriters
+		{
+			size_t count = 0;
+			const uint8_t* first = nullptr;
+			std::string list;
+		};
+
+		OtherWriters WritersBesides(const std::vector<uint8_t*>& writers, std::initializer_list<const uint8_t*> stores)
+		{
+			OtherWriters others;
+			for (const uint8_t* const writer : writers)
+				if (std::find(stores.begin(), stores.end(), writer) == stores.end())
+				{
+					others.list += (others.count++ ? ", " : "") + DescribeAddress(writer);
+					if (!others.first)
+						others.first = writer;
+				}
+			return others;
+		}
+
+		// Q-E-T1 to Q-E-T4, the sites the raises and the measurement share: each checked as the research found it - every
 		// address inside the game and aligned to the size of its reads, the sites agreeing on the counters - and logged with
 		// DIAGNOSTIC_MODE, the budgets' writers among them. False at the first that is not as expected, with the reason in why;
-		// a writer besides the start-up's stores is not one of them: it refuses the raise alone, which it could undo.
+		// a writer besides the start-up's stores is not one of them: it refuses the budgets' raise alone, which it could undo.
 		bool CheckSites(const Matches& found, std::string& why)
 		{
 			const auto fail = [&why](const std::string& reason)
@@ -275,19 +370,10 @@ namespace TweaksV
 					if (std::find(writers.begin(), writers.end(), store) == writers.end())
 						return fail("the scan for the budgets' writers does not find the start-up's store at " + DescribeAddress(store) +
 							(store == startUpStores[0] ? At(kStoreMost) : At(kStoreBudgets)));
-			std::string besides;
-			size_t others = 0;
-			const uint8_t* firstOther = nullptr;
-			for (const uint8_t* const writer : writers)
-				if (writer != startUpStores[0] && writer != startUpStores[1])
-				{
-					besides += (others++ ? ", " : "") + DescribeAddress(writer);
-					if (!firstOther)
-						firstOther = writer;
-				}
+			const OtherWriters others = WritersBesides(writers, { startUpStores[0], startUpStores[1] });
 			LogSite("writers of the budgets at " + DescribeAddress(budgets) + ": the start-up's stores at " + DescribeAddress(startUpStores[0]) + " and " +
-				DescribeAddress(startUpStores[1]) + (others == 0 ? std::string(", none besides them") : ", and " + std::to_string(others) +
-				(writers.size() == kWritersLooked ? " or more" : "") + " besides them: " + besides) + " (" + kStoreMost.label + ", " + kStoreBudgets.label + ")");
+				DescribeAddress(startUpStores[1]) + (others.count == 0 ? std::string(", none besides them") : ", and " + std::to_string(others.count) +
+				(writers.size() == kWritersLooked ? " or more" : "") + " besides them: " + others.list) + " (" + kStoreMost.label + ", " + kStoreBudgets.label + ")");
 
 			// The call after the stores, the one the raise redirects: a call into the game
 			uint8_t* const call = found.storeBudgets + kCallAt;
@@ -330,9 +416,86 @@ namespace TweaksV
 			g_index = index;
 			g_getter = getter;
 			g_budgets = const_cast<uint8_t*>(budgets);
+			g_most = const_cast<uint8_t*>(most);
 			g_call = call;
-			g_otherWriters = others;
-			g_firstOtherWriter = firstOther;
+			g_otherWriters = others.count;
+			g_firstOtherWriter = others.first;
+			return true;
+		}
+
+		// Q-E-T6, after CheckSites: the two dwords the heap's size is the sum of inside the game, aligned and readable, the raise
+		// reading them on the game's start-up thread, the heap inside the game and aligned, its maker's call, its rel32 past the
+		// match, a call into the game. False at the first that is not as expected, with the reason in why.
+		bool CheckHeap(const Matches& found, std::string& why)
+		{
+			const auto fail = [&why](const std::string& reason)
+			{
+				why = reason;
+				return false;
+			};
+			if (!found.heapSiteWhy.empty())
+				return fail(found.heapSiteWhy);
+			const uint8_t* const site = found.heapSite;
+			const uint8_t* const sizes[] = { Rel32Target(site + kSizeFirstAt), Rel32Target(site + kSizeSecondAt) };
+			for (const uint8_t* const size : sizes)
+				if (const std::string wrong = DataFault(size, sizeof(uint32_t), sizeof(uint32_t)); !wrong.empty())
+					return fail("the descriptor heap's size at " + DescribeAddress(size) + At(kHeapSite) + " " + wrong);
+			const uint8_t* const heap = Rel32Target(site + kHeapAt);
+			if (const std::string wrong = Misplaced(heap, kHeapFields, sizeof(uint64_t)); !wrong.empty())
+				return fail("the descriptor heap at " + DescribeAddress(heap) + At(kHeapSite) + " is " + wrong);
+			const uint8_t* const call = site + kMakerCallAt;
+			const uint8_t* const maker = IsReadable(call, kCallSize) ? CallTarget(call) : nullptr;
+			if (!maker || !IsInsideGameImage(maker))
+				return fail("the call of the descriptor heap's maker at " + DescribeAddress(call) + " is not a call into the game (another mod may have hooked it "
+					"already)" + At(kHeapSite));
+			g_heap = heap;
+			g_heapSizes[0] = sizes[0];
+			g_heapSizes[1] = sizes[1];
+			g_heapMaker = maker;
+			return true;
+		}
+
+		// Q-E-T7, the walk's own, after CheckHeap: at its place in the maker Q-E-T6's call leads to, and past its match, read after
+		// IsReadable, the store of the head. False at the first that is not as expected, with the reason in why.
+		bool CheckFreeList(const Matches& found, std::string& why)
+		{
+			const auto fail = [&why](const std::string& reason)
+			{
+				why = reason;
+				return false;
+			};
+			if (!found.heapMakerWhy.empty())
+				return fail(found.heapMakerWhy);
+			if (found.heapMaker != g_heapMaker + kMakerPatternAt)
+				return fail("the descriptor heap's stores at " + DescribeAddress(found.heapMaker) + At(kHeapMaker) + " do not lie " + Hex(kMakerPatternAt) +
+					" bytes into its maker at " + DescribeAddress(g_heapMaker) + At(kHeapSite));
+			const uint8_t* const head = found.heapMaker + kHeadStoresAt;
+			if (!IsReadable(head, sizeof(kHeadStores)))
+				return fail("the code after " + std::string(kHeapMaker.label) + " at " + DescribeAddress(head) + " cannot be read");
+			if (memcmp(head, kHeadStores, sizeof(kHeadStores)) != 0)
+				return fail("the code after " + std::string(kHeapMaker.label) + " at " + DescribeAddress(head) + " is not the store of the descriptor heap's head: " +
+					HexBytes(head, sizeof(kHeadStores)));
+			return true;
+		}
+
+		// The most's writers, after CheckSites, by the same search as the budgets': the start-up's store, and any besides it - which
+		// would change the most again after the start-up, so that its raise would not hold. Logged with DIAGNOSTIC_MODE. False if the
+		// search does not find the start-up's store, with the reason in why.
+		bool CheckMostWriters(const Matches& found, std::string& why)
+		{
+			const uint8_t* const store = found.storeMost + kMostStoreAt;
+			const std::vector<uint8_t*> writers = Scanner::FindRipRelativeStores(g_most, sizeof(uint32_t), kWritersLooked);
+			if (writers.size() < kWritersLooked && std::find(writers.begin(), writers.end(), store) == writers.end())
+			{
+				why = "the scan for the most objects' writers does not find the start-up's store at " + DescribeAddress(store) + At(kStoreMost);
+				return false;
+			}
+			const OtherWriters others = WritersBesides(writers, { store });
+			LogSite("writers of the most objects at " + DescribeAddress(g_most) + ": the start-up's store at " + DescribeAddress(store) +
+				(others.count == 0 ? std::string(", none besides it") : ", and " + std::to_string(others.count) + (writers.size() == kWritersLooked ? " or more" : "") +
+				" besides it: " + others.list) + At(kStoreMost));
+			g_otherMostWriters = others.count;
+			g_firstOtherMostWriter = others.first;
 			return true;
 		}
 
@@ -398,16 +561,53 @@ namespace TweaksV
 			uint64_t buffers = 0, textures = 0, highest = 0;			// bytes
 			uint32_t buffersNumber = 0, texturesNumber = 0, most = 0;
 			uint64_t budgets[kBudgetCount] = {};
-			bool raised = false;										// the raise has run: gameBudgets holds the budgets the game had
+			bool raised = false;										// the raise has run: gameBudgets and gameMost hold what the game had
 			bool raiseNotEnded = false;									// its flag still up after kRaiseWaitMs: no summary from this reading
 			uint64_t gameBudgets[kBudgetCount] = {};
+			uint32_t gameMost = 0;
 			int32_t index = 0;
 			uint8_t flag = 0;
 			bool updateCheckReadable = false;
 			uint32_t updateCheck[kSwitchSize / sizeof(uint32_t)] = {};	// the switch and its three factors, as they lie
+			uint32_t descriptors = 0;									// the heap's size: 0 before the game has made it, and with no walk
+			uint32_t descriptorsInUse = 0;
+			bool descriptorsUnreadable = false;
 		};
 
 		constexpr ULONGLONG kRaiseWaitMs = 1000;	// how long a reading waits for the raise's writes before it says they did not end
+
+		// The descriptors in use, with the walk on, once the game has made the heap: its size less what its free list holds. Each
+		// read an aligned dword, nothing written or called, no lock taken, so a race can only end the walk early or long, by what
+		// is taken or freed meanwhile; the list holds a dword per descriptor, read over its whole length first, and the bound ends
+		// a cycle; about 196,608 reads at most on this game, once a reading.
+		void ReadDescriptors(Reading& reading)
+		{
+			if (!g_walkDescriptors)
+				return;
+			if (!IsReadable(g_heap, kHeapFields))
+			{
+				reading.descriptorsUnreadable = true;
+				return;
+			}
+			const uint32_t size = Load<uint32_t>(g_heap + kHeapCount);
+			if (size == 0)
+				return;
+			const uint32_t* const list = Load<const uint32_t*>(g_heap + kHeapList);
+			if (size > kMostDescriptors || reinterpret_cast<uintptr_t>(list) % sizeof(uint32_t) != 0 || !IsReadable(list, size * size_t{ sizeof(uint32_t) }))
+			{
+				reading.descriptorsUnreadable = true;
+				return;
+			}
+			uint32_t head = Load<uint32_t>(g_heap + kHeapHead);
+			uint32_t free = 0;
+			while (head < size && free < size)
+			{
+				head = Load<uint32_t>(list + head);
+				free++;
+			}
+			reading.descriptors = size;
+			reading.descriptorsInUse = size - free;
+		}
 
 		Reading ReadCounters()
 		{
@@ -426,15 +626,16 @@ namespace TweaksV
 			reading.buffersNumber = Load<uint32_t>(g_counters + kBuffersNumber);
 			reading.texturesNumber = Load<uint32_t>(g_counters + kTexturesNumber);
 			reading.highest = Load<uint64_t>(g_counters + kHighest);
-			reading.most = Load<uint32_t>(g_counters + kMost);
-			// the raise's record before the budgets, so that a reading never pairs the budgets the game had with budgets read
-			// before the raise; a raise that comes while they are read is taken with them, the budgets read again - and again
+			// the raise's record before the budgets and the most, so that a reading never pairs what the game had with what was read
+			// before the raise; a raise that comes while they are read is taken with them, the two read again - and again
 			// while its flag is up, so that a half-raised set never passes as the game's own: its writes are a few instructions,
 			// made once, so a flag still up after kRaiseWaitMs says they did not end, and such a reading is not used
 			const ULONGLONG started = GetTickCount64();
 			for (;;)
 			{
 				reading.raised = g_raised.load(std::memory_order_acquire);
+				reading.gameMost = reading.raised ? g_gameMost.load(std::memory_order_relaxed) : 0;
+				reading.most = Load<uint32_t>(g_most);
 				for (size_t i = 0; i < kBudgetCount; i++)
 				{
 					reading.gameBudgets[i] = reading.raised ? g_gameBudgets[i].load(std::memory_order_relaxed) : 0;
@@ -452,6 +653,7 @@ namespace TweaksV
 			}
 			reading.index = Load<int32_t>(g_index);
 			reading.flag = Load<uint8_t>(g_flag);
+			ReadDescriptors(reading);
 			return reading;
 		}
 
@@ -482,6 +684,7 @@ namespace TweaksV
 		Reading g_logged;
 		uint64_t g_mostBytes = 0, g_mostObjects = 0;
 		uint64_t g_loggedMostMb = 0, g_loggedMostObjects = 0;
+		uint32_t g_mostDescriptors = 0, g_loggedMostDescriptors = 0;
 		uint64_t g_news = 0;
 		bool g_raiseNotEndedSaid = false;
 		bool g_updateCheckShown = false;
@@ -493,9 +696,10 @@ namespace TweaksV
 		}
 
 		// Changes with every reading that has something new to say: the first; a new high - of the bytes in MB, of
-		// the objects, of the game's own mark in MB; the update check's flag raised or lowered, its switch or a factor
-		// changed; another index, budget or most; the raise run since; the counters readable or not. A reading that met a raise
-		// that did not end changes nothing: it is said once, and no summary comes of it.
+		// the objects, of the game's own mark in MB, of the descriptors in use; the update check's flag raised or lowered, its
+		// switch or a factor changed; another index, budget or most; the raise run since; the counters, or the descriptors,
+		// readable or not; the heap made. A reading that met a raise that did not end changes nothing: it is said once, and no
+		// summary comes of it.
 		uint64_t BudgetNumbers()
 		{
 			const Reading now = ReadCounters();
@@ -510,16 +714,19 @@ namespace TweaksV
 			{
 				g_mostBytes = std::max(g_mostBytes, Bytes(now));
 				g_mostObjects = std::max(g_mostObjects, Objects(now));
+				g_mostDescriptors = std::max(g_mostDescriptors, now.descriptorsInUse);
 			}
 			const bool news = g_news == 0 || now.readable != g_logged.readable || !SameUpdateCheck(now, g_logged) || (now.readable &&
 				((g_mostBytes >> 20) > g_loggedMostMb || g_mostObjects > g_loggedMostObjects || (now.highest >> 20) > (g_logged.highest >> 20) ||
 				now.flag != g_logged.flag || now.index != g_logged.index || now.most != g_logged.most || now.raised != g_logged.raised ||
-				memcmp(now.budgets, g_logged.budgets, sizeof(now.budgets)) != 0));
+				memcmp(now.budgets, g_logged.budgets, sizeof(now.budgets)) != 0 || g_mostDescriptors > g_loggedMostDescriptors ||
+				now.descriptors != g_logged.descriptors || now.descriptorsUnreadable != g_logged.descriptorsUnreadable));
 			if (news)
 			{
 				g_logged = now;
 				g_loggedMostMb = g_mostBytes >> 20;
 				g_loggedMostObjects = g_mostObjects;
+				g_loggedMostDescriptors = g_mostDescriptors;
 				g_news++;
 			}
 			return g_news;
@@ -574,8 +781,11 @@ namespace TweaksV
 				" - the texture quality's index " + std::to_string(now.index) + " has no budget";
 			line += " (MaxStreamingMemory_0..3_Base: " + FourMb(game) + " MB" + (memcmp(game, now.budgets, sizeof(game)) != 0 ? ", raised to " +
 				FourMb(now.budgets) + " MB by VIDEO_MEMORY_BUDGET" : std::string()) + ") - textures " + Mb(now.textures) + " MB, buffers " + Mb(now.buffers) +
-				" MB; " + std::to_string(Objects(now)) + " of the " + std::to_string(now.most) + " objects allowed (MaxStreamingResources) - " +
-				std::to_string(now.texturesNumber) + " textures, " + std::to_string(now.buffersNumber) + " buffers; the most so far " + Mb(now.highest) +
+				" MB; " + std::to_string(Objects(now)) + " of the " + std::to_string(now.most) + " objects allowed (MaxStreamingResources" +
+				(now.raised && now.gameMost != now.most ? ": " + std::to_string(now.gameMost) + ", raised by STREAMED_OBJECTS" : std::string()) + ") - " +
+				std::to_string(now.texturesNumber) + " textures, " + std::to_string(now.buffersNumber) + " buffers; " + (now.descriptorsUnreadable ?
+				std::string("the descriptors cannot be read; ") : now.descriptors != 0 ? std::to_string(now.descriptorsInUse) + " of the " +
+				std::to_string(now.descriptors) + " descriptors in use; " : std::string()) + "the most so far " + Mb(now.highest) +
 				" MB by the game's own mark, " + Mb(g_mostBytes) + " MB and " + std::to_string(g_mostObjects) + " objects at TweaksV's readings; the update "
 				"check's flag is " + (now.flag ? "up: it evicts ahead of time" : "down");
 			// all 0 before the game's start-up has read gameconfig.xml, which can come after the first summary: no limit then
@@ -585,6 +795,8 @@ namespace TweaksV
 				line += " - at the budget: the streaming engine evicts what it cannot place (texture loss)";
 			if (now.most != 0 && Objects(now) >= now.most)
 				line += " - at the most objects: the streaming engine evicts what it cannot place (texture loss)";
+			if (now.descriptors != 0 && now.descriptors - now.descriptorsInUse < kNearDescriptors)
+				line += " - near the descriptors' end: the game has no check there";
 			WriteLog(kTag, line + ".");
 		}
 
@@ -649,12 +861,63 @@ namespace TweaksV
 			return true;
 		}
 
-		// The game's call after its start-up has stored the budgets, redirected: each budget below VIDEO_MEMORY_BUDGET raised
-		// to it, none lowered, then the game's function, with its result handed back - on the start-up thread, before any
-		// streaming. The research did not read that function's arguments: the start-up sets none up between its stores and
-		// the call, and gives it no room on the stack but the 32 bytes every call gets, so it takes four registers at most,
-		// which are handed on as they came. Nothing may throw out of here, and the game's function is always called.
-		uint64_t RaiseBudgets(uint64_t first, uint64_t second, uint64_t third, uint64_t fourth)
+		// What the raise makes of the most objects, from the game's own numbers as its start-up has just set them. Compared unsigned,
+		// as the placement compares them: the most is written only if it is below the key, or below the top where that cuts the key,
+		// and the heap has a size and a top above the game's own; never lowered.
+		struct MostRaise
+		{
+			uint32_t had = 0;		// what the game's start-up stored
+			uint64_t size = 0;		// the descriptor heap's, the sum of its two dwords
+			uint64_t top = 0;		// 3/4 of it
+			uint32_t to = 0;		// the key, or the top where that cuts it
+			bool write = false;
+		};
+
+		MostRaise PlanMost()
+		{
+			MostRaise plan;
+			plan.had = Load<uint32_t>(g_most);
+			if (g_mostTo == 0)
+				return plan;
+			plan.size = uint64_t{ Load<uint32_t>(g_heapSizes[0]) } + Load<uint32_t>(g_heapSizes[1]);
+			plan.top = plan.size * 3 / 4;
+			plan.to = static_cast<uint32_t>(std::min<uint64_t>(g_mostTo, plan.top));
+			const bool room = plan.size != 0 && (plan.to == g_mostTo || plan.to > static_cast<uint32_t>(kGameMost));
+			plan.write = room && plan.had <= plan.top && plan.had < plan.to;
+			return plan;
+		}
+
+		// The raise's word on the most objects: a line, or one problem when it wrote nothing for a reason the player must know.
+		void LogMost(const MostRaise& plan)
+		{
+			const std::string size = std::to_string(plan.size);
+			if (plan.size == 0)
+				MostNotRaised("the game's descriptor heap's size at " + DescribeAddress(g_heapSizes[0]) + " and " + DescribeAddress(g_heapSizes[1]) + At(kHeapSite) +
+					" reads 0");
+			else if (plan.to != g_mostTo && plan.to <= static_cast<uint32_t>(kGameMost))
+				MostNotRaised("3/4 of the game's descriptor heap of " + size + ", " + std::to_string(plan.top) + ", is not above the game's own " + std::to_string(kGameMost));
+			else if (plan.had > plan.top)
+				ReportFailure(kTag, "MaxStreamingResources of gameconfig.xml, " + std::to_string(plan.had) + ", is above " + std::to_string(plan.top) +
+					", 3/4 of the game's descriptor heap of " + size + ": that heap has no check at its end, and a load that reaches it crashes. It is left as it is.");
+			else
+			{
+				const std::string most = "The most streamed objects of gameconfig.xml (MaxStreamingResources: " + std::to_string(plan.had) + ") are ";
+				if (!plan.write)
+					WriteLog(kTag, most + "at least " + std::to_string(plan.to) + " - left as they are; the game's descriptor heap holds " + size + ".");
+				else if (plan.to == g_mostTo)
+					WriteLog(kTag, most + "raised to " + std::to_string(plan.to) + " by STREAMED_OBJECTS; the game's descriptor heap holds " + size + ".");
+				else
+					WriteLog(kTag, most + "raised to " + std::to_string(plan.to) + ", 3/4 of the game's descriptor heap of " + size + ", below the " +
+						std::to_string(g_mostTo) + " of STREAMED_OBJECTS.");
+			}
+		}
+
+		// The game's call after its start-up has stored the most and the budgets, redirected: each budget below VIDEO_MEMORY_BUDGET
+		// raised to it and the most by STREAMED_OBJECTS, none lowered, then the game's function, with its result handed back - on the
+		// start-up thread, before any streaming. The research did not read that function's arguments: the start-up sets none up
+		// between its stores and the call, and gives it no room on the stack but the 32 bytes every call gets, so it takes four
+		// registers at most, which are handed on as they came. Nothing may throw out of here, and the game's function is always called.
+		uint64_t RaiseLimits(uint64_t first, uint64_t second, uint64_t third, uint64_t fourth)
 		{
 			uint64_t had[kBudgetCount] = {};
 			uint64_t now[kBudgetCount] = {};
@@ -670,23 +933,32 @@ namespace TweaksV
 				}
 				g_gameBudgets[i].store(had[i], std::memory_order_relaxed);
 			}
+			const MostRaise most = PlanMost();
+			g_gameMost.store(most.had, std::memory_order_relaxed);
 			// the record kept and the flag up before the first write, the flag down after the record is published (ReadCounters)
 			g_raising.store(true, std::memory_order_relaxed);
 			std::atomic_thread_fence(std::memory_order_release);
 			for (size_t i = 0; i < kBudgetCount; i++)
 				if (now[i] != had[i])
 					*reinterpret_cast<volatile uint64_t*>(g_budgets + i * sizeof(uint64_t)) = now[i];
+			if (most.write)
+				*reinterpret_cast<volatile uint32_t*>(g_most) = most.to;
 			g_raised.store(true, std::memory_order_release);
 			g_raising.store(false, std::memory_order_release);
 			const int32_t index = Load<int32_t>(g_index);
 			try
 			{
-				std::string line = "The texture budgets of gameconfig.xml (MaxStreamingMemory_0..3_Base: " + FourMb(had) + " MB) are ";
-				line += raised ? "raised to " + Mb(g_raiseTo) + " MB where they are below it: " + FourMb(now) + " MB now" :
-					"at least " + Mb(g_raiseTo) + " MB each - left as they are";
-				line += index >= 0 && index < static_cast<int32_t>(kBudgetCount) ? "; the texture quality's index " + std::to_string(index) + " uses " +
-					Mb(now[static_cast<size_t>(index)]) + " MB." : "; the texture quality's index " + std::to_string(index) + " has no budget.";
-				WriteLog(kTag, line);
+				if (g_raiseTo != 0)
+				{
+					std::string line = "The texture budgets of gameconfig.xml (MaxStreamingMemory_0..3_Base: " + FourMb(had) + " MB) are ";
+					line += raised ? "raised to " + Mb(g_raiseTo) + " MB where they are below it: " + FourMb(now) + " MB now" :
+						"at least " + Mb(g_raiseTo) + " MB each - left as they are";
+					line += index >= 0 && index < static_cast<int32_t>(kBudgetCount) ? "; the texture quality's index " + std::to_string(index) + " uses " +
+						Mb(now[static_cast<size_t>(index)]) + " MB." : "; the texture quality's index " + std::to_string(index) + " has no budget.";
+					WriteLog(kTag, line);
+				}
+				if (g_mostTo != 0)
+					LogMost(most);
 			}
 			catch (...)
 			{
@@ -704,56 +976,118 @@ namespace TweaksV
 			ReportFailure(kTag, std::string("TweaksV.ini: [") + kResourcesSection.name + "] " + kVideoMemoryBudget.key + "=" + std::to_string(asked) +
 				" is outside 0 or " + std::to_string(kLowestBudgetMb) + ".." + std::to_string(kVideoMemoryBudget.maxValue) + " - using " +
 				std::to_string(budgetMb) + ".");
+		// the most asked for: 0, the game's own, or one from the game's own file's on
+		const int mostAsked = GetNumber(kStreamedObjects);
+		const int mostObjects = mostAsked != 0 && mostAsked < kGameMost ? kGameMost : mostAsked;
+		if (mostObjects != mostAsked)
+			ReportFailure(kTag, std::string("TweaksV.ini: [") + kResourcesSection.name + "] " + kStreamedObjects.key + "=" + std::to_string(mostAsked) +
+				" is outside 0 or " + std::to_string(kGameMost) + ".." + std::to_string(kStreamedObjects.maxValue) + " - using " +
+				std::to_string(mostObjects) + ".");
 		const bool measure = IsDiagnosticMode();
 		bool raise = budgetMb != 0;
+		bool raiseMost = mostObjects != 0;
 		if (!raise)
-		{
 			WriteLog(kTag, std::string(kVideoMemoryBudget.key) + "=0 - the texture budget is not raised.");
-			if (!measure)
-				return;
-		}
+		if (!raiseMost)
+			WriteLog(kTag, std::string(kStreamedObjects.key) + "=0 - the most streamed objects are not raised.");
+		if (!raise && !raiseMost && !measure)
+			return;
 
-		// the sites the raise and the measurement share, all checked before anything is written
-		const Matches found = FindPatterns(measure);
+		// the sites the raises and the measurement share, all checked before anything is written
+		const Matches found = FindPatterns(raiseMost, measure);
 		std::string why;
 		if (!CheckSites(found, why))
 		{
 			if (raise)
 				NotRaised(why);
+			if (raiseMost)
+				MostNotRaised(why);
 			if (measure)
 				NotMeasured(why);
 			return;
 		}
 
-		// the raise, refused while the budgets have a possible writer besides the start-up's stores - it could undo the raise
-		// later, and the search counts a load whose bytes read as a store too (SPECIFICATIONS 8) - and
-		// once the start-up has stored them before TweaksV started: the call the raise redirects is made already
+		// the budgets' raise, refused while they have a possible writer besides the start-up's stores - it could undo the raise
+		// later, and the search counts a load whose bytes read as a store too (SPECIFICATIONS 8)
 		if (raise && g_otherWriters != 0)
 		{
 			NotRaised("the budgets at " + DescribeAddress(g_budgets) + " have " + std::to_string(g_otherWriters) + (g_otherWriters == 1 ? " possible writer" : " possible writers") +
 				" besides the start-up's stores, the first at " + DescribeAddress(g_firstOtherWriter) + ", which could undo the raise later");
 			raise = false;
 		}
-		else if (raise && !StartUpToCome(why))
+
+		// the most's own checks, which refuse its raise alone, and with DIAGNOSTIC_MODE the walk's, which refuse the walk alone
+		if (raiseMost || measure)
 		{
-			NotRaised(why);
-			raise = false;
-		}
-		if (raise)
-		{
-			g_raiseTo = static_cast<uint64_t>(budgetMb) << 20;
-			const std::vector<CallRedirect> redirect = { { g_call, reinterpret_cast<const void*>(&RaiseBudgets), "call after the budgets' stores",
-				reinterpret_cast<void**>(&g_nextStep) } };
-			if (!RedirectCalls(redirect, {}, kTag))
-				NotRaised("the call after the budgets' stores at " + DescribeAddress(g_call) + " could not be redirected (details in TweaksV.log)");
-			else if (IsDryRun())
-				WriteLog(kTag, "DRY_RUN: the texture budgets below " + std::to_string(budgetMb) + " MB would be raised to it when the game's start-up sets them.");
-			else
-				WriteLog(kTag, "The call after the budgets' stores at " + DescribeAddress(g_call) + " is redirected: the texture budgets below " +
-					std::to_string(budgetMb) + " MB are raised to it when the game's start-up sets them.");
+			std::string heapWhy, listWhy, writersWhy;
+			const bool heapFound = CheckHeap(found, heapWhy);
+			g_walkDescriptors = measure && heapFound && CheckFreeList(found, listWhy);
+			if (heapFound)
+				LogSite("descriptor heap at " + DescribeAddress(g_heap) + ": its size from " + DescribeAddress(g_heapSizes[0]) + " and " + DescribeAddress(g_heapSizes[1]) +
+					", made at " + DescribeAddress(found.heapSite + kMakerCallAt) + " -> " + DescribeAddress(g_heapMaker) + At(kHeapSite) + (g_walkDescriptors ? "; its free list at +" +
+					Hex(kHeapList) + ", head at +" + Hex(kHeapHead) + ", size at +" + Hex(kHeapCount) + At(kHeapMaker) : std::string()));
+			if (measure && !g_walkDescriptors)
+				DescriptorsNotMeasured(heapFound ? listWhy : heapWhy);
+			const bool writersFound = CheckMostWriters(found, writersWhy);
+			if (!writersFound && measure)
+				LogSite(writersWhy);
+			if (raiseMost && !heapFound)
+			{
+				MostNotRaised(heapWhy);
+				raiseMost = false;
+			}
+			else if (raiseMost && !writersFound)
+			{
+				MostNotRaised(writersWhy);
+				raiseMost = false;
+			}
+			else if (raiseMost && g_otherMostWriters != 0)
+			{
+				MostNotRaised("the most objects at " + DescribeAddress(g_most) + " have " + std::to_string(g_otherMostWriters) + (g_otherMostWriters == 1 ? " possible writer" :
+					" possible writers") + " besides the start-up's store, the first at " + DescribeAddress(g_firstOtherMostWriter) + ", which could undo the raise later");
+				raiseMost = false;
+			}
 		}
 
-		// the measurement, with DIAGNOSTIC_MODE, the budget at 0 too
+		// both refused once the start-up has stored them before TweaksV started: the call the raises redirect is made already
+		if ((raise || raiseMost) && !StartUpToCome(why))
+		{
+			if (raise)
+				NotRaised(why);
+			if (raiseMost)
+				MostNotRaised(why);
+			raise = raiseMost = false;
+		}
+		if (raise || raiseMost)
+		{
+			g_raiseTo = raise ? static_cast<uint64_t>(budgetMb) << 20 : 0;
+			g_mostTo = raiseMost ? static_cast<uint32_t>(mostObjects) : 0;
+			const std::string budgetsBelow = "the texture budgets below " + std::to_string(budgetMb) + " MB";
+			const std::string mostBelow = "the most objects below " + std::to_string(mostObjects);
+			const std::vector<CallRedirect> redirect = { { g_call, reinterpret_cast<const void*>(&RaiseLimits), "call after the budgets' stores",
+				reinterpret_cast<void**>(&g_nextStep) } };
+			if (!RedirectCalls(redirect, {}, kTag))
+			{
+				const std::string cannot = "the call after the budgets' stores at " + DescribeAddress(g_call) + " could not be redirected (details in TweaksV.log)";
+				if (raise)
+					NotRaised(cannot);
+				if (raiseMost)
+					MostNotRaised(cannot);
+			}
+			else if (IsDryRun())
+			{
+				if (raise)
+					WriteLog(kTag, "DRY_RUN: " + budgetsBelow + " would be raised to it when the game's start-up sets them.");
+				if (raiseMost)
+					WriteLog(kTag, "DRY_RUN: the most streamed objects below " + std::to_string(mostObjects) + " would be raised to it when the game's start-up sets them.");
+			}
+			else
+				WriteLog(kTag, "The call after the budgets' stores at " + DescribeAddress(g_call) + " is redirected: " + (raise && raiseMost ? budgetsBelow +
+					" are raised to it and " + mostBelow + " to it" : raise ? budgetsBelow + " are raised to it" : mostBelow + " are raised to it") +
+					" when the game's start-up sets them.");
+		}
+
+		// the measurement, with DIAGNOSTIC_MODE, both keys at 0 too
 		if (measure)
 			StartBudgetMeasurement(found);
 	}

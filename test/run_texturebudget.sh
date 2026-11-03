@@ -23,9 +23,15 @@
 # missing (TEST_BREAK_PATTERN), a site not as expected, a call another mod hooked, an address outside the game, sites that
 # disagree on the counters and a factor's multiplication changed - each logged, no problem, no box, no summary; the plain
 # game; DRY_RUN alike; and in every run nothing written: the fake's sites and data as they were, no call redirected, every
-# page's protection its own. Fake LOCALAPPDATA: the real one is never touched.
+# page's protection its own. STREAMED_OBJECTS the same way: 0 said in one line, 1 and 98303 raised to 98304 and reported, 98304, 131072
+# and 147456 taken and 147457 clamped by the settings; the most raised in the same call, under the same flag, a gameconfig.xml's
+# above the key left, one above 3/4 of the descriptor heap left with one problem, a heap of no size and a top not above the game's
+# own each one problem and nothing written, a smaller heap's top cutting the key and said; each check of the key's own failing with
+# the budgets still raised, those it shares refusing both; DRY_RUN; and the descriptor walk with DIAGNOSTIC_MODE=1, in use against the
+# list's end, near that end, a new high alone, a cycle, an index past the size, a list that cannot be read and the walk's own patterns
+# not as they must be, each ending the walk alone. Fake LOCALAPPDATA: the real one is never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
-CHECKS=106
+CHECKS=152
 cd "$B" || exit 1
 cp "$R/x64/Release/TweaksV.asi" TweaksV.asi
 cp "$R/object/Test/Release/TweaksV.asi" TweaksV_test.asi
@@ -34,18 +40,21 @@ mkdir -p appdata
 # The summaries: the counters as the fake sets them, then grown by 200 MB and 800 textures past the 3000 MB budget, the
 # update check's flag up; one new high at a time, the flag down - the bytes by 100 MB, the game's mark at 2950 MB, the objects by
 # 400; the update check's switch and factors; and both before the game's start-up has set its data
-SUMMARY1='\[Resources\] DIAGNOSTIC: texture budget: 2845 MB of the 3000 MB budget for the texture quality.s index 2 (MaxStreamingMemory_0..3_Base: 1500, 1500, 3000 and 3000 MB) - textures 2456 MB, buffers 389 MB; 23456 of the 98304 objects allowed (MaxStreamingResources) - 22222 textures, 1234 buffers; the most so far 2900 MB by the game.s own mark, 2845 MB and 23456 objects at TweaksV.s readings; the update check.s flag is down.$'
-SUMMARY2='\[Resources\] DIAGNOSTIC: texture budget: 3045 MB of the 3000 MB budget for the texture quality.s index 2 (MaxStreamingMemory_0..3_Base: 1500, 1500, 3000 and 3000 MB) - textures 2656 MB, buffers 389 MB; 24256 of the 98304 objects allowed (MaxStreamingResources) - 23022 textures, 1234 buffers; the most so far 3045 MB by the game.s own mark, 3045 MB and 24256 objects at TweaksV.s readings; the update check.s flag is up: it evicts ahead of time - at the budget: the streaming engine evicts what it cannot place (texture loss).$'
-HIGH_BYTES='\[Resources\] DIAGNOSTIC: texture budget: 2945 MB of the 3000 MB budget for the texture quality.s index 2 (MaxStreamingMemory_0..3_Base: 1500, 1500, 3000 and 3000 MB) - textures 2556 MB, buffers 389 MB; 23456 of the 98304 objects allowed (MaxStreamingResources) - 22222 textures, 1234 buffers; the most so far 2900 MB by the game.s own mark, 2945 MB and 23456 objects at TweaksV.s readings; the update check.s flag is down.$'
-HIGH_MARK='\[Resources\] DIAGNOSTIC: texture budget: 2945 MB of the 3000 MB budget for the texture quality.s index 2 (MaxStreamingMemory_0..3_Base: 1500, 1500, 3000 and 3000 MB) - textures 2556 MB, buffers 389 MB; 23456 of the 98304 objects allowed (MaxStreamingResources) - 22222 textures, 1234 buffers; the most so far 2950 MB by the game.s own mark, 2945 MB and 23456 objects at TweaksV.s readings; the update check.s flag is down.$'
-HIGH_OBJECTS='\[Resources\] DIAGNOSTIC: texture budget: 2945 MB of the 3000 MB budget for the texture quality.s index 2 (MaxStreamingMemory_0..3_Base: 1500, 1500, 3000 and 3000 MB) - textures 2556 MB, buffers 389 MB; 23856 of the 98304 objects allowed (MaxStreamingResources) - 22622 textures, 1234 buffers; the most so far 2950 MB by the game.s own mark, 2945 MB and 23856 objects at TweaksV.s readings; the update check.s flag is down.$'
+SUMMARY1='\[Resources\] DIAGNOSTIC: texture budget: 2845 MB of the 3000 MB budget for the texture quality.s index 2 (MaxStreamingMemory_0..3_Base: 1500, 1500, 3000 and 3000 MB) - textures 2456 MB, buffers 389 MB; 23456 of the 98304 objects allowed (MaxStreamingResources) - 22222 textures, 1234 buffers; 30000 of the 196608 descriptors in use; the most so far 2900 MB by the game.s own mark, 2845 MB and 23456 objects at TweaksV.s readings; the update check.s flag is down.$'
+SUMMARY2='\[Resources\] DIAGNOSTIC: texture budget: 3045 MB of the 3000 MB budget for the texture quality.s index 2 (MaxStreamingMemory_0..3_Base: 1500, 1500, 3000 and 3000 MB) - textures 2656 MB, buffers 389 MB; 24256 of the 98304 objects allowed (MaxStreamingResources) - 23022 textures, 1234 buffers; 30000 of the 196608 descriptors in use; the most so far 3045 MB by the game.s own mark, 3045 MB and 24256 objects at TweaksV.s readings; the update check.s flag is up: it evicts ahead of time - at the budget: the streaming engine evicts what it cannot place (texture loss).$'
+HIGH_BYTES='\[Resources\] DIAGNOSTIC: texture budget: 2945 MB of the 3000 MB budget for the texture quality.s index 2 (MaxStreamingMemory_0..3_Base: 1500, 1500, 3000 and 3000 MB) - textures 2556 MB, buffers 389 MB; 23456 of the 98304 objects allowed (MaxStreamingResources) - 22222 textures, 1234 buffers; 30000 of the 196608 descriptors in use; the most so far 2900 MB by the game.s own mark, 2945 MB and 23456 objects at TweaksV.s readings; the update check.s flag is down.$'
+HIGH_MARK='\[Resources\] DIAGNOSTIC: texture budget: 2945 MB of the 3000 MB budget for the texture quality.s index 2 (MaxStreamingMemory_0..3_Base: 1500, 1500, 3000 and 3000 MB) - textures 2556 MB, buffers 389 MB; 23456 of the 98304 objects allowed (MaxStreamingResources) - 22222 textures, 1234 buffers; 30000 of the 196608 descriptors in use; the most so far 2950 MB by the game.s own mark, 2945 MB and 23456 objects at TweaksV.s readings; the update check.s flag is down.$'
+HIGH_OBJECTS='\[Resources\] DIAGNOSTIC: texture budget: 2945 MB of the 3000 MB budget for the texture quality.s index 2 (MaxStreamingMemory_0..3_Base: 1500, 1500, 3000 and 3000 MB) - textures 2556 MB, buffers 389 MB; 23856 of the 98304 objects allowed (MaxStreamingResources) - 22622 textures, 1234 buffers; 30000 of the 196608 descriptors in use; the most so far 2950 MB by the game.s own mark, 2945 MB and 23856 objects at TweaksV.s readings; the update check.s flag is down.$'
 UPDATE_CHECK='\[Resources\] DIAGNOSTIC: texture budget: the update check.s switch holds 1 (on), its factors 0.9 of the budget to start evicting, 0.8 to stop, and 0.95 of the video memory Windows gives the game to start evicting too.$'
 UNSET='\[Resources\] DIAGNOSTIC: texture budget: 0 MB of the 0 MB budget for the texture quality.s index 0 (MaxStreamingMemory_0..3_Base: 0, 0, 0 and 0 MB) - textures 0 MB, buffers 0 MB; 0 of the 0 objects allowed (MaxStreamingResources) - 0 textures, 0 buffers; the most so far 0 MB by the game.s own mark, 0 MB and 0 objects at TweaksV.s readings; the update check.s flag is down - the budgets and the most are not set yet (the game sets them when it reads gameconfig.xml).$'
 UPDATE_CHECK_UNSET='\[Resources\] DIAGNOSTIC: texture budget: the update check.s switch holds 0 (off: nothing is evicted ahead of time), its factors 0 of the budget to start evicting, 0 to stop, and 0 of the video memory Windows gives the game to start evicting too.$'
 NOT_MEASURED='\[Resources\] DIAGNOSTIC: the texture budget is not measured: '
 NOT_RAISED='\[Resources\] PROBLEM: The texture budget is not raised this session: '
+MOST_NOT='\[Resources\] PROBLEM: The most streamed objects are not raised this session: '
+MOST_LINE='\[Resources\] The most streamed objects of gameconfig.xml (MaxStreamingResources: '
+NOT_WALKED='\[Resources\] DIAGNOSTIC: the descriptors are not measured: '
 RAISE='\[Resources\] The texture budgets of gameconfig.xml (MaxStreamingMemory_0..3_Base: '
-SUMMARY_RAISED='\[Resources\] DIAGNOSTIC: texture budget: 2845 MB of the 6000 MB budget for the texture quality.s index 2 (MaxStreamingMemory_0..3_Base: 1500, 1500, 3000 and 3000 MB, raised to 6000, 6000, 6000 and 6000 MB by VIDEO_MEMORY_BUDGET) - textures 2456 MB, buffers 389 MB; 23456 of the 98304 objects allowed (MaxStreamingResources) - 22222 textures, 1234 buffers; the most so far 2900 MB by the game.s own mark, 2845 MB and 23456 objects at TweaksV.s readings; the update check.s flag is down.$'
+SUMMARY_RAISED='\[Resources\] DIAGNOSTIC: texture budget: 2845 MB of the 6000 MB budget for the texture quality.s index 2 (MaxStreamingMemory_0..3_Base: 1500, 1500, 3000 and 3000 MB, raised to 6000, 6000, 6000 and 6000 MB by VIDEO_MEMORY_BUDGET) - textures 2456 MB, buffers 389 MB; 23456 of the 98304 objects allowed (MaxStreamingResources) - 22222 textures, 1234 buffers; 30000 of the 196608 descriptors in use; the most so far 2900 MB by the game.s own mark, 2845 MB and 23456 objects at TweaksV.s readings; the update check.s flag is down.$'
 
 # rva NAME [PLUS]: "RVA 0x..." of what the fake's report places at NAME (stores, getter, placement, update, next step,
 # counters, index, flag, switch, index page), plus PLUS
@@ -55,14 +64,14 @@ rva() {
 	[ -n "$at" ] || { echo "RVA-of-$1-not-reported"; return; }
 	printf 'RVA 0x%X' $(( at + ${2:-0} ))
 }
-# report_is CALL BUDGETS: the fake's report - its five sites as placed but the call's rel32, the call to CALL, its data as set but
-# the budgets, its page read/write, the budgets BUDGETS, every page's protection its own
-report_is() { has "texture budget: sites as placed 5 of 5, the call to $1, data as set, its page RW, budgets $2 MB" && has 'protect: all restored (RX)'; }
+# report_is CALL BUDGETS [MOST]: the fake's report - its seven sites as placed but the call's rel32, the call to CALL, its data as set
+# but the budgets and the most, its page read/write, the budgets BUDGETS, the most MOST, every page's protection its own
+report_is() { has "texture budget: sites as placed 7 of 7, the call to $1, data as set, its page RW, budgets $2 MB, the most ${3:-98304}" && has 'protect: all restored (RX)'; }
 # untouched [CALL]: nothing written - the call to CALL (the next step), the budgets the game's own
 untouched() { report_is "${1:-the next step}" '1500, 1500, 3000 and 3000'; }
 # startup CALL BUDGETS: the start-up's call, through CALL, made once with its four arguments, its result back, the budgets
 # BUDGETS while the game's function ran
-startup() { has "start-up: through $1, the next step called 1 time, its arguments as handed, its result back, the budgets then $2 MB"; }
+startup() { has "start-up: through $1, the next step called 1 time, its arguments as handed, its result back, the budgets then $2 MB, the most then ${3:-98304};"; }
 # stubs: the call stubs the fake's report counts
 stubs() { sed -nE 's/.*stubs: ([0-9]+), all RX.*/\1/p' <<< "$out"; }
 # redirected BUDGET: the part's line for the redirected call; call_written: its DIAGNOSTIC line of the write
@@ -85,11 +94,15 @@ both_keys() { fresh_ini; setkey VIDEO_MEMORY_BUDGET 6000 RESOURCES; setkey DIAGN
 refused_both() { refused "$1" && log_line "${NOT_MEASURED}$1\$" && nothing_measured; }
 # found LABEL NAME [PLUS]: the scanner's line for LABEL, found once where the fake has it
 found() { log_has "Pattern $1 found: .* -> $(rva "$2" "${3:-0}"), 1 match"; }
-patterns_found() { found Q-E-T1 stores && found Q-E-T2 stores 34 && found Q-E-T3 getter && found Q-E-T4 placement && found Q-E-T5 update; }
+patterns_found() { found Q-E-T1 stores && found Q-E-T2 stores 34 && found Q-E-T3 getter && found Q-E-T4 placement && found Q-E-T5 update && found Q-E-T6 'device start' && found Q-E-T7 maker 0x36; }
 # writers_line [BESIDES]: the module's line of the budgets' writers - the start-up's two stores, and BESIDES
 writers_line() { log_line "\[Resources\] DIAGNOSTIC: writers of the budgets at $(rva counters 0x28): the start-up.s stores at $(rva stores 26) and $(rva stores 48), ${1:-none besides them} (Q-E-T1, Q-E-T2)\$"; }
-# sites_logged: the module's nine lines, word for word, with the addresses of the fake's sites and data
+# heap_line: the module's line of the descriptor heap; most_writers [BESIDES]: of the most's writers, the start-up's store, and BESIDES
+heap_line() { log_line "\[Resources\] DIAGNOSTIC: descriptor heap at $(rva 'descriptor heap'): its size from $(rva 'heap sizes') and $(rva 'heap sizes' 4), made at $(rva 'device start' 39) -> $(rva maker) (Q-E-T6); its free list at +0x18, head at +0x20, size at +0x2C (Q-E-T7)\$"; }
+most_writers() { log_line "\[Resources\] DIAGNOSTIC: writers of the most objects at $(rva counters 0x20): the start-up.s store at $(rva stores 6), ${1:-none besides it} (Q-E-T1)\$"; }
+# sites_logged: the module's eleven lines, word for word, with the addresses of the fake's sites and data
 sites_logged() {
+	heap_line && most_writers &&
 	log_line "\[Resources\] DIAGNOSTIC: store of the most objects at $(rva stores 6) -> $(rva counters 0x20), from the configuration.s +0x54C (Q-E-T1)\$" &&
 	log_line "\[Resources\] DIAGNOSTIC: store of budgets 0 and 1 at $(rva stores 26) -> $(rva counters 0x28), from the configuration.s +0x550 in MB (Q-E-T1)\$" &&
 	log_line "\[Resources\] DIAGNOSTIC: store of budgets 2 and 3 at $(rva stores 48) -> $(rva counters 0x38), from the configuration.s +0x558 in MB (Q-E-T2)\$" &&
@@ -113,24 +126,31 @@ at_ms() {
 # first_after_10s: the first summary 10 seconds after the announcement - 9.9 at least, 20 at most on a busy machine
 first_after_10s() {
 	local a f d
-	a=$(at_ms 'texture budget.s counters at'); f=$(at_ms 'objects allowed (MaxStreamingResources)')
+	a=$(at_ms 'texture budget.s counters at'); f=$(at_ms 'objects allowed (MaxStreamingResources')
 	[ -n "$a" ] && [ -n "$f" ] || return 1
 	d=$(( f - a )); (( d < 0 )) && d=$(( d + 86400000 ))
 	(( d >= 9900 && d <= 20000 ))
 }
-summaries() { count 'objects allowed (MaxStreamingResources)'; }
+summaries() { count 'objects allowed (MaxStreamingResources'; }
+# most_key VALUE [BUDGET]: TweaksV.ini with STREAMED_OBJECTS=VALUE and VIDEO_MEMORY_BUDGET=BUDGET; refused_most WHY [BUDGETS]: the most's problem
+# WHY, word for word, its only one; the most the game's own, the budgets BUDGETS
+most_key() { fresh_ini; setkey STREAMED_OBJECTS "$1" RESOURCES; setkey VIDEO_MEMORY_BUDGET "${2:-0}" RESOURCES; }
+refused_most() { log_line "${MOST_NOT}$1\$" && [ "$(count '\[Resources\] PROBLEM')" -eq 1 ] && has ', the most 98304'; }
+# raised_most VALUE: the raise's line of a most of 98304 raised to VALUE by the key, word for word; left_most MOST TO: its line of a most left
+raised_most() { log_line "${MOST_LINE}98304) are raised to $1 by STREAMED_OBJECTS; the game.s descriptor heap holds 196608.\$"; }
+left_most() { log_line "${MOST_LINE}$1) are at least $2 - left as they are; the game.s descriptor heap holds 196608.\$"; }
 
-echo "== TB1 defaults, VIDEO_MEMORY_BUDGET=0 and DIAGNOSTIC_MODE=0: nothing looked for, nothing written"
+echo "== TB1 both keys 0, DIAGNOSTIC_MODE=0: nothing looked for, nothing written"
 fresh_ini; out=$(game full_game.exe); echo "      $out"; stubs0=$(stubs)
-check "no texture budget pattern looked for; the part's one line, word for word" "log_lacks 'Q-E-T' && log_line '\[Resources\] VIDEO_MEMORY_BUDGET=0 - the texture budget is not raised.\$' && [ \$(count '\[Resources\]') -eq 1 ]"
+check "no texture budget pattern looked for; the part's two lines, word for word" "log_lacks 'Q-E-T' && log_line '\[Resources\] VIDEO_MEMORY_BUDGET=0 - the texture budget is not raised.\$' && log_line '\[Resources\] STREAMED_OBJECTS=0 - the most streamed objects are not raised.\$' && [ \$(count '\[Resources\]') -eq 2 ]"
 check "the start-up's call made to the game's function itself, its arguments and its result as they came, the budgets the game's own" "startup 'the next step' '1500, 1500, 3000 and 3000' && [ -n '$stubs0' ]"
 check "the fake's sites as placed, its data as set, every page's protection its own" "untouched"
 
-echo "== TB2 DIAGNOSTIC_MODE=1: the five patterns found once each, every site logged, the counters summed up 10 s in"
+echo "== TB2 DIAGNOSTIC_MODE=1: the seven patterns found once each, every site logged, the counters summed up 10 s in"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe wait)
-check "Q-E-T1 to Q-E-T5 found once each, where the fake has them - Q-E-T2 34 bytes after Q-E-T1" "patterns_found"
-check "the nine lines of the sites, word for word, with the addresses of the fake's sites and data" "sites_logged"
-check "the budgets' writers: the start-up's two stores alone - the stores beside the budgets, the loads and the compares of them not counted" "writers_line"
+check "Q-E-T1 to Q-E-T7 found once each, where the fake has them - Q-E-T2 34 bytes after Q-E-T1" "patterns_found"
+check "the eleven lines of the sites, word for word, with the addresses of the fake's sites and data" "sites_logged"
+check "the budgets' writers: the start-up's two stores alone - the stores beside the budgets, the loads and the compares of them not counted - and the most's alike" "writers_line && most_writers"
 check "the announcement, word for word, with the counters' address" "announced"
 check "the update check's switch and factors, logged once: they do not change" "log_line '$UPDATE_CHECK' && [ \$(count 'the update check.s switch holds') -eq 1 ]"
 check "the summary, word for word, with the fake's numbers at the game's own sizes, 10 s after the announcement" "log_line '$SUMMARY1' && first_after_10s"
@@ -195,12 +215,12 @@ check "no problem, no announcement; nothing written" "log_lacks 'PROBLEM' && not
 
 echo "== TB14 the plain game, DIAGNOSTIC_MODE=1: every pattern missing - logged, not the module's problem"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game plain_game.exe)
-check "the scanner's five lines and the module's, word for word" "[ \$(grep -c -E 'Pattern Q-E-T[1-5] not found: ' TweaksV.log) -eq 5 ] && log_line '${NOT_MEASURED}Q-E-T1 was not found.\$'"
+check "the scanner's seven lines and the module's, word for word" "[ \$(grep -c -E 'Pattern Q-E-T[1-7] not found: ' TweaksV.log) -eq 7 ] && log_line '${NOT_MEASURED}Q-E-T1 was not found.\$'"
 check "no problem of the module's, no announcement" "log_lacks '\[Resources\] PROBLEM' && nothing_measured"
 
 echo "== TB15 DRY_RUN=1 with DIAGNOSTIC_MODE=1: the same lines and the same summary; nothing written"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; setkey DRY_RUN 1; out=$(game full_game.exe wait)
-check "the five patterns, the nine lines of the sites, the announcement and the summary 10 s in, word for word" "patterns_found && sites_logged && announced && log_line '$SUMMARY1' && first_after_10s"
+check "the seven patterns, the eleven lines of the sites, the announcement and the summary 10 s in, word for word" "patterns_found && sites_logged && announced && log_line '$SUMMARY1' && first_after_10s"
 check "no problem; nothing written" "log_lacks 'PROBLEM' && untouched"
 
 echo "== TB16 nine writers of the budgets besides the start-up's stores, each of another kind: each named, measured all the same"
@@ -270,7 +290,7 @@ check "nothing written: the call made to the game's function, the budgets as the
 
 echo "== TB33 DIAGNOSTIC_MODE=1 with VIDEO_MEMORY_BUDGET=6000: the sites, the call's write, the summary 10 s in of the raised budget"
 fresh_ini; setkey VIDEO_MEMORY_BUDGET 6000 RESOURCES; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe wait)
-check "the nine lines of the sites, the most and the budgets still 0 at TweaksV's start, and the call's write, word for word" "sites_logged && still_unset && call_written && redirected 6000"
+check "the eleven lines of the sites, the most and the budgets still 0 at TweaksV's start, and the call's write, word for word" "sites_logged && still_unset && call_written && redirected 6000"
 check "the summary 10 s in, word for word, of the raised budget, the game's own four beside it" "log_line '$SUMMARY_RAISED' && first_after_10s"
 check "no problem; the budgets raised, nothing else written" "log_lacks 'PROBLEM' && report_is 'a TweaksV stub' '6000, 6000, 6000 and 6000'"
 
@@ -363,6 +383,131 @@ fresh_ini; setkey VIDEO_MEMORY_BUDGET 6000 RESOURCES; out=$(game full_game.exe t
 check "the movbe behind an F2 alone, which the F2 as its prefix makes crc32's load: refused, named by its 0F" "refused 'the budgets at $(rva counters 0x28) have 1 possible writer besides the start-up.s stores, the first at $(rva misread 63), which could undo the raise later.'"
 fresh_ini; setkey VIDEO_MEMORY_BUDGET 6000 RESOURCES; out=$(game full_game.exe tbmisreadload)
 check "a load whose bytes read as a store, movups of budget 0, its 10 read as adc: counted all the same, a possible writer named by its 10 - safe, where a missed writer is not" "refused 'the budgets at $(rva counters 0x28) have 1 possible writer besides the start-up.s stores, the first at $(rva misread 74), which could undo the raise later.'"
+
+echo "== TB60 STREAMED_OBJECTS=131072 alone: the most raised as the game's start-up sets it, through the redirected call and nothing else"
+most_key 131072; out=$(game full_game.exe)
+check "the budgets' one line; the redirect's line, word for word; the raise's, no line of the budgets' raise" "log_line '\[Resources\] VIDEO_MEMORY_BUDGET=0 - the texture budget is not raised.\$' && log_line \"\[Resources\] The call after the budgets. stores at \$(rva stores 74) is redirected: the most objects below 131072 are raised to it when the game.s start-up sets them.\$\" && raised_most 131072 && log_lacks 'The texture budgets of gameconfig'"
+check "the start-up's call through TweaksV's stub, the most raised before the game's function ran, the budgets as the game set them" "startup 'a TweaksV stub' '1500, 1500, 3000 and 3000' 131072"
+check "nothing else written: the sites as placed but the call, the data as set but the most, one stub more, read+execute; Q-E-T5 and Q-E-T7 not looked for, no DIAGNOSTIC line, no problem" "report_is 'a TweaksV stub' '1500, 1500, 3000 and 3000' 131072 && [ \"\$(stubs)\" = \"\$((stubs0 + 1))\" ] && log_lacks 'Q-E-T5' && log_lacks 'Q-E-T7' && log_lacks '\[Resources\] DIAGNOSTIC' && log_lacks 'PROBLEM'"
+
+echo "== TB61 both keys, as the default file has them: one redirect, both raised in the one call"
+most_key 131072 6000; out=$(game full_game.exe)
+check "the redirect's one line, word for word; both raises' lines; one stub, nothing else written, no problem" "log_line \"\[Resources\] The call after the budgets. stores at \$(rva stores 74) is redirected: the texture budgets below 6000 MB are raised to it and the most objects below 131072 to it when the game.s start-up sets them.\$\" && log_has 'are raised to 6000 MB where they are below it' && raised_most 131072 && startup 'a TweaksV stub' '6000, 6000, 6000 and 6000' 131072 && report_is 'a TweaksV stub' '6000, 6000, 6000 and 6000' 131072 && [ \"\$(stubs)\" = \"\$((stubs0 + 1))\" ] && log_lacks 'PROBLEM'"
+
+# These runs go side by side, each in a game folder of its own, since a fake takes seconds and many wait for a first summary, 10 seconds in.
+# beside NAME KEYS OPTION...: a run in the background, KEYS the commands that make its TweaksV.ini, half as many at a time as the suites; at
+# NAME: its folder and its report, for the checks made in their place below
+game_folder=$B
+running=0
+beside() {
+	local name=$1 keys=$2
+	shift 2
+	( B=$game_folder/beside/$name; mkdir -p "$B" && cd "$B" || exit 1; cp ../../TweaksV.asi .; eval "$keys"; game ../../full_game.exe "$@" > /dev/null ) &
+	running=$((running + 1))
+	if [ "$running" -ge "$(( ${TWEAKSV_TEST_JOBS:-4} / 2 + 1 ))" ]; then wait -n; running=$((running - 1)); fi
+}
+at() { B=$game_folder/beside/$1; cd "$B" || exit 1; out=$(tr -d '\r' < harness.out); }
+for value in 1 98303 98304 147456 147457; do beside "value$value" "most_key $value"; done
+for option in tbconfig140000 tbconfig147456 tbconfig200000 tbheapsmall tbheapedge tbheaptiny; do beside $option 'most_key 131072' $option; done
+for option in tbheapnone tbt6twice tbsizeout tbsizeodd tbheapout tbheapodd tbmakerhooked tbwritemost; do beside $option 'most_key 131072 6000' $option; done
+for option in tbfree16384 tbfree16383 tblistcycle tblistpast tblistunreadable tblistnull tblistodd tbheaphuge; do beside $option 'fresh_ini; setkey DIAGNOSTIC_MODE 1' $option wait; done
+for option in tbt7twice tbmakermoved tbheadstores; do beside walk$option 'most_key 131072; setkey DIAGNOSTIC_MODE 1' $option; done
+wait
+
+echo "== TB62 the key's values: below the game's own raised to it and reported, the game's own and the top taken, past the top the settings' clamp"
+for value in 1 98303; do
+	at "value$value"
+	check "$value: the problem, word for word, the part's only one; 98304 used, the most left as the game set it" "log_line \"\[Resources\] PROBLEM: TweaksV.ini: \[RESOURCES\] STREAMED_OBJECTS=$value is outside 0 or 98304..147456 - using 98304.\$\" && one_problem && left_most 98304 98304 && report_is 'a TweaksV stub' '1500, 1500, 3000 and 3000'"
+done
+at value98304
+check "98304: taken, the most left as the game set it, no problem" "left_most 98304 98304 && report_is 'a TweaksV stub' '1500, 1500, 3000 and 3000' && log_lacks 'PROBLEM'"
+at value147456
+check "147456, the top on this game: raised to it, no problem" "raised_most 147456 && report_is 'a TweaksV stub' '1500, 1500, 3000 and 3000' 147456 && log_lacks 'PROBLEM'"
+at value147457
+check "147457, past the setting's maximum: the settings' clamp, 147456 used" "log_line 'PROBLEM: TweaksV.ini: \[RESOURCES\] STREAMED_OBJECTS=147457 is outside 0..147456 - using 147456.\$' && raised_most 147456 && has ', the most 147456'"
+
+echo "== TB63 a gameconfig.xml's most: above the key left as it is, at the top too, above the top left with one problem"
+at tbconfig140000
+check "140000: left, word for word, no problem; the game's function saw it" "left_most 140000 131072 && startup 'a TweaksV stub' '1500, 1500, 3000 and 3000' 140000 && report_is 'a TweaksV stub' '1500, 1500, 3000 and 3000' 140000 && log_lacks 'PROBLEM'"
+at tbconfig147456
+check "147456, the top itself: left, no problem" "left_most 147456 131072 && has ', the most 147456' && log_lacks 'PROBLEM'"
+at tbconfig200000
+check "200000: left, its one problem, word for word, no line of a raise" "log_line '\[Resources\] PROBLEM: MaxStreamingResources of gameconfig.xml, 200000, is above 147456, 3/4 of the game.s descriptor heap of 196608: that heap has no check at its end, and a load that reaches it crashes. It is left as it is.\$' && [ \$(count '\[Resources\] PROBLEM') -eq 1 ] && has ', the most 200000' && log_lacks 'The most streamed objects of gameconfig.xml'"
+
+echo "== TB64 the heap's size: none, a top that cuts the key, a top not above the game's own"
+at tbheapnone
+check "both dwords 0: one problem, word for word, nothing written of the most; the budgets raised all the same" "refused_most \"the game.s descriptor heap.s size at \$(rva 'heap sizes') and \$(rva 'heap sizes' 4) (Q-E-T6) reads 0.\" && log_has 'are raised to 6000 MB where they are below it' && startup 'a TweaksV stub' '6000, 6000, 6000 and 6000'"
+at tbheapsmall
+check "159744: raised to 119808, 3/4 of it, and said, word for word; no problem" "log_line \"\${MOST_LINE}98304) are raised to 119808, 3/4 of the game.s descriptor heap of 159744, below the 131072 of STREAMED_OBJECTS.\$\" && has ', the most 119808' && log_lacks 'PROBLEM'"
+at tbheapedge
+check "131072: its 3/4 are the game's own 98304, no raise: one problem, word for word" "refused_most '3/4 of the game.s descriptor heap of 131072, 98304, is not above the game.s own 98304.'"
+at tbheaptiny
+check "98304: its 3/4 below the game's own: one problem, word for word" "refused_most '3/4 of the game.s descriptor heap of 98304, 73728, is not above the game.s own 98304.'"
+
+echo "== TB65 each check of the key's own failing, both keys: its one problem, the budgets raised all the same"
+try_most() { at "$1"; check "$1: $2" "refused_most \"$3\" && startup 'a TweaksV stub' '6000, 6000, 6000 and 6000' && report_is 'a TweaksV stub' '6000, 6000, 6000 and 6000'"; }
+try_most tbt6twice "Q-E-T6 twice" "the game code holds Q-E-T6 2 or more times, not the expected 1."
+try_most tbsizeout "the first dword outside the game" "the descriptor heap.s size at 0x[0-9A-F]* (outside the game) (Q-E-T6) is not inside the game."
+try_most tbsizeodd "the first dword not aligned" "the descriptor heap.s size at \$(rva 'heap sizes' 1) (Q-E-T6) is not aligned to 4 bytes."
+try_most tbheapout "the heap outside the game" "the descriptor heap at 0x[0-9A-F]* (outside the game) (Q-E-T6) is not inside the game."
+try_most tbheapodd "the heap not aligned" "the descriptor heap at \$(rva 'descriptor heap' 4) (Q-E-T6) is not aligned to 8 bytes."
+try_most tbmakerhooked "the call of its maker hooked by another mod" "the call of the descriptor heap.s maker at \$(rva 'device start' 39) is not a call into the game (another mod may have hooked it already) (Q-E-T6)."
+try_most tbwritemost "a writer of the most besides the start-up's store, the store 16 bytes before the budgets, no writer of theirs" "the most objects at \$(rva counters 0x20) have 1 possible writer besides the start-up.s store, the first at \$(rva writers 22), which could undo the raise later."
+cd "$game_folder" || exit 1
+B=$game_folder
+most_key 131072 6000; addkey TEST_BREAK_PATTERN Q-E-T6; out=$(ASI=TweaksV_test.asi game full_game.exe)
+check "Q-E-T6 missing (TEST_BREAK_PATTERN, test build)" "refused_most 'Q-E-T6 was not found.' && startup 'a TweaksV stub' '6000, 6000, 6000 and 6000'"
+most_key 131072 6000; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe tbwritemost)
+check "the writers' two lines with DIAGNOSTIC_MODE=1: that store none of the budgets', one of the most's, named" "writers_line && most_writers \"and 1 besides it: \$(rva writers 22)\""
+
+echo "== TB66 the checks both keys share: each key's problem, nothing written; the plain game, the start-up before TweaksV, the dynamic code policy"
+most_key 131072 6000; addkey TEST_BREAK_PATTERN Q-E-T2; out=$(ASI=TweaksV_test.asi game full_game.exe)
+check "Q-E-T2 missing: both problems, word for word; nothing written" "log_line '${NOT_RAISED}Q-E-T2 was not found.\$' && log_line '${MOST_NOT}Q-E-T2 was not found.\$' && [ \$(count '\[Resources\] PROBLEM') -eq 2 ] && untouched"
+most_key 131072; out=$(game plain_game.exe)
+check "the plain game, the key alone: the scanner's five lines, Q-E-T5 and Q-E-T7 not looked for; the problem, word for word" "[ \$(grep -c -E 'Pattern Q-E-T[12346] not found: ' TweaksV.log) -eq 5 ] && log_lacks 'Q-E-T5' && log_lacks 'Q-E-T7' && log_line '${MOST_NOT}Q-E-T1 was not found.\$'"
+most_key 131072; out=$(game full_game.exe tbearly)
+check "the start-up before TweaksV started: the problem, word for word, the most as the game set it, no redirect" "refused_most \"the most objects at \$(rva counters 0x20) and the budgets at \$(rva counters 0x28) were set before TweaksV started (MaxStreamingResources: 98304, MaxStreamingMemory_0..3_Base: 1500, 1500, 3000 and 3000 MB): the game.s start-up ran before TweaksV.s DllMain, and the call after its stores with it.\" && untouched"
+most_key 131072 6000; out=$(game full_game.exe nodyncode)
+check "Windows' dynamic code policy: both problems, word for word; nothing written" "log_line \"\${NOT_RAISED}the call after the budgets. stores at \$(rva stores 74) could not be redirected (details in TweaksV.log).\$\" && log_line \"\${MOST_NOT}the call after the budgets. stores at \$(rva stores 74) could not be redirected (details in TweaksV.log).\$\" && untouched"
+
+echo "== TB67 DRY_RUN=1 with both keys: everything found and checked, the call not redirected; [RESOURCES] ENABLED=0: nothing"
+most_key 131072 6000; setkey DRY_RUN 1; out=$(game full_game.exe)
+check "the three dry-run lines, word for word, and not the redirect's; nothing written, no problem" "dry_run_lines && log_line '\[Resources\] DRY_RUN: the most streamed objects below 131072 would be raised to it when the game.s start-up sets them.\$' && log_lacks 'stores at RVA 0x[0-9A-F]* is redirected' && untouched && startup 'the next step' '1500, 1500, 3000 and 3000' && log_lacks 'PROBLEM'"
+most_key 131072 6000; setkey ENABLED 0 RESOURCES; out=$(game full_game.exe)
+check "the part off with both keys: no line of it, none of its patterns; nothing written" "log_lacks '\[Resources\]' && log_lacks 'Q-E-T' && untouched"
+
+echo "== TB68 DIAGNOSTIC_MODE=1 with both keys: the most raised, the summary says so, the descriptors beside it"
+most_key 131072 6000; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe wait)
+check "the sites' lines, the raise's, the summary 10 s in, word for word: the game's own most beside the raised one, the descriptors in use; no problem" "sites_logged && raised_most 131072 && log_line '\[Resources\] DIAGNOSTIC: texture budget: 2845 MB of the 6000 MB budget for the texture quality.s index 2 (MaxStreamingMemory_0..3_Base: 1500, 1500, 3000 and 3000 MB, raised to 6000, 6000, 6000 and 6000 MB by VIDEO_MEMORY_BUDGET) - textures 2456 MB, buffers 389 MB; 23456 of the 131072 objects allowed (MaxStreamingResources: 98304, raised by STREAMED_OBJECTS) - 22222 textures, 1234 buffers; 30000 of the 196608 descriptors in use; the most so far 2900 MB by the game.s own mark, 2845 MB and 23456 objects at TweaksV.s readings; the update check.s flag is down.\$' && first_after_10s && log_lacks 'PROBLEM'"
+
+echo "== TB69 the walk of the free list, each case a summary's words, the rest going on: the bound, a list past the size, what cannot be read"
+walked() { at "$1"; check "$1: $2" "$3 && announced && log_lacks 'PROBLEM' && untouched"; }
+NEAR=' - near the descriptors. end: the game has no check there'
+in_use() { log_line "1234 buffers; $1 of the $2 descriptors in use; the most so far .*flag is down${3:-}\.\$"; }
+walked tbfree16384 "16384 free: in use, no word of the end" "in_use 180224 196608 && log_lacks 'near the descriptors'"
+walked tbfree16383 "16383 free: near the end, word for word" "in_use 180225 196608 '$NEAR'"
+walked tblistcycle "the last entry leads back: the bound ends the walk, all taken for free" "in_use 0 196608"
+walked tblistpast "an index past the size ends the walk, 11 free: all but those in use, near the end" "in_use 196597 196608 '$NEAR'"
+for option in tblistunreadable tblistnull tblistodd tbheaphuge; do
+	walked $option "the list cannot be read so: said in the summary's place of the number" "log_line '1234 buffers; the descriptors cannot be read; the most so far ' && log_lacks 'descriptors in use'"
+done
+
+echo "== TB70 the walk's own checks, each ending the walk alone: the budget measured, a raise going on"
+walk_off() { at "walk$1"; check "$1: $2" "log_line \"\${NOT_WALKED}$3\$\" && raised_most 131072 && announced && log_lacks 'PROBLEM' && log_line '\[Resources\] DIAGNOSTIC: descriptor heap at .* (Q-E-T6)\$'"; }
+walk_off tbt7twice "Q-E-T7 twice" "the game code holds Q-E-T7 2 or more times, not the expected 1."
+walk_off tbmakermoved "the maker's stores a byte further in" "the descriptor heap.s stores at \$(rva maker 0x37) (Q-E-T7) do not lie 0x36 bytes into its maker at \$(rva maker) (Q-E-T6)."
+walk_off tbheadstores "the store past them another offset's" "the code after Q-E-T7 at \$(rva maker 0xD4) is not the store of the descriptor heap.s head: 89 7E 24 89 7E 28."
+cd "$game_folder" || exit 1
+B=$game_folder
+rm -rf beside
+most_key 131072; setkey DIAGNOSTIC_MODE 1; addkey TEST_BREAK_PATTERN Q-E-T7; out=$(ASI=TweaksV_test.asi game full_game.exe wait)
+check "Q-E-T7 missing (TEST_BREAK_PATTERN, test build): the walk's line, the most raised, the summary without the descriptors" "log_line '${NOT_WALKED}Q-E-T7 was not found.\$' && raised_most 131072 && log_line '1234 buffers; the most so far ' && log_lacks 'descriptors in use' && log_lacks 'PROBLEM'"
+fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe tbmakerhooked)
+check "the key at 0, the maker's call hooked: the walk's line, the most's writers logged, nothing written, no problem" "log_line \"\${NOT_WALKED}the call of the descriptor heap.s maker at \$(rva 'device start' 39) is not a call into the game (another mod may have hooked it already) (Q-E-T6).\$\" && most_writers && log_lacks '\[Resources\] DIAGNOSTIC: descriptor heap at' && log_lacks 'PROBLEM' && untouched"
+
+echo "== TB71 the test build, TWEAKSV_TEST_SUMMARY_MS=500: a new high of the descriptors in use alone brings a summary"
+fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(TWEAKSV_TEST_SUMMARY_MS=500 ASI=TweaksV_test.asi game full_game.exe tbhighdesc)
+check "after the first, one summary for the 100 descriptors more, the rest of it the same; no more" "has 'descriptors taken after the first summary' && log_line '$SUMMARY1' && log_line \"$(sed 's/30000 of the/30100 of the/' <<< "$SUMMARY1")\" && [ \$(summaries) -eq 2 ] && log_lacks 'PROBLEM'"
 
 echo
 echo "TEXTURE BUDGET SCENARIOS: $pass passed, $fail failed"
