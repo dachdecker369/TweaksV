@@ -305,6 +305,8 @@
 //                  entry 19 0x40, the data's offset field 8, its type 0x0E, its subtype 2, its element's size 0x50, its capacity 32, an element's type 0x0B
 //   srnoelement    the lights' member's element's data not there before the game's registration
 //   srnocarcols    with srdraw: the carcols pointer null while it draws, which only TweaksV's guard can take
+//   sfjoin         with srdraw and sdrun: the two halves of the raise together: a car drawn on the bone structure TweaksV's wrapper filled at its model's
+//                  load, then a hit on its siren25 and a wreck by the game's own loops, their bits handed to the car, its report "siren join: ..."
 //   srlateoffset   the game's registration writes the lights' offset 0x44, and its parser reads them there
 //   srgetterelsewhere   the vehicle lights' call of the getter leads to another function of the game than I-E-M1's
 // Ped props (PedProps): the eleven narrowings with the calls in their matches, A-E-G1's two copies among them, the
@@ -3457,6 +3459,7 @@ enum
 	kSirenCountMore32, kSirenCountMore16,								// scmore, later
 	kSirenCountFault,													// scfault
 	kSirenCount21, kSirenCountHoles, kSirenCountShare, kSirenCountReplaced, kSirenCountRace,	// srdraw, with those it draws too
+	kSirenCountJoined,													// sfjoin
 	kSirenCountNoSetting, kSirenCountPast, kSirenCountSpare,			// and at position 0, 255 and past the count
 	kSirenCountVehicles
 };
@@ -4117,6 +4120,7 @@ static void SirenCountSetup(int argc, wchar_t** argv)
 	SirenCountMake(v[kSirenCountShare], 0x50505050, 90, 32, 50, 0, 0);
 	SirenCountMake(v[kSirenCountReplaced], 0x60606060, 95, 32, 60, 0, 0);
 	SirenCountMake(v[kSirenCountRace], 0x70707070, 96, 32, 70, 0, 0);
+	SirenCountMake(v[kSirenCountJoined], 0xB1B1B1B1, 96, 32, 10, 32, 42);
 	SirenCountMake(v[kSirenCountNoSetting], 0x80808080, 97, 32, 20, 0, 0);
 	SirenCountMake(v[kSirenCountPast], 0x90909090, 98, 32, 30, 0, 0);
 	SirenCountMake(v[kSirenCountSpare], 0xA0A0A0A0, 99, 32, 35, 0, 0);
@@ -9211,6 +9215,45 @@ static void SdReport()
 	SdDamageReport();
 	wprintf(L"sd children: %d asked wrongly | ", g_sdChildBad);		// after the loops, the only code that asks
 }
+
+// sfjoin, the two halves of the raise on one model: its bone structure the pool's element TweaksV's wrapper filled at the load, the room the second call reads, and the
+// bits the game's own loops set on it, which the wrapper's shift hands to that call. What each call lit: at first, after a hit on siren25, after a wreck.
+static LONG g_sirenJoinLit[3][2] = {};
+static bool g_sirenJoined = false;
+static void SirenJoinActions(int argc, wchar_t** argv)
+{
+	if (!HasOption(argc, argv, L"sfjoin") || !g_sdRan || !g_sirenRaiseOn)
+		return;
+	const SdModel& full = g_sdModels[kSdFull];
+	SirenCountVehicle& v = g_sirenCountVehicles[kSirenCountJoined];
+	memcpy(&v.structure, full.holding, sizeof(v.structure));	// what the renderer compares the block with
+	v.holder = full.holding;
+	SirenRaiseMerge(kSirenCountJoined, SirenParse(32, 14, 14, -1));
+	g_sirenRaisePastSeed[kSirenCountJoined] = 14;
+	SirenRaiseGiveState(v, 9000);
+	const auto draw = [&v](int at)
+	{
+		SirenCountDraw(g_sirenRaiseLights, &v.car, &v.model, &v.skeleton);
+		g_sirenJoinLit[at][0] = g_sirenRaiseLit[kSirenCountJoined][0];
+		g_sirenJoinLit[at][1] = g_sirenRaiseLit[kSirenCountJoined][1];
+		SdFresh(g_sdModels[kSdFull]);
+	};
+	draw(0);
+	reinterpret_cast<void (*)(SdVehicle*, const void*, int)>(const_cast<unsigned char*>(g_sdHit))(&g_sdVehicle, full.holding, SdBoneOf(full, "siren", 25));
+	memcpy(v.car.bytes + 0x860, &g_sdVehicle.broken, sizeof(g_sdVehicle.broken));
+	draw(1);
+	reinterpret_cast<void (*)(SdVehicle*)>(const_cast<unsigned char*>(g_sdWreck))(&g_sdVehicle);
+	memcpy(v.car.bytes + 0x860, &g_sdVehicle.broken, sizeof(g_sdVehicle.broken));
+	draw(2);
+	g_sirenJoined = true;
+}
+
+static void SirenJoinReport()
+{
+	if (g_sirenJoined)
+		wprintf(L"siren join: %ld+%ld, after a hit on siren25 %ld+%ld, after a wreck %ld+%ld | ", g_sirenJoinLit[0][0], g_sirenJoinLit[0][1], g_sirenJoinLit[1][0], g_sirenJoinLit[1][1],
+			g_sirenJoinLit[2][0], g_sirenJoinLit[2][1]);
+}
 // [corona store]
 // The corona store's data: what the job's parameters are given and what the drawing side's sites name, the store and its count being the lighting capacity's.
 struct CcData
@@ -11973,6 +12016,7 @@ int wmain(int argc, wchar_t** argv)
 	RqActions(argc, argv);
 	// [siren damage]
 	SdActions(argc, argv);
+	SirenJoinActions(argc, argv);
 	// [corona store]
 	CcActions(argc, argv);
 	if (HasOption(argc, argv, L"wait"))
@@ -12068,6 +12112,7 @@ int wmain(int argc, wchar_t** argv)
 	RqReport(argc, argv);
 	// [siren damage]
 	SdReport();
+	SirenJoinReport();
 	CheckStub(Rel32Target(Site{ g_sdCaller, kSdMakerRel32, 0 }));
 	CheckData(SirenCountCode(&SdMakerCarrier) + kSdAllocAt + kSdAllocationAt, 5);
 	// [corona store]

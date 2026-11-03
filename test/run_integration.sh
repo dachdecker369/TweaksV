@@ -4,16 +4,17 @@
 # pattern deliberately broken per plugin with the TEST build, another game exe, no C runtime DLLs, a renamed
 # .asi, no code changes allowed, the user name kept out of the log, the log's limit, links, a read-only game
 # folder, a held log, the code dump, the copy of a script program, a half of WeaponLimits that throws. Every part
-# on, PedProps too, which ships off (PEDPROPS_ON), and the light stores, which base.ini has off (STORES_ON).
+# on, PedProps too, which ships off (PEDPROPS_ON), and the light stores and the sirens per vehicle, which base.ini has off (SIRENS_ON). The raise's
+# two halves together, on one model.
 # Fake LOCALAPPDATA: the real one is never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
-CHECKS=196
+CHECKS=198
 cd "$B" || exit 1
 cp "$R/x64/Release/TweaksV.asi" TweaksV.asi
 cp "$R/object/Test/Release/TweaksV.asi" TweaksV_test.asi
 mkdir -p appdata mods/test scripts plugins
 PEDPROPS_ON=1
-STORES_ON=1
+SIRENS_ON=1
 echo hi > mods/test/file.txt
 
 ALL_ON_HEAP='heap: 1024 MB'
@@ -89,7 +90,7 @@ done
 echo "== I1c ResourceExtensions.asi, Resource Extensions [Enhanced], in the game folder: HeapAdjuster, PackfileLimit, Blips, RayTracing and LightCapacity off while it is there"
 fresh_ini; touch ResourceExtensions.asi; out=$(game full_game.exe); rm -f ResourceExtensions.asi
 check "HeapAdjuster, PackfileLimit, Blips, RayTracing and LightCapacity off, the other parts applied, DirectStorage on" "has '$GAME_HEAP' && has '$PACK_OFF' && log_lacks '\[Blips\]' && log_lacks '\[RayTracing\]' && has '$MODKIT_ON' && has '$BOX_ON' && has '$DECAL_ON' && has '$ROV_ON' && has '$STORY_ON' && log_has '\[DirectStorage\]'"
-check "one item per part, word for word, the only five problems of one summary" "[ \$(re_item HeapAdjuster HEAP_ADJUSTER) -eq 1 ] && [ \$(re_item PackfileLimit PACKFILE_LIMIT) -eq 1 ] && [ \$(re_item Blips BLIPS) -eq 1 ] && [ \$(re_item RayTracing RAYTRACING) -eq 1 ] && [ \$(re_item LightCapacity LIGHTCAPACITY) -eq 1 ] && log_has 'Start-up summary not shown (ERROR_POPUP=0): 5 problem' && summary_once"
+check "one item per part, word for word, and behind the light stores' the sirens' own refusal, the only six problems of one summary" "[ \$(re_item HeapAdjuster HEAP_ADJUSTER) -eq 1 ] && [ \$(re_item PackfileLimit PACKFILE_LIMIT) -eq 1 ] && [ \$(re_item Blips BLIPS) -eq 1 ] && [ \$(re_item RayTracing RAYTRACING) -eq 1 ] && [ \$(re_item LightCapacity LIGHTCAPACITY) -eq 1 ] && log_has '\[SirenSettings\] PROBLEM: The sirens per vehicle are not raised this session: the light stores are not raised' && log_has 'Start-up summary not shown (ERROR_POPUP=0): 6 problem' && summary_once"
 check "the header's Features: line says off for HeapAdjuster, PackfileLimit, Blips, RayTracing and LightCapacity and on for the rest, the check's lines stand after the header" "features_say HeapAdjuster PackfileLimit Blips RayTracing LightCapacity && after_header 'is installed and does this job too'"
 
 echo "== I2 all old plugins at once, in the game folder, scripts\\ and plugins\\: everything skipped"
@@ -464,7 +465,7 @@ check "the copy saved in %LOCALAPPDATA%\\TweaksV, and nothing in the game folder
 check "the header: TWKVSCRP, format 1, 176 bytes, the name zero-padded, the hash and the lengths, placement 1 on the placing thread, the 1st program placed, resolved, the game's base, size and timestamp, none unreadable, the reserved fields 0, the five offsets and the file's size" "[ \"$placed\" = 1 ] && header_ok $f 1 1 1 0"
 check "the blocks byte for byte: the program object, the code over its two pages, the native table before (the hashes) and after (the handlers), the strings" "blocks_ok $f 1"
 check "the log: the first program the game placed, the line that proves the hook runs, and the copy saved, word for word; no problem" "log_line '\[TweaksV\] TEST BUILD: TEST_DUMP_SCRIPT: the first script program the game placed is blip_controller (hash 0x80CFE974), on thread $thread - the hook runs.\$' && saved_line 1 1 'every one resolved' 'none unreadable' && log_lacks 'PROBLEM'"
-check "the placement went through TweaksV's stub, read+execute; the game's resolution ran and its last error came back to the constructor" "has 'script: 1 placed on thread $thread through a TweaksV stub, resolved 1 of 1, last error kept 1 of 1' && has 'stubs: 7, all RX' && has 'protect: all restored (RX)'"
+check "the placement went through TweaksV's stub, read+execute; the game's resolution ran and its last error came back to the constructor" "has 'script: 1 placed on thread $thread through a TweaksV stub, resolved 1 of 1, last error kept 1 of 1' && has 'stubs: 11, all RX' && has 'protect: all restored (RX)'"
 
 fresh_ini; setkey DIAGNOSTIC_MODE 1; addkey TEST_DUMP_SCRIPT BLIP_Controller; script_run scripttwice
 check "placed twice, the name asked for in capitals: two copies, the second with a native the game does not know - not every one resolved - each with its blocks and its line" "[ \$(scripts) = 2 ] && header_ok $d/Script-blip_controller-1.bin 1 1 1 0 && header_ok $d/Script-blip_controller-2.bin 2 2 0 0 && blocks_ok $d/Script-blip_controller-1.bin 1 && blocks_ok $d/Script-blip_controller-2.bin 2 && saved_line 1 1 'every one resolved' 'none unreadable' && saved_line 2 2 'not every one resolved' 'none unreadable' && has 'resolved 1 of 2, last error kept 2 of 2'"
@@ -614,11 +615,16 @@ echo "== I23 an exception nothing nearer catches (the test build's TWEAKSV_TEST_
 fresh_ini; setkey ERROR_POPUP 1; TWEAKSV_TEST_THROWS=RageOpenV box_run
 check "a part, the one that would show the summary itself: said once, its problem word for word, the only one, in the summary's box all the same; that part not started, the parts before and after it started" "[ \$(count '\[RageOpenV\] TEST BUILD: RageOpenV throws in place of starting (TWEAKSV_TEST_THROWS=RageOpenV)\.') -eq 1 ] && log_line '\[RageOpenV\] PROBLEM: unexpected exception - this part is skipped for this session\$' && [ \$(count 'PROBLEM') -eq 1 ] && log_has 'Showing the start-up summary (1 problem(s))\.' && [ \"\$(box_text)\" = \"${SUMMARY_HEAD}• [RageOpenV] unexpected exception - this part is skipped for this session | \$SUMMARY_END\" ] && has '$ROV_OFF' && has '$ALL_ON_HEAP' && has '$PACK_ON' && has '$STORY_ON' && parts_after"
 fresh_ini; setkey ERROR_POPUP 1; setkey DIAGNOSTIC_MODE 1; TWEAKSV_TEST_THROWS='measurement LightCapacity' box_run
-check "a measurement, with DIAGNOSTIC_MODE=1: said once, its line word for word, nothing of it but those under its tag, whose part has run before it; logged and no problem, no box; the measurements before and after it go on" "[ \$(count '\[LightCapacity\] .*\(measurement LightCapacity throws\|a measurement of this part is skipped\)') -eq 2 ] && log_lacks '\[LightCapacity\] .*\(the lighting capacity is\|counting stub\|the most so far\)' && log_line '\[LightCapacity\] TEST BUILD: measurement LightCapacity throws in place of starting (TWEAKSV_TEST_THROWS=measurement LightCapacity)\.\$' && log_line '\[LightCapacity\] DIAGNOSTIC: unexpected exception - a measurement of this part is skipped for this session\.\$' && log_lacks 'PROBLEM' && log_lacks 'Showing the start-up summary' && log_lacks 'message box not shown' && log_has '\[SirenSettings\] DIAGNOSTIC: ' && log_has '\[Population\] DIAGNOSTIC: '"
+check "a measurement, with DIAGNOSTIC_MODE=1: said once, its line word for word, nothing of it but those under its tag, whose part has run before it; logged and no problem, no box; the measurements before and after it go on" "[ \$(count '\[LightCapacity\] .*\(measurement LightCapacity throws\|a measurement of this part is skipped\)') -eq 2 ] && log_lacks '\[LightCapacity\] .*\(the lighting capacity is\|to a counting stub\|the most so far\)' && log_line '\[LightCapacity\] TEST BUILD: measurement LightCapacity throws in place of starting (TWEAKSV_TEST_THROWS=measurement LightCapacity)\.\$' && log_line '\[LightCapacity\] DIAGNOSTIC: unexpected exception - a measurement of this part is skipped for this session\.\$' && log_lacks 'PROBLEM' && log_lacks 'Showing the start-up summary' && log_lacks 'message box not shown' && log_has '\[SirenSettings\] DIAGNOSTIC: ' && log_has '\[Population\] DIAGNOSTIC: '"
 fresh_ini; setkey ERROR_POPUP 1; TWEAKSV_TEST_THROWS=start-up box_run
 check "the start of them all, which only DllMain's catches: said once, its problem word for word, the only one, in the summary's box; no part started, the game as it came, its report whole" "[ \$(count '\[TweaksV\] TEST BUILD: start-up throws in place of starting (TWEAKSV_TEST_THROWS=start-up)\.') -eq 1 ] && log_line '\[TweaksV\] PROBLEM: Unexpected exception during the start-up - the rest of TweaksV is skipped this session\.\$' && [ \$(count 'PROBLEM') -eq 1 ] && log_has 'Showing the start-up summary (1 problem(s))\.' && [ \"\$(box_text)\" = \"${SUMMARY_HEAD}• [TweaksV] Unexpected exception during the start-up - the rest of TweaksV is skipped this session. | \$SUMMARY_END\" ] && has '$GAME_HEAP' && has '$MODKIT_OFF' && has '$PACK_OFF' && has '$BOX_OFF' && has '$DECAL_OFF' && has '$ROV_OFF' && has '$STORY_OFF' && has 'protect: all restored (RX)'"
 fresh_ini; out=$(TWEAKSV_TEST_THROWS=start-up game full_game.exe)
 check "the Release build ignores TWEAKSV_TEST_THROWS: every part started, no TEST BUILD line, no problem" "has '$ALL_ON_HEAP' && has '$ROV_ON' && parts_after && log_lacks 'TEST BUILD' && log_lacks 'PROBLEM'"
+
+echo "== I24 the sirens per vehicle whole, their two halves on one model: the bone structure TweaksV's wrapper filled at its model's load, drawn by the renderer's second call, and the game's own damage loops on it"
+fresh_ini; out=$(game full_game.exe srdraw sdrun sfjoin); echo "      ${out##*siren join}"
+check "its sirens 21 to 32 lit from the room the fill wrote; a hit on siren25 by the game's own loop puts out that one light of the second call; a wreck puts out all of both" "has 'siren join: 20+12, after a hit on siren25 20+11, after a wreck 0+0 |'"
+check "every light of it the item it should be, its block and its stand-in as the renderer wants them; no problem" "has 'stand-ins ok, blocks ok,' && has 'lights right,' && log_lacks 'PROBLEM'"
 
 echo
 echo "INTEGRATION SCENARIOS: $pass passed, $fail failed"

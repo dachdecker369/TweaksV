@@ -14,7 +14,7 @@
 # stores and each site failing alone with nothing written, the hook taken back, DRY_RUN, the IDs' job on and off.
 # Fake LOCALAPPDATA: the real one is never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
-CHECKS=130
+CHECKS=131
 cd "$B" || exit 1
 cp "$R/x64/Release/TweaksV.asi" TweaksV.asi
 cp "$R/object/Test/Release/TweaksV.asi" TweaksV_test.asi
@@ -129,8 +129,8 @@ check "the stubs' line and the module's line, word for word; the call as it was;
 
 # ---- the raise: SIRENS_PER_VEHICLE above 20, the lights past 20 by a second call of the game's own renderer
 
-# The call stubs the raise adds to the others', here the renderer's call and both calls of the getter.
-RAISE_STUBS=3
+# The call stubs the raise adds to the others': the renderer's call, both calls of the getter and the bone structures' maker's.
+RAISE_STUBS=4
 RAISED_SITES="siren raise sites: state size 0x16A8, getter call to a TweaksV stub, the vehicle lights' to a TweaksV stub, reader hooked |"
 NOTHING_WRITTEN="siren raise sites: state size 0x188, getter call to the getter, the vehicle lights' to the getter, reader as laid |"
 # What the loop of the fake's renderer found: 201 passes of the 14 models, 6 of them lit past 20 - 4 of the 12 own lights of the one whose setting has 28 items are default ones
@@ -248,9 +248,9 @@ for label in I-E-B1 I-E-Z1 I-E-Z2 I-E-Z3 I-E-Z4 I-E-Z5 I-E-Z6 I-E-Z7 I-E-C1 I-E-
 	check "$label: the problem, word for word; nothing written" "sc_line '$NOT_RAISED $label was not found.' && has \"$NOTHING_WRITTEN\" && has '$PLACED'"
 done
 
-echo "== R18 the plain game: the part's problem, the first pattern named"
+echo "== R18 the plain game: the light stores find nothing, so the part's problem is theirs"
 raised_ini; setkey LARGE_SIREN_IDS 0 SIRENSETTINGS; out=$(game plain_game.exe)
-check "the problem, word for word" "sc_line '$NOT_RAISED I-E-B1 was not found.'"
+check "the problem, word for word" "sc_line '$NOT_RAISED the light stores are not raised (.LIGHTCAPACITY. in TweaksV.ini), and the game.s own do not take 32 sirens a vehicle. Vehicles keep 20 sirens.'"
 
 # refused WORDS [OPTION...]: full_game with the raise on, its problem word for word, nothing written of the raise's
 refused() {
@@ -291,9 +291,11 @@ check "srlateoffset: the lights' offset read from the member data at the read, n
 raised_ini; out=$(game full_game.exe srdraw srnocarcols)
 check "srnocarcols: no carcols data: every position the empty setting, no second call, no block, no read of a null pointer" "sc_line '$RAISED' && has 'siren lights: second calls 0,' && has 'getter calls right,' && has 'lit police 0+0, 32 0+0,' && has 'nosetting 0+0, past 0+0, spare 0+0, |'"
 
-echo "== R20 the one write refused: by Windows' dynamic code policy at the hook, and by the test build's switch at the writes, the hook taken back"
+echo "== R20 the one write refused: by Windows' dynamic code policy at the stores, and by the test build's switch at the hook and at the writes, the hook taken back"
 raised_ini; setkey LARGE_SIREN_IDS 0 SIRENSETTINGS; out=$(game full_game.exe srdraw nodyncode)
-check "no hook can be made: the problem, word for word; nothing written, the vehicles at 20" "sc_line '$NOT_RAISED the functions could not be hooked (details above). Nothing is changed.' && has \"$NOTHING_WRITTEN\" && has 'siren lights: second calls 0,' && has '$PLACED'"
+check "Windows' dynamic code policy stops the stores first: the problem, word for word; nothing written, the vehicles at 20" "sc_line '$NOT_RAISED the light stores are not raised (.LIGHTCAPACITY. in TweaksV.ini), and the game.s own do not take 32 sirens a vehicle. Vehicles keep 20 sirens.' && has \"$NOTHING_WRITTEN\" && has 'siren lights: second calls 0,' && has '$PLACED'"
+raised_ini; out=$(TWEAKSV_TEST_SIREN_WRITE_FAILS=5 ASI=TweaksV_test.asi game full_game.exe srdraw)
+check "no hook can be made: the test line, the problem, word for word; nothing written, the vehicles at 20" "sc_line 'TEST BUILD: the sirens. one write has its hook refused (TWEAKSV_TEST_SIREN_WRITE_FAILS=5).' && sc_line '$NOT_RAISED the functions could not be hooked (details above). Nothing is changed.' && has \"$NOTHING_WRITTEN\" && has 'siren lights: second calls 0,' && has '$PLACED'"
 raised_ini; out=$(TWEAKSV_TEST_SIREN_WRITE_FAILS=1 ASI=TweaksV_test.asi game full_game.exe srdraw)
 check "the writes refused once the hook is on: the test line, the problem, the hook taken back, nothing written, the vehicles at 20" "sc_line 'TEST BUILD: the sirens. one write is refused (TWEAKSV_TEST_SIREN_WRITE_FAILS=1).' && sc_line '$NOT_RAISED its writes could not be made (details above). Nothing is changed.' && has \"$NOTHING_WRITTEN\" && has 'siren lights: second calls 0,' && has '$PLACED' && log_lacks '$RAISED'"
 raised_ini; out=$(TWEAKSV_TEST_SIREN_WRITE_FAILS=2 ASI=TweaksV_test.asi game full_game.exe srdraw)

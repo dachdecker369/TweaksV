@@ -1216,21 +1216,22 @@ namespace TweaksV
 		SirenWrites list;
 		if (!FindSirenLights(sirens, list) || !FindSirenDamage(sirens, list))
 			return;
-		if (list.writes.empty() && list.redirects.empty() && list.hooks.empty())
-			return;
 
 #ifdef TWEAKSV_TEST_BUILD
 		// test builds only: TWEAKSV_TEST_SIREN_WRITE_FAILS in the environment reaches what comes of the one write failing once the hook is on: 1 it is refused, as a
 		// page Windows will not make writable would, by a write without an address, which stops all of it; 2 an exception in its place; 3 refused, and a hook
-		// that cannot then be switched off, being off already; 4 an exception once it is done
+		// that cannot then be switched off, being off already; 4 an exception once it is done; 5 the hook refused, by a function that is none, since Windows' dynamic code
+		// policy stops the light stores before it
 		wchar_t failure[4]{};
 		const wchar_t writeFails = GetEnvironmentVariableW(L"TWEAKSV_TEST_SIREN_WRITE_FAILS", failure, 4) == 1 ? failure[0] : L'0';
-		if (writeFails >= L'1' && writeFails <= L'4')
+		if (writeFails >= L'1' && writeFails <= L'5')
 			WriteLog(kTag, std::string("TEST BUILD: the sirens' one write ") + (writeFails == L'1' ? "is refused" : writeFails == L'2' ? "throws in its place" :
-				writeFails == L'3' ? "is refused and its hook cannot be switched off" : "throws once it is done") + " (TWEAKSV_TEST_SIREN_WRITE_FAILS=" +
+				writeFails == L'3' ? "is refused and its hook cannot be switched off" : writeFails == L'5' ? "has its hook refused" : "throws once it is done") + " (TWEAKSV_TEST_SIREN_WRITE_FAILS=" +
 				static_cast<char>(writeFails) + ").");
 		if (writeFails == L'1' || writeFails == L'3')
 			list.writes.push_back({ nullptr, {}, "write a test build refuses" });
+		if (writeFails == L'5')
+			list.hooks.front().function = nullptr;
 #endif
 
 		// 4. one write, all or nothing: the hooks first, since a hook can be taken back, then the calls and the constants together

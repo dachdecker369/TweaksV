@@ -4,7 +4,7 @@
 # with the same bytes - and the code uses every pattern of the table exactly once; and, through the full fake
 # game and the test build's TEST_TWICE_PATTERN, each pattern held too often is refused in the same words.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
-CHECKS=231
+CHECKS=277
 
 # "LABEL TEXT" per line, sorted: the table's entries, PATTERNS.md's rows and the
 # labels the code names with Pattern("...") (the table's own comment does not count)
