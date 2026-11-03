@@ -62,7 +62,10 @@ NTFS takes `FILE_RENAME_POSIX_SEMANTICS` from Windows 10 1607 on.
    - **RayTracing:** the buffer object's fields, +0x0C the stride in the low 12 bits of a word, and the views' size from them (the maker with its flags' bit 3), which `T-E-B1` does not pin; the 20-byte vertex (the skinning shader 0x4CDF58A2 writes it, the reflection lighting reads it); the buffer made once, after `DllMain`, its global 0 until then: made anew later (a hint: ray tracing switched on in the menu) a second store; the two frame slots and their adjacent counters; the capacity held only by the two checks and the count (a check added elsewhere refuses earlier, which is safe; a write by a size of its own would not show); the shaders' 26-bit first vertex; what a refusal does, its callers handing their job lists back, rax and the flags free for the counting stubs; the skinning job's +0x48; the neighbouring limits of the same frame.
    - **StaticBounds:** the one lookup of the store's size, which `C-E-L1` pins from the call to the pool's lea and no more (the read-back reports a second reader, which splits the store); the name's hash (a store renamed stays at the game's size with the redirect in place, which only the size's line shows); the store's offsets, in no pattern but the pool's; the game asking after `DllMain`; `blip_controller`'s placement after the load's names, which the read-back's numbers rest on, by the hash at +0x58 of a program.
    - **LightCapacity:** the records' sizes, which the stores' distances rest on; 5 vehicles a job and 60 jobs, in the code's shape and no one constant (`lea edi, [rax+rax*4]` at RVA 0xDE692E and 0xDE6931, the same in 0xF0104E); 300 vehicles a frame, the length of four arrays with their counts right behind them, in no instruction; the frame's order, the vehicles' lights last; the sort list's mark, the byte at +4 of its count, read by no pattern's instruction; the siren setting's byte at +0x38 and its lights' flag at +0x45, through `I-E-T4`'s pointer; a job's scratch handed from the worker's frame to a job whose +0x6E has bit 0 set, the only such call found; the shaders' 512 and 128, in the game's shader files; the ray traced upload's score, with its 196 m; the functions behind `G-E-C1`'s and `G-E-F1`'s jumps, pinned only by the 12 and the 14 bytes of their ways out that the module compares at run time.
-   - **The limits measured and not raised** (Population, Ped pool, A pool's memory, Render queues): their layouts in their sections, only logged, a wrong one a wrong number, never harm; a raise reads them again first.
+   - **Population:** the object's fields no pattern pins (the vehicles' excess, lists, requests in flight and shares, the peds' excess) and the list's format, only logged, a wrong one a wrong number, never harm; the model info's +0x286 bit 1, the streamed flag (a hint of the render queues' pass), and its +0x9D's kinds; the variety's formula (`O-E-P8`'s line logs the 5, the 1 and the 10, not the 0.05; a raise's cap rests on the 10); the block of `gameconfig.xml`, but the story entries' dwords, which `O-E-V7` and `O-E-P5` to `P7` pin: the parser ignores a renamed member in silence, so read the names again from its descriptors with a data window; the constructor's defaults (a change reads in the tables' line as `not the defaults of 1.0.1158.16`, and the module's two arrays are read again); entry 0 of each table and the level's first value, in `.data` (the first tables' line and summary show them); the floor of 9 vehicle models, the frame gates and the 64 frames, behaviour TweaksV does not read; the floor of 6 ped models, only as the bytes `O-E-P2`'s check compares at +0xEA, where a change stops the measurement.
+   - **Ped pool:** the pool's layout and the high 2 bits of its +0x28; the spatial array's offsets, +0x28, +0x30 and +0x38 x, y and z, +0x40 and +0x48 the node's address's parts, +0x50 flags, +0x58 capacity, +0x5C count, set in 0x11682D0; no other function holding a list by that count, so every read of +0x5C after a load of its pointer; the fixed arrays' sizes, the singleton's offsets in 0x1D90620, +0x20 and +0x1020, the filler's three arrays, 1,024 in the six methods and 0x1164D40; the ped's offsets the measurement reads; the pool's size never passing the number.
+   - **A pool's memory:** the allocator's offsets, which the pool memory's line reads and only its budget and the sum of its use and room check; the pools' proxy leading to that allocator, slot 5 of the master allocator (0x36D90, and 0x13CB90 with slot 5 in the start-up).
+   - **Render queues:** the pool object's layout, protected by the stride read at +0x1C at run time; the array's capacity at +0xA, which only the inits pin, the adds the rest of the array; three of a family's four arrays holding whole frames (reset on a flip, the most would read low, not wrong); the game's own `gameconfig.xml` naming the vehicles' two sizes (if not, one vehicle streams, a capacity of 1 in the measurement); the pools' names, labels only, since the code matches hashes; whether streamed models exist in a given load, which is data, not code.
 
 ## HeapAdjuster
 
@@ -756,23 +759,37 @@ A number in MB counts 1,000,000 bytes, as the game's defaults do; HINT marks wha
   Vehicles: level 0x2888D10, story table 0x2888CF0, network table 0x2888D00, 4 dwords each, variety 0x28CACE0, a float.
   Peds: level 0x2888D14, story table 0x2888CD0, network table 0x2888CE0, variety 0x2888B80.
   The flag: 0x29CB211 ("Game In Progress").
+  Two getters (`O-E-C1`) return it doubled, for the crash context's line alone, which prints it in a network game only (0x4600, its print at 0x6350).
+  Their 62 bytes are the same, so no pattern of the table, which wants one match, tells them; a mask at the calls' targets: `8B 05 ? ? ? ? 80 3D ? ? ? ? 00 74 11 48 8D 0D ? ? ? ? 8B 04 81 F3 48 0F 2A C0 EB 17 48 8D 0D ? ? ? ? 8B 04 81 F3 48 0F 2A C0 F3 0F 59 05 ? ? ? ? F3 0F 2C C0 01 C0 C3`: +2 the level; +8 the flag, its `cmp`'s imm8 behind the disp32; +18 the network table; +35 the story table; +51 the variety.
+  The cast is `cvttss2si`: a product at 2^31 bytes gives 0x80000000, the margin's add wraps that to a large positive number, the requests never stop, the excess wraps negative and stays at 0, and the budget is gone altogether.
 - **The tables:** entries 1 to 3 come from the set-up 0x4BD7A0, called once (0x4BD5C8) at the end of the population streaming's init 0x4BB450, so at each run of it, the game's start and a session's: entry = a tunable of `CD_GLOBAL` (0xE3AFC5BD) by a name's hash, its default the configuration's value x 1000, + 1,500,000.
   Twelve blocks of 0x38 bytes, story peds, network peds, story vehicles, network vehicles, three each; their stores, the tables' only writers by a scan of the code: 0x4BD7E4, 0x4BD81C, 0x4BD854; 0x4BD88C, 0x4BD8C4, 0x4BD8FC; 0x4BD934, 0x4BD96C, 0x4BD9A4; 0x4BD9DC, 0x4BDA14, 0x4BDA4C.
   Entry 0 has no writer: `.data`'s 1,500,000 for each table.
+  At TweaksV's start the tables hold `.data`'s other numbers - vehicles 17.5, 29.5, 36.5 MB, peds 28.5, 37.5, 48.3 MB - the level 3, the variety 1.0 and the object zeros; the object's +0x6208 is -1 after the init.
 - **`gameconfig.xml`:** the configuration is [[0x2E96FB0]+0x18]; CGameConfig's member at +0x4F4 is the block `ConfigPopulationStreaming`, which the game's own file leaves out, of `PedsSP` +0x4F4, `PedsMP` +0x500, `VehiclesSP` +0x50C, `VehiclesMP` +0x518, each of `Level1Kb`, `Level2Kb`, `Level3Kb`, dwords.
+  The names by the parser's hashes in the window `28E0700:900`, a descriptor holding the case-sensitive joaat at +0, the offset at +8, the type at +0x10: 0xB90C36F2; 0x5734E391, 0x63432F09, 0x754AC6B3, 0x281C138B; 0x4D3F3EC4, 0x4ED77A3E, 0x9EBE88D3.
   The defaults, from the constructor 0x12BC2C0: peds 54,000, 72,000, 92,000, vehicles 32,000, 56,000, 70,000, in story mode and a network game alike, which gave the tables at 180 s of a boot exactly.
   So the story budget in MB at the slider's top is (`Level3Kb` / 1000 + 1.5) x 6, "Kb" being a thousand; the merge 0x12BC780 copies a value only when it is not negative, so a partial block holds.
   The form, for a budget of 600 MB: `<ConfigPopulationStreaming><VehiclesSP><Level3Kb value="98500"/></VehiclesSP></ConfigPopulationStreaming>` directly inside a `<Config type="CGameConfig">` that applies on PC.
+  `PedMemoryMultiplier` and `VehicleMemoryMultiplier` (cfg+0x38, +0x54) have no reader among the 359 loads of the holder, and the tables stood at the defaults with 2,500 and 4,500 in the file: neither is in the budget.
 - **The variety:** the settings' apply 0x5003A0 stores it, at 0x5004F5 for the peds and 0x50050C for the vehicles, the only stores: the setting (+0xB4 `PedVarietyMultiplier`, +0xB8 `VehicleVarietyMultiplier`, the menu's Population Variety, 0 to 1) x 5 + 1, clamped to 0.05 to 10, so 1 to 6.
+  The check 0x503380 puts a setting outside 0 to 1 back to its default, so the clamp's 10 cannot be reached by `settings.xml` (HINT until a boot shows it).
+- **The level:** 3 from `.data` on; 0x4D5030 (the peds' 0x4D5080) stores a level up to 3 and level / 3 at 0x28CACD4 (0x28C23BC), which also scales how many cars and peds the game wants, and is reached only by a hop of the protected code (HINT: a native's handler); 0x4D5010 and 0x4D5060 set 3 and 1.0 again (HINT: a script's clean-up).
 - **The object** 0x3D73F80, in `.data`; vehicles: +0x6214 bytes in use, a signed dword; +0x6224 what is over the budget, at least 0; the lists +0x3600 traffic of the current pop cycle, +0x3A00 loaded but outside it, +0x3E00 trains, helicopters and two named models (HINT on the types), +0x4200 boats, +0x4A00 dropped but still loaded; +0x62BC requests in flight; +0x623C the weapons' share, in use too; +0x6234 and +0x6238 the mods' pieces.
   Peds: +0x620C bytes in use; +0x621C what is over; +0x6204 the schedule's MaxScenPeds, +0x6208 its override; the lists +0x4E04 the population's, +0x5204 in a group the current schedule does not weigh, +0x5604 in no group (HINT: and the cops), +0x5A04 a network game's chosen models, +0x5E04 asked for directly until loaded.
   Each list is 256 dwords, ended by 0xFFFF or by a value not below the model count, `O-E-P3`'s word; one adder stops silently at 256.
+  At +0, 0x240 records of 24 bytes for vehicles, peds and weapons.
+  The displays (`O-E-C1`), the update's sums (0x4BEB02, 0x4BEB38) that only the crash context reads, count the mods' pieces and a streamed ped's parts twice; every compare reads +0x620C and +0x6214 alone.
 - **What counts:** a model's load callback 0x4CE740 (from 0x1334A70, by the model info's +0x9D & 0x1F: 5 a vehicle, 6 a ped, 4 a weapon) adds through 0x4CDF10 the two sizes of the model and of its dependencies, shared ones once, whoever asked for it; high detail assets come and go on top (0x4C2860), and the common assets are in at the init.
+  So a budget counts bytes, not models, and is no video memory budget, though a car's bytes are mostly video.
 - **Past it,** nothing ends the game and nothing is logged or shown.
   Vehicles: the update's model step 0x4BF990 and the ambient step 0xF06C10 ask for one more model (0x4C5A30) while the use is below the budget less 1.5 MB, the stop, and at level 3 below a floor of 9 models in +0x3600 whatever the use.
   Peds: the gate in 0x4BF990, every 64 frames, about once a second, asks (0x4C7930) while the use is below the budget less 1.5 MB less (n >> 1) x 1.5 MB, n the override or else the schedule's number, and at level 3 below a floor of 6 models in +0x4E04.
+  0x4C1FC0 releases what nothing holds, every frame while over the budget, else every 32nd.
+  A new ambient ped takes the loaded model of its group with the fewest peds, the model info's +0x158 (0x4D24F0), so repeats are about peds divided by models; the number of cars wanted reads no budget, but a model takes only so many instances (0x4D2D10), so too few models can hold traffic under it.
 - **`VehicleStruct`:** the pool behind `O-E-V3`'s pointer, stride 0x34C, 200 slots in the files seen, one per loaded vehicle model.
   A full pool's New ends the game in an `int3`; 0x4C5A30 stops traffic's requests at the size, and 0x4BEB50 releases unused models from 20 below it.
+  The ped models' request 0x4C7930 has no such check, and no pool of `gameconfig.xml` is named for a loaded ped model (HINT: none exists).
 
 | Label | Pattern | Use | 1.0.1158.16 | RVA |
 |---|---|---|---|---|
@@ -806,9 +823,12 @@ The design is in SPECIFICATIONS.md, section 11.16.5, each fixed array and a rais
   A ped's handle is (index << 8) | the slot's flag byte.
 - **The ped,** as the crash log's loop at 0x4F6B reads it: +0xDA & 0xE == 6 a mission ped, +0x1091 bit 4 what every loop skips, +0x1468 bit 4 in the reuse pool, bit 5 reused.
 - **What caps the population,** each update, 0xD8CD20: scenario peds = the schedule's byte x `ScenarioPedsMultiplier` / 100 x factors, ambient peds likewise with `AmbientPedsMultiplier`, both scaled down to `MaxTotalPeds` if their sum passes it, 200 at the population slider's top in my file; then `N-E-K2`'s stores: +28 scenario, +6 ambient x the schedule's percent, +20 the rest of ambient.
+  The reuse pool evicts one when its count 0x434F520 is 15, so it holds at most 15; mission peds are counted against neither, which leaves 41 slots or more on my file.
 - **A full pool** is graceful: the one allocation of a ped, 0xD515F0 in 0xD514C0, returns null when the slots are all in use, before the pool's New 0x15A7C0, which would trap, and its three callers pass the null on.
+  The free-room tests of its users are 2, 3, 5, 10, 11 and 15; "128 kept for missions" is the number of Resource Extensions' page, not the game's.
 - **What the number sizes,** so a raise reaches it by itself: through the getter PedIntelligence (0xDB0 a slot), CMovePed (0x4C0), fragInstNMGta (0x460), two arrays of the population, new'd by the number at 0xD6A73C and filled by 0xD6D1F0 for every live ped of the pool, so the pool must never be larger than the number; through the pool's +0x18 the spatial array, of capacity (size + 3) & ~3, 24 bytes each, and more.
 - **What it does not size,** unchecked, so a raised `Peds` boots well and past 256 peds alive corrupts memory: a memcpy into a fixed array in `.data` (`N-E-R1`, 0x1D90620), the filler's three stack arrays (`N-E-R2`, `N-E-R3`) and the priority function's (`N-E-R4`, 0x12FD0D0); a cap of 1,024 in the spatial array's six search methods and 0x1164D40; and the anim director's family, whose defaults `N-E-D1` to `N-E-D6` hold and whose pools trap when full.
+- **Complete sets:** the pointer and the pool's fields, 608 references in 97 functions and 26 fragments; the getter's 7 calls in 0x10460E0, 0x1167CD0 (3), 0x1175470 and 0x1D90620 (2); the spatial array's pointer, 31 references; a ped's allocation, one `mov edx, 0x1980`.
 
 | Label | Pattern | Use | 1.0.1158.16 | RVA |
 |---|---|---|---|---|
@@ -834,13 +854,27 @@ The design is in SPECIFICATIONS.md, section 11.16.5, each fixed array and a rais
 ## A pool's memory
 
 A pool of the game's does not draw on the heap `H-E1` sizes but on a budget of its own, kept by a big-block allocator that `H-E2` sets up, 0x5A bytes after `H-E1` in the same start-up function (SPECIFICATIONS.md, section 11.1).
+The samples are in `pedpool_findings_for_the_clean_room_build.txt`, section 3.
 
 - **The route:** a pool's allocator 0x15A4D0 asks the allocator at the pool's +0x00, through its vtable's slot 1, for its room, and writes the slots' flags at the result plus the slots' size with no test of the result: `or byte [rcx+rax], 0x80` at 0x15A514.
+  In the pools' makers +0x00 is the proxy 0x286A310, whose vtable lies in `.data` (a hint: the table 0x247CF90).
+  0x36D90 takes the master allocator from TLS+0x5C8, its slot 5, and jumps to that allocator's vtable +0x40 with the size and alignment 16; 0x36E00 frees the same way.
+  The start-up 0x1020 fills the master allocator 0x29B1580: slots 0 and 4 the heap 0x29A8590, slots 1, 2, 3 and 6 another 0x29B15D8, slot 5 the big-block allocator 0x29B1508.
 - **The allocator,** from its constructor 0x141560, called once, at 0x1457, its allocation 0x141640 and its free 0x141800: +0x08 the heap, +0x10 the list of blocks, +0x18 the threshold 0x10000, +0x20 the budget, +0x28 in use, +0x30 room, +0x38 the least room so far, +0x40 the number of blocks, a word, +0x42 bit 0 the fatal flag, set by its constructor, +0x48 a critical section.
+  Its getters: vtable slot 19 the room, slot 22 the least room, slot 17 the use.
 - **An allocation of n bytes,** under its lock: rounded = (n + 0x1003F) & ~0xFFFF; rounded above the room returns null, which is the limit; the fatal flag and 900 blocks, int3; rounded above the threshold, `VirtualAlloc` of rounded + 0x1000 with a guard page at its end, else n + 0x40 from the heap; room and in use change by what was charged, the least room is kept, the block is linked.
+  Free gives the charge back.
 - **The budget:** 0x8800000, 136 MB, `H-E2`'s immediate: a ceiling on a counter, so raising it allocates nothing, and the blocks still come from Windows when asked for.
+  `HEAP_SIZE` changes the heap, not this.
+  At once 0x10F0 takes 8 MB of it, kept at 0x29C76C0 (a hint: the block stays; nothing read gives it back).
 - **A pool's cost:** of n slots s = (stride x n + 7 & ~7) + n, then (s + 0x1003F) & ~0xFFFF above 64 KB and s + 0x40 below it; a store's pool costs stride + 1 bytes a slot.
+  My sum over the 248 references that load the proxy, with my `gameconfig.xml`, comes to 132 to 136 MB of the 136: `InstanceBuffer` 50.7, `Building` 12.0, `GrassBatch` 8.8, the asset stores' pools 18.9, `HandlingData` 6.8, the 8 MB block, the ped pool's 1.6 among them.
+  Script Hook V extends two pools (a hint for who: its log says so, and the same crash's log has their numbers), about 0.4 MB more; whatever raises a pool pays here.
 - **The crash:** past the budget the allocator returns null, and the pool's allocator writes through it at 0x15A514, with `rax` 0 and the address the slots' size.
+  Nine of my dumps fail there: six at 0x1030DA0's pool of 512 slots (a write to 0x26000), two at `HandlingData`'s 8700 x 816 (0x6C5340), the ninth at a pool of 23 slots of 16 bytes (0x170), with room under 64 KB and a third site near 0x1AEA7FC, with `TrainerV.asi` and Collectibles on Map in; without the two plugins the same load passed.
+  In one the dead stack holds the allocator and its lock, and the jump of 0x36D90 is in `r10`.
+  That the budget ran out and not `VirtualAlloc` is by elimination: that log has 46 GB of memory free, and `VirtualAlloc`'s failure makes a call the stack does not show.
+- **Not settled:** why the same load passes one time and fails another: at that crash no other thread stands in an allocator of it or in a pool's maker.
 
 ## Render queues
 
@@ -848,10 +882,12 @@ The design is in SPECIFICATIONS.md, section 11.16.6, a raise's in `renderqueues_
 A pool's name is a hint from memory of the game's `gameconfig.xml`, each backed by its hash at the lookup.
 
 - **The size lookup** 0x149060: rcx the config manager [0x2E96FB0], edx the joaat of the name, r8d the default; it gives the file's value if the file has the entry, else the default, as for an entry's value -1.
+  A flag [0x2E96FA8] would pick the larger of the default and the value; no code writes it, so the value alone stands: `gameconfig.xml` moves a pool both ways (the flag's value a hint: the dump has no `.data`).
 - **A pool** (its layout in "Ped pool"), made by the constructor 0x15A490 and the allocator 0x15A4D0, these six with an empty name.
   A slot is taken at 0x15A7C0 (pool, size): full, or a size above the stride, falls through to the game's fatal trap, INT3 at 0x15A84C, with the stride in edx, which names the pool in a dump.
   A slot is freed at 0x15A930.
 - **A pool's pointer:** three fields, a flag byte at F, a value at F+8, a key at F+0x10, and two constants of its code, r and s: `t = rol64(key, r); x = value ^ t; c = (t & 0x1F) + s; pointer = ~rol64(x, 32 + c)`, null unless the flag's bit 0 is set.
+  0x1363CB0 and 0x1363E60 encrypt it, the same formula backwards.
 - **The six pools:**
 
 | Family | Name (joaat), its lookup | Default | Stride | F | r, s | Where a slot is taken | Full |
@@ -873,10 +909,20 @@ A pool's name is a hint from memory of the game's `gameconfig.xml`, each backed 
 | Vehicles | 0x471F560, 570, 580, 590 | [0x471F5D4] entries (0x1364B70) | 0x471F5A0 | 0x471F5A8 | 0x1368EE0 | none | a walk of the current array | +0xBA8 | 0x1369130 |
 
 - **A flip:** the index goes to (index + 1) mod 4, each entry of the array it enters loses its reference, the count goes to 0, then a pool walk frees render gfx with no references and its "in use" byte clear (+0x2DA for peds).
+  So a render gfx outlives its ped by up to four flips, and three of the four arrays always hold a whole past frame's entries.
+  All three flips run from 0x3CD400, slot 0x48 of the draw list manager's vtable 0x25EAC60, called in 0x13FCE60, which counts a frame number at [0x475B740]; that this is once per frame is a hint from its place.
+  The inits run after `DllMain`: the vehicles' from 0xE7778F in 0xE776D0, called at 0xC4EF1B, the peds' and the props' from 0x1B3BB2F and 0x1B3BB34 in 0x1B3BB00, called at 0xC4EF71.
 - **Past the peds' and the props' arrays** nothing is dropped: the add writes the entry at the count with no compare, so entry 121 lies past the block of 0x3C0 bytes, in whatever the heap put next; the count is 16 bits, so at 65,536 it wraps to 0.
+  Each array has one writer of entries, its add, and one reader, its flip.
 - **Past the vehicles' arrays:** a render gfx enters a frame once, so entries stay within the pool's capacity, which is the arrays' as long as the two names agree; a `gameconfig.xml` naming `CVehicleStreamRenderGfx` above `VehicleStreamRender` makes the pool larger than its arrays, and the same overflow.
+- **`CVehicleStreamRenderGfx` full:** the else branch of 0x13645D0 from 0x1364699 lets the vehicle's current render gfx go and sets its mod state to 0xFF (+0x4F2 to +0x522, +0x533): it draws without its mods, silently.
+  Only two tests of these pools' free room exist: 0x7A6730 returns 0 when the vehicle request pool is full, and the ped clone 0xD4F950 returns 0 for a streamed ped when the free render slots do not exceed the requests in flight.
 - **The draw list's references,** the neighbour on the same path: the manager [0x475B750], 0x14BA0 bytes, made at 0x509330, keeps four arrays at +0x5D0, +0x5E0, +0x5F0, +0x600 of 16-byte entries (module, index), 0x2880 = 10,368 each, with the index at +0xAC and the lock at +0x14AB0.
+  Each add above takes a streaming reference for each asset of the gfx and queues its release there: up to 134 for a ped's render gfx (12 x 7 + 50 slots, those not -1), 52 for a vehicle's; peds pay this per draw, vehicles per frame, and every model drawn pays one too (0x1402640, deduped per frame), so the array is shared with the whole scene.
   The push is checked, but the reference is taken before the check: past 10,368 the release is never queued, and that asset can never unload.
+- **Who is streamed,** hints: a ped by its model info's byte +0x286 bit 1, set at 0x1343BA1 from the ped definition's bool at +0xC0 (0x13438F0); a vehicle's render gfx when mods are applied through 0x134B600.
+- **The callers of the adds:** peds 0x3A0FC6 in 0x3A0CB0, 0x3C2C49 and 0x3C2CC0 in 0x3C2830, which has 13 callers, the draw commands of 0x3EC490; props 0x3A11CD, 0x3D0511, 0x3D28D5; vehicles 0x399AA8, 0x3A2DE9, 0x3C3F37, 0x3C5766.
+  0x3EC490 allocates one draw command per call and nothing asks whether this ped has been added this frame, so a ped's entries per frame come from the render phases that see it.
 
 Each pool's make holds, at the offsets its row gives, the rel32 of its flag, its key and its value, rip-relative with the next instruction 4 bytes on, and r and s, a byte each, wildcards since a build changes them:
 
