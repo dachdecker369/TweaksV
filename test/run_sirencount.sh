@@ -14,7 +14,7 @@
 # stores and each site failing alone with nothing written, the hook taken back, DRY_RUN, the IDs' job on and off.
 # Fake LOCALAPPDATA: the real one is never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
-CHECKS=127
+CHECKS=130
 cd "$B" || exit 1
 cp "$R/x64/Release/TweaksV.asi" TweaksV.asi
 cp "$R/object/Test/Release/TweaksV.asi" TweaksV_test.asi
@@ -296,6 +296,12 @@ raised_ini; setkey LARGE_SIREN_IDS 0 SIRENSETTINGS; out=$(game full_game.exe srd
 check "no hook can be made: the problem, word for word; nothing written, the vehicles at 20" "sc_line '$NOT_RAISED the functions could not be hooked (details above). Nothing is changed.' && has \"$NOTHING_WRITTEN\" && has 'siren lights: second calls 0,' && has '$PLACED'"
 raised_ini; out=$(TWEAKSV_TEST_SIREN_WRITE_FAILS=1 ASI=TweaksV_test.asi game full_game.exe srdraw)
 check "the writes refused once the hook is on: the test line, the problem, the hook taken back, nothing written, the vehicles at 20" "sc_line 'TEST BUILD: the sirens. one write is refused (TWEAKSV_TEST_SIREN_WRITE_FAILS=1).' && sc_line '$NOT_RAISED its writes could not be made (details above). Nothing is changed.' && has \"$NOTHING_WRITTEN\" && has 'siren lights: second calls 0,' && has '$PLACED' && log_lacks '$RAISED'"
+raised_ini; out=$(TWEAKSV_TEST_SIREN_WRITE_FAILS=2 ASI=TweaksV_test.asi game full_game.exe srdraw)
+check "an exception in place of the writes, the hook on, which the catch-all would call a part skipped: the problem, the hook taken back, nothing written, the vehicles at 20" "sc_line 'TEST BUILD: the sirens. one write throws in its place (TWEAKSV_TEST_SIREN_WRITE_FAILS=2).' && sc_line '$NOT_RAISED its writes ended in an unexpected exception. Nothing is changed.' && has \"$NOTHING_WRITTEN\" && has 'siren lights: second calls 0,' && has '$PLACED' && log_lacks 'this part is skipped'"
+raised_ini; out=$(TWEAKSV_TEST_SIREN_WRITE_FAILS=3 ASI=TweaksV_test.asi game full_game.exe srdraw)
+check "a hook that cannot be switched off: the patch module's line, and the problem says that it stays, not that nothing is changed" "log_has 'could not be switched off (MinHook: ' && sc_line '$NOT_RAISED its writes could not be made (details above). Its hook stays on and passes the calls on (details above); nothing else is changed.' && has 'state size 0x188,' && has 'siren lights: second calls 0,'"
+raised_ini; out=$(TWEAKSV_TEST_SIREN_WRITE_FAILS=4 ASI=TweaksV_test.asi game full_game.exe srdraw)
+check "an exception once the writes are in, as a line after them can throw: they stand with their hook, the raise with them, no problem" "sc_line '$RAISED' && has \"$RAISED_SITES\" && has '$LIT_32' && has '$LIGHTS_OK' && log_lacks 'PROBLEM'"
 
 echo
 echo "SIREN COUNT SCENARIOS: $pass passed, $fail failed"

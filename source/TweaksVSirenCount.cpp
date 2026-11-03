@@ -1157,6 +1157,24 @@ namespace TweaksV
 			list.writes.push_back({ stateSize + kStateSizeAtZ2, BytesOf(kRaisedStateSize), "siren state's size" });
 			return true;
 		}
+
+		// The part's hooks off again, its writes not made; false if one stays on, which passes the calls on, and keeps settings no call asks for. A line about
+		// that which cannot be written does not stop the next.
+		bool TakeHooksBack(const std::vector<FunctionHook>& hooks)
+		{
+			bool allOff = true;
+			for (const FunctionHook& hook : hooks)
+				try
+				{
+					if (!DisableHook(hook.function, kTag))
+						allOff = false;
+				}
+				catch (...)
+				{
+					allOff = false;
+				}
+			return allOff;
+		}
 	}
 
 	void SirensNotRaised(const std::string& why)
@@ -1202,14 +1220,17 @@ namespace TweaksV
 			return;
 
 #ifdef TWEAKSV_TEST_BUILD
-		// test builds only: TWEAKSV_TEST_SIREN_WRITE_FAILS=1 in the environment has the one write refused, as a page Windows will not make
-		// writable would, once the hook is on: a write without an address stops all of it
-		wchar_t refused[4]{};
-		if (GetEnvironmentVariableW(L"TWEAKSV_TEST_SIREN_WRITE_FAILS", refused, 4) == 1 && refused[0] == L'1')
-		{
-			WriteLog(kTag, "TEST BUILD: the sirens' one write is refused (TWEAKSV_TEST_SIREN_WRITE_FAILS=1).");
+		// test builds only: TWEAKSV_TEST_SIREN_WRITE_FAILS in the environment reaches what comes of the one write failing once the hook is on: 1 it is refused, as a
+		// page Windows will not make writable would, by a write without an address, which stops all of it; 2 an exception in its place; 3 refused, and a hook
+		// that cannot then be switched off, being off already; 4 an exception once it is done
+		wchar_t failure[4]{};
+		const wchar_t writeFails = GetEnvironmentVariableW(L"TWEAKSV_TEST_SIREN_WRITE_FAILS", failure, 4) == 1 ? failure[0] : L'0';
+		if (writeFails >= L'1' && writeFails <= L'4')
+			WriteLog(kTag, std::string("TEST BUILD: the sirens' one write ") + (writeFails == L'1' ? "is refused" : writeFails == L'2' ? "throws in its place" :
+				writeFails == L'3' ? "is refused and its hook cannot be switched off" : "throws once it is done") + " (TWEAKSV_TEST_SIREN_WRITE_FAILS=" +
+				static_cast<char>(writeFails) + ").");
+		if (writeFails == L'1' || writeFails == L'3')
 			list.writes.push_back({ nullptr, {}, "write a test build refuses" });
-		}
 #endif
 
 		// 4. one write, all or nothing: the hooks first, since a hook can be taken back, then the calls and the constants together
@@ -1226,12 +1247,35 @@ namespace TweaksV
 			SirensNotRaised("the functions could not be hooked (details above). Nothing is changed.");
 			return;
 		}
-		if (!RedirectCalls(list.redirects, list.writes, kTag))
+#ifdef TWEAKSV_TEST_BUILD
+		if (writeFails == L'3' && !dryRun)
+			TakeHooksBack(list.hooks);
+#endif
+		bool written = false;
+		bool threw = false;
+		try
 		{
-			if (!dryRun)
-				for (const FunctionHook& hook : list.hooks)
-					DisableHook(hook.function, kTag);
-			SirensNotRaised("its writes could not be made (details above). Nothing is changed.");
+#ifdef TWEAKSV_TEST_BUILD
+			if (writeFails == L'2')
+				throw 2;
+#endif
+			written = RedirectCalls(list.redirects, list.writes, kTag);
+#ifdef TWEAKSV_TEST_BUILD
+			if (writeFails == L'4')
+				throw 4;
+#endif
+		}
+		catch (...)
+		{
+			// a copy of the writes that could not be made, with the hooks on - or a line after the writes, which are in then: the renderer's call says which
+			threw = true;
+			written = g_renderer && CallTarget(list.redirects.front().site) != reinterpret_cast<const uint8_t*>(g_renderer);
+		}
+		if (!written)
+		{
+			const bool hooksOff = dryRun || TakeHooksBack(list.hooks);
+			SirensNotRaised(std::string(threw ? "its writes ended in an unexpected exception." : "its writes could not be made (details above).") +
+				(hooksOff ? " Nothing is changed." : " Its hook stays on and passes the calls on (details above); nothing else is changed."));
 			return;
 		}
 		g_wouldRaise = dryRun;
