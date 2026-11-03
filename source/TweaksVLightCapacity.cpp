@@ -46,6 +46,7 @@
 #include <vector>
 
 #include "TweaksVConflicts.h"
+#include "TweaksVCoronaStore.h"
 #include "TweaksVLog.h"
 #include "TweaksVMeasure.h"
 #include "TweaksVPatch.h"
@@ -140,7 +141,7 @@ namespace TweaksV
 		static_assert(PatternImm32(P(kF1), kRayTracedLimitAt) == kRayTracedRoom - 1 && PatternImm32(P(kF2), kUploadRecordsImmAt) == kUploadRecordsAt && PatternImm32(P(kF2), kUploadImmAt) == kUploadRoom &&
 			PatternImm32(P(kF3), kReflectionLimitAt) == kReflectionRoom - 1, "TweaksV: G-E-F1 checks against 1023, G-E-F2 uploads 512 at +0x70E0, G-E-F3 checks against 767");
 		static_assert(PatternImm32(P(kG1), kCoronaLimitAt) == kCoronaRoom - 1 && PatternImm32(P(kG2), 3) == kCoronaCountAt && PatternImm32(P(kG2), kCoronaAddLimitAt) == kCoronaRoom - 1 &&
-			kCoronaCountAt == kCoronaRoom * kCoronaBytes, "TweaksV: G-E-G1 and G-E-G2 check the corona store against 1087, its count right behind its 1088 coronas");
+			kCoronaCountAt == kCoronaRoom * kCoronaBytes && kCoronaRoom == kGameCoronas, "TweaksV: G-E-G1 and G-E-G2 check the corona store against 1087, its count right behind its 1088 coronas");
 		static_assert(PatternImm32(P(kH1), 1) == kWorkerFrame && PatternByte(P(kH2), 4) == kScratchAt && kJobBytes <= kWorkerFrame - kScratchAt,
 			"TweaksV: G-E-H1 and G-E-H2 give a job's scratch the worker's frame from +0x50, which holds it");
 
@@ -235,7 +236,7 @@ namespace TweaksV
 		struct Matches
 		{
 			uint8_t* at[kSites] = {};
-			const uint8_t* secondG1 = nullptr;
+			uint8_t* secondG1 = nullptr;
 		};
 
 		// True unless the game's code loads a store from a fourth place: the frame's reset, the drain and the constructor are all the research
@@ -504,7 +505,8 @@ namespace TweaksV
 		constexpr DWORD kSampleMs = 10;		// sees every frame up to 100 fps
 
 		// The numbers sampled and what each has room for, in the order of the summary. The two stores' come from their write pointers,
-		// and their rooms are the part's once it has moved them, which it does before the threads start.
+		// and their rooms are the part's once it has moved them, which it does before the threads start; the corona store's room is what
+		// CoronaStoreNow() says then.
 		enum Number : size_t { kVehicles, kVehicleLights, kVehicleCoronas, kSceneLights, kRayTraced, kReflections, kCoronas, kNumbers };
 		uint32_t g_room[kNumbers] = { kVehiclesRoom, kStoreLights, kStoreCoronas, kSceneRoom, kRayTracedRoom, kReflectionRoom, kCoronaRoom };
 		constexpr const char* kNames[kNumbers] = { "vehicles", "vehicle lights", "vehicle coronas", "scene lights", "ray traced list", "reflection lists", "coronas" };
@@ -516,6 +518,7 @@ namespace TweaksV
 			std::atomic<uint64_t> samples{ 0 };
 			std::atomic<uint64_t> markedAtRoom{ 0 };	// samples with the scene store at its room and the sort list marked: true whatever sets the mark
 			std::atomic<uint64_t> pastUpload{ 0 };		// samples with the ray traced list past what its upload takes
+			std::atomic<uint32_t> lodLights{ 0 };		// the most of the LOD lights' last batch, while the corona store counts them
 		};
 		Sampled g_sampled;
 		std::atomic<bool> g_sampling{ false };			// the sampling thread runs
@@ -585,6 +588,9 @@ namespace TweaksV
 				reflections = std::max({ reflections, Load<uint32_t>(reads.reflections + i * sizeof(uint32_t)), Load<uint32_t>(reads.reflections + kReflectionBuffer + i * sizeof(uint32_t)) });
 			Keep(kReflections, reflections);
 			Keep(kCoronas, Load<uint32_t>(reads.coronas));
+			const CoronaStoreNumbers store = CoronaStoreNow();
+			if (store.counted && store.lodBrought > g_sampled.lodLights.load(std::memory_order_relaxed))	// as in Keep
+				g_sampled.lodLights.store(store.lodBrought, std::memory_order_relaxed);
 			g_sampled.samples.fetch_add(1, std::memory_order_relaxed);	// first, and read last, so that a reading's others hold no more samples than it says
 			if (scene == kSceneRoom && Load<uint8_t>(reads.sortMark) != 0)
 				g_sampled.markedAtRoom.fetch_add(1, std::memory_order_relaxed);
@@ -623,6 +629,9 @@ namespace TweaksV
 			uint64_t markedAtRoom = 0;
 			uint64_t pastUpload = 0;
 			uint64_t refused = 0;
+			uint64_t storeRefused = 0;	// the corona store's refusals, while it counts them, and the LOD lights' job's
+			uint64_t lodRefused = 0;
+			uint32_t lodLights = 0;
 		};
 
 		// What the siren settings ask for, read at a summary (PATTERNS.md): how many there are, how many give a real light per lit siren,
@@ -673,14 +682,16 @@ namespace TweaksV
 		Sirens g_sirens;
 		uint64_t g_news = 0;
 		bool g_summaryWritten = false;
+		bool g_storeCounted = false;	// CoronaStoreNow().counted, at the last reading
 
 		bool SameNews(const Marks& a, const Marks& b)
 		{
-			return memcmp(a.most, b.most, sizeof(a.most)) == 0 && (a.markedAtRoom != 0) == (b.markedAtRoom != 0) && (a.pastUpload != 0) == (b.pastUpload != 0) && a.refused == b.refused;
+			return memcmp(a.most, b.most, sizeof(a.most)) == 0 && (a.markedAtRoom != 0) == (b.markedAtRoom != 0) && (a.pastUpload != 0) == (b.pastUpload != 0) && a.refused == b.refused &&
+				a.storeRefused == b.storeRefused && a.lodRefused == b.lodRefused && a.lodLights == b.lodLights;
 		}
 
 		// Changes with every reading that has something new to say: the first; a most of the minute or of the session other than the
-		// last; lights refused; the store marked at its room or the upload passed where they were not; the settings read anew. How many samples
+		// last; lights or coronas refused; the store marked at its room or the upload passed where they were not; the settings read anew. How many samples
 		// saw what is no news by itself.
 		uint64_t Numbers()
 		{
@@ -689,9 +700,14 @@ namespace TweaksV
 				minute.most[i] = g_sampled.most[i].exchange(0, std::memory_order_relaxed);
 			minute.markedAtRoom = g_sampled.markedAtRoom.exchange(0, std::memory_order_relaxed);
 			minute.pastUpload = g_sampled.pastUpload.exchange(0, std::memory_order_relaxed);
+			minute.lodLights = g_sampled.lodLights.exchange(0, std::memory_order_relaxed);
 			minute.samples = g_sampled.samples.exchange(0, std::memory_order_relaxed);
 			const uint64_t refused = ReadRefused();
 			minute.refused = refused - g_session.refused;
+			const CoronaStoreNumbers store = CoronaStoreNow();
+			minute.storeRefused = store.refused - g_session.storeRefused;
+			minute.lodRefused = store.lodRefused - g_session.lodRefused;
+			g_storeCounted = store.counted;
 
 			Marks session = g_session;
 			for (size_t i = 0; i < kNumbers; i++)
@@ -700,6 +716,9 @@ namespace TweaksV
 			session.markedAtRoom += minute.markedAtRoom;
 			session.pastUpload += minute.pastUpload;
 			session.refused = refused;
+			session.storeRefused = store.refused;
+			session.lodRefused = store.lodRefused;
+			session.lodLights = std::max(session.lodLights, minute.lodLights);
 
 			Sirens sirens = g_sirens;
 			ReadSirens(sirens);
@@ -726,7 +745,8 @@ namespace TweaksV
 			return number(kVehicles) + ", " + number(kVehicleLights) + ", " + number(kVehicleCoronas) + ", " + number(kSceneLights) + " (at its room with the sort list marked in " +
 				std::to_string(marks.markedAtRoom) + " of " + std::to_string(marks.samples) + " samples), " + number(kRayTraced) + " (past " + std::to_string(kUploadRoom) + " in " +
 				std::to_string(marks.pastUpload) + " samples" + (rayTraced > kUploadRoom ? ", by " + std::to_string(rayTraced - kUploadRoom) + " at most" : std::string()) + "), " +
-				number(kReflections) + ", " + number(kCoronas) + ", ";
+				number(kReflections) + ", " + number(kCoronas) + (g_storeCounted ? ", refused " + std::to_string(marks.storeRefused) + " (LOD's own " + std::to_string(kGameCoronas) + ": " +
+				std::to_string(marks.lodRefused) + "), LOD lights " + std::to_string(marks.lodLights) : std::string()) + ", ";
 		}
 
 		std::string SaidRefused(const Marks& marks)
@@ -936,13 +956,24 @@ namespace TweaksV
 			const Matches& m = g_matches;
 			const std::string coronaChange = "from " + std::to_string(kStoreCoronas) + " to " + std::to_string(kRaisedCoronas);
 			const std::string lightChange = "from " + std::to_string(kStoreLights) + " to " + std::to_string(kRaisedLights);
+
+			// the corona store's half: found and checked, and what it writes in the one write; its false refuses the whole, since the LOD
+			// lights' job must move with the store or the game faults
+			std::vector<CodeWrite> writes = ConstantWrites(m);
+			std::string why;
+			if (!FindCoronaStore(m.at[kG1], m.secondG1, writes, why))
+			{
+				NotRaised(why);
+				return;
+			}
+
 			if (IsDryRun())
 			{
 				WriteLog(kTag, "DRY_RUN: would move the vehicle coronas' store (2 references) and raise its limit " + coronaChange + ".");
 				WriteLog(kTag, "DRY_RUN: would move the vehicle lights' store (2 references) and raise its limit " + lightChange + ".");
 				WriteLog(kTag, "DRY_RUN: would lead a job's lists' start values at " + DescribeAddress(m.at[kC4] + kStartValuesAt) + At(P(kC4)) + " to TweaksV's own: 0, 0, " +
 					std::to_string(kRaisedJobCoronas) + ", " + std::to_string(kRaisedJobLights) + ".");
-				g_raised = WriteCode(ConstantWrites(m), kTag);
+				g_raised = WriteCode(writes, kTag);
 				return;
 			}
 
@@ -955,7 +986,6 @@ namespace TweaksV
 			uint8_t* const coronas = block + page;
 			uint8_t* const lights = coronas + coronaBytes;
 
-			std::vector<CodeWrite> writes = ConstantWrites(m);
 			if (!AddLead(writes, m.at[kA1] + kCoronaStoreAt, coronas, "vehicle coronas' store in the frame's reset") ||
 				!AddLead(writes, m.at[kA1] + kLightStoreAt, lights, "vehicle lights' store in the frame's reset") ||
 				!AddLead(writes, m.at[kA2] + kDrainStoreAt, coronas, "vehicle coronas' store in the drain") ||
@@ -1012,6 +1042,7 @@ namespace TweaksV
 			Note("the lighting capacity is not measured: " + g_whyNot);
 			return;
 		}
+		g_room[kCoronas] = CoronaStoreNow().room;
 
 		// the stub made, the summary's thread and the sampling thread started, then the jump redirected: a measurement that cannot sum
 		// up redirects nothing. A dry run or frames already running redirect nothing, and the numbers are read all the same.

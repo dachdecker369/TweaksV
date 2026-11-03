@@ -11,7 +11,7 @@
 # Windows refuses, each check and each pattern again - each a problem with nothing written; the sirens' question through it all. Fake LOCALAPPDATA: the
 # real one is never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
-CHECKS=262
+CHECKS=263
 cd "$B" || exit 1
 cp "$R/x64/Release/TweaksV.asi" TweaksV.asi
 cp "$R/object/Test/Release/TweaksV.asi" TweaksV_test.asi
@@ -205,12 +205,15 @@ check "the part's would-write counts as its one write: the sirens ask and go on"
 echo "== G18 the sirens' question: true once the one write is done"
 SIRENS_ON=1 fresh_ini; setkey ENABLED 0 LIGHTCAPACITY; out=$(game full_game.exe)
 check "the part off: the sirens refuse, word for word; the sites and the stores as placed" "log_line '$SIREN_REFUSAL' && has '$PLACED' && has '$STORES_PLACED'"
-SIRENS_ON=1 fresh_ini; out=$(game full_game.exe)
-check "the part on: written, and the sirens do not refuse" "has '$RAISED' && lc_lacks PROBLEM && log_lacks 'the light stores are not raised'"
+SIRENS_ON=1 fresh_ini; setkey CORONA_STORE 1088 LIGHTCAPACITY; out=$(game full_game.exe)
+check "the part on, the corona store at the game's own: written, and the sirens do not refuse" "has '$RAISED' && lc_lacks PROBLEM && log_lacks 'the light stores are not raised'"
 SIRENS_ON=1 fresh_ini; addkey TEST_BREAK_PATTERN G-E-H2; out=$(ASI=TweaksV_test.asi game full_game.exe)
 check "a pattern missing: the part's problem and the sirens' refusal, nothing written" "lc_line '$NOT_RAISED G-E-H2 was not found.' && log_line '$SIREN_REFUSAL' && has '$PLACED' && has '$STORES_PLACED'"
 SIRENS_ON=1 fresh_ini; out=$(TWEAKSV_TEST_THROWS=LightCapacity ASI=TweaksV_test.asi game full_game.exe)
 check "the part's start throws: skipped, as any part, the sirens refuse, nothing written" "lc_line 'PROBLEM: unexpected exception - this part is skipped for this session' && log_line '$SIREN_REFUSAL' && has '$PLACED' && has '$STORES_PLACED'"
+
+part_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe lcother a1lights)
+check "a check failing with DIAGNOSTIC_MODE=1: the part's problem and the measurement's line in the same words, nothing looked for again, nothing written" "lc_line \"$NOT_RAISED the vehicle lights. store at RVA 0x[0-9A-F]* does not lie 928 coronas past the vehicle coronas. at RVA 0x[0-9A-F]* (G-E-A1).\" && lc_line \"$NOT_MEASURED the vehicle lights. store at RVA 0x[0-9A-F]* does not lie 928 coronas past the vehicle coronas. at RVA 0x[0-9A-F]* (G-E-A1).\" && [ \$(count 'Pattern G-E-A1 found') -eq 1 ] && has '$PLACED' && has '$STORES_PLACED'"
 
 echo "== G19 the part on, the game's frames run already, the write pointers set at TweaksV's start: a problem, nothing written"
 part_ini; out=$(game full_game.exe lcrunning lcjobs); echo "      $out"
@@ -232,7 +235,7 @@ check "the Release build ignores the switch: no line of it, the stores moved" "l
 
 echo "== G21 the part on, none of the game code present (plain fake game)"
 part_ini; out=$(game plain_game.exe)
-check "the scanner's 22 misses and the problem, word for word""[ \$(grep -c -E 'Pattern G-E-[A-H][1-4] not found: ' TweaksV.log) -eq 22 ] && lc_line '$NOT_RAISED G-E-A1 was not found.' && lc_lacks 'moved and its limit' && lc_lacks DIAGNOSTIC"
+check "the scanner's 22 misses and the problem, word for word" "[ \$(grep -c -E 'Pattern G-E-[A-H][1-4] not found: ' TweaksV.log) -eq 22 ] && lc_line '$NOT_RAISED G-E-A1 was not found.' && lc_lacks 'moved and its limit' && lc_lacks DIAGNOSTIC"
 
 # The cases of each check failing and each pattern missing are queued, then run side by side, each in a game folder of its own, half as many at a time as the suites,
 # and checked in order, since each run takes seconds and there are about 110, twice: the measurement's, with the part off, and the part's. section TEXT: a heading.
@@ -319,7 +322,7 @@ not_measured 'lcg1once' "the game code holds G-E-G1 1 time, not the expected 2."
 not_measured 'lcg1thrice' "the game code holds G-E-G1 3 or more times, not the expected 2."
 
 section "G13 TEST_BREAK_PATTERN (test build): each of the 22 patterns missing"
-for label in $(sed -nE 's/^\s*\{ "(G-E-[A-Za-z0-9-]+)", .*/\1/p' "$R/source/TweaksVPatterns.h"); do
+for label in $(sed -nE 's/^\s*\{ "(G-E-[A-H][1-4])", .*/\1/p' "$R/source/TweaksVPatterns.h"); do
 	broken "$label"
 done
 
