@@ -275,7 +275,7 @@ Every part is TweaksV's own code since 2.0.0; the parts that follow another proj
   The release notes name the tag the build came from and link the repository, which `THIRD_PARTY_NOTICES.md` and `README.md` in the zip name too, so the source is one step from the binary wherever the zip goes (GPL-3.0, section 6d); the mod page carries the credits, links the repository and adds no restrictions of its own.
   Check the zip on VirusTotal before uploading: a plain build with its version resource and no packer stays clean.
 
-- **Tests:** `test\` holds fake-game test suites (2939 checks): small programs that pretend to be the game, with copies of the code TweaksV patches and a script program they place as the game does, load the real `TweaksV.asi` and report what it changed.
+- **Tests:** `test\` holds fake-game test suites (2978 checks): small programs that pretend to be the game, with copies of the code TweaksV patches and a script program they place as the game does, load the real `TweaksV.asi` and report what it changed.
   One more suite checks the pattern table against `PATTERNS.md` and has each pattern held too often.
   `bash test/run_all.sh` builds and runs them (see README).
 
