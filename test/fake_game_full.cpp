@@ -1274,9 +1274,10 @@ volatile unsigned char g_lcRender[] = { 0x48, 0x69, 0xC7, 0x00, 0x00, 0x07, 0x00
 volatile unsigned char g_lcUpdate[] = { 0x48, 0x69, 0xC8, 0x00, 0x00, 0x07, 0x00, 0x48, 0x8D, 0x15, 0, 0, 0, 0, 0x48, 0x01, 0xCA, 0x48, 0x89, 0x15, 0, 0, 0, 0, 0x48, 0x8D, 0x0D, 0, 0, 0, 0,
 	0xC7, 0x04, 0x81, 0x00, 0x00, 0x00, 0x00, 0x48, 0x69, 0xC8, 0x0C, 0x9A, 0x02, 0x00, 0x48, 0x8D, 0x15, 0, 0, 0, 0, 0xCC };
 volatile unsigned char g_lcRayLists[] = { 0x48, 0x69, 0xC8, 0x10, 0x20, 0x07, 0x00, 0x48, 0x8D, 0x15, 0, 0, 0, 0, 0x48, 0x8D, 0x34, 0x0A, 0x48, 0x89, 0x35, 0, 0, 0, 0, 0x8B, 0x04, 0x11, 0xCC };
-volatile unsigned char g_lcRayCheck[] = { 0x41, 0x57, 0x41, 0x56, 0x41, 0x54, 0x56, 0x57, 0x53, 0x48, 0x83, 0xEC, 0x28,
+volatile unsigned char g_lcRayAdd[] = { 0x41, 0x57, 0x41, 0x56, 0x41, 0x54, 0x56, 0x57, 0x53, 0x48, 0x83, 0xEC, 0x28,
 	0x4C, 0x8B, 0x25, 0, 0, 0, 0, 0x45, 0x8B, 0x34, 0x24, 0x41, 0x81, 0xFE, 0xFF, 0x03, 0x00, 0x00, 0x0F, 0x8F, 0, 0, 0, 0,
 	0x41, 0xFF, 0x04, 0x24, 0x48, 0x83, 0xC4, 0x28, 0x5B, 0x5F, 0x5E, 0x41, 0x5C, 0x41, 0x5E, 0x41, 0x5F, 0xC3, 0xCC };
+static volatile unsigned char* const g_lcRayCheck = g_lcRayAdd + 13;	// G-E-F1, in it
 volatile unsigned char g_lcUpload[] = { 0x44, 0x0F, 0xB6, 0x05, 0, 0, 0, 0, 0x48, 0x81, 0xC1, 0xE0, 0x70, 0x00, 0x00, 0xBA, 0x00, 0x02, 0x00, 0x00, 0xE8, 0, 0, 0, 0, 0xCC };
 volatile unsigned char g_lcReflections[] = { 0x4B, 0x63, 0x0C, 0x88, 0x48, 0x81, 0xF9, 0xFF, 0x02, 0x00, 0x00, 0xCC };
 volatile unsigned char g_lcCoronaCheck[] = { 0x8B, 0x0D, 0, 0, 0, 0, 0x48, 0x81, 0xF9, 0x3F, 0x04, 0x00, 0x00, 0x0F, 0x87, 0, 0, 0, 0, 0xCC };
@@ -1291,14 +1292,14 @@ volatile unsigned char g_lcCoronaEnd[] = { 0xF0, 0x48, 0x0F, 0xC1, 0x08, 0x48, 0
 volatile unsigned char g_lcCoronaEndWayIn[] = { 0x48, 0x83, 0xEC, 0x58, 0x48, 0x89, 0x54, 0x24, 0x40, 0x48, 0x89, 0xC8, 0x4C, 0x89, 0xC1, 0xE9, 0, 0, 0, 0 };	// the frame; [rsp+0x40] the records, rdx brings them; rax the pointer's address, rcx brings it; rcx the bytes, r8 brings them; jmp G-E-K1
 volatile unsigned char g_lcLightEnd[] = { 0x4C, 0x69, 0xC6, 0xC0, 0x01, 0x00, 0x00, 0x4C, 0x89, 0xC1, 0xF0, 0x48, 0x0F, 0xC1, 0x08, 0xE8, 0, 0, 0, 0, 0x48, 0x83, 0xC4, 0x20, 0x5E, 0xC3 };
 volatile unsigned char g_lcLightEndWayIn[] = { 0x56, 0x48, 0x83, 0xEC, 0x20, 0x48, 0x89, 0xC8, 0x4C, 0x89, 0xC6, 0xE9, 0, 0, 0, 0 };	// rsi kept, the frame; rax the pointer's address, rcx brings it; rsi the lights, r8 brings them; jmp G-E-K2
-static Site g_lcSites[] = { SITE(g_lcReset, 0), SITE(g_lcDrainCoronas, 0), SITE(g_lcDrainLights, 0), SITE(g_lcJobTest, 0), SITE(g_lcKick, 0), SITE(g_lcLastKick, 0),
+static Site g_lcSites[] = { SITE(g_lcCoronaEnd, 0), SITE(g_lcLightEnd, 0), SITE(g_lcReset, 0), SITE(g_lcDrainCoronas, 0), SITE(g_lcDrainLights, 0), SITE(g_lcJobTest, 0), SITE(g_lcKick, 0), SITE(g_lcLastKick, 0),
 	SITE(g_lcAddToList, 0), SITE(g_lcScratch, 0), SITE(g_lcScratchLights, 0), SITE(g_lcStartValuesLoad, 0), SITE(g_lcSceneAdd, 0), SITE(g_lcByteRead, 0), SITE(g_lcRender, 0),
-	SITE(g_lcUpdate, 0), SITE(g_lcRayLists, 0), SITE(g_lcRayCheck, 0), SITE(g_lcUpload, 0), SITE(g_lcReflections, 0), SITE(g_lcCoronaCheck, 0), SITE(g_lcCoronaCheckToo, 0),
-	SITE(g_lcCoronaAdd, 0), SITE(g_lcWorkerFrame, 0), SITE(g_lcWorkerCall, 0), SITE(g_lcConstructor, 0), SITE(g_lcExtra, 0), SITE(g_lcTwin, 0), SITE(g_lcCoronaEnd, 0), SITE(g_lcLightEnd, 0) };
+	SITE(g_lcUpdate, 0), SITE(g_lcRayLists, 0), SITE(g_lcRayAdd, 0), SITE(g_lcUpload, 0), SITE(g_lcReflections, 0), SITE(g_lcCoronaCheck, 0), SITE(g_lcCoronaCheckToo, 0),
+	SITE(g_lcCoronaAdd, 0), SITE(g_lcWorkerFrame, 0), SITE(g_lcWorkerCall, 0), SITE(g_lcConstructor, 0), SITE(g_lcExtra, 0), SITE(g_lcTwin, 0) };
 constexpr size_t kLcSites = sizeof(g_lcSites) / sizeof(g_lcSites[0]);
 // The measurement's one write: the rel32 of the jump when a job's list is full, of the jump when the ray traced list is full and of a job's two copies.
 static Site g_lcJumpRel = SITE(g_lcAddToList, 19);
-static const Site kLcRayJumpRel = SITE(g_lcRayCheck, 33), kLcCoronaCallRel = SITE(g_lcCoronaEnd, 11), kLcLightCallRel = SITE(g_lcLightEnd, 16);
+static const Site kLcRayJumpRel = SITE(g_lcRayAdd, 33), kLcCoronaCallRel = SITE(g_lcCoronaEnd, 11), kLcLightCallRel = SITE(g_lcLightEnd, 16);
 // What the part writes (its findings' 8.1), worked out here and not by TweaksV: the five rel32 it leads to its own memory, the stores' in the reset first, then the drain's, then
 // the start values'; and the bytes: a job's scratch of 0x17340 = 300 x 0x30 + 180 x 0x1C0 in its kicks and laid out, the index's two instructions.
 static const Site kLcLeads[] = { SITE(g_lcReset, 3), SITE(g_lcReset, 24), SITE(g_lcDrainCoronas, 3), SITE(g_lcDrainLights, 3), SITE(g_lcStartValuesLoad, 8) };
@@ -5143,7 +5144,7 @@ static void LcSetUp(int argc, wchar_t** argv)
 	const void* const called = reinterpret_cast<const void*>(&LcCalled);
 	const void* const copy = reinterpret_cast<const void*>(&LcCopy);
 	g_lcWayOut = const_cast<const unsigned char*>(g_lcAddToList) + 37;
-	g_lcRayWayOut = const_cast<const unsigned char*>(g_lcRayCheck) + 41;
+	g_lcRayWayOut = const_cast<const unsigned char*>(g_lcRayAdd) + 41;
 	const uint32_t start[4] = { 0, 0, 200, HasOption(argc, argv, L"lcstartvalues") ? 81u : 80u };
 	memcpy(data.startValues, start, sizeof(start));
 	const LcRef refs[] = {
@@ -5175,7 +5176,7 @@ static void LcSetUp(int argc, wchar_t** argv)
 		{ L"e2current", SITE(g_lcUpdate, 20), &data.currentPointer, 0 },
 		{ L"e3lists", SITE(g_lcRayLists, 10), data.rayTraced, 0 },
 		{ L"e3pointer", SITE(g_lcRayLists, 21), &data.rayPointer, 0 },
-		{ L"f1pointer", SITE(g_lcRayCheck, 16), &data.rayPointer, 0 },
+		{ L"f1pointer", SITE(g_lcRayAdd, 16), &data.rayPointer, 0 },
 		{ L"f1jump", kLcRayJumpRel, const_cast<const unsigned char*>(g_lcRayWayOut), 0 },
 		{ L"k1call", kLcCoronaCallRel, copy, 0 },
 		{ L"k2call", kLcLightCallRel, copy, 0 },
@@ -5191,7 +5192,7 @@ static void LcSetUp(int argc, wchar_t** argv)
 		SetRel32(ref.site, LcTarget(argc, argv, ref) - ref.past);
 	// a rel32 on the page rtjumpunread takes away: its match copied to end the first page of g_rtEdge, every rel32 of the copy set, the site's first byte a NOP
 	const struct { const wchar_t* name; volatile unsigned char* site; size_t start; size_t match; } edges[] = {
-		{ L"a3call", g_lcDrainLights, 0, 33 }, { L"e1reflp", g_lcRender, 0, 62 }, { L"f2call", g_lcUpload, 0, 21 }, { L"f1jump", g_lcRayCheck, 13, 20 }, { L"k1call", g_lcCoronaEnd, 0, 11 }, { L"k2call", g_lcLightEnd, 0, 16 } };
+		{ L"a3call", g_lcDrainLights, 0, 33 }, { L"e1reflp", g_lcRender, 0, 62 }, { L"f2call", g_lcUpload, 0, 21 }, { L"f1jump", g_lcRayAdd, 13, 20 }, { L"k1call", g_lcCoronaEnd, 0, 11 }, { L"k2call", g_lcLightEnd, 0, 16 } };
 	for (const auto& edge : edges)
 		if (LcOption(argc, argv, L"lcedge", edge.name))
 		{
@@ -5423,7 +5424,7 @@ static void LcRunRay(int calls)
 		return;
 	data.rayPointer = reinterpret_cast<uintptr_t>(data.rayTraced[0]);
 	for (int i = 0; i < calls; i++)
-		reinterpret_cast<void (*)()>(const_cast<unsigned char*>(g_lcRayCheck))();
+		reinterpret_cast<void (*)()>(const_cast<unsigned char*>(g_lcRayAdd))();
 	g_lcRayCalls += calls;
 }
 
@@ -5699,8 +5700,8 @@ static void LcReport()
 		rva(reinterpret_cast<const void*>(&LcCalled)), rva(g_lcJobTest), rva(&data.vehicles), rva(g_lcKick), rva(g_lcLastKick), rva(g_lcAddToList), rva(g_lcScratch), rva(g_lcScratchLights),
 		rva(data.startValues), rva(g_lcSceneAdd), rva(&data.sceneCount), rva(data.sortList), rva(&data.sortCount), rva(&data.sortMark), rva(g_lcByteRead), rva(g_lcRender), rva(data.rayTraced),
 		rva(&data.renderPointer), rva(data.bufferCounts), rva(&data.renderCount), rva(data.reflections), rva(&data.reflectionPointer), rva(g_lcUpdate), rva(&data.currentPointer), rva(g_lcRayLists),
-		rva(&data.rayPointer), rva(g_lcRayCheck + 13), rva(g_lcUpload), rva(g_lcReflections), rva(g_lcCoronaCheck), rva(g_lcCoronaCheckToo), rva(&data.coronas), rva(g_lcCoronaAdd), rva(g_lcWorkerFrame),
-		rva(g_lcWorkerCall), rva(g_lcConstructor), rva(g_lcStartValuesLoad), rva(g_lcCoronaEnd), rva(g_lcLightEnd), rva(reinterpret_cast<const void*>(&LcCopy)), rva(g_lcRayCheck + 41));
+		rva(&data.rayPointer), rva(g_lcRayCheck), rva(g_lcUpload), rva(g_lcReflections), rva(g_lcCoronaCheck), rva(g_lcCoronaCheckToo), rva(&data.coronas), rva(g_lcCoronaAdd), rva(g_lcWorkerFrame),
+		rva(g_lcWorkerCall), rva(g_lcConstructor), rva(g_lcStartValuesLoad), rva(g_lcCoronaEnd), rva(g_lcLightEnd), rva(reinterpret_cast<const void*>(&LcCopy)), rva(g_lcRayAdd + 41));
 }
 // The two model budgets: the data the sites lead to, reached through pointers, so that no store of this program's own code counts as a
 // writer of a table; the object on whole pages, since popgone takes one away, and the hole a page of its own.
