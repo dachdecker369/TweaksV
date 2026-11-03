@@ -263,9 +263,12 @@ Then 2.8.0 set - the project's version, the specification's header example and i
 
 1. **The sirens, at night:** `hp16fpiu1`, `lspdcvpi08` and `policelv` side by side, sirens on: the whole lightbar lit, lights 21 to 32 flashing as their carcols says, by my eye.
    One shot at a light past 20, one ram, one wreck: those lights out, their glass gone.
-   The log: the models lit past 20 with their bones found, no table full.
-2. **The stores, the same start:** about 30 of those cars spawned in one place, sirens on, the camera among them.
-   The log: vehicle lights past 400, vehicle coronas past 928, a job's most past 80 lights and past 200 coronas, how many a job refused, the scene store at its room, the coronas past 1088 with none refused, the ray traced list's refused lights; no crash, and the frame rate as I see it (the lighting capacity's findings, 8.4).
+   One repair through the trainer: they come back.
+   One plane with retractable gear, gear up and down: its doors work as ever.
+   The log: the models lit past 20 with their bones found, `real lights in N`, no table full.
+2. **The stores, the same start:** about 30 of those cars spawned in one place, sirens on, from outside the group so that all 30 are in view, since a light out of view takes no room (the lighting capacity's findings, 3.2).
+   The log: vehicle lights past 400, vehicle coronas past 928, a job's most past 80 lights, how many a job refused, the scene store at its room, the coronas past 1088 with none refused, the ray traced list's refused lights; no crash, and the frame rate as I see it (its 8.4).
+   A job past 200 coronas is not sure, as five cars at 37 are 185 (its 3.5): if the log stays at or under 200, the 300 stands with no load past the game's number, its layout proven by the lights past 80 behind it, and I decide then.
 3. **The budgets, a start of its own:** `Level3Kb` at 98,500 in my `gameconfig.xml` (D-V5), `MaxStreamingResources` back at 98304 there, so that `STREAMED_OBJECTS` does the raise, a drive of 20 minutes through the city at night and on to the tunnel: the vehicle budget's share at the stop against 95%, the objects past 100,000, the descriptors in use, whose highest reading with at least 16,384 free settles the key's default (D37), the ray tracing buffer, my LOD switching by eye.
 4. **The build as it ships:** a fresh `TweaksV.ini` from the build's defaults, no `DIAGNOSTIC_MODE`: line 1 names 2.8.0 and the commit without `-dirty`, the one `PROBLEM` `lfpolice`'s Legacy box, every part applied, `VIDEO_MEMORY_BUDGET` at 6000 and `STREAMED_OBJECTS` at its default.
    This is the build that is tagged.

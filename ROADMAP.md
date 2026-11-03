@@ -2,10 +2,10 @@
 
 What I plan for TweaksV next, before it is planned in [PLAN.md](PLAN.md) and specified in [SPECIFICATIONS.md](SPECIFICATIONS.md); what has shipped is in NOTES.md's Versions.
 It holds phase C's second build now, 2.8.0: the sirens per vehicle (PLAN.md, D23) and the raises 2.7.0's measurements of the population's limits and the lighting capacity ask for.
-A new part is a part like the fifteen (SPECIFICATIONS.md, section 16): its own file on the shared code - the scanner, the patch module, the relocation core, the three tables - its own section of `TweaksV.ini`, its old plugin in the conflict check, its measurement under `DIAGNOSTIC_MODE`, its suite, its patterns in PATTERNS.md.
+A new part is a part like the sixteen (SPECIFICATIONS.md, section 16): its own file on the shared code - the scanner, the patch module, the relocation core, the three tables - its own section of `TweaksV.ini`, its old plugin in the conflict check, its measurement under `DIAGNOSTIC_MODE`, its suite, its patterns in PATTERNS.md.
 One minor version per part, a patch version for its fixes, but parts built in one round ship together as one version, as 2.6.0's did (PLAN.md, D18); a version takes the next free number when it ships.
 
-How a part is taken over depends on the original's license, as [CREDITS.md](CREDITS.md) says of the fifteen.
+How a part is taken over depends on the original's license, as [CREDITS.md](CREDITS.md) says of the sixteen.
 Code under a license the GPL-3.0 takes in - MIT, BSD, zlib, the GPL-3.0 itself - may be read and adapted: the patterns and the research are credited in CREDITS.md, every line carried over is named in THIRD_PARTY_NOTICES.md, and the part is still built on TweaksV's shared code, as 2.0.0 rebuilt the five plugins, because a plugin merged as it is brings its own scanner, INI and log, what 1.x had.
 Code without a license, under all rights reserved or under FiveM's terms is idea only: none of it is read, and every game fact behind the part is found anew in the running Enhanced game with my tooling (a test build's dump, Ghidra; PATTERNS.md, "When Game Updates").
 The original left is a Legacy plugin, and no pattern of a Legacy plugin carries over to Enhanced anyway (PATTERNS.md).
