@@ -42,7 +42,7 @@ check "no pattern of the store looked for, no line of it; its sites and jumps as
 
 echo "== C2 the part on at the game's own 1088, DIAGNOSTIC_MODE=1: nothing of it looked for or written, and the fake's own code as the game's"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(ASI=TweaksV_test.asi game full_game.exe ccrun); echo "      ${out:0:80}"
-check "no pattern of the store looked for, no line of it; its sites and jumps as placed" "log_lacks 'G-E-[IJ]' && cc_lacks 'new corona store' && cc_lacks 'general add' && has '$PLACED'"
+check "no pattern of the store looked for, no line of it; its sites and jumps as placed" "log_lacks 'G-E-[IJ]' && cc_lacks 'The corona store moved' && cc_lacks 'new corona store' && cc_lacks 'general add' && has '$PLACED'"
 check "the run at the game's room: 1088 added and 544 refused, the job's clamp and the copy of 0x180 bytes past the records, all in the game's own store" "has '$(ran 1088 'in use')'"
 check "the accessor says the game's own, with nothing counted" "has '$NOW_GAME'"
 check "every page its own protection; no problem" "has 'protect: all restored (RX)' && cc_lacks 'PROBLEM'"
@@ -53,7 +53,7 @@ check "the count lowered to 1088, the placed count wrapped, a copy of about 200 
 
 echo "== C3 CORONA_STORE=4096, no DIAGNOSTIC_MODE: the store moved, the jumps as placed, no line of the store but the writes' own"
 raise_ini; out=$(ASI=TweaksV_test.asi game full_game.exe ccrun); echo "      ${out:0:80}"
-check "the 13 writes of the findings' table and nothing else, in the sites as placed; the new store read/write, 16-aligned, of 196992 bytes" "has '$(moved 4096)'"
+check "the 13 writes of the findings' table and nothing else, in the sites as placed; the new store read/write, 16-aligned, of 196992 bytes; the part's line of it" "has '$(moved 4096)' && cc_line 'The corona store moved and its limit raised from 1088 to 4096 entries.'"
 check "the jumps and the batch's six bytes as placed: no stub without DIAGNOSTIC_MODE" "has 'cc jumps: as placed |'"
 check "the run: the job's parameters name the new store and the old count; two threads' adds up to 4096, each in a slot of its own, the old store all 0; the batch up to the room; the job's own limit still 1088; the copy of 4096 and the 0x180 past them, as the store" "has '$(ran 4096 'all 0')'"
 check "the accessor says the room, nothing counted" "has '$(now 4096 0 0 0 0)'"
@@ -98,7 +98,7 @@ check "1000: reported by the settings and clamped to the game's own: nothing of 
 
 echo "== C6 DRY_RUN=1: found and checked, nothing written, the accessor says the game's own"
 raise_ini; setkey DRY_RUN 1; setkey DIAGNOSTIC_MODE 1; out=$(ASI=TweaksV_test.asi game full_game.exe); echo "      ${out:0:80}"
-check "every site's line, then the would lines: 13 of the store and the move; the jumps' would line, no stub" "cc_line 'DIAGNOSTIC: the general add at RVA $(rva i1): .*' && [ \$(count 'DRY_RUN: would patch the corona store') -eq 13 ] && cc_line 'DRY_RUN: would patch the corona store.s limit in its general add: 3F 04 00 00 -> FF 0F 00 00' && cc_line 'DRY_RUN: would move the corona store (5 references) and raise its limit from 1088 to 4096 (5 sites), with 3 offsets of its count.' && cc_line 'DRY_RUN: would redirect the four jumps when the corona store is full and the LOD lights. batch at RVA $(rva_plus i8 56) (G-E-I8) to counting stubs - the refused coronas are not counted.'"
+check "every site's line, then the would lines: 13 of the store and the move; the jumps' would line, no stub" "cc_lacks 'The corona store moved' && cc_line 'DIAGNOSTIC: the general add at RVA $(rva i1): .*' && [ \$(count 'DRY_RUN: would patch the corona store') -eq 13 ] && cc_line 'DRY_RUN: would patch the corona store.s limit in its general add: 3F 04 00 00 -> FF 0F 00 00' && cc_line 'DRY_RUN: would move the corona store (5 references) and raise its limit from 1088 to 4096 (5 sites), with 3 offsets of its count.' && cc_line 'DRY_RUN: would redirect the four jumps when the corona store is full and the LOD lights. batch at RVA $(rva_plus i8 56) (G-E-I8) to counting stubs - the refused coronas are not counted.'"
 check "no write's line, no jump's would line, no stub's announcement" "cc_lacks 'DIAGNOSTIC: corona store' && cc_lacks 'would patch the jump' && cc_lacks 'the four jumps when the corona store is full .* are redirected'"
 check "its sites and jumps as placed; the accessor says the game's own; no problem" "has '$PLACED' && has '$NOW_GAME' && cc_lacks 'PROBLEM'"
 raise_ini; setkey DRY_RUN 1; out=$(ASI=TweaksV_test.asi game full_game.exe); echo "      ${out:0:80}"

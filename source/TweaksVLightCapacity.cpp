@@ -1197,6 +1197,8 @@ namespace TweaksV
 			Note("the stores moved: the vehicle coronas' at " + DescribeAddress(coronas) + ", the vehicle lights' at " + DescribeAddress(lights) + ", a job's lists' start values at " + DescribeAddress(block));
 			WriteLog(kTag, "The vehicle coronas' store moved and its limit raised " + coronaChange + " entries.");
 			WriteLog(kTag, "The vehicle lights' store moved and its limit raised " + lightChange + " entries.");
+			if (const uint32_t room = CoronaStoreNow().room; room > kGameCoronas)
+				WriteLog(kTag, "The corona store moved and its limit raised from " + std::to_string(kGameCoronas) + " to " + std::to_string(room) + " entries.");
 			WriteLog(kTag, "A job's lists patched: " + std::to_string(kJobLights) + " lights and " + std::to_string(kJobCoronas) + " coronas -> " + std::to_string(kRaisedJobLights) + " lights and " +
 				std::to_string(kRaisedJobCoronas) + " coronas.");
 			WriteLog(kTag, "Scene store's index patched: 88 04 CA -> 89 04 CA, 0F B6 1C C1 -> 8B 1C C1 90.");
