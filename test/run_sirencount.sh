@@ -14,7 +14,7 @@
 # stores and each site failing alone with nothing written, the hook taken back, DRY_RUN, the IDs' job on and off.
 # Fake LOCALAPPDATA: the real one is never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
-CHECKS=131
+CHECKS=132
 cd "$B" || exit 1
 cp "$R/x64/Release/TweaksV.asi" TweaksV.asi
 cp "$R/object/Test/Release/TweaksV.asi" TweaksV_test.asi

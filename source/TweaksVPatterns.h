@@ -206,7 +206,6 @@ namespace TweaksV
 		{ "I-E-B2", "48 8B 87 B0 00 00 00 48 85 C0 74 ? 48 8B 00 48 85 C0 74 ? 0F BE 84 28 99 00 00 00" },
 		{ "I-E-B3", "0F BE 94 18 AD 00 00 00 48 8B 8E C0 09 00 00" },
 		{ "I-E-B4", "41 57 41 56 41 55 41 54 56 57 53 48 83 EC 20 66 83 79 5E 00" },
-		// [siren lights]
 		// SirenSettings, the sirens per vehicle's lights (TweaksVSirenCount.cpp): the renderer's call of the siren settings getter (Z1), redirected;
 		// the siren state's allocation (Z2), written; the start of the array member's tree reader (Z3), hooked; and, checked only, the renderer's
 		// reads of the vehicle's broken sirens through the bone's (Z4), of a flag byte (Z5) and for its group lights (Z6), and the reader's walk
@@ -218,7 +217,6 @@ namespace TweaksV
 		{ "I-E-Z5", "41 0F B6 85 86 09 00 00 24 02" },
 		{ "I-E-Z6", "41 0F B7 45 6C 83 E0 FD 83 F8 08 74 ? 44 0F 28 3D ? ? ? ? 83 F8 01 75 ? 45 0F 28 BD 80 00 00 00" },
 		{ "I-E-Z7", "48 8B 7F 38 48 85 FF 0F 84 ? ? ? ? 48 8B 75 D0 49 8B 45 08 B9 01 00 00 00 EB ? ? ? ? ? 8B 48 28 49 39 CE 0F 84 ? ? ? ? 48 8B 7F 30 49 8D 4E 01 48 85 FF 0F 84 ? ? ? ? 49 89 CE 4C 8D 41 FF 4C 0F AF 40 20" },
-		// [siren damage]
 		// SirenSettings, the sirens per vehicle's damage (TweaksVSirenDamage.cpp): a hit's loop, by its counter of hierarchy IDs (X1, X2),
 		// its glass (X3) and its read of a bone, checked (X4); an impact's loop (L05, N04, N05); the bones the impact marked, hidden
 		// (L03, N03); a wreck's loop (L04, N02); the glass's fragment children's flags (L07, N06) and the same in three classes, from
@@ -317,11 +315,9 @@ namespace TweaksV
 		{ "G-E-G2", "44 8B 81 00 CC 00 00 49 81 F8 3F 04 00 00 0F 87" },
 		{ "G-E-H1", "B8 58 80 01 00 E8 ? ? ? ? 48 29 C4" },
 		{ "G-E-H2", "48 8D 44 24 50 49 89 04 24 4C 89 E1 41 FF 54 24 60" },
-		// [light stores]
 		// A job's end, the measurement's alone (TweaksVLightCapacity.cpp): the copies of its coronas (K1) and of its lights (K2) into the frame's stores, each call past the match
 		{ "G-E-K1", "F0 48 0F C1 08 48 8B 54 24 40 E8" },
 		{ "G-E-K2", "4C 69 C6 C0 01 00 00 4C 89 C1 F0 48 0F C1 08 E8" },
-		// [corona store]
 		// The corona store (TweaksVCoronaStore.cpp), looked for with CORONA_STORE above the game's only: its general add (I1), the store as the two inlined
 		// adds (I2, I3), the copy to the draw list (I4, I5) and the LOD lights' job (I6) name it, what hands it out (I7), the job's batch (I8) and its own limit
 		// (I9); and for the checks alone, the job's scratch (J1), the draw list's command (J2), the draw (J3) and its two stack allocations (J4, J5)

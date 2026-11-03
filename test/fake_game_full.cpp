@@ -699,7 +699,6 @@
 //   rqlatest       the latest numbers change after the first summary, and no most, for 5 s
 //   rqbad:WHAT:N   the site WHAT, N the pool, the family or the call it asks for, as RqSetUp has them, not as the research found it; no site runs then
 //   rqrvas         the report's "rq rvas: ..." field, with every site's RVA, for the suite to compare with the log
-// [siren damage]
 // The sirens per vehicle's damage (TweaksVSirenDamage): its sites as code the fake runs (SdSetUp), always; what the report says of them, "sd sites: ...", always.
 //   sdrun          once TweaksV has started: the pool set up by its site's stride, seven models made through the call at the site - one made for
 //                  20 sirens, one for 32 whose names past siren20 are in other cases, one for 24, one with a few here and there, a plane with gear doors in
@@ -720,7 +719,6 @@
 //   sdpoolmade     the bone structures' pool made before TweaksV starts
 //   sdpoolshape    the instruction before the allocation not the load of the pool
 //   sdpoolout      that load leading outside the game
-// [corona store]
 // The corona store (TweaksVCoronaStore): its sites as the patterns match them, G-E-I1 in g_ccGeneralAdd and G-E-G1 in the lighting capacity's two checks, and its count
 // and records in the lighting capacity's data. The general add, the job's parameters and batch, its own limit and the copy are code the fake runs, only as these ask:
 //   ccrun          once TweaksV has started: the job's parameters; two threads through the general add, 3/4 of the room each; a batch from 100 short of the room that
@@ -1601,7 +1599,6 @@ static Site g_rqSites[] = { SITE(g_rqMakeS1, 0), SITE(g_rqMakeS2, 0), SITE(g_rqM
 	SITE(g_rqManagerMade, 0), SITE(g_rqNotData, 0) };
 #pragma section(".rqedge", read, execute)
 __declspec(allocate(".rqedge")) volatile unsigned char g_rqEdge[0x2000] = { 0xCC };
-// [siren damage]
 // The sirens per vehicle's damage: the loops, the pool's set-up and the caller as code, written by SdSetUp; the stored damage state's loop, which stays at 20;
 // room where an option moves a site, far from every other site.
 volatile unsigned char g_sdHit[0xB0] = { 0xCC };
@@ -1617,7 +1614,6 @@ volatile unsigned char g_sdSync[0x28] = { 0xCC };
 volatile unsigned char g_sdSpare[0x800] = { 0xCC };
 static Site g_sdSites[] = { SITE(g_sdHit, 0), SITE(g_sdImpact, 0), SITE(g_sdHide, 0), SITE(g_sdWreck, 0), SITE(g_sdFlags, 0), SITE(g_sdClasses[0], 0), SITE(g_sdClasses[1], 0),
 	SITE(g_sdClasses[2], 0), SITE(g_sdPoolSite, 0), SITE(g_sdCaller, 0), SITE(g_sdKept, 0), SITE(g_sdSync, 0), SITE(g_sdSpare, 0) };
-// [corona store]
 // The corona store's sites. g_ccGeneralAdd, above: G-E-I1, the record's write with the game's movaps, the index it got at [rdx+0x10], the way out at +70; g_ccAddStart its
 // prologue, as the way out wants it, and on to it. The inlined adds' stores, never run, and where their jumps lead. The copy: G-E-I4 at kCcI4, G-E-I5 at kCcI5, the call
 // to CcCopyBytes, NOPs as far as the game's jle and jz reach. The job's parameters, G-E-I6, and what hands the store out, G-E-I7. The batch, G-E-I8, the placed count at
@@ -8537,7 +8533,6 @@ static void RqReport(int argc, wchar_t** argv)
 	wprintf(L" D1=0x%llX D2=0x%llX D3=0x%llX MG=0x%llX | ", rva(g_rqReferences + 11), rva(g_rqRotation), rva(g_rqManagerMade + 5), rva(&g_rqData.manager));
 }
 
-// [siren damage]
 // The sirens per vehicle's damage (TweaksVSirenDamage): the game's damage code as code that runs, around the patterns' bytes, so that
 // what TweaksV writes is read by the real instructions. SdSetUp writes each loop into .fakesit, and the function that makes a bone
 // structure and the game's fill over carriers its unwind data names, as the siren count does; each loop reads its bones where the game's
@@ -9283,7 +9278,6 @@ static void SirenJoinReport()
 		wprintf(L"siren join: %ld+%ld, after a hit on siren25 %ld+%ld, after a wreck %ld+%ld | ", g_sirenJoinLit[0][0], g_sirenJoinLit[0][1], g_sirenJoinLit[1][0], g_sirenJoinLit[1][1],
 			g_sirenJoinLit[2][0], g_sirenJoinLit[2][1]);
 }
-// [corona store]
 // The corona store's data: what the job's parameters are given and what the drawing side's sites name, the store and its count being the lighting capacity's.
 struct CcData
 {
@@ -10269,9 +10263,7 @@ static void ForEachSite(void (*fn)(const Site&))
 	static Site poolMemorySite = SITE(g_poolMemorySite, 0);
 	fn(poolMemorySite);
 	for (const Site& site : g_rqSites) fn(site);
-	// [siren damage]
 	for (const Site& site : g_sdSites) fn(site);
-	// [corona store]
 	for (const Site& site : g_ccSites) fn(site);
 }
 
@@ -11921,9 +11913,7 @@ int wmain(int argc, wchar_t** argv)
 	PedPoolSetUpSites(argc, argv);
 	PoolMemorySetUpSite(argc, argv);
 	RqSetUp(argc, argv);
-	// [siren damage]
 	SdSetUp(argc, argv);
-	// [corona store]
 	CcSetUp(argc, argv);
 
 	RovSetup(argc, argv);
@@ -12093,10 +12083,8 @@ int wmain(int argc, wchar_t** argv)
 	PedPoolActions(argc, argv);
 	PoolMemoryActions(argc, argv);
 	RqActions(argc, argv);
-	// [siren damage]
 	SdActions(argc, argv);
 	SirenJoinActions(argc, argv);
-	// [corona store]
 	CcActions(argc, argv);
 	if (HasOption(argc, argv, L"wait"))
 		Sleep(11000);	// TweaksV's UNLOCK_FILES summary comes 10 s after the first open it counts, the OpenFile summary 10 s
@@ -12189,12 +12177,10 @@ int wmain(int argc, wchar_t** argv)
 	PedPoolReport();
 	PoolMemoryReport();
 	RqReport(argc, argv);
-	// [siren damage]
 	SdReport();
 	SirenJoinReport();
 	CheckStub(Rel32Target(Site{ g_sdCaller, kSdMakerRel32, 0 }));
 	CheckData(SirenCountCode(&SdMakerCarrier) + kSdAllocAt + kSdAllocationAt, 5);
-	// [corona store]
 	CcReport(module, argc, argv);
 	CheckStub(Rel32Target(g_packCallSite));
 	CheckStub(Rel32Target(g_scriptCallSite));

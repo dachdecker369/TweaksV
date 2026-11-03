@@ -34,11 +34,9 @@ SUITES=(
 	texturebudget
 	raytracing
 	lightcapacity
-	# [corona store]
 	coronastore
 	sirenids
 	sirencount
-	# [siren damage]
 	sirendamage
 	staticbounds
 	population

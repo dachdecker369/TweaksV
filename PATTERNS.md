@@ -485,8 +485,6 @@ The four sites, for the measurement: looked for only with `DIAGNOSTIC_MODE=1`, e
 | I-E-B3 | `0F BE 94 18 AD 00 00 00 48 8B 8E C0 09 00 00` | +4: 0xAD, `siren_glass1`'s byte in the bone structure (`movsx edx, byte [rax+rbx+0xAD]`) - a read of a siren's glass bone, in the function that breaks a siren (RVA 0x1DE80A0) | found | 0x1DE8298 |
 | I-E-B4 | `41 57 41 56 41 55 41 54 56 57 53 48 83 EC 20 66 83 79 5E 00` | +0: the start of find-bone-by-name (RVA 0x1C4BFF0), a function start by the unwind data; +18: 0x5E, the skeleton data's bone count (`cmp word [rcx+0x5E], 0`), tested first | found | 0x1C4BFF0 |
 
-<!-- [siren lights] -->
-
 The sirens per vehicle's lights: what their findings' second pass read, and what the raise rests on.
 The labels are the part's letter `I`; `I-E-B1`, `I-E-C1` and `I-E-P1` are theirs too.
 
@@ -539,8 +537,6 @@ The sites: looked for with `SIRENS_PER_VEHICLE` above 20 alone, each matching ex
 | I-E-Z5 | `41 0F B6 85 86 09 00 00 24 02` | checked only: +4 0x986, the vehicle's flag byte; in the renderer by the unwind data | found | 0xE9C80F |
 | I-E-Z6 | `41 0F B7 45 6C 83 E0 FD 83 F8 08 74 ? 44 0F 28 3D ? ? ? ? 83 F8 01 75 ? 45 0F 28 BD 80 00 00 00` | checked only: +4 0x6C and +30 0x80, the vehicle's fields for the group lights; in the renderer by the unwind data | found | 0xE9D05B |
 | I-E-Z7 | `48 8B 7F 38 48 85 FF 0F 84 ? ? ? ? 48 8B 75 D0 49 8B 45 08 B9 01 00 00 00 EB ? ? ? ? ? 8B 48 28 49 39 CE 0F 84 ? ? ? ? 48 8B 7F 30 49 8D 4E 01 48 85 FF 0F 84 ? ? ? ? 49 89 CE 4C 8D 41 FF 4C 0F AF 40 20` | checked only: +3 0x38, +20 the member data, +34 0x28, +47 0x30 and +72 0x20 pin the reader's node and member fields; in the tree reader by the unwind data | found | 0xAE69C0 |
-
-<!-- [siren damage] -->
 
 ### Siren damage
 
@@ -809,8 +805,22 @@ The patterns, each matching exactly once in both dumps of 2026-10-29 but `G-E-G1
 | G-E-G2 | `44 8B 81 00 CC 00 00 49 81 F8 3F 04 00 00 0F 87` | the drain's add to it (in RVA 0xB3A850): +3 0xCC00; +10 0x43F | found | 0xB3A8D0 |
 | G-E-H1 | `B8 58 80 01 00 E8 ? ? ? ? 48 29 C4` | the worker's frame (RVA 0x142760): +1 0x18058 | found | 0x14276C |
 | G-E-H2 | `48 8D 44 24 50 49 89 04 24 4C 89 E1 41 FF 54 24 60` | a job's scratch, rsp+0x50: +4 0x50, right before `call [job+0x60]`; so 0x18008 bytes for it, which the part's 0x17340 fits with 0xCC8 to spare | found | 0x14284B |
-
-<!-- [light stores] -->
+| G-E-K1 | `F0 48 0F C1 08 48 8B 54 24 40 E8` | a job's coronas at its end: `lock xadd` of the write pointer, its coronas into rdx; +10 the call of the copy, its rel32 past the match - with `DIAGNOSTIC_MODE=1` through a stub that keeps a job's most | found, its RVA to check | 0xE15AB0 |
+| G-E-K2 | `4C 69 C6 C0 01 00 00 4C 89 C1 F0 48 0F C1 08 E8` | a job's lights at its end: +3 0x1C0, the bytes of its n, `lock xadd` of the write pointer; +15 the call of the copy, its rel32 past the match - with `DIAGNOSTIC_MODE=1` through a stub that keeps a job's most | found, its RVA to check | 0xE15AD3 |
+| G-E-I1 | `66 66 66 66 66 2E 0F 1F 84 00 00 00 00 00 44 8B 81 00 CC 00 00 49 81 F8 3F 04 00 00 0F 87 ? ? ? ? 41 8D 70 01 44 89 C0 F0 0F B1 B1 00 CC 00 00 75 DB` | the general add (in RVA 0xB3A850): +0 a 14-byte nop before its loop, reached only by falling through; +17 and +45 the count's disp, 0xCC00; +24 0x43F; +30 the `ja`'s rel32 to RVA 0xB3A9AF; `G-E-G2` whole at +14 | found | 0xB3A8C2 |
+| G-E-I2 | `48 8D 04 49 48 C1 E0 04 48 8D 0D ? ? ? ? 41 0F 28 1E 0F 29 1C 08` | the first inlined add (in RVA 0xB3A4D0): +11 the store (RVA 0x41B4210) | found | 0xB3A7E2 |
+| G-E-I3 | `48 8D 04 49 48 C1 E0 04 48 8D 0D ? ? ? ? 0F 28 44 24 30 0F 29 04 08` | the second (in RVA 0xB6E6F0): +11 the store | found | 0xB6EDD2 |
+| G-E-I4 | `8B 05 ? ? ? ? 89 47 10 85 C0 7E 5C 8D 04 40 C1 E0 04 05 80 01 00 00` | the copy to the draw list (in RVA 0xB1C510): +2 the count (RVA 0x41C0E10), +20 0x180 | found | 0xB1C587 |
+| G-E-I5 | `48 85 C0 74 1E 48 8D 15 ? ? ? ? 48 89 C1 49 89 D8 E8` | the copy: +8 the store, memcpy's source | found | 0xB1C5D7 |
+| G-E-I6 | `48 8D 0D ? ? ? ? 48 8D 54 24 50 4C 8D 44 24 40 E8 ? ? ? ? 48 8B 44 24 50 48 89 05` | the LOD lights' job's parameters (in RVA 0x314200): +3 the store, +18 the call of `G-E-I7` | found | 0x3145AA |
+| G-E-I7 | `48 89 0A 48 81 C1 00 CC 00 00 49 89 08 C3` | hands the store and its count out as pointers, called once: +6 0xCC00 | found | 0xB3CAA0 |
+| G-E-I8 | `BD 40 04 00 00 48 8B 9C 24 ? ? ? ? 48 8B B4 24 ? ? ? ? 66 66 66 66 2E 0F 1F 84 00 00 00 00 00 8B 0B 8D 14 31 81 FA 40 04 00 00 0F 43 D5 89 C8 F0 0F B1 13 75 EA 29 CA 48 8D 04 49` | the job's batch (in RVA 0x2C15C0): +1 and +41 0x440, its clamp; +56 `29 CA 48 8D 04 49`, with rsi what the job brought, edx the new count, ecx the old | found | 0x2C28AE |
+| G-E-I9 | `81 BC 24 90 00 00 00 3F 04 00 00 0F 87 ? ? ? ? 48 8B 84 24` | the job's own limit: +7 0x43F; +13 the `ja`'s rel32 to RVA 0x2C211C | found | 0x2C1EA4 |
+| G-E-J1 | `49 8D 92 00 CC 00 00 BD 00 1C 00 00 4C 29 DD 49 81 C3 FF E3 FF FF 49 81 FB FF 17 FF FF 48 0F 42 D0 41 BD 00 E8 00 00` | the job's scratch, a check: +3 0xCC00 for coronas, +8 0x1C00 for four lists, +35 0xE800 in all | found | 0x2C1384 |
+| G-E-J2 | `48 8B 41 08 48 89 05 ? ? ? ? 8B 51 10 89 15 ? ? ? ? 31 D2 48 85 C0 0F 94 C2 C1 E2 03 89 15` | command 0xDF's handler, a check: +7 the render pointer (RVA 0x42D5C20), +16 the render count (RVA 0x42D5C28), +33 past the match the extras' count (RVA 0x42D5C2C) | found | 0xB3B050 |
+| G-E-J3 | `F0 FF 05 ? ? ? ? 89 D6 49 89 CC 48 63 3D` | the draw (in RVA 0xB22640), a check: +3 its mark (RVA 0x42D5C38), +15 past the match the render count's read | found | 0xB22681 |
+| G-E-J4 | `48 89 F8 48 C1 E0 05 E8 ? ? ? ? 48 29 C4 49 89 E6 48 83 EC 40` | the draw: `alloca(count x 0x20)`, a check | found | 0xB22811 |
+| G-E-J5 | `48 8D 04 BD 0F 00 00 00 48 83 E0 F0 E8 ? ? ? ? 48 29 C4 49 89 E5` | the draw: `alloca(count x 4)`, a check | found | 0xB2285B |
 
 The light stores, the part (SPECIFICATIONS.md section 11.17), write through these rows, 16 writes in all, from the findings' 8.1.
 A job's lists hold 180 lights and 300 coronas: 0x13B00 and 0x3840 bytes, 0x17340 in all, the top with 0x20 to spare being 187 lights beside the 300 coronas; 5 vehicles of 32 lit sirens take 160.
@@ -827,27 +837,6 @@ The measurement's stubs beside the jump of `G-E-C1`, each costing only its own n
   Each is skipped when n is 0 and runs once a job, with the job's whole count, after every vehicle of that job, so r8 is what the job produced, and a list holds no more than its capacity.
   A stub there may use rax, leaves the arguments and rsp as they are and goes on by a tail jump; the jobs run side by side, so it keeps its mark with `lock cmpxchg`, at most 120 times a frame.
   A job's list itself lives on a worker's stack, so no sampling can read it.
-
-| Label | Pattern | Use | 1.0.1158.16 | RVA |
-|---|---|---|---|---|
-| G-E-K1 | `F0 48 0F C1 08 48 8B 54 24 40 E8` | a job's coronas at its end: `lock xadd` of the write pointer, its coronas into rdx; +10 the call of the copy, its rel32 past the match - with `DIAGNOSTIC_MODE=1` through a stub that keeps a job's most | found, its RVA to check | 0xE15AB0 |
-| G-E-K2 | `4C 69 C6 C0 01 00 00 4C 89 C1 F0 48 0F C1 08 E8` | a job's lights at its end: +3 0x1C0, the bytes of its n, `lock xadd` of the write pointer; +15 the call of the copy, its rel32 past the match - with `DIAGNOSTIC_MODE=1` through a stub that keeps a job's most | found, its RVA to check | 0xE15AD3 |
-
-<!-- [corona store] -->
-| G-E-I1 | `66 66 66 66 66 2E 0F 1F 84 00 00 00 00 00 44 8B 81 00 CC 00 00 49 81 F8 3F 04 00 00 0F 87 ? ? ? ? 41 8D 70 01 44 89 C0 F0 0F B1 B1 00 CC 00 00 75 DB` | the general add (in RVA 0xB3A850): +0 a 14-byte nop before its loop, reached only by falling through; +17 and +45 the count's disp, 0xCC00; +24 0x43F; +30 the `ja`'s rel32 to RVA 0xB3A9AF; `G-E-G2` whole at +14 | found | 0xB3A8C2 |
-| G-E-I2 | `48 8D 04 49 48 C1 E0 04 48 8D 0D ? ? ? ? 41 0F 28 1E 0F 29 1C 08` | the first inlined add (in RVA 0xB3A4D0): +11 the store (RVA 0x41B4210) | found | 0xB3A7E2 |
-| G-E-I3 | `48 8D 04 49 48 C1 E0 04 48 8D 0D ? ? ? ? 0F 28 44 24 30 0F 29 04 08` | the second (in RVA 0xB6E6F0): +11 the store | found | 0xB6EDD2 |
-| G-E-I4 | `8B 05 ? ? ? ? 89 47 10 85 C0 7E 5C 8D 04 40 C1 E0 04 05 80 01 00 00` | the copy to the draw list (in RVA 0xB1C510): +2 the count (RVA 0x41C0E10), +20 0x180 | found | 0xB1C587 |
-| G-E-I5 | `48 85 C0 74 1E 48 8D 15 ? ? ? ? 48 89 C1 49 89 D8 E8` | the copy: +8 the store, memcpy's source | found | 0xB1C5D7 |
-| G-E-I6 | `48 8D 0D ? ? ? ? 48 8D 54 24 50 4C 8D 44 24 40 E8 ? ? ? ? 48 8B 44 24 50 48 89 05` | the LOD lights' job's parameters (in RVA 0x314200): +3 the store, +18 the call of `G-E-I7` | found | 0x3145AA |
-| G-E-I7 | `48 89 0A 48 81 C1 00 CC 00 00 49 89 08 C3` | hands the store and its count out as pointers, called once: +6 0xCC00 | found | 0xB3CAA0 |
-| G-E-I8 | `BD 40 04 00 00 48 8B 9C 24 ? ? ? ? 48 8B B4 24 ? ? ? ? 66 66 66 66 2E 0F 1F 84 00 00 00 00 00 8B 0B 8D 14 31 81 FA 40 04 00 00 0F 43 D5 89 C8 F0 0F B1 13 75 EA 29 CA 48 8D 04 49` | the job's batch (in RVA 0x2C15C0): +1 and +41 0x440, its clamp; +56 `29 CA 48 8D 04 49`, with rsi what the job brought, edx the new count, ecx the old | found | 0x2C28AE |
-| G-E-I9 | `81 BC 24 90 00 00 00 3F 04 00 00 0F 87 ? ? ? ? 48 8B 84 24` | the job's own limit: +7 0x43F; +13 the `ja`'s rel32 to RVA 0x2C211C | found | 0x2C1EA4 |
-| G-E-J1 | `49 8D 92 00 CC 00 00 BD 00 1C 00 00 4C 29 DD 49 81 C3 FF E3 FF FF 49 81 FB FF 17 FF FF 48 0F 42 D0 41 BD 00 E8 00 00` | the job's scratch, a check: +3 0xCC00 for coronas, +8 0x1C00 for four lists, +35 0xE800 in all | found | 0x2C1384 |
-| G-E-J2 | `48 8B 41 08 48 89 05 ? ? ? ? 8B 51 10 89 15 ? ? ? ? 31 D2 48 85 C0 0F 94 C2 C1 E2 03 89 15` | command 0xDF's handler, a check: +7 the render pointer (RVA 0x42D5C20), +16 the render count (RVA 0x42D5C28), +33 past the match the extras' count (RVA 0x42D5C2C) | found | 0xB3B050 |
-| G-E-J3 | `F0 FF 05 ? ? ? ? 89 D6 49 89 CC 48 63 3D` | the draw (in RVA 0xB22640), a check: +3 its mark (RVA 0x42D5C38), +15 past the match the render count's read | found | 0xB22681 |
-| G-E-J4 | `48 89 F8 48 C1 E0 05 E8 ? ? ? ? 48 29 C4 49 89 E6 48 83 EC 40` | the draw: `alloca(count x 0x20)`, a check | found | 0xB22811 |
-| G-E-J5 | `48 8D 04 BD 0F 00 00 00 48 83 E0 F0 E8 ? ? ? ? 48 29 C4 49 89 E5` | the draw: `alloca(count x 4)`, a check | found | 0xB2285B |
 
 **The corona store** (`TweaksVCoronaStore`), from `coronastore`'s pass over the dumps of 2026-10-29, first run by my proof of 2.8.0.
 The fourteen patterns are looked for with `CORONA_STORE` above the game's own alone; `G-E-G1` stays the part's, whose two matches `FindCoronaStore` is handed.
