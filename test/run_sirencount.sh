@@ -36,7 +36,7 @@ SITES="\[SirenSettings\] DIAGNOSTIC: .* (I-E-B[1-4])"
 
 echo "== C1 DIAGNOSTIC_MODE=0: nothing looked for, the call not redirected, the sirens drawn as the game draws them"
 fresh_ini; out=$(game full_game.exe scdraw); echo "      $out"
-check "no siren count pattern looked for, no SirenSettings line but the siren IDs' two and SIRENS_PER_VEHICLE's" "log_lacks 'I-E-B' && log_lacks 'I-E-Z' && log_lacks '\[SirenSettings\] DIAGNOSTIC' && [ \$(count '\[SirenSettings\]') -eq 3 ] && sc_line 'SIRENS_PER_VEHICLE=20 - the sirens per vehicle are not raised.'"
+check "no siren count pattern looked for, no SirenSettings line but the siren IDs' two and SIRENS_PER_VEHICLE's" "log_lacks 'I-E-B' && log_lacks '\[SirenSettings\] DIAGNOSTIC' && [ \$(count '\[SirenSettings\]') -eq 3 ] && sc_line 'SIRENS_PER_VEHICLE=20 - the sirens per vehicle are not raised.'"
 check "the stand-ins built; 800 passes through the renderer itself, its arguments, result and last error as the game's, no lookup" "has '$BUILT' && has '$UNCOUNTED'"
 check "sites and data as placed, no call stub of its own (the 8 are the other parts'), every page its own protection" "has '$PLACED' && has 'stubs: 8, all RX' && has 'protect: all restored (RX)'"
 
@@ -44,7 +44,7 @@ echo "== C2 DIAGNOSTIC_MODE=1: the four sites found and logged, the call redirec
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe scdraw wait); echo "      $out"
 renderer=$(tr -d '\r' < TweaksV.log | sed -n 's/.*siren lights. renderer call at RVA 0x[0-9A-F]* -> RVA \(0x[0-9A-F]*\), .*/\1/p')
 function=$(tr -d '\r' < TweaksV.log | sed -n 's/.*, in the function at RVA \(0x[0-9A-F]*\) (unwind data) (I-E-B2)$/\1/p')
-check "the 4 patterns each found exactly once" "[ \$(grep -c -E 'Pattern I-E-B[1-4] found: .* 1 match,' TweaksV.log) -eq 4 ]"
+check "the 4 patterns each found exactly once, none of the raise's looked for" "[ \$(grep -c -E 'Pattern I-E-B[1-4] found: .* 1 match,' TweaksV.log) -eq 4 ] && log_lacks 'Pattern I-E-Z'"
 check "the vehicle lights' two calls, word for word" "sc_line 'DIAGNOSTIC: siren lights. renderer call at RVA 0x[0-9A-F]* -> RVA 0x[0-9A-F]*, siren settings getter call at RVA 0x[0-9A-F]* -> RVA 0x[0-9A-F]* (I-E-B1)'"
 check "the renderer's bone read, its two offsets, in the function the renderer's call leads to, by the fake's unwind data" "sc_line 'DIAGNOSTIC: bone structure offset at RVA 0x[0-9A-F]* holds 0xB0, siren1.s bone offset at RVA 0x[0-9A-F]* holds 0x99, in the function at RVA 0x[0-9A-F]* (unwind data) (I-E-B2)' && [ -n '$renderer' ] && [ '$renderer' = '$function' ]"
 check "the glass bones' offset and find-bone-by-name, a function start by the unwind data, its bone count offset" "sc_line 'DIAGNOSTIC: siren_glass1.s bone offset at RVA 0x[0-9A-F]* holds 0xAD (I-E-B3)' && sc_line 'DIAGNOSTIC: find-bone-by-name at RVA 0x[0-9A-F]*, a function start (unwind data), bone count offset at RVA 0x[0-9A-F]* holds 0x5E (I-E-B4)'"
@@ -138,7 +138,7 @@ LIGHTS_OK='stand-ins ok, blocks ok, own settings ok, lights right,'
 LIT_32='lit police 20+0, 32 20+12, lost 8+0, 8 8+0, none 0+0, more32 20+12, 16 16+0, 21 20+1, holes 20+10, share 20+12, replaced 20+12, nosetting 0+0, past 0+0, spare 0+0, |'
 RAISED='The sirens per vehicle are raised to 32.'
 NOT_RAISED='PROBLEM: The sirens per vehicle are not raised this session:'
-SETTINGS_FULL='PROBLEM: The lights past 20 of every siren setting are not kept this session: the table of 255 siren settings with lights past 20 is full, and the next ones keep 20 lights.'
+SETTINGS_FULL='PROBLEM: Some siren settings. lights past 20 are not kept this session: the table of 255 siren settings with lights past 20 is full, and the next ones keep 20 lights.'
 raised_ini() { SIRENS_ON=1 fresh_ini; }
 
 echo "== R1 SIRENS_PER_VEHICLE=32, as the default file has it: the settings' lights past 20 read, each vehicle made for them lit by a second call"
@@ -176,8 +176,8 @@ check "raised to 24; 4 of each setting's lights past 20 kept, the rest dropped; 
 echo "== R4 the key's limits: 99 is 32, 19 is 20"
 raised_ini; setkey SIRENS_PER_VEHICLE 99 SIRENSETTINGS; out=$(game full_game.exe)
 check "99 raised to 32, reported as other sizes are" "sc_line '$RAISED' && log_has 'PROBLEM: TweaksV.ini: \[SIRENSETTINGS\] SIRENS_PER_VEHICLE=99 is outside 20..32 - using 32\.'"
-raised_ini; setkey SIRENS_PER_VEHICLE 19 SIRENSETTINGS; out=$(game full_game.exe)
-check "19 the game's own 20, reported the same: nothing looked for, nothing written" "log_has 'PROBLEM: TweaksV.ini: \[SIRENSETTINGS\] SIRENS_PER_VEHICLE=19 is outside 20..32 - using 20\.' && sc_line 'SIRENS_PER_VEHICLE=20 - the sirens per vehicle are not raised.' && log_lacks 'I-E-Z' && has \"$NOTHING_WRITTEN\""
+raised_ini; setkey SIRENS_PER_VEHICLE 19 SIRENSETTINGS; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe)
+check "19 the game's own 20, reported the same: nothing looked for, nothing written" "log_has 'PROBLEM: TweaksV.ini: \[SIRENSETTINGS\] SIRENS_PER_VEHICLE=19 is outside 20..32 - using 20\.' && sc_line 'SIRENS_PER_VEHICLE=20 - the sirens per vehicle are not raised.' && log_lacks 'Pattern I-E-Z' && has \"$NOTHING_WRITTEN\""
 
 echo "== R5 a car's sirens 3 and 25 broken: the first call skips its light 3, the second, by the bits past 20, its light 5"
 raised_ini; out=$(game full_game.exe srdraw srbroken)
@@ -191,9 +191,12 @@ echo "== R7 a setting's lights past 20 replaced 200 times while its model is dra
 raised_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe srdraw srrace)
 check "never torn, each light of one generation, the scalars carried over; 201 replacing lines" "has 'not torn,' && has '$LIGHTS_OK' && [ \$(count 'so it replaces that one\.') -eq 201 ] && log_lacks 'PROBLEM'"
 
+raised_ini; out=$(game full_game.exe srdraw srnofirst)
+check "no pass on one thread first: each model's first pass with both threads drawing it, each its own car; no block under way reaches the renderer" "has '$LIGHTS_OK'"
+
 echo "== R8 300 settings with lights past 20: more than the table of 255 holds"
 raised_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe srmany)
-check "255 kept, 45 no room, each logged; the problem once, word for word" "[ \$(count 'past 20 kept in a setting of its own, [0-9]* of 255\.') -eq 255 ] && [ \$(count 'no room for it in the table\.') -eq 45 ] && sc_line '$SETTINGS_FULL' && [ \$(count 'The lights past 20 of every siren setting') -eq 1 ]"
+check "255 kept, 45 no room, each logged; the problem once, word for word" "[ \$(count 'past 20 kept in a setting of its own, [0-9]* of 255\.') -eq 255 ] && [ \$(count 'no room for it in the table\.') -eq 45 ] && sc_line '$SETTINGS_FULL' && [ \$(count 'Some siren settings. lights past 20') -eq 1 ]"
 
 echo "== R9 20,001 twins: the lines of the settings read stop at 20,000, the numbers go on"
 raised_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe srflood)
@@ -201,13 +204,13 @@ check "the cap's line, word for word, once; 20,000 lines before it" "sc_line 'DI
 
 echo "== R10 an item that faults in the reader of an element: the setting keeps 20 lights, the next is read"
 raised_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe srfault)
-check "the problem once, word for word; the next setting kept, the first of the table" "sc_line 'PROBLEM: The lights past 20 of every siren setting are not kept this session: reading the lights past 20 of one ended in an access violation, and such a setting keeps 20 lights.' && sc_line 'DIAGNOSTIC: a siren setting of 32 lights read (key 0x[0-9A-F]\{16\}): 12 past 20 kept in a setting of its own, 1 of 255\.' && [ \$(count 'lights read (key') -eq 1 ] && has 'parser 2 of 2 back,'"
+check "the problem once, word for word; the next setting kept, the first of the table" "sc_line 'PROBLEM: Some siren settings. lights past 20 are not kept this session: reading the lights past 20 of one ended in an access violation, and such a setting keeps 20 lights.' && sc_line 'DIAGNOSTIC: a siren setting of 32 lights read (key 0x[0-9A-F]\{16\}): 12 past 20 kept in a setting of its own, 1 of 255\.' && [ \$(count 'lights read (key') -eq 1 ] && has 'parser 2 of 2 back,'"
 raised_ini; out=$(game full_game.exe srelement)
-check "an element's member object with another member data: nothing read, the problem once" "sc_line 'PROBLEM: The lights past 20 of every siren setting are not kept this session: a lights array.s element is not the one its member data names, and such a setting keeps 20 lights.' && [ \$(count 'The lights past 20 of every siren setting') -eq 1 ] && has 'parser 2 of 2 back,'"
+check "an element's member object with another member data: nothing read, the problem once" "sc_line 'PROBLEM: Some siren settings. lights past 20 are not kept this session: a lights array.s element is not the one its member data names, and such a setting keeps 20 lights.' && [ \$(count 'Some siren settings. lights past 20') -eq 1 ] && has 'parser 2 of 2 back,'"
 
 echo "== R11 the models past the table of 1,024, with the raise: they keep 20 sirens, reported once"
 raised_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe scdraw scfull wait)
-check "the problem once, word for word; the summary's numbers as the measurement's" "sc_line 'PROBLEM: The lights past 20 of every vehicle model are not lit this session: the table of 1024 vehicle models is full, and the next ones keep 20 sirens.' && [ \$(count 'The lights past 20 of every vehicle model') -eq 1 ] && log_has '; the table full, [0-9]* passes of models it could not hold not counted' && has 'siren draws: 1900 through a TweaksV stub, the renderer 1900 times, args ok, result and last error kept 1900 of 1900, '"
+check "the problem once, word for word; the summary's numbers as the measurement's" "sc_line 'PROBLEM: Some vehicle models. lights past 20 are not lit this session: the table of 1024 vehicle models is full, and the next ones keep 20 sirens.' && [ \$(count 'Some vehicle models. lights past 20') -eq 1 ] && log_has '; the table full, [0-9]* passes of models it could not hold not counted' && has 'siren draws: 1900 through a TweaksV stub, the renderer 1900 times, args ok, result and last error kept 1900 of 1900, '"
 
 echo "== R12 the models drawn with the raise and no setting read: none lit, each saying why"
 raised_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe scdraw scodd scfault wait)
@@ -231,16 +234,16 @@ raised_ini; setkey DRY_RUN 1; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe
 check "with DIAGNOSTIC_MODE: the call's would line once, the measurement's own words, nothing counted" "[ \$(count 'DRY_RUN: would redirect the siren lights. renderer call') -eq 1 ] && sc_line '$NOT_MEASURED DRY_RUN - the siren lights. renderer call is not redirected, so nothing is counted.' && log_lacks '$RAISED' && has \"$NOTHING_WRITTEN\""
 
 echo "== R16 the game's build (D40) and the light stores (D39), each the part's problem; the part off"
-raised_ini; out=$(game full_game_1013.exe)
-check "another build: the problem word for word, no pattern of the raise's looked for, nothing written" "sc_line '$NOT_RAISED this game build is 1.0.1013.17, and TweaksV has read the siren lights. renderer of 1.0.1158.16 only. Vehicles keep 20 sirens until a new TweaksV.' && has \"$NOTHING_WRITTEN\""
+raised_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game_1013.exe)
+check "another build: the problem word for word, no pattern of the raise's looked for, nothing written" "sc_line '$NOT_RAISED this game build is 1.0.1013.17, and TweaksV has read the siren lights. renderer of 1.0.1158.16 only. Vehicles keep 20 sirens until a new TweaksV.' && log_lacks 'Pattern I-E-Z' && has \"$NOTHING_WRITTEN\""
 raised_ini; out=$(game full_game_nover.exe)
 check "no version resource: the same problem" "sc_line '$NOT_RAISED this game build is not known, and TweaksV has read the siren lights. renderer of 1.0.1158.16 only. Vehicles keep 20 sirens until a new TweaksV.' && has \"$NOTHING_WRITTEN\""
 raised_ini; setkey ENABLED 0 LIGHTCAPACITY; out=$(game full_game.exe srdraw)
 check "the light stores off: the problem word for word, nothing written, the vehicles at 20" "sc_line '$NOT_RAISED the light stores are not raised (\[LIGHTCAPACITY\] in TweaksV.ini), and the game.s own do not take 32 sirens a vehicle. Vehicles keep 20 sirens.' && has \"$NOTHING_WRITTEN\" && has 'siren lights: second calls 0,' && has 'lit police 20+0, 32 20+0,'"
 raised_ini; setkey ENABLED 0 LIGHTCAPACITY; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe scdraw wait)
 check "and with DIAGNOSTIC_MODE the measurement goes on as without the raise, its call redirected, its words" "sc_line '$SUMMARY' && sc_line '$LINE_32' && has '$COUNTED'"
-raised_ini; setkey ENABLED 0 SIRENSETTINGS; out=$(game full_game.exe srdraw)
-check "[SIRENSETTINGS] off: no line of the part, nothing written" "log_lacks 'I-E-Z' && log_lacks '$NOT_RAISED' && has \"$NOTHING_WRITTEN\""
+raised_ini; setkey ENABLED 0 SIRENSETTINGS; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe srdraw)
+check "[SIRENSETTINGS] off: no line of the part, none of its raise's patterns looked for, nothing written" "log_lacks 'Pattern I-E-Z' && log_lacks '$NOT_RAISED' && has \"$NOTHING_WRITTEN\""
 
 echo "== R17 TEST_BREAK_PATTERN (test build): each of the raise's patterns missing - the part's problem, nothing written"
 for label in I-E-B1 I-E-Z1 I-E-Z2 I-E-Z3 I-E-Z4 I-E-Z5 I-E-Z6 I-E-Z7 I-E-C1 I-E-P1 I-E-M1; do

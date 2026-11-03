@@ -291,6 +291,7 @@
 //   srbroken       with srdraw: the 32-siren car's sirens 3 and 25 broken
 //   srreset        with srdraw: after the first pass every car's first state made anew, its start time another, and one more pass
 //   srrace         with srdraw: a thread replaces one setting's lights past 20 again and again while this one draws its model
+//   srnofirst      with srdraw: no first pass on this thread: each model's first pass comes with both threads drawing it, each its own car
 //   srmany         300 settings of 21 items each, more than TweaksV's table of 255 holds
 //   srflood        20,001 twins of one setting of 21 items
 //   srfault        one setting's 26th item faults in the reader of an element, and the next setting reads as ever
@@ -1089,7 +1090,7 @@ volatile unsigned char g_sirenIdsT4[0xD6] = { 0xCC };
 volatile unsigned char g_sirenIdsD1[27] = { 0xCC };
 volatile unsigned char g_sirenIdsD2[43] = { 0xCC };
 constexpr int kSirenIdsC1At = 1;
-volatile unsigned char g_sirenIdsC1[kSirenIdsC1At + 0xD2] = { 0xCC };
+volatile unsigned char g_sirenIdsC1[kSirenIdsC1At + 0xD9] = { 0xCC };
 volatile unsigned char g_sirenIdsC2[31] = { 0xCC };
 volatile unsigned char g_sirenIdsC3[35] = { 0xCC };
 volatile unsigned char g_sirenIdsR1[21] = { 0xCC };
@@ -2878,7 +2879,7 @@ static void SirenIdsSetup(int argc, wchar_t** argv)
 	g_sirenIdsC1[0] = HasOption(argc, argv, L"src1notstart") ? 0x41 : 0x90;
 	SirenIdsPut(g_sirenIdsC1, kSirenIdsC1At, "56 48 83 EC 20 48 89 CE C7 41 1C 00 00 00 00 B8 83 00 00 00 0F 57 C0 E9 84 00 00 00");	// then on to the ID's default
 	SirenIdsPut(g_sirenIdsC1, kSirenIdsC1At + 0xA0, "C6 06 FF EB 24");
-	SirenIdsPut(g_sirenIdsC1, kSirenIdsC1At + 0xC9, "89 46 1C 48 83 C4 20 5E C3");
+	SirenIdsPut(g_sirenIdsC1, kSirenIdsC1At + 0xC9, "89 46 1C C7 46 34 01 01 01 01 48 83 C4 20 5E C3");	// and 1 at +0x34 to +0x37, as the game's
 	SirenIdsPut(g_sirenIdsC2, 0, "C7 41 30 00 00 00 00 48 C7 41 38 00 00 00 00 C7 41 40 00 00 00 00 C7 41 48 00 00 FF FF C3");
 	SirenIdsPut(g_sirenIdsC3, 0, "C7 40 30 00 00 00 00 48 C7 40 38 00 00 00 00 C7 40 40 00 00 00 00 C7 40 48 00 00 FF FF 48 83 C4 28 C3");
 	if (HasOption(argc, argv, L"sibadt2"))
@@ -3573,6 +3574,7 @@ static void SirenMakeItem(unsigned char* light, uint32_t seed, int item)
 	}
 	const uint32_t colour = 0xFF000000u | (seed << 8) | static_cast<uint32_t>(item);
 	memcpy(light + 0x38, &colour, sizeof(colour));
+	light[0x40] = static_cast<unsigned char>(item % 12);	// its group: past the renderer's 4 in many a file's item, the game's own hazard
 }
 
 // One light of the renderer's loop, at its place i: the value the game's renderer gets for it must be its file's item's at the item's true index.
@@ -3586,7 +3588,7 @@ static void SirenRaiseCheckLight(const unsigned char* light, int i, bool second,
 	}
 	const int item = static_cast<int>(colour & 0xFF);
 	const uint32_t seed = (colour >> 8) & 0xFFFF;
-	bool right = item == (second ? 20 + i : i) && (!second || !pastSeed || seed == pastSeed);
+	bool right = item == (second ? 20 + i : i) && (!second || !pastSeed || seed == pastSeed) && (!second || light[0x40] == (item % 12 > 3 ? 0 : item % 12));
 	for (int sequence = 0; sequence < 2; sequence++)
 	{
 		const unsigned char* const at = light + (sequence ? 0x14 : 0x00);
@@ -3642,7 +3644,7 @@ static bool SirenRaiseOwnOk(const unsigned char* own, const unsigned char* real,
 // What TweaksV gives a position past the game's settings: read only, zero but for sequencerBpm, 200.
 static bool SirenRaiseIsEmpty(const unsigned char* setting)
 {
-	static const float kBpm = 200.0f;
+	static const uint32_t kBpm = 200;
 	for (size_t i = 0; i < 0x5E8; i++)
 		if (setting[i] != (i >= 0x20 && i < 0x24 ? reinterpret_cast<const unsigned char*>(&kBpm)[i - 0x20] : 0))
 			return false;
@@ -3685,9 +3687,10 @@ static void SirenRaiseLights(const unsigned char* vehicle, const unsigned char* 
 	if (second)
 	{
 		const SirenCountVehicle& v = g_sirenCountVehicles[index];
-		const unsigned char* const first = SirenField<const unsigned char*>(v.car.bytes, kSirenCarStateAt);
+		const unsigned char* const car = static_cast<const unsigned char*>(g_sirenCountExpectedVehicle);
+		const unsigned char* const first = SirenField<const unsigned char*>(car, kSirenCarStateAt);
 		InterlockedIncrement(&g_sirenRaiseSecond);
-		if (!SirenRaiseStandInOk(vehicle, v.car.bytes, first))
+		if (!SirenRaiseStandInOk(vehicle, car, first))
 			InterlockedIncrement(&g_sirenRaiseStandInBad);
 		if (!SirenRaiseBlockOk(model, v))
 			InterlockedIncrement(&g_sirenRaiseBlockBad);
@@ -4131,7 +4134,7 @@ static void SirenCountSetup(int argc, wchar_t** argv)
 		v[i].model.position = static_cast<unsigned char>(1 + i);
 	v[kSirenCountNoSetting].model.position = 0;
 	v[kSirenCountPast].model.position = 0xFF;
-	v[kSirenCountSpare].model.position = 30;
+	v[kSirenCountSpare].model.position = 24;
 	for (int i = 0; i < kSirenCountMany; i++)
 	{
 		g_sirenCountMany[i] = v[kSirenCountPolice].model;
@@ -4294,7 +4297,7 @@ static uint32_t SirenRaiseStateSize()
 }
 
 // The game's vehicle set-up: a state as big as the site says, 16-aligned and not cleared as operator new gives it, its first state made by the constructor.
-static void SirenRaiseGiveState(SirenCountVehicle& v, int32_t start)
+static void SirenRaiseGiveState(SirenCountCar& car, int32_t start)
 {
 	const uint32_t size = SirenRaiseStateSize();
 	unsigned char* const state = static_cast<unsigned char*>(_aligned_malloc(size, 16));
@@ -4303,7 +4306,7 @@ static void SirenRaiseGiveState(SirenCountVehicle& v, int32_t start)
 	memcpy(state, &start, sizeof(start));
 	const int32_t beat = -1;
 	memcpy(state + 8, &beat, sizeof(beat));
-	memcpy(v.car.bytes + kSirenCarStateAt, &state, sizeof(state));
+	memcpy(car.bytes + kSirenCarStateAt, &state, sizeof(state));
 }
 
 // What srdraw draws, and from what its settings are made: a model's items, the seed of its first 20 and of those past them, the scalars' if another; the later row of a
@@ -4322,19 +4325,20 @@ static const unsigned char* g_sirenRaiseLights = nullptr;
 static int g_sirenRaiseCount = 0;			// the models this run draws
 static volatile LONG g_sirenRaceDone = 0;
 
-static void SirenRaisePass()
+static SirenCountCar g_sirenRaiseOtherCars[kSirenCountVehicles];		// srnofirst: the second thread's, another vehicle of each model
+static void SirenRaisePass(bool otherCars)
 {
 	for (int n = 0; n < g_sirenRaiseCount; n++)
 	{
 		SirenCountVehicle& v = g_sirenCountVehicles[kSirenRaiseDrawn[n]];
-		SirenCountDraw(g_sirenRaiseLights, &v.car, &v.model, &v.skeleton);
+		SirenCountDraw(g_sirenRaiseLights, otherCars ? &g_sirenRaiseOtherCars[kSirenRaiseDrawn[n]] : &v.car, &v.model, &v.skeleton);
 	}
 }
 
-static DWORD WINAPI SirenRaiseThread(LPVOID)
+static DWORD WINAPI SirenRaiseThread(LPVOID otherCars)
 {
 	for (int pass = 0; pass < 100; pass++)
-		SirenRaisePass();
+		SirenRaisePass(otherCars != nullptr);
 	return 0;
 }
 
@@ -4433,13 +4437,24 @@ static void SirenRaiseActions(int argc, wchar_t** argv)
 	g_sirenRaiseCount = kSirenRaiseAll - (wcscmp(getterWhere, L"a TweaksV stub") == 0 ? 0 : kSirenRaiseUnbounded);
 	int32_t start = 1000;
 	for (int n = 0; n < g_sirenRaiseCount; n++)
-		SirenRaiseGiveState(g_sirenCountVehicles[kSirenRaiseDrawn[n]], start += 16);
+		SirenRaiseGiveState(g_sirenCountVehicles[kSirenRaiseDrawn[n]].car, start += 16);
+	// a block the heap gives back: the first state's start 0, and 0 where the second state's start lies, nothing else of the second clear
+	SirenRaiseGiveState(g_sirenCountVehicles[kSirenCount21].car, 0);
+	memset(SirenField<unsigned char*>(g_sirenCountVehicles[kSirenCount21].car.bytes, kSirenCarStateAt) + kSirenSecondStateAt, 0, sizeof(int32_t));
+	const bool noFirstPass = HasOption(argc, argv, L"srnofirst");
+	if (noFirstPass)
+		for (int n = 0; n < g_sirenRaiseCount; n++)
+		{
+			g_sirenRaiseOtherCars[kSirenRaiseDrawn[n]] = g_sirenCountVehicles[kSirenRaiseDrawn[n]].car;
+			SirenRaiseGiveState(g_sirenRaiseOtherCars[kSirenRaiseDrawn[n]], start += 16);
+		}
 	if (HasOption(argc, argv, L"srbroken"))
 	{
 		const uint32_t broken = (1u << 2) | (1u << 24);
 		memcpy(g_sirenCountVehicles[kSirenCount32].car.bytes + 0x860, &broken, sizeof(broken));
 	}
-	SirenRaisePass();	// the first pass, on this thread
+	if (!noFirstPass)
+		SirenRaisePass(false);	// the first pass, on this thread
 	if (HasOption(argc, argv, L"srreset"))	// the game's resets touch the first state: made anew, another start time
 	{
 		for (int n = 0; n < g_sirenRaiseCount; n++)
@@ -4448,12 +4463,15 @@ static void SirenRaiseActions(int argc, wchar_t** argv)
 			start += 16;
 			memcpy(state, &start, sizeof(start));
 		}
-		SirenRaisePass();
+		SirenRaisePass(false);
 	}
 	HANDLE threads[2] = {};
-	for (HANDLE& thread : threads)
-		if ((thread = CreateThread(nullptr, 0, SirenRaiseThread, nullptr, 0, nullptr)) == nullptr)
-			SirenRaiseThread(nullptr);
+	for (int t = 0; t < 2; t++)
+	{
+		void* const otherCars = noFirstPass && t == 1 ? static_cast<void*>(g_sirenRaiseOtherCars) : nullptr;
+		if ((threads[t] = CreateThread(nullptr, 0, SirenRaiseThread, otherCars, 0, nullptr)) == nullptr)
+			SirenRaiseThread(otherCars);
+	}
 	for (const HANDLE thread : threads)
 		if (thread)
 		{
@@ -4464,7 +4482,7 @@ static void SirenRaiseActions(int argc, wchar_t** argv)
 	{
 		SirenCountVehicle& v = g_sirenCountVehicles[kSirenCountRace];
 		SirenRaiseMerge(kSirenCountRace, SirenParse(32, 11, 999, -1));
-		SirenRaiseGiveState(v, start += 16);
+		SirenRaiseGiveState(v.car, start += 16);
 		SirenCountDraw(g_sirenRaiseLights, &v.car, &v.model, &v.skeleton);	// its first pass, before the setting is replaced
 		const HANDLE thread = CreateThread(nullptr, 0, SirenRaceThread, nullptr, 0, nullptr);
 		if (!thread)

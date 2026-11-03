@@ -51,7 +51,6 @@
 
 #include <array>
 #include <atomic>
-#include <bit>
 #include <cctype>
 #include <cstddef>
 #include <cstdint>
@@ -205,7 +204,10 @@ namespace TweaksV
 		constexpr uint32_t kRaisedStateSize = kStandInAt + kStandInSize;
 		constexpr size_t kStateStartAt = 0x00;		// in a state: an int, the start time
 		constexpr size_t kStateBeatAt = 0x08;		// an int, -1 when it is made
-		static_assert(kRaisedStateSize == 0x16A8 && kSecondStateAt >= kGameStateSize && kSecondStateAt + kGameStateSize <= kStandInAt && kSecondStateAt % 16 == 0 &&
+		constexpr size_t kSecondMadeAt = 0x318;		// in the allocation, behind the second state: what says that the part has made it
+		constexpr uint64_t kSecondMade = 0x5349524E53544154ull;	// "SIRNSTAT", no heap's bytes by chance
+		static_assert(kRaisedStateSize == 0x16A8 && kSecondStateAt >= kGameStateSize && kSecondStateAt + kGameStateSize <= kSecondMadeAt &&
+			kSecondMadeAt + sizeof(kSecondMade) <= kStandInAt && kSecondStateAt % 16 == 0 &&
 			kStandInAt % 16 == 0 && kVehicleMatrixAt % 16 == 0, "TweaksV: the state, the second state and the stand-in, whose matrix lies 16-aligned");
 		static_assert(PatternByte(kStateSizePattern, kStateSizeAtZ2) == (kGameStateSize & 0xFF) && PatternByte(kStateSizePattern, kStateSizeAtZ2 + 1) == (kGameStateSize >> 8),
 			"TweaksV: I-E-Z2 holds the state's size, 0x188");
@@ -213,11 +215,13 @@ namespace TweaksV
 		// A siren setting (the findings' 3.3): its scalars, its head and tail lights, whether it uses real lights, its 20 lights
 		constexpr size_t kSettingSize = 0x5E8;
 		constexpr size_t kScalarsAt = 0x04;			// timeMultiplier to sequencerBpm, 8 dwords
-		constexpr size_t kBpmAt = 0x20;				// sequencerBpm, a float, 200 in a new setting
+		constexpr size_t kBpmAt = 0x20;				// sequencerBpm, a dword the renderer turns into a float, 200 in a new setting
 		constexpr size_t kHeadTailAt = 0x24;		// the head and tail lights' sequencers and multiples, up to the next
 		constexpr size_t kRealLightsAt = 0x38;		// useRealLights, a byte
 		constexpr size_t kLightsAt = 0x3C;
 		constexpr size_t kLightSize = 0x48;
+		constexpr size_t kLightGroupAt = 0x40;		// in a light: its group, a byte, of the renderer's 4
+		constexpr uint8_t kLightGroups = 4;
 		constexpr size_t kLightsBytes = kGameSirens * kLightSize;
 		static_assert(kLightsBytes == 1440 && kLightsAt + kLightsBytes == 0x5DC, "TweaksV: 20 lights of 0x48 bytes up to the count at +0x5DC");
 
@@ -262,9 +266,7 @@ namespace TweaksV
 		consteval std::array<uint8_t, kSettingSize> MakeEmptySetting()
 		{
 			std::array<uint8_t, kSettingSize> setting{};
-			const uint32_t bits = std::bit_cast<uint32_t>(200.0f);
-			for (size_t i = 0; i < sizeof(bits); i++)
-				setting[kBpmAt + i] = static_cast<uint8_t>(bits >> (8 * i));
+			setting[kBpmAt] = 200;
 			return setting;
 		}
 		constexpr std::array<uint8_t, kSettingSize> kEmptySetting = MakeEmptySetting();
@@ -341,19 +343,25 @@ namespace TweaksV
 			own[kRealLightsAt] = setting[kRealLightsAt];
 		}
 
-		// Each light's start, once, so that the renderer's delta x i, or delta x (20 - i) with its direction reversed, gives the light
-		// its true index: its place among the own lights is 20 less.
-		void CorrectStarts(uint8_t* lights, int kept)
+		// Each light, once, as the renderer will take it. Its start, so that the renderer's delta x i, or delta x (20 - i) with its direction reversed,
+		// gives the light its true index: its place among the own lights is 20 less. Its group, an index the renderer does not check, which reaches
+		// the return address from group 9: past the game's 20 a file's lights come to the renderer only through here, and one past the 4 is group 0.
+		void CorrectLights(uint8_t* lights, int kept)
 		{
 			for (int k = 0; k < kept; k++)
+			{
+				uint8_t* const light = lights + k * kLightSize;
 				for (const size_t sequence : kSequencesAt)
 				{
-					uint8_t* const at = lights + k * kLightSize + sequence;
+					uint8_t* const at = light + sequence;
 					const float delta = ValueAt<float>(at, kDeltaAt);
 					const float start = ValueAt<float>(at, kStartAt);
 					const float corrected = at[kDirectionAt] ? start - kGameSirens * delta : start + kGameSirens * delta;
 					memcpy(at + kStartAt, &corrected, sizeof(corrected));
 				}
+				if (light[kLightGroupAt] >= kLightGroups)
+					light[kLightGroupAt] = 0;
+			}
 		}
 
 		// A node's items, up to kMostItems, or false on an access violation. The game has just counted them itself.
@@ -428,7 +436,7 @@ namespace TweaksV
 				if (!g_ownFull)
 				{
 					g_ownFull = true;
-					ReportFailure(kTag, "The lights past 20 of every siren setting are not kept this session: the table of " + std::to_string(kOwnSettings) +
+					ReportFailure(kTag, "Some siren settings' lights past 20 are not kept this session: the table of " + std::to_string(kOwnSettings) +
 						" siren settings with lights past 20 is full, and the next ones keep 20 lights.");
 				}
 				return;
@@ -461,7 +469,7 @@ namespace TweaksV
 		{
 			g_ownNotFit.fetch_add(1, std::memory_order_relaxed);
 			if (!g_ownNotRead.exchange(true))
-				ReportFailure(kTag, std::string("The lights past 20 of every siren setting are not kept this session: ") + why + ", and such a setting keeps 20 lights.");
+				ReportFailure(kTag, std::string("Some siren settings' lights past 20 are not kept this session: ") + why + ", and such a setting keeps 20 lights.");
 		}
 
 		// A lights array the game has just read: its items past 20, if it has any, into an own setting.
@@ -495,7 +503,7 @@ namespace TweaksV
 				NotRead("reading the lights past 20 of one ended in an access violation");
 				return;
 			}
-			CorrectStarts(own + kLightsAt, kept);
+			CorrectLights(own + kLightsAt, kept);
 			const ExclusiveLock lock(g_ownLock);
 			if (!g_ownObjects)
 			{
@@ -827,7 +835,8 @@ namespace TweaksV
 
 		// The renderer once more, on the part's own stand-ins behind the vehicle's state: the vehicle's bits past 20 are the stand-in's
 		// bits from 0 on, so that its light 1 is siren21. The state of the second call follows the game's: its resets touch the first, so
-		// a first state with another start time than the second's has been made anew, and the second is made anew as the game makes it.
+		// a first state with another start time than the second's has been made anew, and the second is made anew as the game makes it. So is one
+		// the marker does not name as the part's, since the game's constructor knows nothing of it and the heap's bytes can hold that very start time.
 		void SecondCall(const uint8_t* vehicle, float a, float b, float c, uint64_t flag, const ModelBlock* block, const uint8_t* skeleton, uint64_t value, void* coronas)
 		{
 			uint8_t* const state = ValueAt<uint8_t*>(vehicle, kVehicleStateAt);
@@ -836,13 +845,14 @@ namespace TweaksV
 			uint8_t* const second = state + kSecondStateAt;
 			uint8_t* const standIn = state + kStandInAt;
 			const int32_t start = ValueAt<int32_t>(state, kStateStartAt);
-			if (ValueAt<int32_t>(second, kStateStartAt) != start)
+			if (ValueAt<uint64_t>(state, kSecondMadeAt) != kSecondMade || ValueAt<int32_t>(second, kStateStartAt) != start)
 			{
 				memset(second, 0, kGameStateSize);
 				memset(standIn, 0, kStandInSize);
 				const int32_t beat = -1;
 				memcpy(second + kStateBeatAt, &beat, sizeof(beat));
 				memcpy(second + kStateStartAt, &start, sizeof(start));
+				memcpy(state + kSecondMadeAt, &kSecondMade, sizeof(kSecondMade));
 			}
 			memcpy(standIn + kVehiclePointerAt, vehicle + kVehiclePointerAt, sizeof(void*));
 			memcpy(standIn + kVehicleKindAt, vehicle + kVehicleKindAt, sizeof(uint16_t));
@@ -878,7 +888,7 @@ namespace TweaksV
 				const DWORD lastError = GetLastError();
 				try
 				{
-					ReportFailure(kTag, "The lights past 20 of every vehicle model are not lit this session: the table of " + std::to_string(kModelSlots) +
+					ReportFailure(kTag, "Some vehicle models' lights past 20 are not lit this session: the table of " + std::to_string(kModelSlots) +
 						" vehicle models is full, and the next ones keep 20 sirens.");
 				}
 				catch (...)

@@ -523,7 +523,7 @@ The labels are the part's letter `I`; `I-E-B1`, `I-E-C1` and `I-E-P1` are theirs
   A position is valid when given and the count never falls: below the count is the one right bound.
 - **The renderer with a setting of zeros** (its listing read in full, and emulated): it lights nothing and cannot fault; a `sequencerBpm` of 0 gives +inf by an SSE `divss`, the exceptions masked (the game's only `LDMXCSR` masks more), as a pack's own 0 does today.
   No value of a setting is an index, a pointer or an integer denominator but a light's group at +0x40, reached only with `light` set and `useRealLights` 0: with bytes from past the array that is a way to a smashed stack (from group 9 it reaches the return address).
-  The constructor's `sequencerBpm` is 200, which the part's empty setting keeps, zero in all else.
+  `sequencerBpm` is a dword the renderer turns into a float (`cvtsi2ss`); the constructor's is 200, which the part's empty setting keeps, zero in all else.
   The renderer never reads a setting's count at +0x5DC or its name at +0x5E0.
 - **What no pattern protects:** that the renderer reads only those 7 fields of the vehicle and 2 of the model, so that after a game update the renderer is read again before these patterns are trusted (D40); that a setting's 20 lights are never changed after their load and are copied whole with their count 20 (RVA 0x1378210, 0x137A3D0), so a hash of their 1,440 bytes is the same at the parser and at the renderer; that the lights' order is the bones', item 20 + k being siren 21 + k; the tree's two fields and the element's call through slot 1.
 
