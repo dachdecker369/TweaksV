@@ -457,12 +457,17 @@
 //   lcsteps        those, and once the first summary is in the log other numbers, some lower, the larger of each two in the second
 //                  buffer and the sort list marked with the store at its room, held 3 s
 //   lcrunning      the write pointers set before TweaksV loads, as the game's frames leave them once they run
-//   lcfull         every counter at its room, the write pointers at their stores' ends
+//   lcfull         every counter at its room, the write pointers at their stores' ends, the moved stores' if the sites name them
 //   lcpast         every counter one past its room, the write pointers one record past their stores' ends: held until the log has
 //                  the lights' pointer's line and every number's line, or 10 s
 //   lcbelow        the write pointers below their stores: held until the log has the lights' pointer's line, or 10 s
 //   lcjobs         two threads add to full lists through add-to-a-job's-list, 100,000 calls each - if its jump leads to its way out
-//                  or to TweaksV's stub
+//                  or to TweaksV's stub; each list's capacities are what G-E-C4's movaps loads, run as code
+//   lcframe        a frame past the game's numbers, if the sites name moved stores: G-E-A1 run as code, 60 jobs each with its lists full by
+//                  those capacities, each at its end moving the write pointers and copying its records, then the drain's walk from the
+//                  stores G-E-A2 and G-E-A3 name; the write pointers stay at the stores' ends
+//   lcindex        an index of 700 stored by G-E-D1 and read back by G-E-D2, both run as code
+//   lcmodded       another mod's lights' bytes in G-E-C3
 //   lcsirens       with simany and sinone: the first summary with no carcols data; then 0 settings, 33 and 255, each until the log has
 //                  its numbers; then 40 of them with the array taking no reads for 1.5 s, and back
 // The checks, each failing on its own, on any rel32 of the sites by the name of the table in LcSetUp:
@@ -1230,11 +1235,13 @@ volatile unsigned char g_staticBoundsInit[] = { 0x90, 0x41, 0x56, 0x48, 0x83, 0x
 volatile unsigned char g_staticBoundsStoreLea[] = { 0x48, 0x8D, 0x0D, 0, 0, 0, 0, 0xE8, 0, 0, 0, 0, 0xBA, 0x01, 0x00, 0x00, 0x00, 0xE8, 0, 0, 0, 0, 0xB9, 0x28, 0x3A, 0x00, 0x00, 0xCC };
 volatile unsigned char g_staticBoundsTwin[64] = { 0xCC };
 static Site g_staticBoundsSites[] = { SITE(g_staticBoundsInit, 0), SITE(g_staticBoundsStoreLea, 0), SITE(g_staticBoundsTwin, 0) };
-// The lighting capacity's sites, in the order of the patterns, a rel32 past a match kept and CC after each. The one the fake runs,
+// The lighting capacity's sites, in the order of the patterns, a rel32 past a match kept and CC after each, but where the fake runs one. The one a job runs,
 // add-to-a-job's-list: its prologue, G-E-C1 at +11 - its jae at +17, its rel32 at +19 to the way out - "inc dword [r14+0x14]" at +33 in
-// place of the game's copy of a record, the way out at +37. The twin: CC, but a third match of G-E-G1 with lcg1thrice.
+// place of the game's copy of a record, the way out at +37. G-E-A1, run as a frame's reset: "ret" after it. G-E-C4, run through a way in that makes its
+// stack: "movaps [rcx], xmm1", the frame undone and "ret" after it. G-E-D1 and G-E-D2, run through ways in that keep rbx: "pop rbx; ret" after the first,
+// the second's call to a "ret" and "mov eax, ebx" before them. The twin: CC, but a third match of G-E-G1 with lcg1thrice.
 volatile unsigned char g_lcReset[] = { 0x48, 0x8D, 0x05, 0, 0, 0, 0, 0x48, 0x89, 0x05, 0, 0, 0, 0, 0x4C, 0x8D, 0x05, 0, 0, 0, 0, 0x48, 0x8D, 0x15, 0, 0, 0, 0,
-	0x48, 0x89, 0x15, 0, 0, 0, 0, 0x4C, 0x8D, 0x0D, 0, 0, 0, 0, 0xCC };
+	0x48, 0x89, 0x15, 0, 0, 0, 0, 0x4C, 0x8D, 0x0D, 0, 0, 0, 0, 0xC3 };
 volatile unsigned char g_lcDrainCoronas[] = { 0x48, 0x8D, 0x1D, 0, 0, 0, 0, 0x48, 0x39, 0x1D, 0, 0, 0, 0, 0x0F, 0x86, 0xCC };
 volatile unsigned char g_lcDrainLights[] = { 0x48, 0x8D, 0x35, 0, 0, 0, 0, 0x48, 0x39, 0x35, 0, 0, 0, 0, 0x76, 0x00, 0x0F, 0x1F, 0x44, 0x00, 0x00, 0x48, 0x89, 0xF1,
 	0x31, 0xD2, 0x45, 0x31, 0xC0, 0x45, 0x31, 0xC9, 0xE8, 0, 0, 0, 0, 0xCC };
@@ -1247,10 +1254,13 @@ volatile unsigned char g_lcAddToList[] = { 0x41, 0x57, 0x41, 0x56, 0x56, 0x57, 0
 volatile unsigned char g_lcScratch[] = { 0x4C, 0x8D, 0x48, 0x0F, 0x49, 0x83, 0xE1, 0xF0, 0x4C, 0x89, 0xCA, 0x48, 0x29, 0xC2, 0x49, 0x8D, 0xA9, 0x80, 0x25, 0x00, 0x00,
 	0xBB, 0x00, 0x8C, 0x00, 0x00, 0x48, 0x29, 0xD3, 0x48, 0x81, 0xC2, 0xFF, 0x73, 0xFF, 0xFF, 0x45, 0x31, 0xC0, 0x48, 0x81, 0xFA, 0x7F, 0x4E, 0xFF, 0xFF, 0xBE, 0x80, 0xB1, 0x00, 0x00, 0xCC };
 volatile unsigned char g_lcScratchLights[] = { 0x48, 0x05, 0x00, 0x8C, 0x00, 0x00, 0x48, 0x81, 0xFA, 0x00, 0x8C, 0x00, 0x00, 0xCC };
-volatile unsigned char g_lcStartValuesLoad[] = { 0x48, 0x89, 0x7C, 0x24, 0x68, 0x0F, 0x28, 0x0D, 0, 0, 0, 0, 0xCC };
+volatile unsigned char g_lcStartValuesLoad[] = { 0x48, 0x89, 0x7C, 0x24, 0x68, 0x0F, 0x28, 0x0D, 0, 0, 0, 0, 0x0F, 0x29, 0x09, 0x48, 0x83, 0xC4, 0x78, 0xC3 };
+volatile unsigned char g_lcStartValuesWayIn[] = { 0x48, 0x83, 0xEC, 0x78, 0xE9, 0, 0, 0, 0 };	// sub rsp, 0x78; jmp G-E-C4
 volatile unsigned char g_lcSceneAdd[] = { 0x48, 0x63, 0x05, 0, 0, 0, 0, 0x48, 0x3D, 0xFF, 0x03, 0x00, 0x00, 0x0F, 0x8F, 0, 0, 0, 0, 0x48, 0x63, 0x0D, 0, 0, 0, 0, 0x48, 0x8D, 0x15, 0, 0, 0, 0,
-	0x8D, 0x59, 0x01, 0x89, 0x1D, 0, 0, 0, 0, 0x88, 0x04, 0xCA, 0xCC };
-volatile unsigned char g_lcByteRead[] = { 0x0F, 0xB6, 0x1C, 0xC1, 0xF3, 0x0F, 0x11, 0x74, 0xC1, 0x04, 0x4A, 0x8D, 0x14, 0xC1, 0xE8, 0, 0, 0, 0, 0xCC };
+	0x8D, 0x59, 0x01, 0x89, 0x1D, 0, 0, 0, 0, 0x88, 0x04, 0xCA, 0x5B, 0xC3 };
+volatile unsigned char g_lcSceneWayIn[] = { 0x53, 0xE9, 0, 0, 0, 0 };	// push rbx; jmp G-E-D1
+volatile unsigned char g_lcByteRead[] = { 0x0F, 0xB6, 0x1C, 0xC1, 0xF3, 0x0F, 0x11, 0x74, 0xC1, 0x04, 0x4A, 0x8D, 0x14, 0xC1, 0xE8, 0x04, 0, 0, 0, 0x89, 0xD8, 0x5B, 0xC3, 0xC3 };
+volatile unsigned char g_lcByteWayIn[] = { 0x53, 0x48, 0x89, 0xD0, 0x49, 0x89, 0xD0, 0xE9, 0, 0, 0, 0 };	// push rbx; rax and r8 the entry, as rdx brings it; jmp G-E-D2
 volatile unsigned char g_lcRender[] = { 0x48, 0x69, 0xC7, 0x00, 0x00, 0x07, 0x00, 0x48, 0x8D, 0x15, 0, 0, 0, 0, 0x48, 0x01, 0xC2, 0x48, 0x89, 0x15, 0, 0, 0, 0, 0x48, 0x8D, 0x05, 0, 0, 0, 0,
 	0x44, 0x8B, 0x04, 0xB8, 0x44, 0x89, 0x05, 0, 0, 0, 0, 0x48, 0x69, 0xC7, 0x0C, 0x9A, 0x02, 0x00, 0x48, 0x8D, 0x0D, 0, 0, 0, 0, 0x48, 0x01, 0xC1, 0x48, 0x89, 0x0D, 0, 0, 0, 0, 0xCC };
 volatile unsigned char g_lcUpdate[] = { 0x48, 0x69, 0xC8, 0x00, 0x00, 0x07, 0x00, 0x48, 0x8D, 0x15, 0, 0, 0, 0, 0x48, 0x01, 0xCA, 0x48, 0x89, 0x15, 0, 0, 0, 0, 0x48, 0x8D, 0x0D, 0, 0, 0, 0,
@@ -1272,7 +1282,23 @@ static Site g_lcSites[] = { SITE(g_lcReset, 0), SITE(g_lcDrainCoronas, 0), SITE(
 	SITE(g_lcUpdate, 0), SITE(g_lcRayLists, 0), SITE(g_lcRayCheck, 0), SITE(g_lcUpload, 0), SITE(g_lcReflections, 0), SITE(g_lcCoronaCheck, 0), SITE(g_lcCoronaCheckToo, 0),
 	SITE(g_lcCoronaAdd, 0), SITE(g_lcWorkerFrame, 0), SITE(g_lcWorkerCall, 0), SITE(g_lcConstructor, 0), SITE(g_lcExtra, 0), SITE(g_lcTwin, 0) };
 constexpr size_t kLcSites = sizeof(g_lcSites) / sizeof(g_lcSites[0]);
-static Site g_lcJumpRel = SITE(g_lcAddToList, 19);	// the rel32 of the jump when full, the one thing TweaksV may write
+static Site g_lcJumpRel = SITE(g_lcAddToList, 19);	// the rel32 of the jump when full, the measurement's one write
+// What the part writes (its findings' 8.1), worked out here and not by TweaksV: the five rel32 it leads to its own memory, the stores' in the reset first, then the drain's, then
+// the start values'; and the bytes: a job's scratch of 0x17340 = 300 x 0x30 + 180 x 0x1C0 in its kicks and laid out, the index's two instructions.
+static const Site kLcLeads[] = { SITE(g_lcReset, 3), SITE(g_lcReset, 24), SITE(g_lcDrainCoronas, 3), SITE(g_lcDrainLights, 3), SITE(g_lcStartValuesLoad, 8) };
+constexpr size_t kLcLeadCount = sizeof(kLcLeads) / sizeof(kLcLeads[0]);
+struct LcRaisedBytes { Site site; size_t size; unsigned char bytes[4]; };
+static const LcRaisedBytes kLcRaisedBytes[] = {
+	{ SITE(g_lcKick, 4), 4, { 0x40, 0x73, 0x01, 0x00 } }, { SITE(g_lcLastKick, 5), 4, { 0x40, 0x73, 0x01, 0x00 } },
+	{ SITE(g_lcScratch, 17), 4, { 0x40, 0x38, 0x00, 0x00 } },	// 0x3840, the coronas
+	{ SITE(g_lcScratch, 22), 4, { 0x00, 0x3B, 0x01, 0x00 } },	// 0x13B00, the lights
+	{ SITE(g_lcScratch, 32), 4, { 0xFF, 0xC4, 0xFE, 0xFF } },	// -0x13B01
+	{ SITE(g_lcScratch, 42), 4, { 0xBF, 0x8C, 0xFE, 0xFF } },	// -0x17341
+	{ SITE(g_lcScratch, 47), 4, { 0x40, 0x73, 0x01, 0x00 } },
+	{ SITE(g_lcScratchLights, 2), 4, { 0x00, 0x3B, 0x01, 0x00 } }, { SITE(g_lcScratchLights, 9), 4, { 0x00, 0x3B, 0x01, 0x00 } },
+	{ SITE(g_lcSceneAdd, 42), 1, { 0x89 } },					// mov [rdx+rcx*8], eax
+	{ SITE(g_lcByteRead, 0), 4, { 0x8B, 0x1C, 0xC1, 0x90 } },	// mov ebx, [rcx+rax*8]; nop
+};
 // The two model budgets (Population), none of it run: the crash context's read of the ambient cars, O-E-V5, whose last two bytes begin
 // its line, O-E-C1; the two getters; the check before a vehicle model's request, O-E-V1 and O-E-V2; the release's test of VehicleStruct,
 // O-E-V3; the tables' set-up's call, O-E-V6; the ped memory's sum, O-E-P1; the gate, O-E-P2, the rest of whose bytes PopSetUp places; the
@@ -5009,6 +5035,7 @@ alignas(4096) static unsigned char g_lcHoleStorage[4096];
 static unsigned char* volatile g_lcHole = g_lcHoleStorage;
 static const unsigned char* volatile g_lcWayOut = nullptr;	// where the jump when full leads in the game: its way out
 static int32_t g_lcJumpPlaced = 0;							// its rel32 as placed
+static int32_t g_lcLeadsPlaced[kLcLeadCount];				// the part's rel32 as placed
 static unsigned char g_lcPlaced[kLcSites][96];				// the sites' bytes as placed
 
 // A stand-in for the two functions the sites call and nothing runs here.
@@ -5071,11 +5098,12 @@ static void LcSetCounts(const LcNumbers& numbers)
 	data.coronas = numbers.coronas;
 	data.sortMark = numbers.mark;
 }
+// The write pointers, by the stores the frame's reset names now: the game's, or those the part moved them to.
 static void LcSetPointers(const LcNumbers& numbers)
 {
 	LcData& data = *g_lcData;
-	data.lightPointer = reinterpret_cast<uintptr_t>(data.lightStore) + uint64_t{ numbers.lights } * 0x1C0;
-	data.coronaPointer = reinterpret_cast<uintptr_t>(data.coronaStore) + uint64_t{ numbers.vehicleCoronas } * 0x30;
+	data.lightPointer = reinterpret_cast<uintptr_t>(Rel32Target(kLcLeads[1])) + uint64_t{ numbers.lights } * 0x1C0;
+	data.coronaPointer = reinterpret_cast<uintptr_t>(Rel32Target(kLcLeads[0])) + uint64_t{ numbers.vehicleCoronas } * 0x30;
 }
 static void LcSet(const LcNumbers& numbers)
 {
@@ -5152,6 +5180,11 @@ static void LcSetUp(int argc, wchar_t** argv)
 		g_lcExtra[7] = 0x48;
 	if (HasOption(argc, argv, L"lcnoctor"))
 		g_lcConstructor[0] = g_lcConstructor[7] = 0xCC;
+	if (HasOption(argc, argv, L"lcmodded"))
+		g_lcScratchLights[3] = 0x90;
+	SetRel32(SITE(g_lcStartValuesWayIn, 5), const_cast<const unsigned char*>(g_lcStartValuesLoad));
+	SetRel32(SITE(g_lcSceneWayIn, 2), const_cast<const unsigned char*>(g_lcSceneAdd));
+	SetRel32(SITE(g_lcByteWayIn, 8), const_cast<const unsigned char*>(g_lcByteRead));
 	if (HasOption(argc, argv, L"lcnumbers") || HasOption(argc, argv, L"lcsteps"))
 		LcSetCounts(kLcFirst);
 	if (HasOption(argc, argv, L"lcrunning"))
@@ -5173,9 +5206,28 @@ static void LcSetUp(int argc, wchar_t** argv)
 		for (size_t at = 0; at < g_lcSites[i].size && at < sizeof(g_lcPlaced[i]); at++)
 			g_lcPlaced[i][at] = g_lcSites[i].bytes[at];
 	g_lcJumpPlaced = static_cast<int32_t>(Imm32(g_lcJumpRel));
+	for (size_t i = 0; i < kLcLeadCount; i++)
+		g_lcLeadsPlaced[i] = static_cast<int32_t>(Imm32(kLcLeads[i]));
 }
 
-// A job's list as add-to-a-job's-list reads it, and one thread's calls of it on a list of its own: 80 fit, the rest take the jump when full.
+// True if every one of the part's rel32 leads elsewhere than as placed.
+static bool LcLed()
+{
+	for (size_t i = 0; i < kLcLeadCount; i++)
+		if (static_cast<int32_t>(Imm32(kLcLeads[i])) == g_lcLeadsPlaced[i])
+			return false;
+	return true;
+}
+
+// The lists' start values as a job loads them: G-E-C4 run as code, whose movaps would fault on 16 bytes not 16-aligned.
+static void LcStartValues(uint32_t (&values)[4])
+{
+	alignas(16) uint32_t loaded[4] = {};
+	reinterpret_cast<void (*)(uint32_t*)>(const_cast<unsigned char*>(g_lcStartValuesWayIn))(loaded);
+	memcpy(values, loaded, sizeof(loaded));
+}
+
+// A job's list as add-to-a-job's-list reads it, and one thread's calls of it on a list of its own: as many fit as its capacity, the rest take the jump when full.
 struct LcList
 {
 	void* coronas;
@@ -5220,6 +5272,78 @@ static LcStub LcFindStub()
 	return stub;
 }
 
+// A frame past the game's own numbers, on what the sites name now: the reset, 60 jobs with their lists full, each at its end moving a write pointer by what it has and copying
+// its records, each marked first and last, and the drain's walk from the store it names to the write pointer. The sites must name moved stores: on the game's these jobs would
+// run over the write pointers, as the game's would.
+static wchar_t g_lcFrame[120] = L"not run";
+constexpr uint32_t kLcCoronaBytes = 0x30, kLcLightBytes = 0x1C0;
+static uint32_t LcMark(uint32_t job, uint32_t record)
+{
+	return job << 16 | record;
+}
+static void LcFill(volatile uint64_t& pointer, uint32_t job, uint32_t records, uint32_t bytes)
+{
+	unsigned char* const at = reinterpret_cast<unsigned char*>(InterlockedExchangeAdd64(reinterpret_cast<volatile LONG64*>(&pointer), LONG64{ records } * bytes));
+	for (uint32_t record = 0; record < records; record++)
+	{
+		const uint32_t mark = LcMark(job, record);
+		memcpy(at + size_t{ record } * bytes, &mark, sizeof(mark));
+		memcpy(at + size_t{ record + 1 } * bytes - sizeof(mark), &mark, sizeof(mark));
+	}
+}
+static void LcWalk(const unsigned char* store, uint64_t end, uint32_t perJob, uint32_t bytes, uint32_t& count, uint32_t& wrong)
+{
+	count = 0;
+	wrong = 0;
+	for (const unsigned char* at = store; reinterpret_cast<uintptr_t>(at) < end; at += bytes, count++)
+	{
+		uint32_t first = 0, last = 0;
+		memcpy(&first, at, sizeof(first));
+		memcpy(&last, at + bytes - sizeof(last), sizeof(last));
+		const uint32_t mark = LcMark(count / perJob, count % perJob);
+		if (first != mark || last != mark)
+			wrong++;
+	}
+}
+static void LcRunFrame()
+{
+	LcData& data = *g_lcData;
+	if (!LcLed())
+		return;
+	uint32_t values[4] = {};
+	LcStartValues(values);
+	const uint32_t coronas = values[2], lights = values[3];
+	reinterpret_cast<void (*)()>(const_cast<unsigned char*>(g_lcReset))();
+	const uint64_t coronaStart = data.coronaPointer, lightStart = data.lightPointer;
+	for (uint32_t job = 0; job < 60; job++)
+	{
+		LcFill(data.coronaPointer, job, coronas, kLcCoronaBytes);
+		LcFill(data.lightPointer, job, lights, kLcLightBytes);
+	}
+	const unsigned char* const coronaStore = Rel32Target(kLcLeads[2]);
+	const unsigned char* const lightStore = Rel32Target(kLcLeads[3]);
+	uint32_t coronasDrained = 0, coronasWrong = 0, lightsDrained = 0, lightsWrong = 0;
+	LcWalk(coronaStore, data.coronaPointer, coronas, kLcCoronaBytes, coronasDrained, coronasWrong);
+	LcWalk(lightStore, data.lightPointer, lights, kLcLightBytes, lightsDrained, lightsWrong);
+	swprintf(g_lcFrame, sizeof(g_lcFrame) / sizeof(g_lcFrame[0]), L"60 jobs of %u coronas and %u lights, the reset and the drain %ls, drained %u and %u, %u and %u wrong", coronas, lights,
+		coronaStart == reinterpret_cast<uintptr_t>(coronaStore) && lightStart == reinterpret_cast<uintptr_t>(lightStore) ? L"one" : L"APART", coronasDrained, lightsDrained, coronasWrong, lightsWrong);
+}
+
+// An index past a byte through the scene store's two sites, run as code: the sort list's first entry as the store's add leaves it, then read back.
+static wchar_t g_lcIndex[32] = L"not run";
+static void LcRunIndex()
+{
+	LcData& data = *g_lcData;
+	const uint32_t scene = data.sceneCount;
+	data.sceneCount = 700;
+	data.sortCount = 0;
+	reinterpret_cast<void (*)()>(const_cast<unsigned char*>(g_lcSceneWayIn))();
+	const uint32_t back = reinterpret_cast<uint32_t (*)(uint64_t*, uint64_t)>(const_cast<unsigned char*>(g_lcByteWayIn))(data.sortList, 0);
+	swprintf(g_lcIndex, sizeof(g_lcIndex) / sizeof(g_lcIndex[0]), L"700 read back as %u", back);
+	data.sortCount = 0;
+	data.sceneCount = scene;
+}
+
 // Once TweaksV has started, as the game's frames would: the counters and the lists as asked.
 static wchar_t g_lcJobs[96] = L"not run";
 static wchar_t g_lcSteps[96] = L"";
@@ -5227,8 +5351,14 @@ static void LcActions(int argc, wchar_t** argv)
 {
 	const size_t jobsSize = sizeof(g_lcJobs) / sizeof(g_lcJobs[0]), stepsSize = sizeof(g_lcSteps) / sizeof(g_lcSteps[0]);
 	const LcNumbers later = { 20, 200, 100, 811, 1024, { 200, 700 }, { { 1, 2, 3 }, { 4, 5, 300 } }, 950, 1 };
-	const LcNumbers full = { 300, 400, 928, 1024, 1024, { 1024, 1024 }, { { 768, 768, 768 }, { 768, 768, 768 } }, 1088, 0 };
-	const LcNumbers past = { 301, 401, 929, 1025, 1, { 1025, 0 }, { { 769, 0, 0 }, { 0, 0, 0 } }, 1089, 0 };
+	const bool led = LcLed();
+	const uint32_t lightRoom = led ? 10800 : 400, coronaRoom = led ? 18000 : 928;
+	const LcNumbers full = { 300, lightRoom, coronaRoom, 1024, 1024, { 1024, 1024 }, { { 768, 768, 768 }, { 768, 768, 768 } }, 1088, 0 };
+	const LcNumbers past = { 301, lightRoom + 1, coronaRoom + 1, 1025, 1, { 1025, 0 }, { { 769, 0, 0 }, { 0, 0, 0 } }, 1089, 0 };
+	if (HasOption(argc, argv, L"lcindex"))
+		LcRunIndex();
+	if (HasOption(argc, argv, L"lcframe"))
+		LcRunFrame();
 	if (HasOption(argc, argv, L"lcnumbers") || HasOption(argc, argv, L"lcsteps"))
 		LcSetPointers(kLcFirst);
 	if (HasOption(argc, argv, L"lcfull"))
@@ -5244,14 +5374,16 @@ static void LcActions(int argc, wchar_t** argv)
 	if (HasOption(argc, argv, L"lcbelow"))
 	{
 		LcData& data = *g_lcData;
-		data.lightPointer = reinterpret_cast<uintptr_t>(data.lightStore) - 0x1C0;
-		data.coronaPointer = reinterpret_cast<uintptr_t>(data.coronaStore) - 0x30;
+		data.lightPointer = reinterpret_cast<uintptr_t>(Rel32Target(kLcLeads[1])) - 0x1C0;
+		data.coronaPointer = reinterpret_cast<uintptr_t>(Rel32Target(kLcLeads[0])) - 0x30;
 		RtWaitFor("vehicle lights' write pointer", 10000);
 		RtWaitFor("vehicle coronas' write pointer", 10000);
 	}
 	if (HasOption(argc, argv, L"lcjobs") && (Rel32Target(g_lcJumpRel) == g_lcWayOut || LcFindStub().found))
 	{
-		LcList lists[2] = { { nullptr, nullptr, 0, 0, 200, 80 }, { nullptr, nullptr, 0, 0, 200, 80 } };
+		uint32_t values[4] = {};
+		LcStartValues(values);
+		LcList lists[2] = { { nullptr, nullptr, values[0], values[1], values[2], values[3] }, { nullptr, nullptr, values[0], values[1], values[2], values[3] } };
 		const HANDLE thread = CreateThread(nullptr, 0, LcRunJob, &lists[0], 0, nullptr);
 		if (!thread)
 			LcRunJob(&lists[0]);
@@ -5311,16 +5443,37 @@ static void LcActions(int argc, wchar_t** argv)
 	}
 }
 
-// "lc sites: as placed, jump as placed | lc jobs: not run | lc rvas: ... | " - the sites' bytes but the jump's rel32 as placed; where the jump leads and, if to a stub, how
-// it is and what its counter holds; the lists' calls; and where the sites and the data lie, for the suite to compare with the log's lines.
+// True if the byte lies in the size bytes of that site.
+static bool LcIn(const volatile unsigned char* byte, const Site& site, size_t size)
+{
+	return byte >= site.bytes + site.offset && byte < site.bytes + site.offset + size;
+}
+
+// "lc sites: as placed, jump as placed | lc stores: as placed | lc frame: not run | lc index: not run | lc jobs: not run | lc rvas: ... | " - the sites' bytes but the jump's rel32 as placed, or
+// "raised": every one the part writes as it must and every other as placed; where the jump leads and, if to a stub, how it is and what its counter holds; the stores and the lists' start values the
+// sites name, how they are and what a job loads; the frame's and the index's runs; the lists' calls; and where the sites and the data lie, for the suite to compare with the log's lines.
 static void LcReport()
 {
-	bool placed = true;
+	bool placed = true, raised = LcLed();
 	for (size_t i = 0; i < kLcSites; i++)
 		for (size_t at = 0; at < g_lcSites[i].size && at < sizeof(g_lcPlaced[i]); at++)
-			if (g_lcSites[i].bytes + at < g_lcJumpRel.bytes + g_lcJumpRel.offset || g_lcSites[i].bytes + at >= g_lcJumpRel.bytes + g_lcJumpRel.offset + 4)
-				placed = placed && g_lcSites[i].bytes[at] == g_lcPlaced[i][at];
-	wprintf(L"lc sites: %ls, ", placed ? L"as placed" : L"CHANGED");
+		{
+			const volatile unsigned char* const byte = g_lcSites[i].bytes + at;
+			if (LcIn(byte, g_lcJumpRel, 4))
+				continue;
+			placed = placed && *byte == g_lcPlaced[i][at];
+			bool led = false;
+			for (const Site& lead : kLcLeads)
+				led = led || LcIn(byte, lead, 4);
+			if (led)
+				continue;
+			unsigned char expected = g_lcPlaced[i][at];
+			for (const LcRaisedBytes& write : kLcRaisedBytes)
+				if (LcIn(byte, write.site, write.size))
+					expected = write.bytes[byte - (write.site.bytes + write.site.offset)];
+			raised = raised && *byte == expected;
+		}
+	wprintf(L"lc sites: %ls, ", placed ? L"as placed" : raised ? L"raised" : L"CHANGED");
 	const LcStub stub = LcFindStub();
 	if (stub.found)
 	{
@@ -5335,17 +5488,32 @@ static void LcReport()
 		return static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(const_cast<const void*>(p)) - reinterpret_cast<uintptr_t>(ImageBase()));
 	};
 	const LcData& data = *g_lcData;
+	if (raised)
+	{
+		const auto protection = [](const void* at) {
+			MEMORY_BASIC_INFORMATION info{};
+			const DWORD protect = VirtualQuery(at, &info, sizeof(info)) == sizeof(info) ? info.Protect : 0;
+			return protect == PAGE_READWRITE ? L"RW" : protect == PAGE_READONLY ? L"read-only" : L"NEITHER";
+		};
+		uint32_t values[4] = {};
+		LcStartValues(values);
+		wprintf(L" | lc stores: moved, coronas %ls, lights %ls, the drain names %ls, the start values %ls, loaded %u %u %u %u", protection(Rel32Target(kLcLeads[0])), protection(Rel32Target(kLcLeads[1])),
+			Rel32Target(kLcLeads[0]) == Rel32Target(kLcLeads[2]) && Rel32Target(kLcLeads[1]) == Rel32Target(kLcLeads[3]) ? L"the same" : L"OTHERS", protection(Rel32Target(kLcLeads[4])), values[0], values[1], values[2], values[3]);
+	}
+	else
+		wprintf(L" | lc stores: %ls", placed ? L"as placed" : L"CHANGED");
+	wprintf(L" | lc frame: %ls | lc index: %ls", g_lcFrame, g_lcIndex);
 	wprintf(L" | lc jobs: %ls%ls | lc rvas: reset 0x%llX, coronas 0x%llX, corona pointer 0x%llX, lights 0x%llX, light pointer 0x%llX, drain coronas 0x%llX, drain lights 0x%llX, called 0x%llX, "
 		L"job test 0x%llX, vehicles 0x%llX, kick 0x%llX, last kick 0x%llX, add 0x%llX, scratch 0x%llX, scratch lights 0x%llX, start values 0x%llX, scene add 0x%llX, scene count 0x%llX, sort list 0x%llX, "
 		L"sort count 0x%llX, sort mark 0x%llX, byte read 0x%llX, render 0x%llX, store 0x%llX, render pointer 0x%llX, buffer counts 0x%llX, render count 0x%llX, reflections 0x%llX, reflection pointer 0x%llX, "
 		L"update 0x%llX, current pointer 0x%llX, ray lists 0x%llX, ray pointer 0x%llX, ray check 0x%llX, upload 0x%llX, reflection check 0x%llX, corona check 0x%llX, corona check too 0x%llX, corona count 0x%llX, "
-		L"corona add 0x%llX, worker frame 0x%llX, worker call 0x%llX, constructor 0x%llX | ",
+		L"corona add 0x%llX, worker frame 0x%llX, worker call 0x%llX, constructor 0x%llX, start load 0x%llX | ",
 		g_lcJobs, g_lcSteps, rva(g_lcReset), rva(data.coronaStore), rva(&data.coronaPointer), rva(data.lightStore), rva(&data.lightPointer), rva(g_lcDrainCoronas), rva(g_lcDrainLights),
 		rva(reinterpret_cast<const void*>(&LcCalled)), rva(g_lcJobTest), rva(&data.vehicles), rva(g_lcKick), rva(g_lcLastKick), rva(g_lcAddToList), rva(g_lcScratch), rva(g_lcScratchLights),
 		rva(data.startValues), rva(g_lcSceneAdd), rva(&data.sceneCount), rva(data.sortList), rva(&data.sortCount), rva(&data.sortMark), rva(g_lcByteRead), rva(g_lcRender), rva(data.rayTraced),
 		rva(&data.renderPointer), rva(data.bufferCounts), rva(&data.renderCount), rva(data.reflections), rva(&data.reflectionPointer), rva(g_lcUpdate), rva(&data.currentPointer), rva(g_lcRayLists),
 		rva(&data.rayPointer), rva(g_lcRayCheck), rva(g_lcUpload), rva(g_lcReflections), rva(g_lcCoronaCheck), rva(g_lcCoronaCheckToo), rva(&data.coronas), rva(g_lcCoronaAdd), rva(g_lcWorkerFrame),
-		rva(g_lcWorkerCall), rva(g_lcConstructor));
+		rva(g_lcWorkerCall), rva(g_lcConstructor), rva(g_lcStartValuesLoad));
 }
 // The two model budgets: the data the sites lead to, reached through pointers, so that no store of this program's own code counts as a
 // writer of a table; the object on whole pages, since popgone takes one away, and the hole a page of its own.

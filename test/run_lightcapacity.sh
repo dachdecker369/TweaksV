@@ -1,14 +1,17 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-only
-# The lighting capacity, a limit measured first (TweaksVLightCapacity): with DIAGNOSTIC_MODE=1 the fake game's 22 sites found, checked and
-# logged, the counters sampled and summed up 10 seconds in and again when they change, the one write - the jump when a job's list is full
-# through a counting stub while two threads run that code at once, the count exact - and nothing else; every number at its room and past it,
-# the write pointers outside their stores, each line once and no box; the siren settings' numbers on none, 0, 33 and 255 settings and an array
-# that takes no reads; each pattern missing, each check failing on its own, a jump another mod redirected, the plain game, DRY_RUN and Windows'
-# dynamic code policy - each logged, never a problem, nothing written; without DIAGNOSTIC_MODE nothing looked for. Fake LOCALAPPDATA: the real
-# one is never touched.
+# The light stores and the lighting capacity (TweaksVLightCapacity). The measurement, with the part off, as base.ini has it: with DIAGNOSTIC_MODE=1
+# the fake game's 22 sites found, checked and logged, the counters sampled and summed up 10 seconds in and again when they change, its one write - the
+# jump when a job's list is full through a counting stub while two threads run that code at once, the count exact - and nothing else; every number at its
+# room and past it, the write pointers outside their stores, each line once and no box; the siren settings' numbers on none, 0, 33 and 255 settings and an
+# array that takes no reads; each pattern missing, each check failing on its own, a jump another mod redirected, the plain game, DRY_RUN and Windows' dynamic
+# code policy - each logged, never a problem, nothing written; without DIAGNOSTIC_MODE nothing looked for. The part, on as the default file has it: its one
+# write, every byte of it and nothing else, every page its own protection; a job's lists as a movaps loads them, a frame past the game's numbers and the
+# index read back, the sites run as code; the measurement over the moved stores, from what the part found; DRY_RUN, frames that have begun, memory or a page
+# Windows refuses, each check and each pattern again - each a problem with nothing written; the sirens' question through it all. Fake LOCALAPPDATA: the
+# real one is never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
-CHECKS=138
+CHECKS=262
 cd "$B" || exit 1
 cp "$R/x64/Release/TweaksV.asi" TweaksV.asi
 cp "$R/object/Test/Release/TweaksV.asi" TweaksV_test.asi
@@ -18,10 +21,24 @@ mkdir -p appdata
 PLACED='lc sites: as placed, jump as placed |'
 STUB='lc sites: as placed, jump to a stub, RX, on to its way out, its counter RW, holding '
 JOBS='lc jobs: added 160, refused 199840'
+# The part's: every byte it writes as it must and every other as placed; the stores and the start values the sites name; a job's lists as its movaps loads them
+RAISED='lc sites: raised, jump as placed |'
+RAISED_STUB='lc sites: raised, jump to a stub, RX, on to its way out, its counter RW, holding '
+MOVED='lc stores: moved, coronas RW, lights RW, the drain names the same, the start values read-only, loaded 0 0 300 180 |'
+STORES_PLACED='lc stores: as placed |'
+RAISED_JOBS='lc jobs: added 360, refused 199640'
+part_ini() { STORES_ON=1 fresh_ini; }
 # The module's lines, word for word (an apostrophe as any character)
 lc_line() { log_line "\[LightCapacity\] $1\$"; }
 lc_lacks() { log_lacks "\[LightCapacity\] .*$1"; }
 NOT_MEASURED='DIAGNOSTIC: the lighting capacity is not measured:'
+OUT='0x[0-9A-F]* (outside the game)'
+NOT_RAISED='PROBLEM: The light stores are not raised this session:'
+STATUS_CORONAS='The vehicle coronas. store moved and its limit raised from 928 to 18000 entries.'
+STATUS_LIGHTS='The vehicle lights. store moved and its limit raised from 400 to 10800 entries.'
+STATUS_LISTS='A job.s lists patched: 80 lights and 200 coronas -> 180 lights and 300 coronas.'
+STATUS_INDEX='Scene store.s index patched: 88 04 CA -> 89 04 CA, 0F B6 1C C1 -> 8B 1C C1 90.'
+SIREN_REFUSAL='\[SirenSettings\] PROBLEM: The sirens per vehicle are not raised this session: the light stores are not raised (\[LIGHTCAPACITY\] in TweaksV.ini), and the game.s own do not take 32 sirens a vehicle. Vehicles keep 20 sirens.$'
 MEASURED='DIAGNOSTIC: the lighting capacity is measured: its numbers are sampled every 10 ms and logged after 10 seconds, then every minute while they change.'
 REDIRECTED='DIAGNOSTIC: the jump at RVA 0x[0-9A-F]* (G-E-C1) is redirected to a counting stub: every light a job.s full list refuses is counted.'
 SITES='\[LightCapacity\] DIAGNOSTIC: .*(\(N-1, \)\?G-E-[A-H][1-4])\( -> game size .*\)\?$'
@@ -44,10 +61,12 @@ in_order() {
 	echo "$text"
 }
 
-echo "== G1 DIAGNOSTIC_MODE=0: nothing looked for, nothing written"
-fresh_ini; out=$(game full_game.exe lcnumbers lcjobs); echo "      $out"
+echo "== G1 DIAGNOSTIC_MODE=0, the part off: nothing looked for, nothing written"
+fresh_ini; out=$(game full_game.exe lcnumbers lcjobs lcframe lcindex); echo "      $out"
+stubs_off=$(grep -o 'stubs: [0-9]*, [^|]*' <<< "$out")
 check "no pattern of the part looked for, no line of the part" "log_lacks 'G-E-' && log_lacks '\[LightCapacity\]'"
-check "the sites and the jump as placed, the lists' calls through the game's own jump; every page its own protection" "has '$PLACED' && has '$JOBS' && has 'protect: all restored (RX)'"
+check "the sites and the jump as placed, the lists' calls through the game's own jump; every page its own protection" "has '$PLACED' && has '$STORES_PLACED' && has '$JOBS' && has 'protect: all restored (RX)'"
+check "the game's own: the frame past its numbers not run on its stores, and its bug, the index past a byte read back as its low byte, the sites run as code" "has 'lc frame: not run |' && has 'lc index: 700 read back as 188 |'"
 
 echo "== G2 DIAGNOSTIC_MODE=1: the sites found and logged, the numbers sampled, the jump through its stub while two threads run it, the summary 10 s in"
 fresh_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe lcnumbers lcjobs wait); echo "      $out"
@@ -143,14 +162,86 @@ echo "== G8 none of the game code present (plain fake game): logged, not a probl
 fresh_ini; setkey DIAGNOSTIC_MODE 1; setkey LARGE_SIREN_IDS 0 SIRENSETTINGS; out=$(game plain_game.exe)
 check "the scanner's 22 misses and the module's line, word for word; none of it a problem" "[ \$(grep -c -E 'Pattern G-E-[A-H][1-4] not found: ' TweaksV.log) -eq 22 ] && lc_line '$NOT_MEASURED G-E-A1 was not found.' && lc_lacks PROBLEM"
 
+echo "== G14 the part on, DIAGNOSTIC_MODE=0: its one write and its four lines"
+part_ini; out=$(game full_game.exe lcjobs lcframe lcindex); echo "      $out"
+check "the four lines, word for word, and no other under its tag; no pattern's line, no diagnostic line" "lc_line '$STATUS_CORONAS' && lc_line '$STATUS_LIGHTS' && lc_line '$STATUS_LISTS' && lc_line '$STATUS_INDEX' && [ \$(count '\[LightCapacity\]') -eq 4 ] && log_lacks 'G-E-' && lc_lacks DIAGNOSTIC"
+check "the writes and nothing else: every byte of the 22 sites as the part must leave it or as placed, the jump as placed" "has '$RAISED'"
+check "the stores moved, read/write, the drain naming what the reset names; the start values read-only and 16-aligned, for G-E-C4's movaps run as code" "has '$MOVED'"
+check "every page its own protection; no call stub of its own, the other parts' as with the part off" "has 'protect: all restored (RX)' && has '$stubs_off'"
+check "a job's lists as its movaps loads them: 180 lights fit each of the two threads', the rest through the game's own way out" "has '$RAISED_JOBS'"
+check "a frame past the game's numbers, the sites run as code: 60 full jobs, every record where the drain finds it, unbroken" "has 'lc frame: 60 jobs of 300 coronas and 180 lights, the reset and the drain one, drained 18000 and 10800, 0 and 0 wrong |'"
+check "the index read back whole, the two instructions run as code" "has 'lc index: 700 read back as 700 |'"
+check "no problem" "log_lacks PROBLEM"
+
+echo "== G15 the part on, DIAGNOSTIC_MODE=1: the sites found once, the writes logged, the measurement over the moved stores, its stub counting at the raised lists"
+part_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe lcnumbers lcjobs wait); echo "      $out"
+check "the 21 patterns each found exactly once, G-E-G1 twice: the measurement looks for nothing again; every site logged once, 22 lines" "[ \$(grep -c -E 'Pattern G-E-[A-H][1-4] found: .* 1 match,' TweaksV.log) -eq 21 ] && log_has 'Pattern G-E-G1 found: .* 2 matches,' && [ \$(site_lines) -eq 22 ]"
+check "the sites' lines name the game's stores, as the part found them: the frame's reset, word for word" "lc_line 'DIAGNOSTIC: the frame.s reset at RVA $(rva reset): the vehicle coronas. store at RVA $(rva coronas), their write pointer at RVA $(rva 'corona pointer'), the vehicle lights. store at RVA $(rva lights), their write pointer at RVA $(rva 'light pointer') (G-E-A1)'"
+check "the constants' writes, each with its old bytes and its new, word for word" "lc_line 'DIAGNOSTIC: scene store.s index store at RVA $(rva_plus 'scene add' 42): 88 04 CA -> 89 04 CA' && lc_line 'DIAGNOSTIC: scene store.s index read at RVA $(rva 'byte read'): 0F B6 1C C1 -> 8B 1C C1 90' && lc_line 'DIAGNOSTIC: job.s scratch size in its kick at RVA $(rva_plus kick 4): 80 B1 00 00 -> 40 73 01 00' && lc_line 'DIAGNOSTIC: job.s scratch size in its last kick at RVA $(rva_plus 'last kick' 5): 80 B1 00 00 -> 40 73 01 00' && lc_line 'DIAGNOSTIC: job.s coronas. bytes at RVA $(rva_plus scratch 17): 80 25 00 00 -> 40 38 00 00' && lc_line 'DIAGNOSTIC: job.s lights. bytes at RVA $(rva_plus scratch 22): 00 8C 00 00 -> 00 3B 01 00' && lc_line 'DIAGNOSTIC: job.s lights. bytes, as -N-1 at RVA $(rva_plus scratch 32): FF 73 FF FF -> FF C4 FE FF' && lc_line 'DIAGNOSTIC: job.s scratch size, as -N-1 at RVA $(rva_plus scratch 42): 7F 4E FF FF -> BF 8C FE FF' && lc_line 'DIAGNOSTIC: job.s scratch size at RVA $(rva_plus scratch 47): 80 B1 00 00 -> 40 73 01 00' && lc_line 'DIAGNOSTIC: job.s lights. bytes, added at RVA $(rva_plus 'scratch lights' 2): 00 8C 00 00 -> 00 3B 01 00' && lc_line 'DIAGNOSTIC: job.s lights. bytes, compared at RVA $(rva_plus 'scratch lights' 9): 00 8C 00 00 -> 00 3B 01 00'"
+BYTES='[0-9A-F][0-9A-F] [0-9A-F][0-9A-F] [0-9A-F][0-9A-F] [0-9A-F][0-9A-F]'
+check "the five rel32 writes, word for word, and the line that says where they lead" "lc_line \"DIAGNOSTIC: vehicle coronas. store in the frame.s reset at RVA $(rva_plus reset 3): $BYTES -> $BYTES\" && lc_line \"DIAGNOSTIC: vehicle lights. store in the frame.s reset at RVA $(rva_plus reset 24): $BYTES -> $BYTES\" && lc_line \"DIAGNOSTIC: vehicle coronas. store in the drain at RVA $(rva_plus 'drain coronas' 3): $BYTES -> $BYTES\" && lc_line \"DIAGNOSTIC: vehicle lights. store in the drain at RVA $(rva_plus 'drain lights' 3): $BYTES -> $BYTES\" && lc_line \"DIAGNOSTIC: job.s lists. start values at RVA $(rva_plus 'start load' 8): $BYTES -> $BYTES\" && lc_line 'DIAGNOSTIC: the stores moved: the vehicle coronas. at $OUT, the vehicle lights. at $OUT, a job.s lists. start values at $OUT'"
+check "the writes and nothing else, as the part leaves them; the stub counting both threads' 199,640 refusals at the raised lists; every page its own protection; no problem" "has '${RAISED_STUB}199640 |' && has '$MOVED' && has '$RAISED_JOBS' && lc_line '$REDIRECTED' && has 'protect: all restored (RX)' && lc_lacks PROBLEM"
+RAISED_NUMBERS=${FIRST_NUMBERS/143 of 400/143 of 10800}
+RAISED_NUMBERS=${RAISED_NUMBERS/512 of 928/512 of 18000}
+check "the first summary over the moved stores, word for word: of 10800 and of 18000, the rest as ever" "lc_line \"DIAGNOSTIC: the most so far: $RAISED_NUMBERS, a job.s refused lights 199640; $SIRENS_24\""
+
+echo "== G16 the part on: a frame past the game's numbers measured, the stores at their rooms and no line past them; then past them, then below them"
+part_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe lcframe wait); echo "      $out"
+check "the frame run, the summary at the moved stores' rooms, the rest as they stood; no line past a room, no problem" "has 'lc frame: 60 jobs of 300 coronas and 180 lights, the reset and the drain one, drained 18000 and 10800, 0 and 0 wrong |' && lc_line \"DIAGNOSTIC: the most so far: vehicles 0 of 300, vehicle lights 10800 of 10800, vehicle coronas 18000 of 18000, scene lights 0 of 1024 (at its room with the sort list marked in 0 of $N samples), ray traced list 0 of 1024 (past 512 in 0 samples), reflection lists 0 of 768, coronas 0 of 1088, a job.s refused lights 0; $SIRENS_24\" && lc_lacks 'is outside its store' && lc_lacks 'past the [0-9]* the game has room for' && lc_lacks PROBLEM"
+part_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe lcpast)
+check "a record past the moved stores' ends: outside their stores, each line once, no box" "lc_line 'DIAGNOSTIC: vehicle lights. write pointer $OUT is outside its store - the game has overwritten memory.' && lc_line 'DIAGNOSTIC: vehicle coronas. write pointer $OUT is outside its store - the game has overwritten memory.' && [ \$(count 'is outside its store') -eq 2 ] && lc_lacks PROBLEM"
+part_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe lcbelow)
+check "below the moved stores: outside them too, each line once" "lc_line 'DIAGNOSTIC: vehicle lights. write pointer $OUT is outside its store - the game has overwritten memory.' && lc_line 'DIAGNOSTIC: vehicle coronas. write pointer $OUT is outside its store - the game has overwritten memory.' && [ \$(count 'is outside its store') -eq 2 ]"
+
+echo "== G17 the part on, DRY_RUN=1 with DIAGNOSTIC_MODE=1: everything found and checked, the would lines, nothing written, the measurement over the game's own stores; the sirens' dry run goes on"
+part_ini; setkey DIAGNOSTIC_MODE 1; setkey DRY_RUN 1; out=$(game full_game.exe lcnumbers lcjobs lcindex wait); echo "      $out"
+check "the would lines of the stores and the start values, word for word" "lc_line 'DRY_RUN: would move the vehicle coronas. store (2 references) and raise its limit from 928 to 18000.' && lc_line 'DRY_RUN: would move the vehicle lights. store (2 references) and raise its limit from 400 to 10800.' && lc_line 'DRY_RUN: would lead a job.s lists. start values at RVA $(rva_plus 'start load' 8) (G-E-C4) to TweaksV.s own: 0, 0, 300, 180.'"
+check "the would lines of the constants, each with its old bytes and its new" "lc_line 'DRY_RUN: would patch the scene store.s index store: 88 04 CA -> 89 04 CA' && lc_line 'DRY_RUN: would patch the scene store.s index read: 0F B6 1C C1 -> 8B 1C C1 90' && lc_line 'DRY_RUN: would patch the job.s scratch size: 80 B1 00 00 -> 40 73 01 00' && [ \$(count '\[LightCapacity\] DRY_RUN: would patch the') -eq 11 ]"
+check "nothing written: no status line, the sites and the stores as placed, the game's own lists and index; every page its own protection" "lc_lacks 'moved and its limit' && lc_lacks 'patched:' && has '$PLACED' && has '$STORES_PLACED' && has '$JOBS' && has 'lc index: 700 read back as 188 |' && has 'protect: all restored (RX)'"
+check "the numbers over the game's own stores; the refusals not counted; no problem" "lc_line \"DIAGNOSTIC: the most so far: $FIRST_NUMBERS, a job.s refused lights are not counted (DRY_RUN); $SIRENS_24\" && lc_lacks PROBLEM"
+SIRENS_ON=1 fresh_ini; setkey DRY_RUN 1; out=$(game full_game.exe)
+check "the part's would-write counts as its one write: the sirens ask and go on" "lc_line 'DRY_RUN: would move the vehicle lights. store (2 references) and raise its limit from 400 to 10800.' && log_lacks 'the light stores are not raised'"
+
+echo "== G18 the sirens' question: true once the one write is done"
+SIRENS_ON=1 fresh_ini; setkey ENABLED 0 LIGHTCAPACITY; out=$(game full_game.exe)
+check "the part off: the sirens refuse, word for word; the sites and the stores as placed" "log_line '$SIREN_REFUSAL' && has '$PLACED' && has '$STORES_PLACED'"
+SIRENS_ON=1 fresh_ini; out=$(game full_game.exe)
+check "the part on: written, and the sirens do not refuse" "has '$RAISED' && lc_lacks PROBLEM && log_lacks 'the light stores are not raised'"
+SIRENS_ON=1 fresh_ini; addkey TEST_BREAK_PATTERN G-E-H2; out=$(ASI=TweaksV_test.asi game full_game.exe)
+check "a pattern missing: the part's problem and the sirens' refusal, nothing written" "lc_line '$NOT_RAISED G-E-H2 was not found.' && log_line '$SIREN_REFUSAL' && has '$PLACED' && has '$STORES_PLACED'"
+SIRENS_ON=1 fresh_ini; out=$(TWEAKSV_TEST_THROWS=LightCapacity ASI=TweaksV_test.asi game full_game.exe)
+check "the part's start throws: skipped, as any part, the sirens refuse, nothing written" "lc_line 'PROBLEM: unexpected exception - this part is skipped for this session' && log_line '$SIREN_REFUSAL' && has '$PLACED' && has '$STORES_PLACED'"
+
+echo "== G19 the part on, the game's frames run already, the write pointers set at TweaksV's start: a problem, nothing written"
+part_ini; out=$(game full_game.exe lcrunning lcjobs); echo "      $out"
+check "the problem, word for word; the sites and the stores as placed, a job's lists the game's own; every page its own protection" "lc_line '$NOT_RAISED the game.s frames run already - its threads may run the sites while they are rewritten.' && has '$PLACED' && has '$STORES_PLACED' && has '$JOBS' && has 'protect: all restored (RX)'"
+part_ini; setkey DIAGNOSTIC_MODE 1; out=$(game full_game.exe lcrunning lcjobs wait); echo "      $out"
+check "with DIAGNOSTIC_MODE=1: the problem, the measurement's own line, the numbers over the game's own stores" "lc_line '$NOT_RAISED the game.s frames run already - its threads may run the sites while they are rewritten.' && lc_line 'DIAGNOSTIC: a job.s refused lights are not counted: the game.s frames run already - its threads may run the jump while it is rewritten.' && lc_line '$MEASURED' && log_has 'vehicle lights 143 of 400, vehicle coronas 512 of 928'"
+
+echo "== G20 what Windows refuses: the game code's pages (its dynamic code policy); the part's memory (the test build's TWEAKSV_TEST_LIGHT_STUB)"
+part_ini; out=$(game full_game.exe lcjobs nodyncode); echo "      $out"
+check "the jump's page refused: WriteCode's line and the problem, word for word; the sites and the stores as placed, a job's lists the game's own" "lc_line \"The game code at RVA 0x[0-9A-F]* could not be made writable (.*\" && lc_line '$NOT_RAISED the game code could not be changed (details in TweaksV.log).' && has '$PLACED' && has '$STORES_PLACED' && has '$JOBS' && lc_lacks 'moved and its limit'"
+part_ini; out=$(TWEAKSV_TEST_LIGHT_STUB='no stores' ASI=TweaksV_test.asi game full_game.exe); echo "      $out"
+check "no near memory: the switch's line and the problem, word for word; nothing written" "lc_line 'TEST BUILD: the near memory is taken for none for the stores (TWEAKSV_TEST_LIGHT_STUB).' && lc_line '$NOT_RAISED no memory near the game could be had for the stores.' && has '$PLACED' && has '$STORES_PLACED' && lc_lacks 'moved and its limit'"
+part_ini; out=$(TWEAKSV_TEST_LIGHT_STUB='values refused' ASI=TweaksV_test.asi game full_game.exe)
+check "the start values' page refused: the switch's line and the problem, word for word; nothing written" "lc_line 'TEST BUILD: the start values. page is taken as refused (TWEAKSV_TEST_LIGHT_STUB).' && lc_line '$NOT_RAISED a job.s lists. start values could not be made read-only (.*).' && has '$PLACED' && has '$STORES_PLACED' && lc_lacks 'moved and its limit'"
+part_ini; out=$(TWEAKSV_TEST_LIGHT_STUB='stores out of reach' ASI=TweaksV_test.asi game full_game.exe)
+check "out of reach: the switch's line and the problem, word for word; nothing written" "lc_line 'TEST BUILD: the stores are taken as out of reach (TWEAKSV_TEST_LIGHT_STUB).' && lc_line \"$NOT_RAISED the part.s memory at $OUT is out of reach of the vehicle coronas. store in the frame.s reset at RVA $(rva_plus reset 3).\" && has '$PLACED' && has '$STORES_PLACED' && lc_lacks 'moved and its limit'"
+part_ini; out=$(TWEAKSV_TEST_LIGHT_STUB='no stores' game full_game.exe)
+check "the Release build ignores the switch: no line of it, the stores moved" "lc_lacks 'TEST BUILD' && has '$RAISED' && has '$MOVED'"
+
+echo "== G21 the part on, none of the game code present (plain fake game)"
+part_ini; out=$(game plain_game.exe)
+check "the scanner's 22 misses and the problem, word for word""[ \$(grep -c -E 'Pattern G-E-[A-H][1-4] not found: ' TweaksV.log) -eq 22 ] && lc_line '$NOT_RAISED G-E-A1 was not found.' && lc_lacks 'moved and its limit' && lc_lacks DIAGNOSTIC"
+
 # The cases of each check failing and each pattern missing are queued, then run side by side, each in a game folder of its own, half as many at a time as the suites,
-# and checked in order, since each run takes seconds and there are about 90. section TEXT: a heading. not_measured OPTIONS LINE: the fake's options, and the module's
-# line that names why. broken LABEL: the test build with that pattern treated as not found. Each: nothing written, nothing started, no problem.
+# and checked in order, since each run takes seconds and there are about 110, twice: the measurement's, with the part off, and the part's. section TEXT: a heading.
+# not_measured OPTIONS LINE: the fake's options, and the module's line that names why. broken LABEL: the test build with that pattern treated as not found. The
+# measurement's: nothing written, nothing started, no problem. The part's: its problem, the only one of the part, nothing written, nothing started.
 CASES=()
 section() { CASES+=("== $1"); }
 not_measured() { CASES+=("$1|$2"); }
 broken() { CASES+=("!$1"); }
-OUT='0x[0-9A-F]* (outside the game)'
 HERE='RVA 0x[0-9A-F]*'
 
 section "G9 the frame's stores, each check failing on its own"
@@ -182,9 +273,10 @@ not_measured 'lcout c1jump lcjobs' "the jump when a job.s list is full, at $HERE
 not_measured 'lcunread c1jump lcjobs' "the jump when a job.s list is full, at $HERE, leads to $HERE, which cannot be read (G-E-C1)."
 not_measured 'lcother c1jump lcjobs' "the jump when a job.s list is full, at $HERE, leads to $HERE, which holds [0-9A-F ]*, not the function.s way out (G-E-C1)."
 not_measured 'lcout c4values' "the job.s lists. start values at $OUT (G-E-C4) are not inside the game."
-not_measured 'lcodd c4values' "the job.s lists. start values at $HERE (G-E-C4) are not aligned to 4 bytes."
+not_measured 'lcodd c4values' "the job.s lists. start values at $HERE (G-E-C4) are not aligned to 16 bytes."
 not_measured 'lcunread c4values' "the job.s lists. start values at $HERE (G-E-C4) cannot be read."
 not_measured 'lcstartvalues wait' "a job.s lists. start values at $HERE are not 0, 0, 200, 80 (G-E-C4)."
+not_measured 'lcmodded' "G-E-C3 was not found."
 
 section "G11 the scene store"
 not_measured 'lcout d1count' "the scene store.s count at $OUT (G-E-D1) is not inside the game."
@@ -231,25 +323,28 @@ for label in $(sed -nE 's/^\s*\{ "(G-E-[A-Za-z0-9-]+)", .*/\1/p' "$R/source/Twea
 	broken "$label"
 done
 
-# run_case N CASE, in the background
+# run_case FOLDER CASE [part], in the background: the part on and no DIAGNOSTIC_MODE where it says so, and no run longer than it need be
 game_folder=$B
 run_case() {
 	B=$game_folder/cases/$1
 	mkdir -p "$B" && cd "$B" || exit 1
 	cp ../../TweaksV.asi ../../TweaksV_test.asi .
-	fresh_ini; setkey DIAGNOSTIC_MODE 1
+	local options=${2%%|*}
+	if [ -n "${3:-}" ]; then part_ini; options=${options/ wait/}; else fresh_ini; setkey DIAGNOSTIC_MODE 1; fi
 	case "$2" in
 		"!"*) addkey TEST_BREAK_PATTERN "${2#!}"; ASI=TweaksV_test.asi game ../../full_game.exe lcnumbers > /dev/null ;;
-		*) game ../../full_game.exe ${2%%|*} > /dev/null ;;
+		*) game ../../full_game.exe $options > /dev/null ;;
 	esac
 }
 n=0; running=0
 for entry in "${CASES[@]}"; do
 	[[ "$entry" == "== "* ]] && continue
 	n=$((n + 1))
-	run_case "$n" "$entry" &
-	running=$((running + 1))
-	if [ "$running" -ge "$(( ${TWEAKSV_TEST_JOBS:-4} / 2 + 1 ))" ]; then wait -n; running=$((running - 1)); fi
+	for mode in "" part; do
+		run_case "$mode$n" "$entry" $mode &
+		running=$((running + 1))
+		if [ "$running" -ge "$(( ${TWEAKSV_TEST_JOBS:-4} / 2 + 1 ))" ]; then wait -n; running=$((running - 1)); fi
+	done
 done
 wait
 n=0
@@ -266,6 +361,23 @@ for entry in "${CASES[@]}"; do
 	else
 		options=${entry%%|*}
 		check "$options: the line, word for word; the sites as placed, no announcement, the fake runs no jump that leads elsewhere and, with 11 s more, no summary comes; no problem" "lc_line '$NOT_MEASURED ${entry#*|}' && $NOTHING && { [[ '$options' != *lcjobs* ]] || has 'lc jobs: not run'; } && { [[ '$options' != *wait* ]] || lc_lacks 'the most so far'; }"
+	fi
+done
+echo "== G22 the same with the part on: each pattern missing and each check failing refuses it, with nothing written"
+n=0
+for entry in "${CASES[@]}"; do
+	[[ "$entry" == "== "* ]] && continue
+	n=$((n + 1))
+	B=$game_folder/cases/part$n
+	cd "$B" || exit 1
+	out=$(tr -d '\r' < harness.out)
+	NOTHING="[ \$(count '\[LightCapacity\] PROBLEM') -eq 1 ] && has '$PLACED' && has '$STORES_PLACED' && lc_lacks 'moved and its limit' && lc_lacks 'patched:' && lc_lacks DIAGNOSTIC && has 'protect: all restored (RX)'"
+	if [[ "$entry" == "!"* ]]; then
+		label=${entry#!}
+		check "$label: the part's problem, word for word, the only one of the part; the sites and the stores as placed" "lc_line '$NOT_RAISED $label was not found.' && $NOTHING"
+	else
+		options=${entry%%|*}
+		check "${options/ wait/}: the part's problem, word for word, the only one of the part; the sites and the stores as placed" "lc_line '$NOT_RAISED ${entry#*|}' && $NOTHING && { [[ '$options' != *lcjobs* ]] || has 'lc jobs: not run'; }"
 	fi
 done
 B=$game_folder
