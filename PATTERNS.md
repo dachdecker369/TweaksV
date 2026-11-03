@@ -868,7 +868,9 @@ The fourteen patterns are looked for with `CORONA_STORE` above the game's own al
   A corona's index is a word, 65535 at most.
 - **The complete set sized by 1088:** 0x43F at RVA 0xB3A789, 0xB6ED79, 0xB3A8DA and 0x2C1EAB; 0x440 at RVA 0x2C28AF and 0x2C28D7; 0xCC00 at RVA 0xB3A8D3, 0xB3A8EF, 0xB3CAA6, 0xB3B8BF and 0x2C1387; 0xE800, -0xE801, 0x1C00 and -0x1C01 at RVA 0x2C13A7, 0x2C139D, 0x2C14E6, 0x2C138C and 0x2C1396, and +0x70 in RVA 0x3146C8; 0xCCB4 at RVA 0xBD9CAA, the constructor's loop.
   Unrelated, read one by one: 0x43F at RVA 0x763EA5 and the other 156 of 0x440.
-  The store's base is named at 19 sites and the count by 6 rip reads, and by `[reg+0xCC00]` at RVA 0xB3A8D0, 0xB3A8EB and 0xB3B8BD.
+  The store's base is named at 19 sites, each a `lea` as the module's count sees it: RVA 0x23FA8, 0x3145AA, 0x4004B8, 0xB0DFC1, 0xB1C4E5, 0xB1C5DC, 0xB22625, 0xB3A7EA, 0xB6EDDA, 0xBD9C6C, 0xDF07AA, 0xDF0CC4, 0xE09637, 0xEE4602, 0xF01122, 0x1840AAC, 0x185512B, 0x1B71D6C and 0x1B72E51.
+  What hands the store out is called once, at RVA 0x3145BB, which the module counts too.
+  The count is read by 6 rip reads, and by `[reg+0xCC00]` at RVA 0xB3A8D0, 0xB3A8EB and 0xB3B8BD.
 - **The raise, 13 writes:** the nop at `G-E-I1` +0 becomes `lea rcx, [new store]` and a nop of 7, which turns the old store the callers hand it into the new one before the loop; the count's disp at +17 and +45, and `G-E-I7`'s +6, become the count less the new store; the limits at `G-E-I1` +24 and each `G-E-G1` +9 become N - 1 and `G-E-I8`'s +1 and +41 N; the rel32 at `G-E-I2` +11, `G-E-I3` +11, `G-E-I5` +8 and `G-E-I6` +3 lead to the new store.
   The count and everything past +0xCC00 stay where they are, so the other fifteen references to the old base, the reset at RVA 0xB3B8BD and the constructor stay true; the job's own 1088 stays, since it keeps a city at night from taking more.
 - **The trap:** at a count past 1088 the old clamp gives edx = 0x440 below ecx, the `cmpxchg` lowers the count and `sub edx, ecx` wraps, so memcpy gets about 200 GB and faults (reasoned, not seen: an access violation in memcpy, RVA 0x2479F10, called from RVA 0x2C290B).

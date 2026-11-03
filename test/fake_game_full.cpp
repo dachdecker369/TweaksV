@@ -731,6 +731,9 @@
 //   ccedge NAME    with rtjumpunread: j2extras, j3count or g1jump, the site whose match ends where this rel32 starts copied to the end of g_rtEdge's first page and
 //                  the rel32 on the page rtjumpunread takes away, the site's first byte a NOP
 //   ccmodded NAME  what another mod would have changed, a byte of what a pattern pins: i1nop, i4past, i7count, i8move, i8clamp, i9limit or j1scratch
+//   ccrefs         16 more leas of the store, which make 20 with the four of the sites
+//   cccalls        a second call of what hands the store out
+//   ccleft         the report's "cc left: N": the regions of private read/write memory, all 0, of the size of a store of 4096 coronas
 #include <windows.h>
 #include <winternl.h>
 #include <cstddef>
@@ -1647,7 +1650,10 @@ volatile unsigned char g_ccCommand[] = { 0x48, 0x8B, 0x41, 0x08, 0x48, 0x89, 0x0
 volatile unsigned char g_ccDraw[] = { 0xF0, 0xFF, 0x05, 0, 0, 0, 0, 0x89, 0xD6, 0x49, 0x89, 0xCC, 0x48, 0x63, 0x3D, 0, 0, 0, 0, 0xCC };
 volatile unsigned char g_ccStackRecords[] = { 0x48, 0x89, 0xF8, 0x48, 0xC1, 0xE0, 0x05, 0xE8, 0, 0, 0, 0, 0x48, 0x29, 0xC4, 0x49, 0x89, 0xE6, 0x48, 0x83, 0xEC, 0x40, 0xCC };
 volatile unsigned char g_ccStackIndices[] = { 0x48, 0x8D, 0x04, 0xBD, 0x0F, 0x00, 0x00, 0x00, 0x48, 0x83, 0xE0, 0xF0, 0xE8, 0, 0, 0, 0, 0x48, 0x29, 0xC4, 0x49, 0x89, 0xE5, 0xCC };
-static Site g_ccSites[] = { SITE(g_ccAddStart, 0), SITE(g_ccFirstStore, 0), SITE(g_ccSecondStore, 0), SITE(g_ccFirstWayOut, 0), SITE(g_ccSecondWayOut, 0), SITE(g_ccCopy, 0), SITE(g_ccParameters, 0), SITE(g_ccHandOut, 0),
+constexpr int kCcExtraLeas = 16, kCcLeaBytes = 7;
+volatile unsigned char g_ccExtraLeas[kCcExtraLeas * kCcLeaBytes] = { 0xCC };	// CC, and with ccrefs leas of the store
+volatile unsigned char g_ccExtraCall[] = { 0xCC, 0, 0, 0, 0, 0xCC };			// no call until cccalls makes it one
+static Site g_ccSites[] = { SITE(g_ccExtraLeas, 0), SITE(g_ccExtraCall, 0), SITE(g_ccAddStart, 0), SITE(g_ccFirstStore, 0), SITE(g_ccSecondStore, 0), SITE(g_ccFirstWayOut, 0), SITE(g_ccSecondWayOut, 0), SITE(g_ccCopy, 0), SITE(g_ccParameters, 0), SITE(g_ccHandOut, 0),
 	SITE(g_ccBatch, 0), SITE(g_ccLodLimit, 0), SITE(g_ccScratch, 0), SITE(g_ccCommand, 0), SITE(g_ccDraw, 0), SITE(g_ccStackRecords, 0), SITE(g_ccStackIndices, 0) };
 #pragma data_seg()
 
@@ -9365,6 +9371,21 @@ static void CcSetUp(int argc, wchar_t** argv)
 			edge.site[0] = 0x90;
 		}
 
+	if (HasOption(argc, argv, L"ccrefs"))
+		for (int i = 0; i < kCcExtraLeas; i++)
+		{
+			volatile unsigned char* const lea = g_ccExtraLeas + i * kCcLeaBytes;
+			lea[0] = 0x48;
+			lea[1] = 0x8D;
+			lea[2] = 0x0D;
+			SetRel32({ g_ccExtraLeas, i * kCcLeaBytes + 3, sizeof(g_ccExtraLeas) }, data.gameCoronas);
+		}
+	if (HasOption(argc, argv, L"cccalls"))
+	{
+		g_ccExtraCall[0] = 0xE8;
+		SetRel32(SITE(g_ccExtraCall, 1), site(g_ccHandOut, 0));
+	}
+
 	const struct { const wchar_t* name; volatile unsigned char* at; unsigned char value; } modded[] = {
 		{ L"i1nop", g_ccGeneralAdd, 0xE9 }, { L"i4past", g_ccCopy + kCcI4 + 21, 0x02 }, { L"i7count", g_ccHandOut + 7, 0xCD }, { L"i8move", g_ccBatch + kCcI8 + 2, 0x08 },
 		{ L"i8clamp", g_ccBatch + kCcI8 + 42, 0x08 }, { L"i9limit", g_ccLodLimit + kCcI9 + 8, 0x08 }, { L"j1scratch", g_ccScratch + 4, 0xCD } };
@@ -9669,10 +9690,33 @@ static void CcActions(int argc, wchar_t** argv)
 		VirtualFree(target, 0, MEM_RELEASE);
 }
 
+// The regions of private read/write memory, all 0, of the size of a store of 4096 coronas, anywhere: what a raise leaves, and what a dry run or a store out of reach must not.
+static int CcRegionsLeft()
+{
+	const size_t bytes = (size_t{ 4096 } * 0x30 + 0x180 + 0xFFF) & ~size_t{ 0xFFF };
+	SYSTEM_INFO memory{};
+	GetSystemInfo(&memory);
+	int regions = 0;
+	MEMORY_BASIC_INFORMATION info{};
+	for (const unsigned char* at = static_cast<const unsigned char*>(memory.lpMinimumApplicationAddress); at < memory.lpMaximumApplicationAddress && VirtualQuery(at, &info, sizeof(info)) == sizeof(info);
+		at = static_cast<const unsigned char*>(info.BaseAddress) + info.RegionSize)
+	{
+		if (info.State != MEM_COMMIT || info.Type != MEM_PRIVATE || info.Protect != PAGE_READWRITE || info.RegionSize != bytes)
+			continue;
+		const unsigned char* const region = static_cast<const unsigned char*>(info.BaseAddress);
+		bool empty = true;
+		for (size_t i = 0; i < bytes && empty; i++)
+			empty = region[i] == 0;
+		if (empty)
+			regions++;
+	}
+	return regions;
+}
+
 // "cc sites: as placed | cc jumps: as placed | cc run: not run | cc now: ... | cc rvas: ... | " - the sites: as placed, or the store moved, N coronas, every write of the findings'
 // table and nothing else, its memory RW, 16-aligned and of the size asked; the jumps: as placed, or each through its stub, with the counters; what the fake ran; the accessor, in a test
 // build; and where the sites lie, for the suite to compare with the log's lines.
-static void CcReport(HMODULE module)
+static void CcReport(HMODULE module, int argc, wchar_t** argv)
 {
 	if (!CcFirstChange(nullptr, 0))
 		wprintf(L"cc sites: as placed");
@@ -9714,6 +9758,8 @@ static void CcReport(HMODULE module)
 		}
 	}
 	wprintf(L" | cc run: %ls | ", g_ccRun);
+	if (HasOption(argc, argv, L"ccleft"))
+		wprintf(L"cc left: %d | ", CcRegionsLeft());
 	const auto now = reinterpret_cast<void (*)(uint64_t*)>(GetProcAddress(module, "TweaksVTestCoronaStoreNow"));
 	if (now)
 	{
@@ -12149,7 +12195,7 @@ int wmain(int argc, wchar_t** argv)
 	CheckStub(Rel32Target(Site{ g_sdCaller, kSdMakerRel32, 0 }));
 	CheckData(SirenCountCode(&SdMakerCarrier) + kSdAllocAt + kSdAllocationAt, 5);
 	// [corona store]
-	CcReport(module);
+	CcReport(module, argc, argv);
 	CheckStub(Rel32Target(g_packCallSite));
 	CheckStub(Rel32Target(g_scriptCallSite));
 	CheckStub(Rel32Target(Site{ g_staticBoundsInit, kSbLookupRel, 0 }));

@@ -12,6 +12,9 @@
 //                  one; and the general add's nop before its loop turns the old store its eleven callers hand it into the new one
 //   the clamp      must move with the store: at a count past 1088 the old clamp lowers the count and asks for a copy of about 200 GB. So every
 //                  site is found and checked before anything is written, and any site missing refuses the part as a whole
+//   the sets       nothing gates this raise by the game's build, so a later build whose patterns still match may hold more than the research
+//                  found: a second caller of what hands the store out gets its count from the old store, and a 20th reference may be a new
+//                  batch with a clamp of its own. So both are counted first, and more than the research found refuses, as for the part's own stores
 // At the game's own 1088 nothing of it is looked for or written. A dry run finds and checks everything and writes nothing.
 // With DIAGNOSTIC_MODE the store counts what it refuses, each by a stub in the form of the lighting capacity's: four jumps through a
 // lock inc on to where they led, and the batch's six bytes through a stub that adds what the batch could not place. The stubs lie near the
@@ -62,7 +65,7 @@ namespace TweaksV
 
 		// The sites' fields, from their matches. J2's last and J3's last lie past their matches.
 		constexpr size_t kAddLeaRelAt = 3, kAddLoadAt = 17, kAddLimitAt = 24, kAddJumpAt = 28, kAddJumpRelAt = 30, kAddExchangeAt = 45;	// I1
-		constexpr size_t kInlinedCountAt = 2, kInlinedLimitAt = 9, kInlinedJumpRelAt = 15;													// G1, the part's
+		constexpr size_t kInlinedCountAt = 2, kInlinedLimitAt = 9, kInlinedJumpAt = 13, kInlinedJumpRelAt = 15, kInlinedMatch = 15;			// G1, the part's
 		constexpr size_t kInlinedStoreAt = 11;																								// I2, I3
 		constexpr size_t kCopyCountAt = 2, kCopyPastAt = 20, kCopyStoreAt = 8;																// I4; I5 the store
 		constexpr size_t kJobStoreAt = 3, kJobCallAt = 17;																					// I6
@@ -72,12 +75,14 @@ namespace TweaksV
 		constexpr size_t kPointerAt = 7, kRenderCountAt = 16, kExtrasAt = 33;																// J2
 		constexpr size_t kMarkAt = 3, kDrawCountAt = 15;																					// J3
 		constexpr size_t kRel32 = sizeof(int32_t);
+		constexpr size_t kStoreReferences = 19, kHandOutCalls = 1;	// the complete sets, by the research (PATTERNS.md): the store's references a scan sees, and what hands it out's callers
 
 		static_assert(kCountAt == kGameCoronas * kCoronaBytes && kPastRecords == 8 * kCoronaBytes, "TweaksV: the store's count right behind its 1088 coronas, and 8 more read by its copy");
 		static_assert(kCoronaStore.minValue == static_cast<int>(kGameCoronas) && (uint64_t{ static_cast<uint32_t>(kCoronaStore.maxValue) } + 8) * kStackPerCorona <= kStackCommitted - kStackSpare &&
 			static_cast<uint32_t>(kCoronaStore.maxValue) + 8 <= 0xFFFF, "TweaksV: CORONA_STORE from the game's own to what a draw's stack and its word of an index take");
 
-		// Every constant the raise rests on is the one its pattern pins: the nop that is rewritten, the instructions around each field, the job's sizes.
+		// Every constant the raise rests on is the one its pattern pins: the nop that is rewritten, the instructions around each field, the job's sizes. G-E-G1 is
+		// the part's, and the code names a pattern once, so that its three are read when the part hands its matches over (SitesFault).
 		static_assert(PatternHolds(P(kI1), 0, { 0x66, 0x66, 0x66, 0x66, 0x66, 0x2E, 0x0F, 0x1F, 0x84, 0, 0, 0, 0, 0 }) && PatternHolds(P(kI1), 14, { 0x44, 0x8B, 0x81 }) &&
 			PatternImm32(P(kI1), kAddLoadAt) == kCountAt && PatternHolds(P(kI1), 21, { 0x49, 0x81, 0xF8 }) && PatternImm32(P(kI1), kAddLimitAt) == kGameCoronas - 1 &&
 			PatternHolds(P(kI1), kAddJumpAt, { 0x0F, 0x87 }) && PatternHolds(P(kI1), 41, { 0xF0, 0x0F, 0xB1, 0xB1 }) && PatternImm32(P(kI1), kAddExchangeAt) == kCountAt && PatternHolds(P(kI1), 49, { 0x75, 0xDB }),
@@ -137,13 +142,23 @@ namespace TweaksV
 					return std::string("the ") + namer.what + " names the corona store at " + DescribeAddress(namer.named) + ", the first inlined add the one at " + DescribeAddress(f.store) + At(P(namer.site)) + ".";
 			Note("the corona store at " + DescribeAddress(f.store) + ", its count at " + DescribeAddress(count) + ": the inlined adds' stores at " + DescribeAddress(f.at[kI2] + kInlinedStoreAt) + At(P(kI2)) +
 				" and " + DescribeAddress(f.at[kI3] + kInlinedStoreAt) + At(P(kI3)));
+			const std::vector<uint8_t*> references = Scanner::FindRipRelativeReferences(f.store, kStoreReferences + 1);
+			std::string list;
+			for (size_t i = 0; i < references.size(); i++)
+				list += (i == 0 ? "" : i + 1 == references.size() ? " and " : ", ") + DescribeAddress(references[i]);
+			Note("the corona store at " + DescribeAddress(f.store) + " is referenced in " + (references.size() > kStoreReferences ? std::to_string(kStoreReferences + 1) + " places or more" : std::to_string(references.size()) + " places") + " of the game's code: " + list);
+			if (references.size() > kStoreReferences)	// fewer is a fact for the boot: the scan sees a lea or a store of a pointer
+				return "the game's code references the corona store at " + DescribeAddress(f.store) + " in " + std::to_string(kStoreReferences + 1) + " places or more, not " + std::to_string(kStoreReferences) + ", as the research found them.";
 			const uint8_t* const copied = Rel32Target(f.at[kI4] + kCopyCountAt);
 			if (copied != count)
 				return "the copy to the draw list reads the count at " + DescribeAddress(copied) + ", not the one right behind the 1088 coronas, at " + DescribeAddress(count) + At(P(kI4)) + ".";
 			Note("the copy to the draw list at " + DescribeAddress(f.at[kI5]) + ": its count at " + DescribeAddress(f.at[kI4] + kCopyCountAt) + At(P(kI4)) + ", its store at " + DescribeAddress(f.at[kI5] + kCopyStoreAt) + At(P(kI5)));
 			for (size_t i = 0; i < std::size(f.inlined); i++)
 			{
-				const uint8_t* const read = Rel32Target(f.inlined[i] + kInlinedCountAt);
+				const uint8_t* const add = f.inlined[i];
+				if (add[0] != 0x8B || add[1] != 0x0D || ValueAt<uint32_t>(add, kInlinedLimitAt) != kGameCoronas - 1 || add[kInlinedJumpAt] != 0x0F || add[kInlinedJumpAt + 1] != 0x87)
+					return std::string(i == 0 ? "the first" : "the second") + " inlined add at " + DescribeAddress(add) + " holds " + HexBytes(add, kInlinedMatch) + ", not its read of the count, its limit of " + std::to_string(kGameCoronas - 1) + " and its jump when full (G-E-G1).";
+				const uint8_t* const read = Rel32Target(add + kInlinedCountAt);
 				if (read != count)
 					return std::string(i == 0 ? "the first" : "the second") + " inlined add reads the count at " + DescribeAddress(read) + ", not the one right behind the 1088 coronas, at " + DescribeAddress(count) + " (G-E-G1).";
 			}
@@ -157,6 +172,8 @@ namespace TweaksV
 			const uint8_t* const handOut = CallTarget(f.at[kI6] + kJobCallAt);
 			if (handOut != f.at[kI7])
 				return "the LOD lights' job's call at " + DescribeAddress(f.at[kI6] + kJobCallAt) + " leads to " + DescribeAddress(handOut) + ", not to what hands the store out, at " + DescribeAddress(f.at[kI7]) + " (another mod may have hooked it already)" + At(P(kI6)) + ".";
+			if (Scanner::FindCallsTo(f.at[kI7], kHandOutCalls + 1).size() > kHandOutCalls)
+				return "the game's code calls what hands the corona store out, at " + DescribeAddress(f.at[kI7]) + ", in " + std::to_string(kHandOutCalls + 1) + " places or more, not " + std::to_string(kHandOutCalls) + At(P(kI7)) + ".";
 			Note("the LOD lights' job's parameters at " + DescribeAddress(f.at[kI6]) + At(P(kI6)) + ", their call of what hands the store out at " + DescribeAddress(f.at[kI7]) + At(P(kI7)));
 			Note("the LOD lights' batch: its clamp at " + DescribeAddress(f.at[kI8] + kBatchMoveAt) + " and " + DescribeAddress(f.at[kI8] + kBatchCompareAt) + " holds " + std::to_string(kGameCoronas) + At(P(kI8)));
 			Note("the LOD lights' job's own limit at " + DescribeAddress(f.at[kI9] + kLodLimitAt) + " holds " + std::to_string(kGameCoronas - 1) + " (N-1, " + P(kI9).label + ") -> game size " + std::to_string(kGameCoronas) + ": left as it is");
@@ -445,7 +462,7 @@ namespace TweaksV
 			redirects.push_back({ six, toBatch, "LOD lights' batch's way to its counting stub" });
 			writes.insert(writes.end(), redirects.begin(), redirects.end());
 			g_counters.store(reinterpret_cast<const Counters*>(block + page), std::memory_order_release);
-			Note("the four jumps when the corona store is full and the LOD lights' batch at " + DescribeAddress(six) + At(P(kI8)) + " are redirected to counting stubs with the part's one write: every corona refused is counted.");
+			Note("the four jumps when the corona store is full and the LOD lights' batch at " + DescribeAddress(six) + At(P(kI8)) + " are redirected to counting stubs once the part's one write is done.");
 		}
 	}
 

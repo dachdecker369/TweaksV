@@ -8,7 +8,7 @@
 # store's own reasons and lines, not what the part says around them, whichever part that is: the accessor through the test build's export. Fake LOCALAPPDATA:
 # the real one is never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
-CHECKS=105
+CHECKS=111
 cd "$B" || exit 1
 cp "$R/x64/Release/TweaksV.asi" TweaksV.asi
 cp "$R/object/Test/Release/TweaksV.asi" TweaksV_test.asi
@@ -30,9 +30,18 @@ NOW_GAME=$(now 1088 0 0 0 0)
 # An RVA from the fake's report: rva i1; rva_plus NAME N: that RVA plus N
 rva() { sed -n 's/.*cc rvas: \([^|]*\) |.*/, \1/p' <<< "$out" | sed -n "s/.*, $1 \(0x[0-9A-F]*\).*/\1/p"; }
 rva_plus() { printf '0x%X' $(( $(rva "$1") + $2 )); }
+# in_order RVA...: "RVA 0x1, RVA 0x2 and RVA 0x3", in address order, as a scan finds them, since the linker lays the fake's sites out as it likes
+in_order() {
+	local rvas=($(for a in "$@"; do printf '%d\n' "$a"; done | sort -n)) text="" i
+	for ((i = 0; i < ${#rvas[@]}; i++)); do
+		[ "$i" = 0 ] || { [ "$i" = $(( ${#rvas[@]} - 1 )) ] && text+=" and " || text+=", "; }
+		text+=$(printf 'RVA 0x%X' "${rvas[i]}")
+	done
+	echo "$text"
+}
 NOT_RAISED='PROBLEM: The light stores are not raised this session:'
 NOT_COUNTED='DIAGNOSTIC: the corona store.s refused coronas are not counted:'
-REDIRECTED='DIAGNOSTIC: the four jumps when the corona store is full and the LOD lights. batch at RVA 0x[0-9A-F]* (G-E-I8) are redirected to counting stubs with the part.s one write: every corona refused is counted.'
+REDIRECTED='DIAGNOSTIC: the four jumps when the corona store is full and the LOD lights. batch at RVA 0x[0-9A-F]* (G-E-I8) are redirected to counting stubs once the part.s one write is done.'
 HEX='[0-9A-F][0-9A-F]'
 ANY4="$HEX $HEX $HEX $HEX"
 
@@ -67,6 +76,7 @@ echo "== C4 CORONA_STORE=4096, DIAGNOSTIC_MODE=1: every site logged at the fake'
 raise_ini; setkey DIAGNOSTIC_MODE 1; out=$(ASI=TweaksV_test.asi game full_game.exe ccrun); echo "      ${out:0:80}"
 check "the 14 patterns each found exactly once" "[ \$(grep -c -E 'Pattern G-E-[IJ][1-9] found: .* 1 match,' TweaksV.log) -eq 14 ]"
 check "the store, its count and the inlined adds' stores" "cc_line 'DIAGNOSTIC: the corona store at RVA $(rva store), its count at RVA $(rva count): the inlined adds. stores at RVA $(rva_plus i2 11) (G-E-I2) and RVA $(rva_plus i3 11) (G-E-I3)'"
+check "the store's references, by the scan, in address order: the four of the sites" "cc_line \"DIAGNOSTIC: the corona store at RVA $(rva store) is referenced in 4 places of the game.s code: $(in_order $(rva_plus i2 8) $(rva_plus i3 8) $(rva_plus i5 5) $(rva i6))\""
 check "the copy, the inlined adds' limits" "cc_line 'DIAGNOSTIC: the copy to the draw list at RVA $(rva i5): its count at RVA $(rva_plus i4 2) (G-E-I4), its store at RVA $(rva_plus i5 8) (G-E-I5)' && cc_line 'DIAGNOSTIC: the inlined adds. limits at RVA $(rva_plus first 9) and RVA $(rva_plus second 9) hold 1087, their counts the same'"
 check "the general add" "cc_line 'DIAGNOSTIC: the general add at RVA $(rva i1): its count at 0xCC00 of the store at RVA $(rva_plus i1 17) and RVA $(rva_plus i1 45), its limit at RVA $(rva_plus i1 24) holds 1087 (N-1, G-E-I1) -> game size 1088'"
 check "the LOD lights' job: its parameters, its batch's clamp, its own limit left, its scratch" "cc_line 'DIAGNOSTIC: the LOD lights. job.s parameters at RVA $(rva i6) (G-E-I6), their call of what hands the store out at RVA $(rva i7) (G-E-I7)' && cc_line 'DIAGNOSTIC: the LOD lights. batch: its clamp at RVA $(rva_plus i8 1) and RVA $(rva_plus i8 41) holds 1088 (G-E-I8)' && cc_line 'DIAGNOSTIC: the LOD lights. job.s own limit at RVA $(rva_plus i9 7) holds 1087 (N-1, G-E-I9) -> game size 1088: left as it is' && cc_line 'DIAGNOSTIC: the LOD lights. job.s scratch at RVA $(rva j1): 0xCC00 bytes of coronas, 0x1C00 of lists, 0xE800 in all (G-E-J1)'"
@@ -148,6 +158,8 @@ refused 'lcother i6store' "the LOD lights. job names the corona store at $HERE, 
 refused 'lcother i4count' "the copy to the draw list reads the count at $HERE, not the one right behind the 1088 coronas, at $HERE (G-E-I4)."
 refused 'lcother g1first lcother g1second' "the first inlined add reads the count at $HERE, not the one right behind the 1088 coronas, at $HERE (G-E-G1)."
 refused 'lcother g1second' "\(the \(first\|second\) inlined add reads the count at $HERE, not the one right behind the 1088 coronas, at $HERE (G-E-G1).\|the corona store.s two checks read different counts: $HERE and $HERE (G-E-G1).\)"
+refused 'ccrefs' "the game.s code references the corona store at $HERE in 20 places or more, not 19, as the research found them."
+refused 'cccalls' "the game.s code calls what hands the corona store out, at $HERE, in 2 places or more, not 1 (G-E-I7)."
 refused 'lcother i6call' "the LOD lights. job.s call at $HERE leads to $HERE, not to what hands the store out, at $HERE (another mod may have hooked it already) (G-E-I6)."
 refused 'lcout i6call' "the LOD lights. job.s call at $HERE leads to $OUT, not to what hands the store out, at $HERE (another mod may have hooked it already) (G-E-I6)."
 refused 'lcout j2pointer' "the draw list.s render pointer at $OUT (G-E-J2) is not inside the game."
@@ -256,6 +268,14 @@ raise_ini; setkey DIAGNOSTIC_MODE 1; out=$(ASI=TweaksV_test.asi game full_game.e
 check "a refusal of the store: the part's problem, nothing written, and the measurement goes on over the game's own room" "cc_line \"$NOT_RAISED $SECOND_ADD\" && has '$PLACED' && has '$NOW_GAME' && cc_line 'DIAGNOSTIC: the lighting capacity is measured: .*' && cc_line 'DIAGNOSTIC: the most so far: .*coronas 0 of 1088, .*'"
 raise_ini; setkey DIAGNOSTIC_MODE 1; setkey DRY_RUN 1; out=$(ASI=TweaksV_test.asi game full_game.exe wait); echo "      ${out:0:80}"
 check "a dry run: the store's would lines in the part's, and the measurement over the game's own room" "[ \$(count 'DRY_RUN: would patch the corona store') -eq 13 ] && has '$PLACED' && has '$NOW_GAME' && cc_line 'DIAGNOSTIC: the most so far: .*coronas 0 of 1088, .*'"
+
+echo "== C16 what stays of the new store: the raise's one region, and nothing of a dry run or of a store out of reach"
+raise_ini; out=$(ASI=TweaksV_test.asi game full_game.exe ccleft); echo "      ${out:0:80}"
+check "the raise: its store is the one region of its size, all 0" "has '$(moved 4096)' && has 'cc left: 1 |'"
+raise_ini; setkey DRY_RUN 1; out=$(ASI=TweaksV_test.asi game full_game.exe ccleft); echo "      ${out:0:80}"
+check "a dry run: the store it made for its lines is gone" "has '$PLACED' && has 'cc left: 0 |'"
+raise_ini; out=$(TWEAKSV_TEST_CORONA_MEMORY='far' ASI=TweaksV_test.asi game full_game.exe ccleft); echo "      ${out:0:80}"
+check "a store out of reach: refused, and gone" "has '$PLACED' && has 'cc left: 0 |'"
 
 echo
 echo "CORONA STORE SCENARIOS: $pass passed, $fail failed"
