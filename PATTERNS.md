@@ -485,6 +485,43 @@ The four sites, for the measurement: looked for only with `DIAGNOSTIC_MODE=1`, e
 
 <!-- [siren lights] -->
 
+The sirens per vehicle's lights: what their findings' second pass read, and what the raise rests on.
+The labels are the part's letter `I`; `I-E-B1`, `I-E-C1` and `I-E-P1` are theirs too.
+
+- **The parser's member objects:** a member object holds its vtable at +0x00, its member data at +0x08 and, for an array, its element's member object at +0x10; slot 1 of the vtable reads a node of the file's tree.
+  A node's first child lies at +0x38, its next sibling at +0x30.
+- **The member data:** +0x08 the offset, 0 at TweaksV's start and written from the structure's offsets table when the game registers it, after TweaksV's start; +0x10 the type (0x0D an array, 0x0C a structure), +0x11 the subtype, +0x20 the element's size, +0x28 a fixed array's capacity, +0x30 the element's member data.
+  The lights' member data lie at RVA 0x28EE4C8, entry 19 of `I-E-P1`'s table: hash 0x7A07C7F6, `sirens`, type 0x0D, subtype 1, flags 0x0009, element size 0x48, capacity 20, offset 0x3C once registered; type, subtype, size and capacity stand from the start, read by the data window's boot of 2026-11-02.
+  Their element's lies at RVA 0x28EE488: hash 0x063FA3F2, `Item`, type 0x0C.
+  The parent's array of settings keeps its own element size, 0x5E8, in its member data at RVA 0x28EC470, hash 0x9AF814F5, `Sirens`, type 0x0D, subtype 0, a growing array.
+- **A siren setting's members,** each matched by its hash: `id` +0x00, `name` +0x5E0, `timeMultiplier` +0x04, `lightFalloffMax` +0x08, `lightFalloffExponent` +0x0C, `lightInnerConeAngle` +0x10, `lightOuterConeAngle` +0x14, `lightOffset` +0x18, `textureName` +0x1C, `sequencerBpm` +0x20, `leftHeadLight` +0x24, `rightHeadLight` +0x28, `leftTailLight` +0x2C, `rightTailLight` +0x30, `leftHeadLightMultiples` +0x34, right +0x35, `leftTailLightMultiples` +0x36, right +0x37, `useRealLights` +0x38, `sirens` +0x3C.
+  A light's: `rotation` +0x00, `flashiness` +0x14, `corona` +0x28, `color` +0x38, `intensity` +0x3C, `lightGroup` +0x40, `scaleFactor` +0x41, `scale` +0x42, `rotate` +0x43, `flash` +0x44, `light` +0x45, `spotLight` +0x46, `castShadows` +0x47.
+- **The array's tree reader** (RVA 0xAE6630, slot 1 of the array class, its vtable at RVA 0x261E520): it counts the node's children, calls RVA 0xACFCA0 with the member, the object, the count and 7, then reads each child into the array's base plus i x the element's size by the element's slot 1, and for subtypes 1 to 4 and 9 stops when i reaches the capacity.
+  RVA 0xACFCA0, for subtype 1, stores min(children, capacity) at ((size x capacity + 3) & ~3) + offset, so a fixed array's count lies behind its elements by rule.
+  So item 21 and on of an XML file's setting are dropped, the count 20, no message.
+  Every file through RVA 0xAC6B30 and 0xB05060 is first made a tree, so the same reader runs; a pack's binary file too (HINT: through the tree's own format check).
+- **A binary `carcols.ymt` through the base loader** (RVA 0x1349E40) loads member by member by name hash, each value read by the file's type and stored by the member's, and an array by the file's count with no limit (RVA 0xACF6F0): a file of more than the runtime capacity writes past the array, over the count, the name and the next setting, the game's own hazard, which the raise neither sees nor changes.
+- **The renderer's reads** (RVA 0xE9BCB0, read in full, its one caller RVA 0xE16F9C, run from the job at RVA 0xE15900 on worker threads): of the vehicle, never passed on to a call, +0x48 (its +0x20 a pointer kept for one float's store at its end), +0x6C and +0x80 (the matrix for the group lights, 16 bytes by a `movaps`), +0xDC, +0x860, +0x986 and +0x1380, and the vehicle's address itself, shifted, as the lights' shadow ID (its low 32 bits + 5 + i); of the model info the getter's argument at RVA 0xE9BD4E and +0xB0, nothing else.
+  Per light i: bit i of +0x860, the bone structure's +0x99 + i, the light, the state's 4 arrays and 2 masks, the skeleton by the bone's index.
+  A down-counter from 20 only scales a light's delta when its direction is reversed: delta x (20 - i), as a signed float, and delta x i forward.
+  A light's group, +0x40, indexes 4 stack entries unchecked, the game's own.
+  Coronas and lights go to the job's list, the 9th argument, each with its capacity check.
+- **The siren state:** one allocation, `I-E-Z2`, and one store of its pointer, at RVA 0xDCAA32, nothing copies it; the constructor RVA 0x1363630 leaves it zero but for the beat at +0x08, -1, and the start time at +0x00; its resets touch that state alone; the game frees it whole.
+  `operator new` gives 16-aligned memory.
+- **What no pattern protects:** that the renderer reads only those 7 fields of the vehicle and 2 of the model, so that after a game update the renderer is read again before these patterns are trusted (D40); that a setting's 20 lights are never changed after their load and are copied whole with their count 20 (RVA 0x1378210, 0x137A3D0), so a hash of their 1,440 bytes is the same at the parser and at the renderer; that the lights' order is the bones', item 20 + k being siren 21 + k; the tree's two fields and the element's call through slot 1.
+
+The sites: looked for with `SIRENS_PER_VEHICLE` above 20 alone, each matching exactly once in both dumps of 1.0.1158.16.
+
+| Label | Pattern | Use | 1.0.1158.16 | RVA |
+|---|---|---|---|---|
+| I-E-Z1 | `48 8B 8C 24 58 04 00 00 49 8B 45 48 48 8B 40 20 48 89 84 24 58 02 00 00 E8 ? ? ? ? 45 0F B7 BD DC 00 00 00 44 03 3D ? ? ? ? 49 8B 8D 80 13 00 00` | +24: the renderer's call of the siren settings getter, redirected, its target the one `I-E-B1` +24 leads to; +11 0x48, +15 0x20, +33 0xDC and +47 0x1380 pin the renderer's reads of the vehicle's fields; in the renderer by the unwind data | found | 0xE9BD36 |
+| I-E-Z2 | `B9 88 01 00 00 E8 ? ? ? ? 48 89 C3` | +1: 0x188, the siren state's allocation, written 0x16A8: the state, a second state at +0x190, a stand-in vehicle of 0x1388 bytes at +0x320 | found | 0xDCAA1B |
+| I-E-Z3 | `55 41 57 41 56 41 55 41 54 56 57 53 48 81 EC A8 00 00 00 48 8D AC 24 80 00 00 00 0F 29 75 10 48 89 D7 49 89 CD` | +0: the array member's tree reader, hooked, a function start by the unwind data; it keeps rcx, the member object, in r13 and rdx, the node, in rdi | found | 0xAE6630 |
+| I-E-Z4 | `41 8B 84 85 60 08 00 00 0F A3 E8 72 ? 48 8B 87 B0 00 00 00 48 85 C0 74 ? 48 8B 00 48 85 C0 74 ? 0F BE 84 28 99 00 00 00` | checked only: +4 0x860, the vehicle's broken sirens, +16 0xB0 and +37 0x99, `I-E-B2` with what stands before it; in the renderer by the unwind data | found | 0xE9C0AC |
+| I-E-Z5 | `41 0F B6 85 86 09 00 00 24 02` | checked only: +4 0x986, the vehicle's flag byte; in the renderer by the unwind data | found | 0xE9C80F |
+| I-E-Z6 | `41 0F B7 45 6C 83 E0 FD 83 F8 08 74 ? 44 0F 28 3D ? ? ? ? 83 F8 01 75 ? 45 0F 28 BD 80 00 00 00` | checked only: +4 0x6C and +30 0x80, the vehicle's fields for the group lights; in the renderer by the unwind data | found | 0xE9D05B |
+| I-E-Z7 | `48 8B 7F 38 48 85 FF 0F 84 ? ? ? ? 48 8B 75 D0 49 8B 45 08 B9 01 00 00 00 EB ? ? ? ? ? 8B 48 28 49 39 CE 0F 84 ? ? ? ? 48 8B 7F 30 49 8D 4E 01 48 85 FF 0F 84 ? ? ? ? 49 89 CE 4C 8D 41 FF 4C 0F AF 40 20` | checked only: +3 0x38, +20 the member data, +34 0x28, +47 0x30 and +72 0x20 pin the reader's node and member fields; in the tree reader by the unwind data | found | 0xAE69C0 |
+
 <!-- [siren damage] -->
 
 ## PedProps

@@ -11,6 +11,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <optional>
+#include <string>
 
 namespace TweaksV
 {
@@ -30,6 +31,20 @@ namespace TweaksV
 	// found is all it takes, whatever the sites after it hold - but the part goes through its patterns in order and stops at
 	// the first missing or not as the findings have it, so one before I-E-T4 leaves nothing here.
 	std::optional<SirenSettingsArray> SirenSettingsNow();
+
+	// What the sirens per vehicle take from this module's sites: the constructor of a siren setting, and the two tables of
+	// their parser registration, each entry a member's.
+	struct SirenSettingSites
+	{
+		const uint8_t* constructor;		// I-E-C1's match
+		const uint8_t* memberTable;		// I-E-P1's: the members' data, a pointer each
+		const uint8_t* offsetTable;		// and their offsets in a siren setting, a dword each
+	};
+
+	// Those sites, for the module that runs right after InitSirenIds: the matches it kept, since its writes change what I-E-C1
+	// matches, or, with the IDs left alone, a search of their own, kept too. Nothing without both; why then gets the reason in
+	// Scanner::NotAsOften's words unless it holds one already, and the tables inside the game and readable are what it checks.
+	std::optional<SirenSettingSites> FindSirenSettingSites(std::string& why);
 
 	// With LARGE_SIREN_IDS=0 or the part off: finds and checks every site of the limit, logs each one and starts the
 	// measurement; writes nothing to the game. With the part at work it does nothing: InitSirenIds measures then. Started

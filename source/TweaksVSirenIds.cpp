@@ -781,7 +781,8 @@ namespace TweaksV
 		{
 			std::string notFound;
 			for (size_t i = 0; i < kMatchCount; i++)
-				g_matches[i] = Scanner::FindOnce(*kLimitPatterns[i], notFound);
+				if (!g_matches[i])	// the sirens per vehicle's, which ran before, keep their two
+					g_matches[i] = Scanner::FindOnce(*kLimitPatterns[i], notFound);
 			KeepCarcolsPointer();
 			if (!notFound.empty())
 			{
@@ -1185,6 +1186,22 @@ namespace TweaksV
 		if (!carcols || !ReadSettings(carcols, settings))
 			return std::nullopt;
 		return SirenSettingsArray{ settings.array, settings.count, kSettingSize };
+	}
+
+	std::optional<SirenSettingSites> FindSirenSettingSites(std::string& why)
+	{
+		for (const Match match : { kC1, kP1 })
+			if (!g_matches[match])
+				g_matches[match] = Scanner::FindOnce(*kLimitPatterns[match], why);
+		if (!g_matches[kC1] || !g_matches[kP1])
+			return std::nullopt;
+		if (!Readable(g_matches[kP1] + kOffsetsAt, sizeof(int32_t), "lea of the siren settings' offsets table", kLimitPatterns[kP1]->label))
+		{
+			if (why.empty())
+				why = g_why;
+			return std::nullopt;
+		}
+		return SirenSettingSites{ g_matches[kC1], Rel32Target(g_matches[kP1] + kMemberTableAt), Rel32Target(g_matches[kP1] + kOffsetsAt) };
 	}
 
 	void InitSirenIds()

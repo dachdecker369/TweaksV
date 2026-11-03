@@ -204,6 +204,17 @@ namespace TweaksV
 		{ "I-E-B3", "0F BE 94 18 AD 00 00 00 48 8B 8E C0 09 00 00" },
 		{ "I-E-B4", "41 57 41 56 41 55 41 54 56 57 53 48 83 EC 20 66 83 79 5E 00" },
 		// [siren lights]
+		// SirenSettings, the sirens per vehicle's lights (TweaksVSirenCount.cpp): the renderer's call of the siren settings getter (Z1), redirected;
+		// the siren state's allocation (Z2), written; the start of the array member's tree reader (Z3), hooked; and, checked only, the renderer's
+		// reads of the vehicle's broken sirens through the bone's (Z4), of a flag byte (Z5) and for its group lights (Z6), and the reader's walk
+		// over a node's children (Z7)
+		{ "I-E-Z1", "48 8B 8C 24 58 04 00 00 49 8B 45 48 48 8B 40 20 48 89 84 24 58 02 00 00 E8 ? ? ? ? 45 0F B7 BD DC 00 00 00 44 03 3D ? ? ? ? 49 8B 8D 80 13 00 00" },
+		{ "I-E-Z2", "B9 88 01 00 00 E8 ? ? ? ? 48 89 C3" },
+		{ "I-E-Z3", "55 41 57 41 56 41 55 41 54 56 57 53 48 81 EC A8 00 00 00 48 8D AC 24 80 00 00 00 0F 29 75 10 48 89 D7 49 89 CD" },
+		{ "I-E-Z4", "41 8B 84 85 60 08 00 00 0F A3 E8 72 ? 48 8B 87 B0 00 00 00 48 85 C0 74 ? 48 8B 00 48 85 C0 74 ? 0F BE 84 28 99 00 00 00" },
+		{ "I-E-Z5", "41 0F B6 85 86 09 00 00 24 02" },
+		{ "I-E-Z6", "41 0F B7 45 6C 83 E0 FD 83 F8 08 74 ? 44 0F 28 3D ? ? ? ? 83 F8 01 75 ? 45 0F 28 BD 80 00 00 00" },
+		{ "I-E-Z7", "48 8B 7F 38 48 85 FF 0F 84 ? ? ? ? 48 8B 75 D0 49 8B 45 08 B9 01 00 00 00 EB ? ? ? ? ? 8B 48 28 49 39 CE 0F 84 ? ? ? ? 48 8B 7F 30 49 8D 4E 01 48 85 FF 0F 84 ? ? ? ? 49 89 CE 4C 8D 41 FF 4C 0F AF 40 20" },
 		// [siren damage]
 
 		// PedProps (TweaksVPedProps.cpp): the eleven narrowings to 8 bits the part widens - an anchor's total in the check
