@@ -207,10 +207,17 @@ namespace TweaksV
 		}
 		for (const CodeWrite& write : writes)	// and the new code visible to the processor
 			FlushInstructionCache(GetCurrentProcess(), write.address, write.bytes.size());
-		if (diagnostic)
-			for (size_t i = 0; i < writes.size(); i++)
-				WriteLog(tag, "DIAGNOSTIC: " + writes[i].what + " at " + DescribeAddress(writes[i].address) + ": " + before[i] + " -> " +
-					HexBytes(writes[i].address, writes[i].bytes.size()));
+		// The bytes are in: lines that cannot be made, with the process out of memory, must not tell the caller otherwise.
+		try
+		{
+			if (diagnostic)
+				for (size_t i = 0; i < writes.size(); i++)
+					WriteLog(tag, "DIAGNOSTIC: " + writes[i].what + " at " + DescribeAddress(writes[i].address) + ": " + before[i] + " -> " +
+						HexBytes(writes[i].address, writes[i].bytes.size()));
+		}
+		catch (...)
+		{
+		}
 		return true;
 	}
 

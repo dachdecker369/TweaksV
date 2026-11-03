@@ -159,7 +159,7 @@ namespace TweaksV
 		Number(kStaticBoundsSection, "STATICBOUNDS_SIZE", 16000, 1, 32767, "Number of static collision bounds - Maximum 32767"),
 	};
 
-	// The keys the default TweaksV.ini holds: layout 5 has 46.
+	// The keys the default TweaksV.ini holds: layout 5 has 47.
 	consteval size_t IniKeyCount()
 	{
 		size_t keys = 0;
