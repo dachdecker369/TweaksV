@@ -38,6 +38,7 @@ SUITES=(
 	sirenids
 	sirencount
 	# [siren damage]
+	sirendamage
 	staticbounds
 	population
 	pedpool

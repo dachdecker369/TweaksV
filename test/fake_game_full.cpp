@@ -653,6 +653,24 @@
 //   rqbad:WHAT:N   the site WHAT, N the pool, the family or the call it asks for, as RqSetUp has them, not as the research found it; no site runs then
 //   rqrvas         the report's "rq rvas: ..." field, with every site's RVA, for the suite to compare with the log
 // [siren damage]
+// The sirens per vehicle's damage (TweaksVSirenDamage): its sites as code the fake runs (SdSetUp), always; what the report says of them, "sd sites: ...", always.
+//   sdrun          once TweaksV has started: the pool set up by its site's stride, seven models made through the call at the site - one made for
+//                  20 sirens, one for 32 whose names past siren20 are in other cases, one for 24, one with a few here and there, a plane with gear doors in
+//                  its first glass slots, one with bones past what a signed byte names, one with 8 sirens - and every loop run on them
+//   sdnoholder     with sdrun: one more model, whose model info's +0xB0 is null, as the game's readers allow
+//   sdbadholder    with sdrun: the same, its +0xB0 at an address that cannot be read
+//   sdfillfault    with sdrun: one more model, on which the game's fill faults when TweaksV calls it
+//   sdmany         with sdrun: 20,001 more models with bones past siren20
+//   sdchanged:L    the site of pattern L changed as another mod would, by a byte the pattern pins, the first of three; no loop runs then, nor with the ones below
+//   sdfar:L        the site of pattern L away from the loop it belongs to
+//   sdfourth:L     one more copy of pattern L
+//   sdhooked       the call of the function that makes a bone structure already leads outside the game (another mod redirected it)
+//   sdelsewhere    that call leads to another function of the game than the one the allocation lies in
+//   sdallocout     the allocation's pattern where no unwind data names a function
+//   sdnotstart     the fill's pattern 16 bytes into its function
+//   sdnounwind     the fill's pattern where no unwind data names a function
+//   sdpoolmade     the bone structures' pool made before TweaksV starts
+//   sdpoolshape    the instruction before the allocation not the load of the pool
 // [corona store]
 #include <windows.h>
 #include <winternl.h>
@@ -1508,6 +1526,21 @@ static Site g_rqSites[] = { SITE(g_rqMakeS1, 0), SITE(g_rqMakeS2, 0), SITE(g_rqM
 #pragma section(".rqedge", read, execute)
 __declspec(allocate(".rqedge")) volatile unsigned char g_rqEdge[0x2000] = { 0xCC };
 // [siren damage]
+// The sirens per vehicle's damage: the loops, the pool's set-up and the caller as code, written by SdSetUp; the stored damage state's loop, which stays at 20;
+// room where an option moves a site, far from every other site.
+volatile unsigned char g_sdHit[0xB0] = { 0xCC };
+volatile unsigned char g_sdImpact[0x80] = { 0xCC };
+volatile unsigned char g_sdHide[0x48] = { 0xCC };
+volatile unsigned char g_sdWreck[0x40] = { 0xCC };
+volatile unsigned char g_sdFlags[0x60] = { 0xCC };
+volatile unsigned char g_sdClasses[3][0x60] = { { 0xCC }, { 0xCC }, { 0xCC } };
+volatile unsigned char g_sdPoolSite[0x20] = { 0xCC };
+volatile unsigned char g_sdCaller[0x28] = { 0xCC };
+volatile unsigned char g_sdKept[0x09] = { 0xCC };
+volatile unsigned char g_sdSync[0x28] = { 0xCC };
+volatile unsigned char g_sdSpare[0x800] = { 0xCC };
+static Site g_sdSites[] = { SITE(g_sdHit, 0), SITE(g_sdImpact, 0), SITE(g_sdHide, 0), SITE(g_sdWreck, 0), SITE(g_sdFlags, 0), SITE(g_sdClasses[0], 0), SITE(g_sdClasses[1], 0),
+	SITE(g_sdClasses[2], 0), SITE(g_sdPoolSite, 0), SITE(g_sdCaller, 0), SITE(g_sdKept, 0), SITE(g_sdSync, 0), SITE(g_sdSpare, 0) };
 // [corona store]
 #pragma data_seg()
 
@@ -8136,6 +8169,698 @@ static void RqReport(int argc, wchar_t** argv)
 }
 
 // [siren damage]
+// The sirens per vehicle's damage (TweaksVSirenDamage): the game's damage code as code that runs, around the patterns' bytes, so that
+// what TweaksV writes is read by the real instructions. SdSetUp writes each loop into .fakesit, and the function that makes a bone
+// structure and the game's fill over carriers its unwind data names, as the siren count does; each loop reads its bones where the game's
+// does, so the numbers it leaves are the raise's.
+//   the caller (I-E-Y3)    mov rsi, rcx, then the site's two calls: the maker, or TweaksV's stub, and the fake's next function
+//   the maker (I-E-Y2)     a jump on to SdMaker, its allocation and constructor behind it, which SdMaker runs with the pool in rcx
+//   the fill (I-E-Y4)      the game's prologue and first call, undone at once, and a jump on to SdFill
+//   a hit                  rcx the vehicle, rdx the structure, r8d a bone: for that bone's siren the vehicle's +0x860 bit and +0x865, and its glass's child
+//   an impact              rcx the vehicle, its +0x408 the structure, rdx the damage object, r8d a bone: the object's +0x440 bit and +0x445, and the glass's child
+//   the hiding             rcx the damage object, rdx the structure, r8 a byte per bone: each marked siren's bone hidden
+//   a wreck                rcx the vehicle, its +0x408 the structure: the +0x860 bit of each siren whose bone exists
+//   the flags, the classes rcx the vehicle, through +0x20 and +0xB0 to the structure: each glass bone's child gets 0x17FFFFE0, in the array at +0x90
+struct SdBone
+{
+	char name[24];
+	uint16_t index;
+	uint16_t tag;
+};
+constexpr int kSdBones = 100;
+struct SdModel
+{
+	unsigned char head[0x18];
+	uint32_t hash;						// +0x18: the hash of the model's name
+	unsigned char a[0xB0 - 0x1C];
+	void* const* holder;				// +0xB0: the holder of its bone structure
+	unsigned char b[0x340 - 0xB8];
+	uint32_t type;						// +0x340: 8 and 1 have a third table, gear doors in the first glass slots
+	unsigned char c[0x54B - 0x344];
+	unsigned char flags;				// +0x54B: what the caller's site tests
+	void* holding;						// the fake's own from here on: the holder's +0x00, the bone structure
+	bool faults;						// the game's fill faults on TweaksV's table
+	int named;
+	SdBone bones[kSdBones];				// its skeleton's bones with a name
+	unsigned char made[0x34C];			// the bone structure as the game made it, before the wrapper
+};
+static_assert(offsetof(SdModel, hash) == 0x18 && offsetof(SdModel, holder) == 0xB0 && offsetof(SdModel, type) == 0x340 && offsetof(SdModel, flags) == 0x54B,
+	"the damage's models lie at the game's offsets");
+struct SdEntry
+{
+	const char* name;
+	int32_t id;
+};
+static_assert(sizeof(SdEntry) == 16, "an entry of the game's tables of bones");
+struct SdVehicle
+{
+	unsigned char head[0x20];
+	const SdModel* model;				// +0x20
+	unsigned char a[0x90 - 0x28];
+	uint32_t* children;					// +0x90: the flags of the fragment's children
+	unsigned char b[0x408 - 0x98];
+	const void* structure;				// +0x408
+	unsigned char c[0x440 - 0x410];
+	uint32_t marked;					// +0x440: the damage object's set
+	unsigned char d;
+	unsigned char markedByte;			// +0x445
+	unsigned char e[0x860 - 0x446];
+	uint32_t broken;					// +0x860: the vehicle's broken sirens
+	unsigned char f;
+	unsigned char brokenByte;			// +0x865
+	unsigned char g[0x9C0 - 0x866];
+	const void* fragment;				// +0x9C0
+};
+static_assert(offsetof(SdVehicle, model) == 0x20 && offsetof(SdVehicle, children) == 0x90 && offsetof(SdVehicle, structure) == 0x408 && offsetof(SdVehicle, marked) == 0x440 &&
+	offsetof(SdVehicle, markedByte) == 0x445 && offsetof(SdVehicle, broken) == 0x860 && offsetof(SdVehicle, brokenByte) == 0x865 && offsetof(SdVehicle, fragment) == 0x9C0,
+	"the damage's vehicles lie at the game's offsets");
+
+enum { kSdPolice, kSdFull, kSdSome, kSdSparse, kSdPlane, kSdLost, kSdFew, kSdDrawn, kSdNoHolder = kSdDrawn, kSdFault, kSdManyModel, kSdModels };
+static SdModel g_sdModels[kSdModels];
+static unsigned char* volatile g_sdPool = nullptr;	// made once TweaksV has started, as the game makes it; the allocation's load reads it
+static uint32_t g_sdStride = 0, g_sdAllocation = 0, g_sdElements = 0, g_sdUsed = 0;
+static int g_sdTraps = 0, g_sdMade = 0, g_sdArgsBad = 0, g_sdKeptBoth = 0, g_sdOwnFills = 0, g_sdOwnEntries = 0, g_sdFillStarts = 0, g_sdChildBad = 0;
+static uint32_t g_sdOwnFlag = 0xFFFFFFFF;
+static unsigned char g_sdTrapped[0x400];
+static bool g_sdBuilt = false, g_sdStopped = false, g_sdRan = false;
+static volatile uint64_t g_sdMakerResult = 0;
+static SdEntry g_sdBase[41], g_sdExtra[15];
+static uint16_t g_sdBaseTags[40], g_sdExtraTags[14];
+static char g_sdNames[54][24];
+static const volatile int* volatile g_sdNowhere = nullptr;
+static volatile int g_sdSink = 0;
+static const void* volatile g_sdMakerTarget = nullptr;
+static const void* volatile g_sdFillTarget = nullptr;
+static size_t g_sdMakerRoom = 0, g_sdFillRoom = 0;
+constexpr uint64_t kSdSecond = 0x2222222222222222ull, kSdThird = 0x3333333333333333ull, kSdFourth = 0x4444444444444444ull;
+constexpr uint64_t kSdResult = 0x5D5D5D5D0000F00Dull;
+constexpr DWORD kSdLastError = 0x5158;
+constexpr size_t kSdAllocAt = 8;		// in the maker's carrier: the allocation, behind the jump
+constexpr int kSdPoolRel32 = 8, kSdAllocRel32 = 18, kSdConstructRel32 = 29, kSdAllocationAt = 12;	// in the allocation: the pool's load's disp32, its two calls' rel32, I-E-Y2
+constexpr int kSdMakerRel32 = 12, kSdNextRel32 = 20;		// in the caller: I-E-Y3's two calls' rel32
+constexpr int kSdFillStartRel32 = 29, kSdFillJumpAt = 61;	// in the fill: its first call's rel32, the jump on to SdFill
+
+// The tag the game knows a bone by, as the findings have it: letters folded to upper case, an ELF-style hash, modulo 0xFE8F, plus 0x170.
+static uint16_t SdTag(const char* name)
+{
+	uint32_t hash = 0;
+	for (; *name; name++)
+	{
+		hash = (hash << 4) + static_cast<unsigned char>(*name >= 'a' && *name <= 'z' ? *name - 'a' + 'A' : *name);
+		const uint32_t top = hash & 0xF0000000u;
+		hash = (hash ^ (top >> 24)) & ~top;
+	}
+	return static_cast<uint16_t>(hash % 0xFE8Fu + 0x170u);
+}
+
+// The game's allocator: it traps at a size of 0, a size above the stride or a full pool.
+static unsigned char* SdAllocate(unsigned char* pool, uint32_t size)
+{
+	g_sdAllocation = size;
+	if (size == 0 || size > g_sdStride || g_sdUsed >= g_sdElements)
+	{
+		g_sdTraps++;
+		return g_sdTrapped;
+	}
+	return pool + static_cast<size_t>(g_sdStride) * g_sdUsed++;
+}
+
+// The bone structure's constructor: the set at +0x00, the table of bones and to +0x2A8 all 0xFF, then fields to 0x34C. What lies past that,
+// a pool's own bytes, it leaves.
+static void SdConstruct(unsigned char* structure)
+{
+	memset(structure, 0xFF, 0x10);
+	memset(structure + 0x10, 0xFF, 0x298);
+	for (size_t i = 0x2A8; i < 0x34C; i++)
+		structure[i] = static_cast<unsigned char>(i);
+}
+
+// The game's fill: for each entry until a null name the bone by its tag and, if found, the low byte of its index at 0x10 + the entry's ID, unchecked.
+// With a table outside the game it is TweaksV's call; a model that faults faults then, three of the table's bones in.
+static void SdFill(const SdModel* model, const SdEntry* table, const uint16_t* tags, uint32_t flag)
+{
+	const bool own = !InImage(table);
+	if (own)
+	{
+		g_sdOwnFills++;
+		g_sdOwnFlag = flag;
+	}
+	unsigned char* const structure = static_cast<unsigned char*>(model->holding);
+	int k = 0;
+	for (; table[k].name; k++)
+	{
+		if (own && model->faults && k == 3)
+			g_sdSink = *g_sdNowhere;
+		for (int i = 0; i < model->named; i++)
+			if (model->bones[i].tag == tags[k])
+			{
+				structure[0x10 + table[k].id] = static_cast<unsigned char>(model->bones[i].index);
+				break;
+			}
+	}
+	if (own)
+		g_sdOwnEntries = k;
+}
+static void SdFillStart(const SdModel*)
+{
+	g_sdFillStarts++;
+}
+
+// The carriers: functions with frames of their own, so that the fake's unwind data names them, and room for their stand-ins.
+static __declspec(noinline) void SdMakerCarrier()
+{
+	volatile int frame[16];
+	for (int i = 0; i < 16; i++)
+		frame[i] = g_sdSink + 7 * i;
+	for (int i = 1; i < 16; i++)
+		frame[i] = frame[i] + (frame[i - 1] ^ 0x5DA7);
+	g_sdSink = frame[3] + frame[8] + frame[13];
+}
+static __declspec(noinline) void SdFillCarrier()
+{
+	volatile int frame[16];
+	for (int i = 0; i < 16; i++)
+		frame[i] = g_sdSink - 9 * i;
+	for (int i = 1; i < 16; i++)
+		frame[i] = frame[i] + (frame[i - 1] ^ 0xF177);
+	g_sdSink = frame[2] + frame[7] + frame[12];
+}
+
+// The function that makes a structure, behind its jump: the allocation and the constructor as code, the game's fills, what it made kept for
+// the suite's comparison. It gives a result and a last error of its own, which the caller's site hands on and looks at.
+static uint64_t SdMaker(SdModel* model, uint64_t second, uint64_t third, uint64_t fourth)
+{
+	g_sdMade++;
+	if (second != kSdSecond || third != kSdThird || fourth != kSdFourth)
+		g_sdArgsBad++;
+	using Allocation = unsigned char* (*)();
+	unsigned char* const structure = reinterpret_cast<Allocation>(SirenCountCode(&SdMakerCarrier) + kSdAllocAt)();
+	model->holding = structure;
+	SdFill(model, g_sdBase, g_sdBaseTags, 0);
+	if (model->type == 8 || model->type == 1)
+		SdFill(model, g_sdExtra, g_sdExtraTags, 1);
+	memcpy(model->made, structure, sizeof(model->made));
+	SetLastError(kSdLastError);
+	return kSdResult;
+}
+
+// What the fragment answers about a bone: its child, here its index, which the flags' loops index their array by; the hit's and the
+// impact's calls of it break the child.
+static unsigned char g_sdAsked[128], g_sdHidden[128];
+static uint32_t g_sdChildren[128];
+static SdVehicle g_sdVehicle;
+static uint64_t SdChild(const void* fragment, int bone)
+{
+	if (fragment != &g_sdVehicle || bone < 0 || bone >= 128)
+	{
+		g_sdChildBad++;
+		return ~uint64_t{ 0 };
+	}
+	g_sdAsked[bone] = 1;
+	return static_cast<uint64_t>(bone);
+}
+
+// A place of each pattern in its code: the label, where its bytes start and how many, and the byte it pins that "sdchanged" changes.
+struct SdPlace
+{
+	const wchar_t* label;
+	volatile unsigned char* code;
+	int at, length, pinned;
+};
+// An operand TweaksV writes: what the game holds there and what it holds raised, raised + perSiren x N.
+struct SdOperand
+{
+	volatile unsigned char* code;
+	int at, size;
+	int32_t raised, perSiren;
+};
+static unsigned char g_sdPlaced[10][0x800];
+static int32_t g_sdAllocationPlaced = 0;
+static const SdOperand g_sdOperands[] = {
+	{ g_sdHit, 36, 4, 0x33C, 0 }, { g_sdHit, 0x38, 4, 0x33C, 1 }, { g_sdHit, 0x44, 4, -0x33C, 0 }, { g_sdHit, 0x7F, 1, 0x30, 0 },
+	{ g_sdImpact, 0x18, 1, 0, 1 }, { g_sdImpact, 0x2E, 4, 0x34C, 0 }, { g_sdImpact, 0x5B, 4, 0x36C, 0 },
+	{ g_sdHide, 0x13, 1, 0, 1 }, { g_sdHide, 0x2E, 4, 0x34C, 0 },
+	{ g_sdWreck, 11, 1, 0, 1 }, { g_sdWreck, 0x1C, 4, 0x34C, 0 },
+	{ g_sdFlags, 0x12, 1, 0, 1 }, { g_sdFlags, 0x27, 4, 0x36C, 0 },
+	{ g_sdClasses[0], 16, 4, 0, -1 }, { g_sdClasses[1], 16, 4, 0, -1 }, { g_sdClasses[2], 16, 4, 0, -1 },
+	{ g_sdClasses[0], 0x26, 4, 0x36C, 1 }, { g_sdClasses[1], 0x26, 4, 0x36C, 1 }, { g_sdClasses[2], 0x26, 4, 0x36C, 1 },
+	{ g_sdPoolSite, 8, 4, 0x38C, 0 },
+};
+constexpr int kSdOperands = 20;	// and the allocation's, in its carrier
+static_assert(sizeof(g_sdOperands) / sizeof(g_sdOperands[0]) == kSdOperands, "19 damage writes and the pool's");
+static const struct { volatile unsigned char* code; size_t size; } g_sdCode[] = { { g_sdHit, sizeof(g_sdHit) }, { g_sdImpact, sizeof(g_sdImpact) }, { g_sdHide, sizeof(g_sdHide) },
+	{ g_sdWreck, sizeof(g_sdWreck) }, { g_sdFlags, sizeof(g_sdFlags) }, { g_sdClasses[0], sizeof(g_sdClasses[0]) }, { g_sdClasses[1], sizeof(g_sdClasses[1]) },
+	{ g_sdClasses[2], sizeof(g_sdClasses[2]) }, { g_sdPoolSite, sizeof(g_sdPoolSite) }, { g_sdSync, sizeof(g_sdSync) } };
+
+static int32_t SdValueAt(const volatile unsigned char* at, int size)
+{
+	if (size == 1)
+		return *at;
+	uint32_t value = 0;
+	for (int i = 0; i < 4; i++)
+		value |= static_cast<uint32_t>(at[i]) << (8 * i);
+	return static_cast<int32_t>(value);
+}
+
+// How the code stands against what was placed: as placed, or the operands raised to one N and nothing else.
+static const wchar_t* SdSitesState()
+{
+	static wchar_t text[64];
+	const volatile unsigned char* const allocation = SirenCountCode(&SdMakerCarrier) + kSdAllocAt + kSdAllocationAt;
+	const int n = SdValueAt(g_sdHit + 0x38, 4) - 0x33C;
+	bool placed = SdValueAt(allocation + 1, 4) == g_sdAllocationPlaced, raised = n > 20 && n <= 32 && SdValueAt(allocation + 1, 4) == 0x38C, other = false;
+	for (size_t c = 0; c < sizeof(g_sdCode) / sizeof(g_sdCode[0]); c++)
+		for (size_t i = 0; i < g_sdCode[c].size; i++)
+		{
+			const volatile unsigned char* const at = g_sdCode[c].code + i;
+			bool operand = false;
+			for (const SdOperand& o : g_sdOperands)
+				operand = operand || (at >= o.code + o.at && at < o.code + o.at + o.size);
+			if (*at != g_sdPlaced[c][i])
+			{
+				placed = false;
+				other = other || !operand;
+			}
+		}
+	for (const SdOperand& o : g_sdOperands)
+		if (SdValueAt(o.code + o.at, o.size) != (o.size == 1 ? (o.raised + o.perSiren * n) & 0xFF : o.raised + o.perSiren * n))
+			raised = false;
+	if (placed)
+		return L"as placed";
+	if (!raised || other)
+		return L"NOT AS WRITTEN";
+	swprintf_s(text, L"raised to %d, nothing else", n);
+	return text;
+}
+
+// Where the call of the maker leads now: the maker, TweaksV's call stub, another mod or another function of the game.
+static const wchar_t* SdWhere()
+{
+	const unsigned char* const target = Rel32Target(Site{ g_sdCaller, kSdMakerRel32, 0 });
+	if (target == SirenCountCode(&SdMakerCarrier))
+		return L"the maker";
+	if (InImage(target))
+		return L"another function of the game";
+	MEMORY_BASIC_INFORMATION info{};
+	if (VirtualQuery(target, &info, sizeof(info)) == sizeof(info) && info.State == MEM_COMMIT && memcmp(target, "\xFF\x25\x00\x00\x00\x00", 6) == 0)
+		return L"a TweaksV stub";
+	return L"another mod";
+}
+
+static void SdPut(volatile unsigned char* code, size_t size, const char* hex)
+{
+	for (size_t i = 0; i < size; i++)
+		code[i] = 0xCC;
+	SirenIdsPut(code, 0, hex);
+}
+
+// Before TweaksV loads: every loop written, its calls pointed; the carriers rewritten; what the options change, then what stands copied for the
+// comparison. Any option that changes a site stops the loops from running, each of which then has a site it does not know.
+static void SdSetUp(int argc, wchar_t** argv)
+{
+	SdPut(g_sdHit, sizeof(g_sdHit), "53 55 57 56 41 54 41 56 41 57 48 83 EC 40 44 0F 11 44 24 20 44 0F 11 5C 24 30 48 89 CB 49 89 D7 44 89 C6 BF 89 00 00 00 F3 44 0F 10 05 00 00 00 00 45 "
+		"0F 57 DB 48 81 FF 9D 00 00 00 0F 84 4F 00 00 00 8D AF 77 FF FF FF 41 BE 01 00 00 00 4C 89 F8 44 0F B6 64 38 10 41 80 FC FF 74 2F 41 39 F4 75 2A 89 E9 "
+		"41 D3 E6 44 09 B3 60 08 00 00 C6 83 65 08 00 00 01 48 89 D8 4C 89 F9 0F BE 54 39 24 48 8B 88 C0 09 00 00 E8 00 00 00 00 48 FF C7 EB A4 44 0F 10 44 24 "
+		"20 44 0F 10 5C 24 30 48 83 C4 40 41 5F 41 5E 41 5C 5E 5F 5D 5B C3");
+	SdPut(g_sdImpact, sizeof(g_sdImpact), "53 55 57 56 41 54 48 83 EC 20 49 89 CC 48 89 D7 44 89 C6 31 ED 48 83 FD 14 0F 84 51 00 00 00 49 8B 84 24 08 04 00 00 48 89 C1 0F BE 94 29 99 00 00 00 "
+		"BB 01 00 00 00 39 F2 75 30 89 E9 D3 E3 09 9F 40 04 00 00 C6 87 45 04 00 00 01 4C 89 E0 49 8B 8C 24 08 04 00 00 0F BE 94 29 AD 00 00 00 48 8B 88 C0 09 "
+		"00 00 E8 00 00 00 00 48 FF C5 EB A5 48 83 C4 20 41 5C 5E 5F 5D 5B C3");
+	SdPut(g_sdHide, sizeof(g_sdHide), "53 55 56 41 54 48 89 CE 49 89 D1 4D 89 C4 31 DB 48 83 FB 14 74 2B 89 D8 C1 E8 05 8B 84 86 40 04 00 00 0F A3 D8 73 15 4C 89 C8 0F BE AC 18 99 00 00 00 "
+		"83 FD FF 74 05 41 C6 04 2C 01 48 FF C3 EB CF 41 5C 5E 5D 5B C3");
+	SdPut(g_sdWreck, sizeof(g_sdWreck), "55 41 57 49 89 CF 31 C9 48 83 F9 14 74 2A 49 8B 87 08 04 00 00 48 89 C5 0F BE 94 0D 99 00 00 00 BD 01 00 00 00 83 FA FF 74 09 D3 E5 41 09 AF 60 08 00 "
+		"00 48 FF C1 EB D0 41 5F 5D C3");
+	SdPut(g_sdFlags, sizeof(g_sdFlags), "53 57 56 48 83 EC 20 48 89 CE 48 89 CF 31 DB 48 83 FB 14 74 3F 48 8B 46 20 48 8B 80 B0 00 00 00 48 8B 00 0F BE 94 18 AD 00 00 00 83 FA FF 74 1F 48 8B "
+		"8E C0 09 00 00 E8 00 00 00 00 83 F8 FF 74 0E 48 8B 8F 90 00 00 00 C7 04 81 E0 FF FF 17 48 FF C3 EB BB 48 83 C4 20 5E 5F 5B C3");
+	for (auto& code : g_sdClasses)
+	{
+		SdPut(code, sizeof(code), "53 57 56 48 83 EC 20 48 89 CE 48 89 CF 48 C7 C3 EC FF FF FF 48 8B 46 20 48 8B 80 B0 00 00 00 48 8B 00 0F BE 94 18 C1 00 00 00 83 FA FF 74 1F 48 8B 8E "
+			"C0 09 00 00 E8 00 00 00 00 83 F8 FF 74 0E 48 8B 8F 90 00 00 00 C7 04 81 E0 FF FF 17 48 FF C3 75 C1 48 83 C4 20 5E 5F 5B C3");
+		SetRel32({ code, 55, 0 }, reinterpret_cast<const void*>(&SdChild));
+	}
+	SetRel32({ g_sdHit, 136, 0 }, reinterpret_cast<const void*>(&SdChild));
+	SetRel32({ g_sdImpact, 103, 0 }, reinterpret_cast<const void*>(&SdChild));
+	SetRel32({ g_sdFlags, 56, 0 }, reinterpret_cast<const void*>(&SdChild));
+	SdPut(g_sdPoolSite, sizeof(g_sdPoolSite), "48 83 EC 28 C7 44 24 20 4C 03 00 00 4C 8D 05 00 00 00 00 8B 44 24 20 48 83 C4 28 C3");
+	SdPut(g_sdCaller, sizeof(g_sdCaller), "56 48 83 EC 20 48 89 CE 48 89 F1 E8 00 00 00 00 48 89 F1 E8 00 00 00 00 F6 86 4B 05 00 00 10 48 83 C4 20 5E C3");
+	SdPut(g_sdKept, sizeof(g_sdKept), "48 89 05 00 00 00 00 C3");
+	SetRel32({ g_sdKept, 3, 0 }, const_cast<const uint64_t*>(&g_sdMakerResult));
+	SetRel32({ g_sdCaller, kSdNextRel32, 0 }, const_cast<const unsigned char*>(g_sdKept));
+	// the stored damage state's loop and read, which stay at 20: TweaksV looks for neither
+	SdPut(g_sdSync, sizeof(g_sdSync), "48 83 FD 14 0F 84 00 00 00 00 41 0F B6 84 2D F4 00 00 00 CC 0F BE 9C 28 AD 00 00 00 48 8B 06 48 89 F1");
+	for (size_t i = 0; i < sizeof(g_sdSpare); i++)
+		g_sdSpare[i] = 0xCC;
+
+	// the carriers
+	unsigned char* const maker = SirenCountCode(&SdMakerCarrier);
+	unsigned char* const fill = SirenCountCode(&SdFillCarrier);
+	constexpr size_t kAllocationSize = 42, kFillSize = 67, kNotStartAt = 16;
+	g_sdMakerRoom = SirenCountRoom(maker, kSdAllocAt + kAllocationSize + 1);
+	g_sdFillRoom = SirenCountRoom(fill, kNotStartAt + kFillSize + 1);
+	g_sdBuilt = g_sdMakerRoom != 0 && g_sdFillRoom != 0;
+	if (!g_sdBuilt)
+		return;
+	static const char kFillCode[] = "41 57 41 56 41 55 41 54 56 57 55 53 48 83 EC 28 45 89 CE 4D 89 C5 48 89 D3 49 89 CF E8 00 00 00 00 4C 89 F9 48 89 DA 4D 89 E8 45 89 F1 48 83 C4 28 5B "
+		"5D 5F 5E 41 5C 41 5D 41 5E 41 5F";
+	static const char kAllocationCode[] = "57 48 83 EC 20 48 8B 0D 00 00 00 00 BA 4C 03 00 00 E8 00 00 00 00 48 89 C7 48 89 C1 E8 00 00 00 00 48 89 F8 48 83 C4 20 5F C3";
+	const bool allocationOut = HasOption(argc, argv, L"sdallocout"), notStart = HasOption(argc, argv, L"sdnotstart"), noUnwind = HasOption(argc, argv, L"sdnounwind");
+	g_sdMakerTarget = reinterpret_cast<const void*>(&SdMaker);
+	g_sdFillTarget = reinterpret_cast<const void*>(&SdFill);
+	DWORD makerOld = 0, fillOld = 0, unused = 0;
+	VirtualProtect(maker, g_sdMakerRoom, PAGE_EXECUTE_READWRITE, &makerOld);
+	VirtualProtect(fill, g_sdFillRoom, PAGE_EXECUTE_READWRITE, &fillOld);
+	memset(maker, 0xCC, g_sdMakerRoom);
+	memset(fill, 0xCC, g_sdFillRoom);
+	SirenCountJump(maker, &g_sdMakerTarget);
+	if (allocationOut)
+		SirenIdsPut(g_sdSpare, 0x600, kAllocationCode);		// the allocation's pattern where no unwind data names a function
+	else
+	{
+		SirenIdsPut(maker, kSdAllocAt, kAllocationCode);
+		SetRel32({ maker + kSdAllocAt, kSdPoolRel32, 0 }, const_cast<unsigned char* const*>(&g_sdPool));
+		if (HasOption(argc, argv, L"sdpoolshape"))
+			maker[kSdAllocAt + kSdPoolRel32 - 2] = 0x8D;	// a lea, not the load: another shape; no loop runs then
+		SetRel32({ maker + kSdAllocAt, kSdAllocRel32, 0 }, reinterpret_cast<const void*>(&SdAllocate));
+		SetRel32({ maker + kSdAllocAt, kSdConstructRel32, 0 }, reinterpret_cast<const void*>(&SdConstruct));
+	}
+	if (noUnwind)
+		SirenIdsPut(g_sdSpare, 0x680, kFillCode);			// the fill's pattern where no unwind data names a function
+	else
+	{
+		unsigned char* const code = fill + (notStart ? kNotStartAt : 0);
+		SirenIdsPut(code, 0, kFillCode);
+		SetRel32({ code, kSdFillStartRel32, 0 }, reinterpret_cast<const void*>(&SdFillStart));
+		SirenCountJump(code + kSdFillJumpAt, &g_sdFillTarget);
+	}
+	SetRel32({ g_sdCaller, kSdMakerRel32, 0 }, HasOption(argc, argv, L"sdhooked") ? static_cast<const void*>(ImageEnd() + 0x76000) :
+		HasOption(argc, argv, L"sdelsewhere") ? static_cast<const void*>(fill) : static_cast<const void*>(maker));
+	g_sdStopped = allocationOut || notStart || noUnwind || HasOption(argc, argv, L"sdhooked") || HasOption(argc, argv, L"sdelsewhere") ||
+		HasOption(argc, argv, L"sdpoolshape") || HasOption(argc, argv, L"sdpoolmade");
+	if (HasOption(argc, argv, L"sdpoolmade"))
+		g_sdPool = g_sdTrapped;		// the pool made before TweaksV starts
+
+	// sdchanged:LABEL, sdfar:LABEL, sdfourth:LABEL
+	const SdPlace places[] = {
+		{ L"I-E-X1", g_sdHit, 35, 18, 1 }, { L"I-E-X2", g_sdHit, 0x35, 25, 3 }, { L"I-E-X3", g_sdHit, 0x7B, 13, 4 }, { L"I-E-X4", g_sdHit, 0x51, 10, 5 },
+		{ L"I-E-L05", g_sdImpact, 0x15, 18, 3 }, { L"I-E-N04", g_sdImpact, 0x2A, 13, 4 }, { L"I-E-N05", g_sdImpact, 0x57, 15, 4 },
+		{ L"I-E-L03", g_sdHide, 0x10, 18, 3 }, { L"I-E-N03", g_sdHide, 0x2A, 13, 4 },
+		{ L"I-E-L04", g_sdWreck, 8, 13, 3 }, { L"I-E-N02", g_sdWreck, 0x18, 13, 4 },
+		{ L"I-E-L07", g_sdFlags, 0xF, 17, 3 }, { L"I-E-N06", g_sdFlags, 0x23, 37, 4 },
+		{ L"I-E-L08", g_sdClasses[0], 13, 7, 3 }, { L"I-E-N09", g_sdClasses[0], 0x22, 12, 4 },
+		{ L"I-E-Y1", g_sdPoolSite, 4, 11, 4 }, { L"I-E-Y2", maker + kSdAllocAt, kSdAllocationAt, 17, 1 }, { L"I-E-Y3", g_sdCaller, 8, 23, 0 }, { L"I-E-Y4", fill, 0, 29, 0 } };
+	for (int i = 1; i < argc; i++)
+		for (const SdPlace& place : places)
+		{
+			const volatile unsigned char* const bytes = place.code + place.at;
+			if (wcsncmp(argv[i], L"sdchanged:", 10) == 0 && wcscmp(argv[i] + 10, place.label) == 0)
+			{
+				place.code[place.at + place.pinned] ^= 0x01;
+				g_sdStopped = true;
+			}
+			if (wcsncmp(argv[i], L"sdfar:", 6) == 0 && wcscmp(argv[i] + 6, place.label) == 0)
+			{
+				for (int k = 0; k < place.length; k++)
+					g_sdSpare[0x400 + k] = bytes[k];
+				place.code[place.at] ^= 0x01;
+				g_sdStopped = true;
+			}
+			if (wcsncmp(argv[i], L"sdfourth:", 9) == 0 && wcscmp(argv[i] + 9, place.label) == 0)
+			{
+				for (int k = 0; k < place.length; k++)
+					g_sdSpare[0x100 + k] = bytes[k];
+				g_sdStopped = true;
+			}
+		}
+	VirtualProtect(fill, g_sdFillRoom, fillOld, &unused);		// the carriers may share a page: the later's old protection first
+	VirtualProtect(maker, g_sdMakerRoom, makerOld, &unused);
+	FlushInstructionCache(GetCurrentProcess(), maker, g_sdMakerRoom);
+	FlushInstructionCache(GetCurrentProcess(), fill, g_sdFillRoom);
+
+	for (size_t c = 0; c < sizeof(g_sdCode) / sizeof(g_sdCode[0]); c++)
+		for (size_t i = 0; i < g_sdCode[c].size; i++)
+			g_sdPlaced[c][i] = g_sdCode[c].code[i];
+	g_sdAllocationPlaced = SdValueAt(maker + kSdAllocAt + kSdAllocationAt + 1, 4);
+}
+
+// A model: its name's hash, its type, and bones by name.
+static SdModel& SdNew(int which, uint32_t hash, uint32_t type)
+{
+	SdModel& model = g_sdModels[which];
+	model.hash = hash;
+	model.type = type;
+	model.holder = &model.holding;
+	return model;
+}
+static void SdAdd(SdModel& model, const char* format, int first, int last, int firstBone)
+{
+	for (int n = first; n <= last && model.named < kSdBones; n++)
+	{
+		SdBone& bone = model.bones[model.named++];
+		snprintf(bone.name, sizeof(bone.name), format, n);
+		bone.index = static_cast<uint16_t>(firstBone + n - first);
+		bone.tag = SdTag(bone.name);
+	}
+}
+
+// The index of a model's bone "<prefix><n>", in any case, or -1.
+static int SdBoneOf(const SdModel& model, const char* prefix, int n)
+{
+	char name[24];
+	snprintf(name, sizeof(name), "%s%d", prefix, n);
+	for (int i = 0; i < model.named; i++)
+		if (_stricmp(model.bones[i].name, name) == 0)
+			return model.bones[i].index;
+	return -1;
+}
+
+// What a slot of the room must hold: the game's byte for siren 1 to 20 or their glass, a plane's gear doors among them; past them a bone by name
+// that a signed byte can name, or -1.
+static int SdSlot(const SdModel& model, int kind, int n)
+{
+	if (n <= 20)
+		return static_cast<signed char>(model.made[(kind ? 0xAD : 0x99) + n - 1]);
+	if (model.faults)
+		return -1;	// whatever the game's fill had written when it faulted
+	const int bone = SdBoneOf(model, kind ? "siren_glass" : "siren", n);
+	return bone >= 0 && bone < 128 ? bone : -1;
+}
+static bool SdRoomRight(const SdModel& model)
+{
+	const unsigned char* const structure = static_cast<const unsigned char*>(model.holding);
+	for (int kind = 0; kind < 2; kind++)
+		for (int n = 1; n <= 32; n++)
+			if (static_cast<signed char>(structure[(kind ? 0x36C : 0x34C) + n - 1]) != SdSlot(model, kind, n))
+				return false;
+	return true;
+}
+
+// The structure's own bytes as the game made them, but for the bits of the bones past siren20 in its set.
+static bool SdStructureRight(const SdModel& model)
+{
+	unsigned char want[sizeof(model.made)];
+	memcpy(want, model.made, sizeof(want));
+	for (int kind = 0; kind < 2; kind++)
+		for (int n = 21; n <= 32; n++)
+		{
+			const int bone = SdSlot(model, kind, n);
+			if (bone >= 0)
+				want[bone / 8] &= static_cast<unsigned char>(~(1u << (bone % 8)));
+		}
+	return memcmp(want, model.holding, sizeof(want)) == 0;
+}
+
+// The game's load, once TweaksV has started: the pool set up by its site's stride, then each model made through the caller's site, with
+// arguments, a result and a last error to see handed on.
+static void SdMake(SdModel& model)
+{
+	SetLastError(0);
+	reinterpret_cast<void (*)(SdModel*, uint64_t, uint64_t, uint64_t)>(const_cast<unsigned char*>(g_sdCaller))(&model, kSdSecond, kSdThird, kSdFourth);
+	const DWORD error = GetLastError();
+	if (error == kSdLastError && g_sdMakerResult == kSdResult)
+		g_sdKeptBoth++;
+}
+static void SdActions(int argc, wchar_t** argv)
+{
+	if (!HasOption(argc, argv, L"sdrun") || !g_sdBuilt || g_sdStopped)
+		return;
+	g_sdRan = true;
+	g_sdStride = reinterpret_cast<uint32_t (*)()>(const_cast<unsigned char*>(g_sdPoolSite))();
+	g_sdElements = 16;
+	unsigned char* const pool = static_cast<unsigned char*>(VirtualAlloc(nullptr, static_cast<size_t>(g_sdElements) * g_sdStride, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE));
+	memset(pool, 0xAB, static_cast<size_t>(g_sdElements) * g_sdStride);
+	g_sdPool = pool;
+	for (int n = 1; n <= 20; n++)
+	{
+		snprintf(g_sdNames[n - 1], sizeof(g_sdNames[0]), "siren%d", n);
+		snprintf(g_sdNames[19 + n], sizeof(g_sdNames[0]), "siren_glass%d", n);
+		g_sdBase[n - 1] = { g_sdNames[n - 1], 0x88 + n };
+		g_sdBase[19 + n] = { g_sdNames[19 + n], 0x9C + n };
+		g_sdBaseTags[n - 1] = SdTag(g_sdNames[n - 1]);
+		g_sdBaseTags[19 + n] = SdTag(g_sdNames[19 + n]);
+	}
+	for (int n = 1; n <= 14; n++)
+	{
+		snprintf(g_sdNames[39 + n], sizeof(g_sdNames[0]), "gear_door_%d", n);
+		g_sdExtra[n - 1] = { g_sdNames[39 + n], 0x9C + n };
+		g_sdExtraTags[n - 1] = SdTag(g_sdNames[39 + n]);
+	}
+
+	SdModel& police = SdNew(kSdPolice, 0x79FBB0C5, 0);
+	SdAdd(police, "siren%d", 1, 20, 40);
+	SdAdd(police, "siren_glass%d", 1, 20, 60);
+	SdModel& full = SdNew(kSdFull, 0xA1B2C3D4, 0);				// past siren20 in other cases: the game's lookup ignores case
+	SdAdd(full, "siren%d", 1, 20, 10);
+	SdAdd(full, "SIREN%d", 21, 32, 30);
+	SdAdd(full, "siren_glass%d", 1, 20, 42);
+	SdAdd(full, "Siren_Glass%d", 21, 32, 62);
+	SdModel& some = SdNew(kSdSome, 0x24242424, 0);
+	SdAdd(some, "siren%d", 1, 24, 10);
+	SdAdd(some, "siren_glass%d", 1, 24, 50);
+	SdModel& sparse = SdNew(kSdSparse, 0x0DD50A25, 0);
+	SdAdd(sparse, "siren%d", 1, 4, 10);
+	SdAdd(sparse, "siren%d", 21, 21, 14);
+	SdAdd(sparse, "siren%d", 25, 25, 15);
+	SdAdd(sparse, "siren_glass%d", 1, 2, 16);
+	SdAdd(sparse, "siren_glass%d", 25, 25, 18);
+	SdModel& plane = SdNew(kSdPlane, 0xA1A1A1A1, 8);			// its first glass slots gear doors, by the third table
+	SdAdd(plane, "siren%d", 1, 2, 5);
+	SdAdd(plane, "siren_glass%d", 1, 1, 40);
+	SdAdd(plane, "gear_door_%d", 1, 14, 20);
+	SdAdd(plane, "siren%d", 21, 21, 34);
+	SdAdd(plane, "siren_glass%d", 21, 21, 35);
+	SdModel& lost = SdNew(kSdLost, 0x0C0FFEE0, 0);				// bones past what a signed byte names: siren5 as the game has it, siren21 none
+	SdAdd(lost, "siren%d", 5, 5, 130);
+	SdAdd(lost, "siren%d", 21, 21, 129);
+	SdAdd(lost, "siren%d", 22, 22, 127);
+	SdModel& few = SdNew(kSdFew, 0x2C3D4E5F, 0);
+	SdAdd(few, "siren%d", 1, 8, 20);
+	for (int i = 0; i < kSdDrawn; i++)
+		SdMake(g_sdModels[i]);
+	if (HasOption(argc, argv, L"sdnoholder") || HasOption(argc, argv, L"sdbadholder"))
+	{
+		SdModel& model = SdNew(kSdNoHolder, 0x0BAD0001, 0);
+		SdAdd(model, "siren%d", 1, 24, 10);
+		model.holder = HasOption(argc, argv, L"sdnoholder") ? nullptr : reinterpret_cast<void* const*>(ImageEnd() + 0x77000);
+		SdMake(model);
+	}
+	if (HasOption(argc, argv, L"sdfillfault"))
+	{
+		SdModel& model = SdNew(kSdFault, 0x0BAD0003, 0);
+		SdAdd(model, "siren%d", 1, 24, 10);
+		model.faults = true;
+		SdMake(model);
+	}
+	if (HasOption(argc, argv, L"sdmany"))
+	{
+		SdModel& model = SdNew(kSdManyModel, 0, 0);
+		SdAdd(model, "siren%d", 1, 24, 10);
+		for (uint32_t i = 0; i < 20001; i++)
+		{
+			model.hash = 0x5D000000u + i;
+			g_sdUsed = g_sdElements - 1;
+			SdMake(model);
+		}
+	}
+}
+
+static void SdFresh(const SdModel& model)
+{
+	memset(&g_sdVehicle, 0, sizeof(g_sdVehicle));
+	memset(g_sdAsked, 0, sizeof(g_sdAsked));
+	memset(g_sdHidden, 0, sizeof(g_sdHidden));
+	memset(g_sdChildren, 0, sizeof(g_sdChildren));
+	g_sdVehicle.model = &model;
+	g_sdVehicle.structure = model.holding;
+	g_sdVehicle.children = g_sdChildren;
+	g_sdVehicle.fragment = &g_sdVehicle;
+}
+
+// The slots of a kind whose bone a byte per bone marks, siren1's bit 0.
+static uint32_t SdMarkedSlots(const SdModel& model, int kind, const unsigned char* marks)
+{
+	uint32_t slots = 0;
+	for (int n = 1; n <= 32; n++)
+	{
+		const int bone = SdSlot(model, kind, n);
+		if (bone >= 0 && bone < 128 && marks[bone])
+			slots |= 1u << (n - 1);
+	}
+	return slots;
+}
+
+// The damage, each loop run as code: a hit and an impact on a siren of the model made for 32, a wreck on each model, the flags' four loops on three of them.
+static void SdDamageReport()
+{
+	const SdModel& full = g_sdModels[kSdFull];
+	const int sirens[] = { 5, 20, 21, 25, 32 };
+	wprintf(L"sd hit:");
+	for (const int n : sirens)
+	{
+		SdFresh(full);
+		reinterpret_cast<void (*)(SdVehicle*, const void*, int)>(const_cast<unsigned char*>(g_sdHit))(&g_sdVehicle, full.holding, SdBoneOf(full, "siren", n));
+		wprintf(L" %d 0x%08X %u 0x%08X,", n, g_sdVehicle.broken, g_sdVehicle.brokenByte, SdMarkedSlots(full, 1, g_sdAsked));
+	}
+	wprintf(L" | sd impact:");
+	for (const int n : sirens)
+	{
+		SdFresh(full);
+		reinterpret_cast<void (*)(SdVehicle*, SdVehicle*, int)>(const_cast<unsigned char*>(g_sdImpact))(&g_sdVehicle, &g_sdVehicle, SdBoneOf(full, "siren", n));
+		reinterpret_cast<void (*)(SdVehicle*, const void*, unsigned char*)>(const_cast<unsigned char*>(g_sdHide))(&g_sdVehicle, full.holding, g_sdHidden);
+		wprintf(L" %d 0x%08X %u 0x%08X hidden 0x%08X,", n, g_sdVehicle.marked, g_sdVehicle.markedByte, SdMarkedSlots(full, 1, g_sdAsked), SdMarkedSlots(full, 0, g_sdHidden));
+	}
+	wprintf(L" | sd wreck:");
+	for (int i = 0; i < kSdDrawn; i++)
+	{
+		SdFresh(g_sdModels[i]);
+		reinterpret_cast<void (*)(SdVehicle*)>(const_cast<unsigned char*>(g_sdWreck))(&g_sdVehicle);
+		wprintf(L" 0x%08X", g_sdVehicle.broken);
+	}
+	wprintf(L" | sd flags:");
+	const int flagged[] = { kSdPolice, kSdFull, kSdPlane };
+	for (const int which : flagged)
+	{
+		const SdModel& model = g_sdModels[which];
+		volatile unsigned char* const loops[] = { g_sdFlags, g_sdClasses[0], g_sdClasses[1], g_sdClasses[2] };
+		for (volatile unsigned char* const loop : loops)
+		{
+			SdFresh(model);
+			reinterpret_cast<void (*)(SdVehicle*)>(const_cast<unsigned char*>(loop))(&g_sdVehicle);
+			unsigned char set[128] = {};
+			int others = 0;
+			for (int bone = 0; bone < 128; bone++)
+			{
+				set[bone] = g_sdChildren[bone] == 0x17FFFFE0 ? 1 : 0;
+				others += g_sdChildren[bone] != 0 && !set[bone];
+			}
+			wprintf(L" 0x%08X%ls", SdMarkedSlots(model, 1, set), others ? L" WRONG FLAGS" : L"");
+		}
+		wprintf(L",");
+	}
+	wprintf(L" | ");
+}
+
+static void SdReport()
+{
+	wprintf(L"sd sites: %ls, the maker's call leads to %ls | ", SdSitesState(), SdWhere());
+	if (!g_sdRan)
+		return;
+	int rooms = 0, structures = 0;
+	for (int i = 0; i < kSdDrawn; i++)
+	{
+		rooms += SdRoomRight(g_sdModels[i]);
+		structures += SdStructureRight(g_sdModels[i]);
+	}
+	wprintf(L"sd pool: stride 0x%X, allocation 0x%X, %d traps | ", g_sdStride, g_sdAllocation, g_sdTraps);
+	wprintf(L"sd models: %d made, %d with bad arguments, result and last error kept %d, %d through its code, children asked wrongly %d, rooms right %d of %d, their structures right %d | ",
+		g_sdMade, g_sdArgsBad, g_sdKeptBoth, g_sdFillStarts, g_sdChildBad, rooms, kSdDrawn, structures);
+	wprintf(L"sd fill: TweaksV's %d times, flag %u, %d entries | ", g_sdOwnFills, g_sdOwnFlag, g_sdOwnEntries);
+	if (g_sdModels[kSdFault].faults)
+		wprintf(L"sd fault: room %ls, structure %ls | ", SdRoomRight(g_sdModels[kSdFault]) ? L"right" : L"WRONG", SdStructureRight(g_sdModels[kSdFault]) ? L"right" : L"WRONG");
+	if (g_sdModels[kSdNoHolder].hash)
+		wprintf(L"sd noholder: room byte 0x%02X | ", static_cast<const unsigned char*>(g_sdModels[kSdNoHolder].holding)[0x34C]);
+	SdDamageReport();
+	// what the game's tables hold, by the same rule
+	wprintf(L"sd tags: %ls | ", SdTag("chassis") == 0xCD54 && SdTag("siren1") == 0x61A7 && SdTag("siren20") == 0x1642 && SdTag("siren_glass1") == 0xF688 ? L"as the game's" : L"NOT the game's");
+}
 // [corona store]
 
 // The game's two tree searches behind the box streamer's four calls: the first and the third call lead
@@ -8630,6 +9355,7 @@ static void ForEachSite(void (*fn)(const Site&))
 	fn(poolMemorySite);
 	for (const Site& site : g_rqSites) fn(site);
 	// [siren damage]
+	for (const Site& site : g_sdSites) fn(site);
 	// [corona store]
 }
 
@@ -10226,6 +10952,7 @@ int wmain(int argc, wchar_t** argv)
 	PoolMemorySetUpSite(argc, argv);
 	RqSetUp(argc, argv);
 	// [siren damage]
+	SdSetUp(argc, argv);
 	// [corona store]
 
 	RovSetup(argc, argv);
@@ -10394,6 +11121,7 @@ int wmain(int argc, wchar_t** argv)
 	PoolMemoryActions(argc, argv);
 	RqActions(argc, argv);
 	// [siren damage]
+	SdActions(argc, argv);
 	// [corona store]
 	if (HasOption(argc, argv, L"wait"))
 		Sleep(11000);	// TweaksV's UNLOCK_FILES summary comes 10 s after the first open it counts, the OpenFile summary 10 s
@@ -10485,6 +11213,9 @@ int wmain(int argc, wchar_t** argv)
 	PoolMemoryReport();
 	RqReport(argc, argv);
 	// [siren damage]
+	SdReport();
+	CheckStub(Rel32Target(Site{ g_sdCaller, kSdMakerRel32, 0 }));
+	CheckData(SirenCountCode(&SdMakerCarrier) + kSdAllocAt + kSdAllocationAt, 5);
 	// [corona store]
 	CheckStub(Rel32Target(g_packCallSite));
 	CheckStub(Rel32Target(g_scriptCallSite));
