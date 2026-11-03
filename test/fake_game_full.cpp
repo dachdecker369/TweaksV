@@ -725,6 +725,7 @@
 //   ccrun          once TweaksV has started: the job's parameters; two threads through the general add, 3/4 of the room each; a batch from 100 short of the room that
 //                  brings 300; the job's own limit at 1087 and three times at 1088; the copy at a full store and at 0
 //   cctrap         in place of ccrun: a batch of 100 from a count of 1500, the first past the game's 1088 that its clamp cannot take
+//   ccpast         in place of ccrun: the count at 1089 until the log has the part's first summary, then one past the room, until the log has its line
 // The checks, each failing on its own, through the lighting capacity's lcout, lcend, lcodd, lcunread and lcother, on any rel32 by the name of the table in CcSetUp:
 //   ccedge NAME    with rtjumpunread: j2extras, j3count or g1jump, the site whose match ends where this rel32 starts copied to the end of g_rtEdge's first page and
 //                  the rel32 on the page rtjumpunread takes away, the site's first byte a NOP
@@ -9555,8 +9556,8 @@ static_assert(offsetof(CcCommand, count) == 0x10, "the copy stores the count at 
 
 static void CcActions(int argc, wchar_t** argv)
 {
-	const bool trap = HasOption(argc, argv, L"cctrap");
-	if (!trap && !HasOption(argc, argv, L"ccrun"))
+	const bool trap = HasOption(argc, argv, L"cctrap"), past = HasOption(argc, argv, L"ccpast");
+	if (!trap && !past && !HasOption(argc, argv, L"ccrun"))
 		return;
 	LcData& data = *g_lcData;
 	CcData& cc = *g_ccData;
@@ -9566,6 +9567,16 @@ static void CcActions(int argc, wchar_t** argv)
 	const uint32_t room = Imm32(SITE(g_ccGeneralAdd, 24)) + 1;
 	const auto batch = reinterpret_cast<uint64_t (*)(volatile uint32_t*, uint64_t, uint32_t*)>(const_cast<unsigned char*>(g_ccBatch));
 	g_ccRun[0] = L'\0';
+	if (past)
+	{
+		*count = 1089;
+		const bool summed = RtWaitFor("DIAGNOSTIC: the most so far: vehicles", 25000);
+		*count = room + 1;
+		const bool said = RtWaitFor("coronas seen at ", 5000);
+		*count = 0;
+		CcSay(L"held at 1089, %ls; then at %u, %ls", summed ? L"a summary came" : L"NO SUMMARY", room + 1, said ? L"a line came" : L"NO LINE");
+		return;
+	}
 	if (trap)
 	{
 		*count = 1500;

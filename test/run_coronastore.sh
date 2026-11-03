@@ -8,7 +8,7 @@
 # store's own reasons and lines, not what the part says around them, whichever part that is: the accessor through the test build's export. Fake LOCALAPPDATA:
 # the real one is never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
-CHECKS=95
+CHECKS=105
 cd "$B" || exit 1
 cp "$R/x64/Release/TweaksV.asi" TweaksV.asi
 cp "$R/object/Test/Release/TweaksV.asi" TweaksV_test.asi
@@ -106,7 +106,7 @@ check "without DIAGNOSTIC_MODE: the 13 and the move, no word of the jumps; nothi
 
 echo "== C7 Windows' dynamic code policy: no stub, no write, nothing changed"
 raise_ini; setkey DIAGNOSTIC_MODE 1; out=$(ASI=TweaksV_test.asi game full_game.exe nodyncode); echo "      ${out:0:80}"
-check "the stubs' line, word for word; the write refused; its sites and jumps as placed, the problem the part's" "cc_line '$NOT_COUNTED its stubs could not be made read+execute (.*).' && log_line '\[LightCapacity\] The game code at RVA 0x[0-9A-F]* could not be made writable (.*' && has '$PLACED' && cc_line \"$NOT_RAISED the game code could not be changed (details .*).\""
+check "the stubs' line, word for word; the write refused; its sites and jumps as placed, the problem the part's" "cc_line '$NOT_COUNTED its stubs could not be made read+execute (.*).' && log_line '\[LightCapacity\] The game code at RVA 0x[0-9A-F]* could not be made writable (.*' && has '$PLACED' && cc_line \"$NOT_RAISED the game code could not be changed (details .*).\" && has '$NOW_GAME'"
 
 echo "== C8 the near memory, the test build's TWEAKSV_TEST_CORONA_MEMORY"
 raise_ini; out=$(TWEAKSV_TEST_CORONA_MEMORY='none' ASI=TweaksV_test.asi game full_game.exe); echo "      ${out:0:80}"
@@ -231,6 +231,31 @@ for entry in "${CASES[@]}"; do
 done
 B=$game_folder
 cd "$B" && rm -rf cases
+
+echo "== C14 the sirens at 32 behind the store: anything that refuses the store holds them at 20, nothing of the store written"
+SIREN_REFUSAL='\[SirenSettings\] PROBLEM: The sirens per vehicle are not raised this session: the light stores are not raised (\[LIGHTCAPACITY\] in TweaksV.ini), and the game.s own do not take 32 sirens a vehicle. Vehicles keep 20 sirens.$'
+SECOND_ADD="the second inlined add names the corona store at $HERE, the first inlined add the one at $HERE (G-E-I3)."
+SIRENS_ON=1 fresh_ini; addkey TEST_BREAK_PATTERN G-E-I1; out=$(ASI=TweaksV_test.asi game full_game.exe); echo "      ${out:0:80}"
+check "a pattern of the store missing: the part's problem and the sirens' behind it, word for word; nothing written; the accessor says the game's own" "cc_line '$NOT_RAISED G-E-I1 was not found.' && log_line '$SIREN_REFUSAL' && has '$PLACED' && has '$NOW_GAME'"
+SIRENS_ON=1 fresh_ini; out=$(ASI=TweaksV_test.asi game full_game.exe lcother i3store); echo "      ${out:0:80}"
+check "a check of the store failing: the same" "cc_line \"$NOT_RAISED $SECOND_ADD\" && log_line '$SIREN_REFUSAL' && has '$PLACED' && has '$NOW_GAME'"
+SIRENS_ON=1 fresh_ini; out=$(TWEAKSV_TEST_CORONA_MEMORY='none' ASI=TweaksV_test.asi game full_game.exe); echo "      ${out:0:80}"
+check "no memory for the store: the same" "cc_line '$NOT_RAISED no memory near the game could be had for the new corona store of 4096 coronas.' && log_line '$SIREN_REFUSAL' && has '$PLACED' && has '$NOW_GAME'"
+SIRENS_ON=1 fresh_ini; out=$(ASI=TweaksV_test.asi game full_game.exe nodyncode); echo "      ${out:0:80}"
+check "the part's write refused by Windows, after the store said yes: the same" "cc_line \"$NOT_RAISED the game code could not be changed (details .*).\" && log_line '$SIREN_REFUSAL' && has '$PLACED' && has '$NOW_GAME'"
+SIRENS_ON=1 fresh_ini; out=$(ASI=TweaksV_test.asi game full_game.exe ccrun); echo "      ${out:0:80}"
+check "the store raised: the sirens do not refuse, every write of the store, its run as ever" "log_lacks 'the light stores are not raised' && has '$(moved 4096)' && has '$(ran 4096 'all 0')' && has '$(now 4096 0 0 0 0)'"
+
+echo "== C15 the part's measurement reads the store through the accessor: its room and its counters in the summary, the first with the raise written"
+raise_ini; setkey DIAGNOSTIC_MODE 1; out=$(ASI=TweaksV_test.asi game full_game.exe ccrun wait); echo "      ${out:0:80}"
+check "the run's counters in the first summary, in the findings' words" "cc_line 'DIAGNOSTIC: the most so far: .*coronas [0-9]* of 4096, refused 2248 (LOD.s own 1088: 3), LOD lights 300, .*'"
+raise_ini; setkey DIAGNOSTIC_MODE 1; out=$(ASI=TweaksV_test.asi game full_game.exe ccpast); echo "      ${out:0:80}"
+check "a count past the game's 1088, inside the room: a number of the summary, no line of its own" "cc_line 'DIAGNOSTIC: the most so far: .*coronas 1089 of 4096, refused 0 (LOD.s own 1088: 0), LOD lights 0, .*' && cc_lacks 'coronas seen at 1089'"
+check "a count past the room: its line says the room" "cc_line 'DIAGNOSTIC: coronas seen at 4097, past the 4096 the game has room for.'"
+raise_ini; setkey DIAGNOSTIC_MODE 1; out=$(ASI=TweaksV_test.asi game full_game.exe lcother i3store wait); echo "      ${out:0:80}"
+check "a refusal of the store: the part's problem, nothing written, and the measurement goes on over the game's own room" "cc_line \"$NOT_RAISED $SECOND_ADD\" && has '$PLACED' && has '$NOW_GAME' && cc_line 'DIAGNOSTIC: the lighting capacity is measured: .*' && cc_line 'DIAGNOSTIC: the most so far: .*coronas 0 of 1088, .*'"
+raise_ini; setkey DIAGNOSTIC_MODE 1; setkey DRY_RUN 1; out=$(ASI=TweaksV_test.asi game full_game.exe wait); echo "      ${out:0:80}"
+check "a dry run: the store's would lines in the part's, and the measurement over the game's own room" "[ \$(count 'DRY_RUN: would patch the corona store') -eq 13 ] && has '$PLACED' && has '$NOW_GAME' && cc_line 'DIAGNOSTIC: the most so far: .*coronas 0 of 1088, .*'"
 
 echo
 echo "CORONA STORE SCENARIOS: $pass passed, $fail failed"
