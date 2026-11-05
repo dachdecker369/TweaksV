@@ -2,12 +2,12 @@
 
 The order of work for a change to TweaksV, phase by phase, each ending with its proof, a commit and my boot.
 What came before is in the git history and in NOTES.md's Versions; the passes' findings and reviews are in my research tools' `output-1158.16\`.
-Phase C is done: 2.7.0, tagged on 7fa28da, for my own use (D19), and 2.8.0, tagged on b3a7a1b, the full version I publish (D7). Its tracks, items and the decisions' full text are in the git history up to b3a7a1b.
+Phase C is done: 2.7.0, tagged on 1a8cbab, for my own use (D19), and 2.8.0, tagged on 5953055, the full version I publish (D7). Its tracks, items and the decisions' full text are in the git history up to 5953055.
 No phase is planned now.
 
 ## Decisions
 
-D1 to D18, phases A and B, in short; their full text is in the git history up to 098836c.
+D1 to D18, phases A and B, in short; their full text is in the git history up to 1a092fe.
 "Stands" marks what still binds.
 
 - **D1:** the parts' coding round in two phases: a build that only measures, then the writing halves, only where the numbers ask for them.
@@ -59,7 +59,7 @@ D1 to D18, phases A and B, in short; their full text is in the git history up to
 
 ## What my boots have shown so far
 
-The full account is in the git history up to b3a7a1b.
+The full account is in the git history up to 5953055.
 
 - **2.8.0's proof,** 2026-11-03: every raise past the game's own number, no crash but my own Legacy car's.
   - **Starts 1 and 2, the sirens and the stores,** 19 minutes: three models lit past 20 by my eye and the log; a shot, a ram and a wreck put those lights out and their glass, a repair brings them back, a plane's gear works as ever.
@@ -70,11 +70,11 @@ The full account is in the git history up to b3a7a1b.
     Five stars and the drive gave no load: vehicles 48, vehicle lights 193, scene lights 557, coronas 705.
   - **The airport, three attempts with real cars:** no load, which D44 answers: at most 143 vehicle lights, 225 vehicle coronas, scene lights 511, a job's 82 coronas.
     The first ended in the game's trap at `+0x127C32F`, a Legacy `lfpolice` car I spawned ("Packs", below), at none of the raises' sites.
-  - **Start 5, the load,** 6 minutes, the test build of 4226c6d (D44), `TEST_SIREN_PASSES=16` for one start's margin, about 10 cars of `hp16fpiu1`, sirens on, all in view: no crash, the one `PROBLEM` `lfpolice`'s Legacy box, my folder's name gone from the log.
+  - **Start 5, the load,** 6 minutes, the test build of 44fc466 (D44), `TEST_SIREN_PASSES=16` for one start's margin, about 10 cars of `hp16fpiu1`, sirens on, all in view: no crash, the one `PROBLEM` `lfpolice`'s Legacy box, my folder's name gone from the log.
     Past the game's numbers, at last: vehicle lights 1,023 of 10,800, vehicle coronas 2,027 of 18,000, coronas 2,507 of 4,096, none refused, a job's lists at their room, 180 and 300, 2,252,028 lights refused as the load asks, and the scene store at its 1,024 with the sort list marked in 3,575 of 30,090 samples.
     By my eye the lights flicker hard and the frame rate is about half, the overload's own.
-  - **Start 6, the build as it ships,** 5 minutes, the Release build of 4226c6d, no `TweaksV.ini`: `Created TweaksV.ini with the default settings.`, the one `PROBLEM` `lfpolice`'s Legacy box, every part applied, no `TEST BUILD` line, no user name.
-  - **The last boot,** the Release build of b3a7a1b with the new wording of the default file and the popups, no `TweaksV.ini`: the file made equal to the default, the one `PROBLEM` `lfpolice`'s Legacy box, every part applied: the build that is tagged.
+  - **Start 6, the build as it ships,** 5 minutes, the Release build of 44fc466, no `TweaksV.ini`: `Created TweaksV.ini with the default settings.`, the one `PROBLEM` `lfpolice`'s Legacy box, every part applied, no `TEST BUILD` line, no user name.
+  - **The last boot,** the Release build of 5953055 with the new wording of the default file and the popups, no `TweaksV.ini`: the file made equal to the default, the one `PROBLEM` `lfpolice`'s Legacy box, every part applied: the build that is tagged.
 - **2.7.0's proof,** 2026-11-02, the numbers 2.8.0 was planned from: with `VIDEO_MEMORY_BUDGET=6000`, vehicle lights 327 of 400, vehicle coronas 439 of 928, scene lights 642 of 1024, the ray traced list 1024 of 1024, coronas 1088 of 1088, objects 98,343 of 98,304; ped pool 97 of 256, ped budget 505.8 of 561, the render queues far under their room.
   The pool at 8000 with `STATICBOUNDS_SIZE=16000` crashed the first build at the save's load, `int3` at `+0x93AA93`, and passed on the tagged one; 32767 passed at the pool of 24,500.
   The trainer stopped answering once after caps were set on freemode peds, no event, no crash file.
@@ -93,7 +93,7 @@ The full account is in the git history up to b3a7a1b.
 
 ## Next steps
 
-**State:** 2.8.0, phase C's second and last build, is tagged on b3a7a1b and pushed, this document with it, and my proof passed on it; it is the full version I publish (D7), after 2.2.1.
+**State:** 2.8.0, phase C's second and last build, is tagged on 5953055 and pushed, this document with it, and my proof passed on it; it is the full version I publish (D7), after 2.2.1.
 Above the tag the source files took plain lowercase names (D45): the Release build is 2.8.0's, byte for byte, but for the commit in its log header, its time stamps and its debug ID.
 It has sixteen parts, `TweaksV.ini`'s layout 5 with its 47 keys, 274 patterns and 2986 checks, the full run about 10 minutes side by side.
 It takes the sirens per vehicle (D23), the light stores and the corona store as a part (D35, D39), `VIDEO_MEMORY_BUDGET` at 6000 (D33), and `STREAMED_OBJECTS` at 131072 (D37), which ended my LOD switching by my eye.

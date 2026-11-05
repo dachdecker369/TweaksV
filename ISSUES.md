@@ -36,7 +36,7 @@ The game's descriptor heap has no check at its end, so past what my proof shows 
 ## T-PEDPROPS: the ped props' raise is untested and experimental, and ships off
 
 - **What:** the part widens the game's eleven narrowings of a ped model's props per anchor, and no boot of mine has shown that this works past 255:
-  - My boot of 2.6.0 (2026-11-01, the build of 80fee95) applied the widening at all 11 sites.
+  - My boot of 2.6.0 (2026-11-01, the build of a701da5) applied the widening at all 11 sites.
   - The switch to `mp_m_freemode_01` past 255, with my converted US Armed Forces pack (`r4usarmyv3`) in, crashed the game: 0xC0000005 at `GTA5_Enhanced.exe+0x5A0998D`, the same offset as in my test of 2.5.0 without the widening.
   - The control, with that pack out, switched fine at 255, with a hat at index 200.
   - Whether the crash comes from going past 255 or from the big packs' own data is not known: no test has gone past 255 without a big pack.
