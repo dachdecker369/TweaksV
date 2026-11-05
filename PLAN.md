@@ -40,7 +40,7 @@ D1 to D18, phases A and B, in short; their full text is in the git history up to
 - **D29, stands:** the workflow, as my rules for every project have it since 2026-11-01.
 - **D30:** the lighting capacity and the render queues measured; `[PEDPROPS]` ships off.
 - **D31:** the two model budgets and the ped pool measured; `POOL_MEMORY` raised to 256 MB.
-- **D-V5, stands:** the vehicle budget by no code: `Level3Kb` at 98,500 in my `gameconfig.xml`, 600 MB in place of 429, which stays after my proof's start 4.
+- **D-V5:** the vehicle budget by no code: `Level3Kb` at 98,500 in my `gameconfig.xml`, 600 MB in place of 429, for my proof's start 4; my load has not held it since 2026-11-04, so the budget is the game's 429 MB again.
 - **D33, stands:** `VIDEO_MEMORY_BUDGET` at 6000 by default.
 - **D34:** 2.8.0's order: research and coding side by side, with no wait for the weekly limit's reset.
 - **D35, stands:** the corona store moved and raised, `CORONA_STORE`, 4096 by default, 1088 to 8192; the LOD lights' job keeps its own 1088.
