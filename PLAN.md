@@ -36,7 +36,7 @@ D1 to D18, phases A and B, in short; their full text is in the git history up to
 - **D24 and D32, stand:** StaticBounds anew: one call redirect at the store's one size lookup, `STATICBOUNDS_SIZE` up to 32767, a read-back on every boot.
 - **D25, stands:** a limit measured first; a raise only from a boot's numbers.
 - **D26 and D27:** 2.7.0's open issues taken in two sweeps; its scaffold, the reflow to one sentence a line and `TweaksV.ini`'s layout 5.
-- **D28, stands:** the dumps, `GameData-*.bin` and the `work-*` folders stay for now, since they cost nothing.
+- **D28, stands:** `GameData-*.bin` and the `work-*` folders stay for now, since they cost nothing; the `GameCode-*.bin` dumps are gone, the rebuilt images in the `work-*` folders hold their code, and a new dump comes from a test build when a pass needs one.
 - **D29, stands:** the workflow, as my rules for every project have it since 2026-11-01.
 - **D30:** the lighting capacity and the render queues measured; `[PEDPROPS]` ships off.
 - **D31:** the two model budgets and the ped pool measured; `POOL_MEMORY` raised to 256 MB.
@@ -56,6 +56,7 @@ D1 to D18, phases A and B, in short; their full text is in the git history up to
 - **D45, stands:** the source files have plain lowercase names without the project's, since 2026-11-05: `main.cpp`, `log.cpp` and so on, and only Visual Studio's `TweaksV.slnx`, `TweaksV.vcxproj` and `TweaksV.vcxproj.filters` carry the name.
   The symbols keep `namespace TweaksV`, and the binary, its INI and its log keep their names.
   There is no `main.h`: `main.cpp` defines only `DllMain`, which no other file calls.
+- **D46, stands:** `PACKFILEARRAY_SIZE` stops at 32770 and is rounded down to a multiple of 5, one number for all three limits, the array still 65535 entries; 65530 would boot, but it offers archives a handle cannot carry (PATTERNS.md, "PackfileLimit").
 
 ## What my boots have shown so far
 

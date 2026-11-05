@@ -111,7 +111,7 @@ Limits: imm32 = size x mul + add, each decoding to the same size, 1024.
 | P-E-I1 | `3b 05 ? ? ? ? 0f 8d ? ? ? ? 89 c0` | +2: rel32 of `cmp eax, [rip+disp32]` to the indirect size variable, which holds N-4 (7256 on the current build) | found | 0x1279156 |
 | P-E-H1 | `89 48 ? 48 8d 0d ? ? ? ? 48 89 08 48 89 c1 e8` | +0x10: the call handed the streaming configuration read from `gameconfig.xml`, its archive count at offset 24, 8512 on current build | found | 0x5093D5 |
 
-The array: RVA 0x2C075B0, 7260 entries of 8 bytes; archive indices are 16-bit, which caps it at 65535.
+The array: RVA 0x2C075B0, 7260 entries of 8 bytes; archive indices are 16-bit, so the moved array has 65535 entries, and the size stops at 32770 (below, "What the size may be").
 The rows below, each with its rel32's offset and with the build's `R31a` or `R31b`, are every reference the game's code has to it: 33 on 1.0.1158.16, 25 `lea` and the 8 `mov [rip+disp32], r64` of `P-E-R23..R30`.
 Nothing else reaches it or into it, and no stored pointer holds its address in the sections the dump holds.
 `P-E-R32` and `P-E-R33` were found in my code dump.
@@ -152,6 +152,26 @@ Nothing else reaches it or into it, and no stored pointer holds its address in t
 | P-E-R31b | `41 ? ? ? ? ? ? ? ? ? ? 41 bb ? ? ? ? ? 8d` | 20 (older builds) | not used on current build | - |
 | P-E-R32 | `48 89 cf 31 f6 4c 8d 3d ? ? ? ? eb 10` | 8 (RVA 0x13EA794): the rel32 of `lea r15` (`4C 8D 3D` at 5), the load in the function 0x13EA760..0x13EA9A4, which walks a collection's entries, looks each one's packfile up as array[handle >> 16], tolerates a null entry and folds a value per entry into a hash it returns | found | 0x13EA78C |
 | P-E-R33 | `75 0c cc 48 8d 0d ? ? ? ? 48 8b 0c d1` | 6 (RVA 0x1275F89): the rel32 of `lea rcx` (`48 8D 0D` at 3), in `P-E-R20`'s function 0x1275F10..0x1275FF4, in the bytes after an `int3` trap - reached only when the index is at or past the N-4 variable or the entry is null, so never run | found | 0x1275F83 |
+
+**What the size may be.**
+Findings: `archivecount_findings_for_the_clean_room_build.txt`.
+
+- **The archive count:** its one reader 0xCEE397 takes the streaming configuration object's +0x18, adds 5 (0xCEE39A) and calls the archive list's set-up 0xCE2AD0.
+  That allocates in full, 0x68 bytes an entry, from the int32, and keeps the sum's low 16 bits in the list's capacity 0x42F9BDA, the bit count 0x42F9C1A and the pointer list's capacity 0x42F9BF2.
+  So a size of 65531 or more wraps them, and 65530 is the most they hold.
+- **The guard the wrap switches off:** once an archive's entries are registered, the game releases its entry table: 0x10F650 nulls +0x28 and keeps the count +0x30, and +0x42 of its list entry is cleared, so that byte says the table is in memory.
+  0xCE5445 asks for an archive that is out of memory, and 0xCE9633 leaves such an archive's position at 0, each only for an index below the bit count; past it both are skipped, and the archive's slot +0x1E8, 0x111850, reads the null table.
+  My boots of 65535 and 65531 end there: 0xC0000005, a read of 0x60 at 0x11188C, handle 0x570006 (archive 87, entry 6), asked for by a Scaleform movie while the game initializes.
+- **An entry's position:** 16 bytes an entry, bits 42 to 62 of its first eight bytes plus the archive's +0x9C.
+  Another collection's slot +0x1E8, 0x127C520, returns the entry number with bit 30 set: a sort position, not a handle.
+- **A handle:** (index << 16) | entry, its top two bits `10` meaning an archive's own object (0xCE335C and others, masked and compared with 0x80000000), so an index of 0x8000 or more cannot work.
+  No load has come near it, so that limit rests on the code alone.
+- **The search for a free slot,** 0x10F147..0x10F1CA, `P-E-D3`'s loop: five slots a pass, its counter from 5 in steps of 5, ending only when the counter equals the size.
+  So it hands out the indices 1 to N-5, which `P-E-I1`'s N-4 fits, and a size that is no multiple of 5 has no end once the slots fill up.
+  The index is kept as a word at +0x9A of the archive.
+- **The highest size that is sound:** N-5 at most 0x7FFF and N a multiple of 5: 32770.
+  No store's size reaches those 16-bit fields, so `STATICBOUNDS_SIZE` and `gameconfig.xml`'s stores do not move it.
+  The list costs the game's general heap 1.66 MiB at 13000 and 4.18 MiB at 32770.
 
 ## BoxStreamer
 

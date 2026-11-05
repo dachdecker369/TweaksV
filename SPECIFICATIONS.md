@@ -390,7 +390,9 @@ Modkit IDs are 16-bit, which caps the array at 65536.
 
 The game's array of RPF archives, on the core: 7260 entries of 8 bytes on 1.0.1158.16, which 33 instructions reference, every reference the game's code has (section 10.2), one of them by game build (`P-E-R31a` or `P-E-R31b`).
 Two limits size it: an immediate, by game build too (`P-E-D3`, `P-E-D2` or `P-E-D1`), and a variable the game compares an archive index against (`P-E-I1`), which holds four less than the array's size, a margin the core keeps (`Variable(2, -4)`).
-Archive indices are 16-bit, which caps the array at 65535.
+Archive indices are 16-bit, so the array has 65535 entries at every size, and any index a handle holds lies inside it.
+`PACKFILEARRAY_SIZE` stops at 32770, by what the game does with the size (PATTERNS.md, "PackfileLimit"): it adds 5 to the archive count and keeps the sum in 16-bit fields, which 65531 and up wrap, a crash at start-up; it reads a handle's top bits `10` as an archive's own object, so an index stops at 0x7FFF; and its search for a free slot hands out the indices 1 to the size - 5 and ends only on the size exactly.
+So a size that is no multiple of 5 is rounded down and reported as a clamp is, unless that would pass below the game's own size, and `static_assert`s tie the key's maximum and default to the three.
 
 The third limit lies in the game's configuration.
 The call that reads it (`P-E-H1`) must lead into the game - one another mod has redirected refuses the job - and goes, in the same all-or-nothing write as the references and limits, through a call stub to `SetStreamingInterface`, which replaces the archive count the game read from `gameconfig.xml` with the new size, logs what it replaced and calls the game's own function.
