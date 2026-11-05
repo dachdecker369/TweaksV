@@ -62,6 +62,10 @@ D1 to D18, phases A and B, in short; their full text is in the git history up to
 
 The full account is in the git history up to 5953055.
 
+- **2.8.1's proof,** 2026-11-05, the maximums.
+  On 2.8.0's build, with the other keys at their defaults, `PACKFILEARRAY_SIZE` at 65535 and at 65531 crashed at `+0x11188C` while the game initialized, and 65530 reached a session.
+  With every other key at its maximum, 13000 ran about 8 minutes and 32770 about 11, with a wanted level and a drive from the Hollywood Hills to Sandy Shores and back: no `PROBLEM`, no crash file, nothing amiss by my eye.
+  The Release build of 4f5db4a: with no `TweaksV.ini`, the file made equal to the default, every part applied; with 65535 in it, the clamp's box on screen, `using 32770` and `is replaced by 32770.`, in the game.
 - **2.8.0's proof,** 2026-11-03: every raise past the game's own number, no crash but my own Legacy car's.
   - **Starts 1 and 2, the sirens and the stores,** 19 minutes: three models lit past 20 by my eye and the log; a shot, a ram and a wreck put those lights out and their glass, a repair brings them back, a plane's gear works as ever.
     Past the game's numbers: coronas 1,588 of 4,096, none refused; a job's 97 of 180 lights; objects 117,269, descriptors 140,933 of 196,608.
@@ -94,11 +98,11 @@ The full account is in the git history up to 5953055.
 
 ## Next steps
 
-**State:** 2.8.0, phase C's second and last build, is tagged on 5953055 and pushed, this document with it, and my proof passed on it; it is the full version I publish (D7), after 2.2.1.
-Above the tag the source files took plain lowercase names (D45): the Release build is 2.8.0's, byte for byte, but for the commit in its log header, its time stamps and its debug ID.
-It has sixteen parts, `TweaksV.ini`'s layout 5 with its 47 keys, 274 patterns and 2986 checks, the full run about 10 minutes side by side.
-It takes the sirens per vehicle (D23), the light stores and the corona store as a part (D35, D39), `VIDEO_MEMORY_BUDGET` at 6000 (D33), and `STREAMED_OBJECTS` at 131072 (D37), which ended my LOD switching by my eye.
+**State:** 2.8.1, a patch above phase C, is tagged on 4f5db4a and pushed, this document with it, and my boots passed on it; it waits for me to publish it, with the current `README.md` and `CREDITS.md` in its zip.
+`PACKFILEARRAY_SIZE` stops at 32770 and is rounded down to a multiple of 5 (D46), since 65531 and up crashed the game at start-up; every key at its maximum boots together on my load.
+It has sixteen parts, `TweaksV.ini`'s layout 5 with its 47 keys, 274 patterns and 2995 checks, the full run about 10 minutes side by side.
+2.8.0, tagged on 5953055, the full version I published (D7), took the sirens per vehicle (D23), the light stores and the corona store as a part (D35, D39), `VIDEO_MEMORY_BUDGET` at 6000 (D33), and `STREAMED_OBJECTS` at 131072 (D37), which ended my LOD switching by my eye.
 Open for a later plan, none asked for now: the ray traced list's sort (D36); some lights on buildings that come on late, about 50 m from a Gruppe 6 building downtown by my eye, with nothing refused in the log (ROADMAP.md); the hat of T-PEDPROPS (D42).
 The open issues, in ISSUES.md, are T-HARDEN, T-DIAG, T-FREEZE, T-PEDPROPS and T-DESCRIPTORS.
 
-**Decisions waiting on me:** none. The dumps, `GameData-*.bin` and the `work-*` folders stay (D28).
+**Decisions waiting on me:** none. `GameData-*.bin` and the `work-*` folders stay (D28).

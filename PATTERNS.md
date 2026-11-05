@@ -161,7 +161,7 @@ Findings: `archivecount_findings_for_the_clean_room_build.txt`.
   So a size of 65531 or more wraps them, and 65530 is the most they hold.
 - **The guard the wrap switches off:** once an archive's entries are registered, the game releases its entry table: 0x10F650 nulls +0x28 and keeps the count +0x30, and +0x42 of its list entry is cleared, so that byte says the table is in memory.
   0xCE5445 asks for an archive that is out of memory, and 0xCE9633 leaves such an archive's position at 0, each only for an index below the bit count; past it both are skipped, and the archive's slot +0x1E8, 0x111850, reads the null table.
-  My boots of 65535 and 65531 end there: 0xC0000005, a read of 0x60 at 0x11188C, handle 0x570006 (archive 87, entry 6), asked for by a Scaleform movie while the game initializes.
+  My boots of 65535 and 65531 end there: 0xC0000005, a read of 0x60 at 0x11188C, handle 0x570006 (archive 87, entry 6), asked for by a Scaleform movie while the game initializes; my boot of 65530 reaches a session.
 - **An entry's position:** 16 bytes an entry, bits 42 to 62 of its first eight bytes plus the archive's +0x9C.
   Another collection's slot +0x1E8, 0x127C520, returns the entry number with bit 30 set: a sort position, not a handle.
 - **A handle:** (index << 16) | entry, its top two bits `10` meaning an archive's own object (0xCE335C and others, masked and compared with 0x80000000), so an index of 0x8000 or more cannot work.
