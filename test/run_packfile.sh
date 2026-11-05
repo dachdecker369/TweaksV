@@ -3,7 +3,7 @@
 # PackfileLimit scenarios (packfilelimit.cpp): a fake GTA5_Enhanced.exe with copies of the patched game
 # code loads the real TweaksV.asi. Fake LOCALAPPDATA: the real one is never touched.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
-CHECKS=58
+CHECKS=67
 cd "$B" || exit 1
 cp "$R/x64/Release/TweaksV.asi" .
 mkdir -p appdata
@@ -32,12 +32,12 @@ check "limits and configuration count 20000, array still full size" "has 'D3=200
 echo "== P3 PACKFILEARRAY_SIZE=1000 is raised to the game's own 4500, reported"
 fresh_ini; setkey PACKFILEARRAY_SIZE 1000 PACKFILE_LIMIT; out=$(game full_game.exe)
 check "limits stay 4500, configuration count 4500" "has 'D3=4500 D2=4500 D1=4500 I=4496 |' && has 'config 3000 -> 4500,'"
-check "clamp reported for the start-up summary, which names the size used" "log_has 'PROBLEM: TweaksV.ini: PACKFILEARRAY_SIZE=1000 is outside 4500..65535 - using 4500.'"
+check "clamp reported for the start-up summary, which names the size used" "log_has 'PROBLEM: TweaksV.ini: PACKFILEARRAY_SIZE=1000 is outside 4500..32770 - using 4500.'"
 
-echo "== P4 PACKFILEARRAY_SIZE=70000 is clamped to 65535"
+echo "== P4 PACKFILEARRAY_SIZE=70000 is clamped to 32770"
 fresh_ini; setkey PACKFILEARRAY_SIZE 70000 PACKFILE_LIMIT; out=$(game full_game.exe)
-check "limits 65535" "has 'D3=65535 D2=4500 D1=4500 I=65531 |' && has 'config 3000 -> 65535,'"
-check "clamp reported for the start-up summary" "log_has 'PROBLEM: TweaksV.ini: \[PACKFILE_LIMIT\] PACKFILEARRAY_SIZE=70000 is outside 1..65535 - using 65535.'"
+check "limits 32770" "has 'D3=32770 D2=4500 D1=4500 I=32766 |' && has 'config 3000 -> 32770,'"
+check "clamp reported for the start-up summary" "log_has 'PROBLEM: TweaksV.ini: \[PACKFILE_LIMIT\] PACKFILEARRAY_SIZE=70000 is outside 1..32770 - using 32770.'"
 
 echo "== P5 PACKFILEARRAY_SIZE=abc falls back to the default 13000"
 fresh_ini; setkey PACKFILEARRAY_SIZE abc PACKFILE_LIMIT; out=$(game full_game.exe)
@@ -136,6 +136,27 @@ echo "== P19 the game's configuration holds more archives (20000) than PACKFILEA
 fresh_ini; out=$(game full_game.exe packbigconfig); echo "      $out"
 check "the hooked call writes exactly the new size over the configured 20000 and calls the game's function with it" "has 'hook: config 20000 -> 12000, original called 1x with 12000 |' && has '$MOVED'"
 check "the hook's line names both counts; no problem" "log_has 'The archive count of the game.s configuration, 20000, is replaced by 12000.' && log_lacks 'PROBLEM'"
+
+echo "== P20 PACKFILEARRAY_SIZE=65535, which crashed the real game at start-up: clamped to 32770, reported"
+fresh_ini; setkey PACKFILEARRAY_SIZE 65535 PACKFILE_LIMIT; out=$(game full_game.exe)
+check "limits and the configuration's count 32770, the array still its full size" "has '$MOVED' && has 'D3=32770 D2=4500 D1=4500 I=32766 |' && has 'config 3000 -> 32770,'"
+check "reported for the start-up summary" "log_has 'PROBLEM: TweaksV.ini: \[PACKFILE_LIMIT\] PACKFILEARRAY_SIZE=65535 is outside 1..32770 - using 32770.'"
+
+echo "== P21 PACKFILEARRAY_SIZE=32770, the key's maximum: used as it is"
+fresh_ini; setkey PACKFILEARRAY_SIZE 32770 PACKFILE_LIMIT; out=$(game full_game.exe)
+check "limits and the configuration's count 32770" "has 'D3=32770 D2=4500 D1=4500 I=32766 |' && has 'config 3000 -> 32770,'"
+check "no problems" "log_lacks 'PROBLEM'"
+
+echo "== P22 PACKFILEARRAY_SIZE=13001: the game's search for a free slot would not end on it, so rounded down to 13000, reported"
+fresh_ini; setkey PACKFILEARRAY_SIZE 13001 PACKFILE_LIMIT; out=$(game full_game.exe)
+check "limits and the configuration's count 13000, all three the one number" "has 'D3=13000 D2=4500 D1=4500 I=12996 |' && has 'config 3000 -> 13000,'"
+check "reported for the start-up summary, which names the size used" "log_has 'PROBLEM: TweaksV.ini: PACKFILEARRAY_SIZE=13001 is not a multiple of 5 - using 13000.'"
+check "the status line names the size used" "log_has 'The packfile array moved and its limit raised from 4500 to 13000 entries.'"
+
+echo "== P23 PACKFILEARRAY_SIZE=4502 rounds down to the game's own 4500, no lower"
+fresh_ini; setkey PACKFILEARRAY_SIZE 4502 PACKFILE_LIMIT; out=$(game full_game.exe)
+check "limits and the configuration's count 4500" "has 'D3=4500 D2=4500 D1=4500 I=4496 |' && has 'config 3000 -> 4500,'"
+check "reported" "log_has 'PROBLEM: TweaksV.ini: PACKFILEARRAY_SIZE=4502 is not a multiple of 5 - using 4500.'"
 
 echo
 echo "PACKFILE SCENARIOS: $pass passed, $fail failed"

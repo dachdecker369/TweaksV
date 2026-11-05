@@ -7,8 +7,9 @@
 // immediate (P-E-D3, D2 or D1 by game build) and a variable the game compares an archive index against,
 // which holds four less than the array's size (P-E-I1; 1.x wrote the full size over it, this keeps the margin).
 // PACKFILEARRAY_SIZE in [PACKFILE_LIMIT] moves the array to one of 65535 entries, always allocated in
-// full, and raises both limits to that size, clamped to the game's own size..65535, on the relocation
-// core. The third limit lies in the game's configuration: the call that reads it (P-E-H1) is
+// full, and raises both limits to that size, clamped to the game's own size..32770 and rounded down to a
+// multiple of 5 (the constants below say why), on the relocation core. The third limit lies in the game's
+// configuration: the call that reads it (P-E-H1) is
 // redirected through a call stub to a function that replaces the archive count read from
 // gameconfig.xml with the same size and then calls the game's own function - in the same all-or-nothing
 // write as the references and limits. A call another mod has already redirected is left alone.
@@ -31,6 +32,7 @@
 #include "patch.h"
 #include "relocation.h"
 #include "settings.h"
+#include "summary.h"
 
 namespace TweaksV
 {
@@ -38,8 +40,18 @@ namespace TweaksV
 	{
 		constexpr const char* kTag = "PackfileLimit";
 
-		constexpr uint32_t kMaxEntries = 65535;	// archive indices are 16-bit
-		static_assert(kMaxEntries == static_cast<uint32_t>(kPackfileArraySize.maxValue), "TweaksV: PACKFILEARRAY_SIZE's maximum must be the array's size");
+		constexpr uint32_t kMaxEntries = 65535;		// the array: archive indices are 16-bit, so any index a handle holds lies inside it
+
+		// What the game does with the size, which stops it well below the array's (PATTERNS.md, "PackfileLimit"):
+		constexpr uint32_t kCountAdded = 5;			// it adds this to the archive count and keeps the sum in 16-bit fields; a wrap crashes it at start-up
+		constexpr uint32_t kSlotStep = 5;			// its search for a free slot tests this many at a time and ends only on the size exactly
+		constexpr uint32_t kLastIndex = 0x7FFF;		// a handle is (index << 16) | entry, and it reads the top bits 10 as an archive's own object
+		constexpr uint32_t kMaxSize = static_cast<uint32_t>(kPackfileArraySize.maxValue);
+		static_assert(kMaxSize <= kMaxEntries, "TweaksV: PACKFILEARRAY_SIZE's maximum must fit the array");
+		static_assert(kMaxSize + kCountAdded <= 0xFFFF, "TweaksV: PACKFILEARRAY_SIZE's maximum must not wrap the game's 16-bit fields");
+		static_assert(kMaxSize - kSlotStep <= kLastIndex, "TweaksV: the search hands out the indices 1 to the size - 5, which a handle must hold");
+		static_assert(kMaxSize % kSlotStep == 0, "TweaksV: PACKFILEARRAY_SIZE's maximum must end the game's search for a free slot");
+		static_assert(kPackfileArraySize.defaultValue % kSlotStep == 0, "TweaksV: PACKFILEARRAY_SIZE's default must end the game's search for a free slot");
 
 		constexpr GameVersion kVersion1013_17{ 1, 0, 1013, 17 };	// the Mansions DLC: the second direct size pattern
 		constexpr GameVersion kVersion1158_13{ 1, 0, 1158, 13 };	// the Kortz Center DLC: the third, and the other reference
@@ -128,6 +140,16 @@ namespace TweaksV
 		RelocationPlan plan;
 		if (!FindRelocation(spec, plan))
 			return;
+
+		// a size the game's search for a free slot would pass without ending: rounded down, and reported as a clamp is. Never
+		// below the game's own size, which the search ends on as it stands
+		const uint32_t multiple = plan.size - plan.size % kSlotStep;
+		if (multiple != plan.size && multiple >= plan.gameSize)
+		{
+			ReportFailure(kTag, std::string("TweaksV.ini: ") + kPackfileArraySize.key + "=" + std::to_string(plan.size) + " is not a multiple of " +
+				std::to_string(kSlotStep) + " - using " + std::to_string(multiple) + ".");
+			plan.size = multiple;
+		}
 
 		// the streaming configuration call: a call into the game - one another mod has redirected is left alone
 		uint8_t* const call = plan.matches.back()[0] + kCallOffset;

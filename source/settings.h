@@ -111,7 +111,7 @@ namespace TweaksV
 		Number(kModkitSection, "MODKITARRAY_SIZE", 65536, 1, 65536, "Number of modkit IDs - Maximum 65536"),
 
 		Switch(kPackfileSection, "ENABLED", true),
-		Number(kPackfileSection, "PACKFILEARRAY_SIZE", 13000, 1, 65535, "Number of archives - Maximum 65535"),
+		Number(kPackfileSection, "PACKFILEARRAY_SIZE", 13000, 1, 32770, "Number of archives - Maximum 32770"),
 
 		Switch(kBoxStreamerSection, "ENABLED", true),
 		Number(kBoxStreamerSection, "TRAVERSAL_LIST_SIZE", 10000, 1000, 100000, "Number of map boxes - Maximum 100000"),
