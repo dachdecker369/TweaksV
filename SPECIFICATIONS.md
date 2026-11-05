@@ -29,44 +29,45 @@ A new part is an entry in each table plus one file of its own.
 
 ## 2. The code at a glance
 
-Every file in `source\` is `TweaksV*` and every symbol is in `namespace TweaksV`, except `dllmain.cpp`, `version.rc` and MinHook in `vendor\MinHook`, compiled unchanged.
-In the table a name without an extension stands for its `.h` and its `.cpp`.
+Every file in `source\` has a plain lowercase name without the project's (D45); only Visual Studio's `TweaksV.slnx`, `TweaksV.vcxproj` and `TweaksV.vcxproj.filters` carry it.
+Every symbol is in `namespace TweaksV`, except in `main.cpp` and `version.rc`; MinHook in `vendor\MinHook` is compiled unchanged.
+In this document a file's name without an extension stands for its `.h` and its `.cpp`.
 
 | File | Job | Section |
 |---|---|---|
-| `dllmain.cpp` | the one `DllMain`, the start-up in ten steps | 3 |
-| `TweaksVGame` | the game's name and file version | 3 |
-| `TweaksVSettings` | the settings table and its readers | 4.1 |
-| `TweaksVPatterns.h` | the pattern table | 4.2 |
-| `TweaksVFeatures` | the feature table | 4.3 |
-| `TweaksVIni` | `TweaksV.ini`, the file | 5 |
-| `TweaksVFiles` | the own-file checks | 5.2 |
-| `TweaksVLog` | `TweaksV.log`, the console, the text helpers | 6 |
-| `TweaksVLock.h` | the lock guard of the log and the summary | 6.1 |
-| `TweaksVSummary` | the problems and findings and their boxes | 6.4 |
-| `TweaksVMeasure` | the measurements' one loop and summary, and one check of the game's data | 6.6 |
-| `TweaksVConflicts` | the conflict check, and the tests for an address inside the game | 7 |
-| `TweaksVScanner` | the scanner | 8 |
-| `TweaksVPatch` | the patch module | 9 |
-| `TweaksVRelocation` | the relocation core, for the six array parts | 10 |
-| `TweaksV<Part>` | the part of that name: HeapAdjuster, ModkitLimit, PackfileLimit, BoxStreamer, Decals, RageOpenV, StraightToStoryMode, DirectStorage, Blips, PedProps, RayTracing, StaticBounds | 11 |
-| `TweaksVModsFolder` | RageOpenV's one walk of the mods folder, for its list and its check for Legacy packs | 11.6 |
-| `TweaksVLegacyPacks` | RageOpenV's check for packs made for GTA V Legacy | 11.6 |
-| `TweaksVRpf.h` | the RPF7 facts RageOpenV and that check share | 11.6 |
-| `TweaksVWeaponInfos` | WeaponLimits' weapon infos | 11.10.1 |
-| `TweaksVWeaponComponents` | WeaponLimits' weapon components | 11.10.2 |
-| `TweaksVTextureBudget` | the Resources part | 11.12 |
-| `TweaksVSirenIds` | SirenSettings' siren setting IDs, and their measurement | 11.14, 11.16.1 |
-| `TweaksVSirenCount` | SirenSettings' sirens per vehicle, their lights and their measurement | 11.14.1, 11.16.2 |
-| `TweaksVSirenDamage` | the sirens per vehicle's damage | 11.14 |
-| `TweaksVSirenRoom.h` | what those two share | 11.14, 11.14.1 |
-| `TweaksVPopulation` | measured first: the two model budgets | 11.16.4 |
-| `TweaksVPedPool` | measured first: the ped pool | 11.16.5 |
-| `TweaksVRenderQueues` | measured first: the render queues | 11.16.6 |
-| `TweaksVLightCapacity` | LightCapacity's job's lists and light stores, and the lighting capacity's measurement | 11.17, 11.16.3 |
-| `TweaksVCoronaStore` | LightCapacity's corona store | 11.17.1 |
-| `TweaksVScripts` | the script programs' shared hook, and a program's layout | 13.3 |
-| `TweaksVDump` | test builds' copies of the game's code, its data windows and a script program | 13.2, 13.3 |
+| `main.cpp` | the one `DllMain`, the start-up in ten steps | 3 |
+| `game` | the game's name and file version | 3 |
+| `settings` | the settings table and its readers | 4.1 |
+| `patterns.h` | the pattern table | 4.2 |
+| `features` | the feature table | 4.3 |
+| `ini` | `TweaksV.ini`, the file | 5 |
+| `files` | the own-file checks | 5.2 |
+| `log` | `TweaksV.log`, the console, the text helpers | 6 |
+| `lock.h` | the lock guard of the log and the summary | 6.1 |
+| `summary` | the problems and findings and their boxes | 6.4 |
+| `measure` | the measurements' one loop and summary, and one check of the game's data | 6.6 |
+| `conflicts` | the conflict check, and the tests for an address inside the game | 7 |
+| `scanner` | the scanner | 8 |
+| `patch` | the patch module | 9 |
+| `relocation` | the relocation core, for the six array parts | 10 |
+| `<part>` | the part of that name, in lowercase: HeapAdjuster, ModkitLimit, PackfileLimit, BoxStreamer, Decals, RageOpenV, StraightToStoryMode, DirectStorage, Blips, PedProps, RayTracing, StaticBounds | 11 |
+| `modsfolder` | RageOpenV's one walk of the mods folder, for its list and its check for Legacy packs | 11.6 |
+| `legacypacks` | RageOpenV's check for packs made for GTA V Legacy | 11.6 |
+| `rpf.h` | the RPF7 facts RageOpenV and that check share | 11.6 |
+| `weaponinfos` | WeaponLimits' weapon infos | 11.10.1 |
+| `weaponcomponents` | WeaponLimits' weapon components | 11.10.2 |
+| `texturebudget` | the Resources part | 11.12 |
+| `sirenids` | SirenSettings' siren setting IDs, and their measurement | 11.14, 11.16.1 |
+| `sirencount` | SirenSettings' sirens per vehicle, their lights and their measurement | 11.14.1, 11.16.2 |
+| `sirendamage` | the sirens per vehicle's damage | 11.14 |
+| `sirenroom.h` | what those two share | 11.14, 11.14.1 |
+| `population` | measured first: the two model budgets | 11.16.4 |
+| `pedpool` | measured first: the ped pool | 11.16.5 |
+| `renderqueues` | measured first: the render queues | 11.16.6 |
+| `lightcapacity` | LightCapacity's job's lists and light stores, and the lighting capacity's measurement | 11.17, 11.16.3 |
+| `coronastore` | LightCapacity's corona store | 11.17.1 |
+| `scripts` | the script programs' shared hook, and a program's layout | 13.3 |
+| `dump` | test builds' copies of the game's code, its data windows and a script program | 13.2, 13.3 |
 | `version.rc` | the version resource, from `BuildInfo.h` | 15 |
 
 Every `.cpp` and `.h` opens with its SPDX line and what the file is, a part's `.cpp` also with what the part does, every switch it reads and the credit for the idea or the patterns.
@@ -97,7 +98,7 @@ PackfileLimit chooses patterns by it, the sirens per vehicle are raised only on 
 
 ## 4. The three tables
 
-### 4.1 Settings (`TweaksVSettings.h`)
+### 4.1 Settings (`settings.h`)
 
 Every setting is defined once in `kSettings`, in the order of the default file, with its section, key, kind, default, limits and the short comment the default file carries after its value.
 The default file, the keys added back, the log header and every reader come from this table, and a name not in it does not compile (`FindSetting`); README has each key's meaning, range and default.
@@ -109,7 +110,7 @@ A `static_assert` on `IniKeyCount()` pins the layout at 47 keys: a new key means
 `LoadSettings()` reads every entry once through `ReadIniValue`, a build that is not the test build skipping the seven test keys; nothing reads the file again.
 A value TweaksV cannot use is reported, with the value used instead: the default for one that is no switch or no number, the nearest of the table's limits, the only ones this report knows, for a number outside them.
 
-### 4.2 Patterns (`TweaksVPatterns.h`)
+### 4.2 Patterns (`patterns.h`)
 
 `kPatterns` lists every pattern once, under the label PATTERNS.md gives it and in PATTERNS.md's order, grouped per part, and is the one place in the code to change after a game update.
 A malformed pattern, a repeated label or a label not in the table does not compile (`PatternsAreValid()`, and `Pattern(label)`, the only way the code names a pattern).
@@ -118,7 +119,7 @@ A malformed pattern, a repeated label or a label not in the table does not compi
 The table holds 274 patterns; 1.0.1158.16 uses 271, since the packfile part chooses one of three direct-size patterns and one of two references by build.
 The check boot (`DIAGNOSTIC_MODE=1` and `CONSOLE=1`, every part on - `[PEDPROPS] ENABLED=1` among them, which ships off - with or without `DRY_RUN=1`) looks for every one.
 
-### 4.3 Features (`TweaksVFeatures.cpp`)
+### 4.3 Features (`features.cpp`)
 
 An old plugin is a stand-alone `.asi` that did a part's job before TweaksV and that TweaksV replaces; a plugin that stays does its job too and stays installed because another mod needs it (a `PeerPlugin` constant, section 7).
 `kFeatures` names them per part, with its start function, in the order of `kSections` by a `static_assert`:
@@ -152,7 +153,7 @@ The file in use is the game folder's `TweaksV.ini` if it exists, else the fallba
 A file in the game folder always wins; the header says when an unused copy sits in the fallback folder.
 A read-only game folder is normal, so it is only logged and shows no message box; any other reason, such as a `TweaksV.log` that another program holds open (section 6.1), is a problem in the start-up summary.
 
-### 5.2 The own-file checks (`TweaksVFiles`)
+### 5.2 The own-file checks (`files`)
 
 TweaksV writes only to its own files, `TweaksV.ini`, `TweaksV.log`, `TweaksV.old.ini` and the test-build dumps, and only where each is what its path says: a plain file directly in the folder it belongs in.
 A link in its place could otherwise make TweaksV write to another file, which matters when the game runs as administrator.
@@ -164,7 +165,7 @@ A refused `TweaksV.ini` is neither read nor written, so every setting keeps its 
 `OpenOwnFile` opens the link itself, never its target, and deletes a file it created itself when the check fails.
 `HoldOwnFile` opens without delete sharing: while the handle is open, nobody can rename, delete or replace the file or rename a folder above it, so the Win32 INI functions that open it by its path reach this very file.
 
-### 5.3 Creating, updating, replacing (`TweaksVIni`)
+### 5.3 Creating, updating, replacing (`ini`)
 
 `CreateOrUpdateIni()`:
 
@@ -188,7 +189,7 @@ What each key does is README's table, and the two testing switches are in its "D
 
 ### 6.1 The log file
 
-`WriteLog(tag, text)` appends `hh:mm:ss.mmm [Tag] text` to `TweaksV.log` and to the console when one is open, under one `SRWLOCK` held through the guard of `TweaksVLock.h`, which an exception releases too, so that no failure can leave the next line waiting forever.
+`WriteLog(tag, text)` appends `hh:mm:ss.mmm [Tag] text` to `TweaksV.log` and to the console when one is open, under one `SRWLOCK` held through the guard of `lock.h`, which an exception releases too, so that no failure can leave the next line waiting forever.
 A line is cut at 2 KB, in a test build at 64 KB; lines written before the log is started, up to 1024, are kept and written after the header.
 Every mention of the Windows user's profile folder is written as `%USERPROFILE%`, in its short form (`C:\Users\NAME~1`) and with forward slashes too, because logs get posted in public and that folder is usually named after the user.
 The file grows to 64 MB at most, room for hours of the logs for testing; a last line says when it stops, and the console still gets every line.
@@ -233,7 +234,7 @@ Every part logs the same things the same way, under its own tag; these are the f
 
 Addresses inside the game are written as `RVA 0x...`, the offset from the start of `GTA5_Enhanced.exe` in memory, so they can be compared across boots and with PATTERNS.md; an address outside the game as `0x... (outside the game)`.
 
-### 6.4 Problems and the start-up summary (`TweaksVSummary`)
+### 6.4 Problems and the start-up summary (`summary`)
 
 `ReportFailure(tag, what)` logs `PROBLEM: <what>` under the part's tag and keeps the item (`[Tag] what`) for the start-up summary, under a lock held through the same guard.
 `ShowStartupSummary()` shows them once in one message box, 40 at most and the rest counted, with the log's path and the switch that stops these messages; with `ERROR_POPUP=0` the log says so in the box's place.
@@ -242,7 +243,7 @@ Addresses inside the game are written as `RVA 0x...`, the offset from the start 
 A problem reported after the summary was shown - a part that stops working later, such as a file in the mods folder that RageOpenV cannot open - comes a second later in a box of its own, from a thread of its own (`late report`).
 A finding is no part failing: the part is doing its job and has found what the player must know.
 `ReportFinding(tag, finding, what)` logs it as `PROBLEM: <what>` too, but it is never an item of the start-up summary, whose heading and last line do not fit it: it goes to that same thread, whether the summary has been shown or not.
-Each kind has its heading and its last line in a table in `TweaksVSummary`: the part that stopped working, `Finding::LegacyPacks` (section 11.6) and `Finding::RefusedFiles` (section 11.10).
+Each kind has its heading and its last line in a table in `summary`: the part that stopped working, `Finding::LegacyPacks` (section 11.6) and `Finding::RefusedFiles` (section 11.10).
 The thread shows a box per kind with something in it, at most three of each per session, so that a part that keeps failing cannot fill the screen nor take a finding's box; past that, and with `ERROR_POPUP=0`, a report is only logged.
 
 `StartModuleThread(thread, what)` starts these threads, RageOpenV's and DirectStorage's checks, the static bounds check and the threads of section 6.6 with an extra reference to the module, which the thread drops when it ends, so that `TweaksV.asi` cannot be unloaded under it.
@@ -252,7 +253,7 @@ The thread shows a box per kind with something in it, at most three of each per 
 `CONSOLE=1` opens a console window once the header is written, which mirrors every log line from then on; the RageOpenV part then NOPs the game's call that would hide it (section 11.6).
 It is a testing aid: when it cannot be opened or kept, the log says so and nothing is reported.
 
-### 6.6 The measurements (`TweaksVMeasure`)
+### 6.6 The measurements (`measure`)
 
 One loop serves `DIAGNOSTIC_MODE`'s eleven measurements of the parts, the six of the parts measured first (section 11.16), DirectStorage's `UNLOCK_FILES` summary and the weapon infos guard's report (section 11.10.1).
 A part describes its measurement as a `Measurement { thread, firstMs, numbers, summary, start }` and starts it with `StartMeasurement`, through `StartModuleThread` (section 6.4); the thread never ends, so it keeps its reference to the module, and nothing leaves it (a `try`).
@@ -261,7 +262,7 @@ Then one comes every minute while `numbers` changes, in a test build every `TWEA
 A measurement whose thread cannot start is logged, not reported: it is an aid that changes nothing in the game (section 12).
 The exception is the `weapon infos guard report`, the guard's own: its thread not started, the guard is not set up, a problem of the part (section 11.10.1).
 
-## 7. The conflict check (`TweaksVConflicts`)
+## 7. The conflict check (`conflicts`)
 
 `CheckForConflicts()` looks in the three places an ASI loader loads from (`kLoaderFolders`: the game folder, its `scripts` and its `plugins`) for every old plugin and every plugin that stays of every feature (section 4.3).
 An old plugin found switches its part off for the session and is reported, with the word to delete it.
@@ -278,7 +279,7 @@ The plugins that stay:
 `IsPluginInstalledFor(section)` answers from that one search whether a plugin of either kind does a part's job, whatever `TweaksV.ini` says of the part, false when the check did not run: for StaticBounds, which leaves the game's code to such a plugin even while `TweaksV.ini` switches Blips off, since its check would hook the script programs Blips' plugins work on (section 11.15).
 `IsInsideGameImage(p)` is the shared test for an address inside `GTA5_Enhanced.exe`'s image, and `IsInsideGameData(p)` the same for the section the game's section table names `.data`, for the one write TweaksV makes outside the game's code (section 11.14).
 
-## 8. The scanner (`TweaksVScanner`)
+## 8. The scanner (`scanner`)
 
 The scanner finds TweaksV's patterns in the running game's code, logging under `[Scanner]`.
 `GTA5_Enhanced.exe` is encrypted on disk, so the code is only readable in memory, and a game update changes it: what the scanner finds is the one thing to maintain after an update (PATTERNS.md, "When Game Updates").
@@ -299,7 +300,7 @@ The pattern parser is an altered version of ScriptHookVDotNet's memory scanner (
 The search for stores takes in moves of 1 to 32 bytes and the integer unit's read-modify-writes; x87 stores and AVX-512's are not looked for.
 The bytes before the operand are read every way an instruction could start among them, so a load whose bytes read as a store counts as one, which is safe where a missed writer is not.
 
-## 9. The patch module (`TweaksVPatch`)
+## 9. The patch module (`patch`)
 
 Every change to the game's code goes through this module, so that every part writes the same way and no part has to know about page protection, `DRY_RUN` or `DIAGNOSTIC_MODE`.
 
@@ -315,14 +316,14 @@ Every change to the game's code goes through this module, so that every part wri
   `IsReadable(address, size)`, over the whole range, comes before any byte outside a pattern's match is read.
   `CopyMemorySafely(target, source, size)` catches an access violation and returns false, nothing else being caught, for memory that may change or be freed between a check and the read: the pointers the game's DirectStorage calls hand the part's hooks, the heap data a measurement or a guard walks while the game changes it.
 
-## 10. The relocation core (`TweaksVRelocation`)
+## 10. The relocation core (`relocation`)
 
 Six parts move one of the game's static arrays to a larger one and raise the limit the game's code carries for it: the modkit array, the packfile array, the box streamer's traversal list, the decal definitions array, the weapon component list, whose size no instruction carries - it is the distance to the count that follows the list - and the siren setting ID table, whose size no setting chooses.
 They describe their array in tables; the core does the work once for all of them.
 
 ### 10.1 The tables
 
-`TweaksVRelocation.h` holds the tables' fields and the builders that fill them.
+`relocation.h` holds the tables' fields and the builders that fill them.
 
 - An `Anchor` is a pattern of the part, how often it must match, and what every match holds: a reference, up to three limits, both, or neither - a site the part reads itself through the plan.
 - A `ReferenceSite` is the rel32 of a `lea r64, [rip+disp32]` or of a rip-relative `mov` that addresses the array.
@@ -432,7 +433,7 @@ The start-up, in this order:
    The encryption tag is kept per thread and used up by the parse it was found for, so that archives opened at the same time never mix (PATTERNS.md, "When Game Updates" item 5, has what that rests on).
    An OPEN archive's entries are marked as the game expects (PATTERNS.md's RageOpenV) only when its table is plausible and can be read, because the table is the game's heap memory and a field moved by a game update would point anywhere; else the archive is left as it is, logged, the first of a session reported once.
 
-**The mods folder's one walk** (`WalkModsFolder`, `TweaksVModsFolder`): RageOpenV's list and the check below go by it, so that the two list the same files the same way and stop at the same name.
+**The mods folder's one walk** (`WalkModsFolder`, `modsfolder`): RageOpenV's list and the check below go by it, so that the two list the same files the same way and stop at the same name.
 Its limits are 200,000 names handed on and 800,000 looked at, so that a folder of names left out is bounded too and not by the disk alone, the first past either ending the walk, and 32 levels deep, what a folder at that depth holds not read.
 Names are spelled in UTF-8 and paths limited to 254 bytes, by what the game's file functions take on every Windows, whatever its ANSI code page (PATTERNS.md, "When Game Updates" item 5).
 
@@ -444,11 +445,11 @@ A path that is not relative, not valid UTF-8, longer than 254 bytes or with `..`
 A path the list has goes to the game's own function as `mods/` plus the game's own spelling, and what that returns is what the game gets: none of the four falls back to the game's own file, so the player's file is never replaced behind their back.
 A mods file OpenBulk cannot open is that failure for the game, logged, the first of a session reported once.
 
-**The check for packs made for GTA V Legacy** (`TweaksVLegacyPacks`, no key of its own).
+**The check for packs made for GTA V Legacy** (`legacypacks`, no key of its own).
 Once the eight hooks are on, `StartLegacyPacksCheck()`, the one call, starts the check's thread (`Legacy packs check`), so the game's thread never waits for it; with `DRY_RUN`, and wherever the mods folder is not used, the call is never made.
 
 Every `.rpf` file the walk gives is a pack, named by its path from the current directory.
-Its archives are read from a queue, no recursion, only their headers, entry tables and names, by the RPF7 facts in PATTERNS.md's RageOpenV, one set in `TweaksVRpf.h` that both files include, so the two never disagree.
+Its archives are read from a queue, no recursion, only their headers, entry tables and names, by the RPF7 facts in PATTERNS.md's RageOpenV, one set in `rpf.h` that both files include, so the two never disagree.
 A resource named `.yft`, `.ydr`, `.ydd` or `.ytd` with Legacy's version (PATTERNS.md's RageOpenV) makes the pack one made for Legacy, and a binary named `.rpf` is an archive nested in this one.
 
 Every count and size is bounded, so that no buffer is sized by a file's numbers unchecked: 1,048,576 entries per table; header, table and names inside the archive; 65,792 bytes of names, all that a file's 16-bit name offset can reach, each name ending in a zero within 256 bytes; a nested archive stored, inside the one that holds it and past that one's names, so that it is smaller and the nesting ends; 8 levels of nesting; 4,096 archives and 64 MB of entry tables and names per pack; 1 GB in all.
@@ -605,8 +606,8 @@ Two counting stubs near the game, read+execute, their counters on a read/write p
 ### 11.14 SirenSettings (`InitSirenIds`)
 
 A siren setting of `carcols.meta` and the vehicle variation that names it carry its ID in a byte on the whole load path, and a table of 256 bytes maps an ID to the setting's position, a byte too, in which 0 means no sirens: 256 IDs and 255 settings a vehicle can use, bound silently (PATTERNS.md, "Siren IDs").
-`TweaksVSirenIds` widens the ID to 16 bits on that whole path; the position stays a byte, so 255 settings stay the most and more still wrap.
-The part's other job, `SIRENS_PER_VEHICLE`, its lights and its damage (`TweaksVSirenDamage`), is section 11.14.1.
+`sirenids` widens the ID to 16 bits on that whole path; the position stays a byte, so 255 settings stay the most and more still wrap.
+The part's other job, `SIRENS_PER_VEHICLE`, its lights and its damage (`sirendamage`), is section 11.14.1.
 
 The 14 patterns go through the core (section 10.2) as anchors, four limits that agree on another size than 256 being another mod's, and the other sites are checked as section 11.16.1 has them, for the part more strictly: an ID member's type other than a byte's is taken for another mod's widening, and a type byte outside the game's `.data` (`IsInsideGameData`, section 7) is refused.
 
@@ -641,12 +642,12 @@ The setting's key is a 64-bit hash of the 20 lights the game kept, their members
 
 **The second call.** `I-E-Z2`'s allocation holds the state, a second state and a stand-in vehicle, freed whole by the game.
 The wrapper calls the game's renderer, then looks the model up in the table of 1,024 (section 11.16.2), and a model that does not fit keeps 20 sirens, reported once.
-On a model's first pass a block is made when the room behind its bone structure (`TweaksVSirenRoom.h`) names bones past `siren20` and its setting's 20 lights hash to an own setting, its scalars the last model's where two with the same 20 lights differ, a limit logged; the block stands in for the model info, so that the renderer's light 1 is `siren21`.
+On a model's first pass a block is made when the room behind its bone structure (`sirenroom.h`) names bones past `siren20` and its setting's 20 lights hash to an own setting, its scalars the last model's where two with the same 20 lights differ, a limit logged; the block stands in for the model info, so that the renderer's light 1 is `siren21`.
 
 Both calls of the getter lead to one plain function (D41), the game's getter left out: a block, which is no model info, gets its own setting, by one range check; position 0 gets none; a position below the array's count that entry, the count read before the pointer; any other, or no carcols data, the empty setting of TweaksV's, zero but for `sequencerBpm` 200, which lights nothing.
 Lights past 20 are per pass, so up to 8 merged lights a vehicle (`useRealLights` off), not 4; a pack's binary file with lights past 20 stays dark if it does not reach the tree reader (HINT: it does).
 
-**The damage** (`FindSirenDamage`, `TweaksVSirenDamage`) is the half of the part's one write behind the lights': 64 bytes of room behind each bone structure, filled at a model's load, and the game's damage loops raised to read them, so that a hit, an impact and a wreck reach lights 21 to 32.
+**The damage** (`FindSirenDamage`, `sirendamage`) is the half of the part's one write behind the lights': 64 bytes of room behind each bone structure, filled at a model's load, and the game's damage loops raised to read them, so that a hit, an impact and a wreck reach lights 21 to 32.
 The bone structures' pool must not be made yet, since TweaksV would have started too late to give its structures their room; no pattern pins its load, so it is read by its shape right before `I-E-Y2`.
 It adds 21 writes and one redirected call: the bounds to N, the key, and `I-E-L08`'s -20 to -N, the reads to the room, the hit's counter (PATTERNS.md, "Siren damage"), the pool's stride and the allocation to 0x38C, whatever N is.
 The sync loop stays at 20: it reads 20 bytes of sync data, and nothing writes its sites.
@@ -678,7 +679,7 @@ For the store's, a size from 0 up to below the key becomes the key, and one belo
 
 ### 11.16 The parts measured first (`kMeasuredFirst`)
 
-A limit of the game is lifted only once a mod load reaches it, and only from a boot's numbers (D25), so each limit is measured first, by a module of its part: `TweaksV<Limit>.cpp` and `.h`, with its header comment, one entry function, `Measure<Limit>()`, and its part's log tag, or one of its own where no part stands behind it yet.
+A limit of the game is lifted only once a mod load reaches it, and only from a boot's numbers (D25), so each limit is measured first, by a module of its part: `<limit>.cpp` and `.h`, with its header comment, one entry function, `Measure<Limit>()`, and its part's log tag, or one of its own where no part stands behind it yet.
 `kMeasuredFirst` starts them with `DIAGNOSTIC_MODE=1` (section 4.3), in the order of the subsections below, the ped props' measurement last (section 11.11).
 
 A module finds every pattern of its limit, its measurement's and those the writing half will use, so that the log names each one missing and its line the first, checks and logs each site as the writing half will, and starts its measurement through `StartMeasurement` (section 6.6).
@@ -799,7 +800,7 @@ The counters, with `DIAGNOSTIC_MODE` and not with `DRY_RUN`, are an aid (section
   INI values are limited to 255 characters, parsed and clamped; the mods folder's walk and the check of its packs have limits on every count, size and depth (section 11.6); paths from the game and from DirectStorage, and its rename buffers, are read within a length, DirectStorage's under a guard against unreadable memory (section 11.8); the scanner reads the PE headers only where they lie inside the image (section 8); the log cuts its lines and its file.
 - **Nothing throws into the game.**
   Every hook and every thread puts what can throw - a log line, a table walk - inside a `try`, and `DllMain` catches everything on attach and returns `TRUE`.
-  A lock is never left taken by an exception (`TweaksVLock.h`), nor a page of the game's code writable (the guard in `WriteCode`).
+  A lock is never left taken by an exception (`lock.h`), nor a page of the game's code writable (the guard in `WriteCode`).
   A hook that works after the game's function, or in its place, keeps the game's last error around that work; the others call the game's function last, so the game's own error stands.
 - **Nothing per frame beyond the game's own work.**
   A hook on a hot path (the file functions, the tree searches, `NtCreateFile`, which every file open of the game passes) does one path spelling and one hash lookup, one count with atomics, or one bounded comparison of the open's name with the game folder: no allocation, no lock of TweaksV's, no file system call but one query of a folder's identity per open relative to a folder handle (section 11.8).
@@ -832,24 +833,24 @@ A test build (`-p:TweaksVTestBuild=true`, which defines `TWEAKSV_TEST_BUILD`) sa
 
 The other `TWEAKSV_TEST_` environment variables, each named where the code reads it, reach what a fake cannot otherwise bring: a file system without file IDs or POSIX renames, a thread or memory Windows refuses, a part that throws, a load past a guard's room.
 
-### 13.2 The code dump and the data windows (`TweaksVDump`)
+### 13.2 The code dump and the data windows (`dump`)
 
-`StartCodeDump()` and `StartDataDump()` take their first copies at once, in `DllMain`, before any part changes the game; a thread saves them and, after the seconds asked for, a second copy, in `%LOCALAPPDATA%\TweaksV` through the own-file checks, never in the game folder (the files: README, "Test Builds"; their layouts: `TweaksVDump.h`).
+`StartCodeDump()` and `StartDataDump()` take their first copies at once, in `DllMain`, before any part changes the game; a thread saves them and, after the seconds asked for, a second copy, in `%LOCALAPPDATA%\TweaksV` through the own-file checks, never in the game folder (the files: README, "Test Builds"; their layouts: `dump.h`).
 A code dump holds the PE headers and every section that is not writable, and a writable one only when it is also executable: the plain data sections can hold the player's data and are never saved.
 It is how patterns are found after a game update (PATTERNS.md, "When Game Updates", item 3).
 A data window is there since a research pass needs static data that lies in `.data`, the parser's member data first (D21); it is named for static data that holds no player's data, and `.data` as a whole stays out.
 A value past README's limits is one problem and nothing is saved, the good windows neither, which takes in one RVA named twice, whose two windows would write one file, and a value of more than 254 characters, which a key cannot hold whole.
 
-### 13.3 The script programs (`TweaksVScripts`) and their copy (`TEST_DUMP_SCRIPT`)
+### 13.3 The script programs (`scripts`) and their copy (`TEST_DUMP_SCRIPT`)
 
 A script program is one of the game's compiled scripts as the game holds it in memory.
 The game's resource constructor, on its resource placement thread, calls the function that resolves the natives (the call at +3 of `Y-E-H1`) and only afterwards enters the program in its registry of programs, so no script thread can run a program while that call is under way (PATTERNS.md, "Script programs").
 
-`TweaksVScripts` owns the one redirect of that call, for every part that works on a script program.
+`scripts` owns the one redirect of that call, for every part that works on a script program.
 `Scripts::AddUser`, from `DllMain` only, puts a user in a fixed table of four, so that the game's thread needs no allocation and no lock.
 A user's `before` sees every program placed while the native table still holds the hashes, its `after` the program once the game has resolved them, each inside a `try`, with the game's last error kept around their work.
 
-A research reader is written against the file (`TweaksVDump.h`), so a change of its layout needs a new format version.
+A research reader is written against the file (`dump.h`), so a change of its layout needs a new format version.
 
 ## 14. The tests
 
@@ -916,36 +917,36 @@ A change needs the suites of this table; the full run is a round's one proof.
 
 | A change to | Needs |
 |---|---|
-| `TweaksVHeapAdjuster` | `story`, `ini_default`, `pedpool`, `integration` |
-| `TweaksVStraightToStoryMode` | `story`, `ini_default`, `integration` |
-| `TweaksVModkitLimit` | `modkit`, `integration` |
-| `TweaksVPackfileLimit` | `packfile`, `ini_default`, `integration` |
-| `TweaksVBoxStreamer` | `boxstreamer`, `ini_default`, `integration` |
-| `TweaksVDecals` | `decals`, `ini_default`, `integration` |
-| `TweaksVRageOpenV`, `TweaksVModsFolder`, `TweaksVLegacyPacks`, `TweaksVRpf.h` | `rageopenv`, `legacypacks`, `integration` |
-| `TweaksVDirectStorage`, `test\fake_dstorage.cpp`, `test\fake_renamer.cpp` | `directstorage`, `integration` |
-| `TweaksVBlips` | `blips`, `staticbounds`, `integration` |
-| `TweaksVScripts` | `blips`, `pedprops`, `staticbounds`, `integration` |
-| `TweaksVWeaponInfos` | `weaponinfos`, `integration` |
-| `TweaksVWeaponComponents` | `weaponcomponents`, `integration` |
-| `TweaksVPedProps` | `pedprops`, `integration` |
-| `TweaksVTextureBudget` | `texturebudget`, `integration` |
-| `TweaksVRayTracing` | `raytracing`, `integration` |
-| `TweaksVSirenIds` | `sirenids`, `sirencount`, `lightcapacity`, `integration` |
-| `TweaksVStaticBounds` | `staticbounds`, `blips`, `ini_default`, `integration` |
-| `TweaksVSirenCount` | `sirencount`, `sirendamage`, `lightcapacity`, `coronastore`, `integration` |
-| `TweaksVSirenRoom.h` | `sirencount`, `sirendamage`, `integration` |
-| `TweaksVSirenDamage` | `sirendamage`, `integration` |
-| `TweaksVLightCapacity` | `lightcapacity`, `ini_default`, `integration` |
-| `TweaksVCoronaStore` | `coronastore`, `lightcapacity`, `ini_default`, `integration` |
-| `TweaksVPopulation` | `population`, `integration` |
-| `TweaksVPedPool` | `pedpool`, `integration` |
-| `TweaksVRenderQueues` | `renderqueues`, `integration` |
-| `TweaksVDump` | `blips`, `integration` |
+| `heapadjuster` | `story`, `ini_default`, `pedpool`, `integration` |
+| `straighttostorymode` | `story`, `ini_default`, `integration` |
+| `modkitlimit` | `modkit`, `integration` |
+| `packfilelimit` | `packfile`, `ini_default`, `integration` |
+| `boxstreamer` | `boxstreamer`, `ini_default`, `integration` |
+| `decals` | `decals`, `ini_default`, `integration` |
+| `rageopenv`, `modsfolder`, `legacypacks`, `rpf.h` | `rageopenv`, `legacypacks`, `integration` |
+| `directstorage`, `test\fake_dstorage.cpp`, `test\fake_renamer.cpp` | `directstorage`, `integration` |
+| `blips` | `blips`, `staticbounds`, `integration` |
+| `scripts` | `blips`, `pedprops`, `staticbounds`, `integration` |
+| `weaponinfos` | `weaponinfos`, `integration` |
+| `weaponcomponents` | `weaponcomponents`, `integration` |
+| `pedprops` | `pedprops`, `integration` |
+| `texturebudget` | `texturebudget`, `integration` |
+| `raytracing` | `raytracing`, `integration` |
+| `sirenids` | `sirenids`, `sirencount`, `lightcapacity`, `integration` |
+| `staticbounds` | `staticbounds`, `blips`, `ini_default`, `integration` |
+| `sirencount` | `sirencount`, `sirendamage`, `lightcapacity`, `coronastore`, `integration` |
+| `sirenroom.h` | `sirencount`, `sirendamage`, `integration` |
+| `sirendamage` | `sirendamage`, `integration` |
+| `lightcapacity` | `lightcapacity`, `ini_default`, `integration` |
+| `coronastore` | `coronastore`, `lightcapacity`, `ini_default`, `integration` |
+| `population` | `population`, `integration` |
+| `pedpool` | `pedpool`, `integration` |
+| `renderqueues` | `renderqueues`, `integration` |
+| `dump` | `blips`, `integration` |
 | `TweaksV.vcxproj`, `version.rc` | `integration` |
-| `TweaksVRelocation` | `ini_default`, `modkit`, `packfile`, `boxstreamer`, `decals`, `weaponcomponents`, `sirenids`, `integration` |
-| `TweaksVMeasure` | `story`, `boxstreamer`, `decals`, `rageopenv`, `legacypacks`, `directstorage`, `blips`, `weaponinfos`, `weaponcomponents`, `pedprops`, `texturebudget`, `raytracing`, `sirenids`, `staticbounds`, `sirencount`, `sirendamage`, `lightcapacity`, `coronastore`, `population`, `pedpool`, `renderqueues`, `integration` |
-| `TweaksVPatterns.h`, PATTERNS.md | `patterns`, and the suite of each part whose pattern changed |
+| `relocation` | `ini_default`, `modkit`, `packfile`, `boxstreamer`, `decals`, `weaponcomponents`, `sirenids`, `integration` |
+| `measure` | `story`, `boxstreamer`, `decals`, `rageopenv`, `legacypacks`, `directstorage`, `blips`, `weaponinfos`, `weaponcomponents`, `pedprops`, `texturebudget`, `raytracing`, `sirenids`, `staticbounds`, `sirencount`, `sirendamage`, `lightcapacity`, `coronastore`, `population`, `pedpool`, `renderqueues`, `integration` |
+| `patterns.h`, PATTERNS.md | `patterns`, and the suite of each part whose pattern changed |
 | `test\run_<suite>.sh` | that suite, and its `CHECKS` line when its number of checks changes |
 | `test\fake_game_full.cpp`, `test\fake_game_rov.cpp` | the suites whose scenarios it changes, and every suite when it changes what each run does or a field the suites read |
 | `test\fake_game.cpp` | `story`, `modkit`, `packfile`, `boxstreamer`, `decals`, `rageopenv`, `legacypacks`, `weaponinfos`, `weaponcomponents`, `pedprops`, `texturebudget`, `raytracing`, `sirenids`, `staticbounds`, `sirencount`, `sirendamage`, `lightcapacity`, `coronastore`, `population`, `pedpool`, `renderqueues` |
@@ -953,7 +954,7 @@ A change needs the suites of this table; the full run is a round's one proof.
 | `test\expected_default.ini`, `test\layout1.ini` | `ini_default`, `integration` |
 | `test\deps.cmd`, `test\headers.cmd` | `integration` |
 | `test\junction.cmd` | `rageopenv`, `integration` |
-| the shared code - `dllmain.cpp`, `TweaksVFeatures`, `TweaksVSettings`, `TweaksVIni`, `TweaksVFiles`, `TweaksVGame`, `TweaksVLock.h`, `TweaksVLog`, `TweaksVSummary`, `TweaksVConflicts`, `TweaksVScanner`, `TweaksVPatch` - and `test\run_all.sh`, `test\common.sh`, `test\base.ini`, `test\build.cmd`, `test\build_tweaksv.cmd`, `test\vsenv.cmd` | the full run |
+| the shared code - `main.cpp`, `features`, `settings`, `ini`, `files`, `game`, `lock.h`, `log`, `summary`, `conflicts`, `scanner`, `patch` - and `test\run_all.sh`, `test\common.sh`, `test\base.ini`, `test\build.cmd`, `test\build_tweaksv.cmd`, `test\vsenv.cmd` | the full run |
 
 Every part's row needs `patterns` too, whose "every pattern used once" a part's `.cpp` alone can break by dropping a `Pattern("...")`.
 A new part's suite adds its row, with `integration`, and its patterns join the patterns suite's run over the table by themselves: a pattern its part looks for only under a key other than `DIAGNOSTIC_MODE`, or a pattern of another game build, gets its line there, as `R-E-C1` and the packfile part's older patterns have.
@@ -982,12 +983,12 @@ The order: the version in the project file, a local commit, Release rebuilt from
   A file of an older layout is carried forward at its next start (section 5.3), so a new layout needs nothing more in the code.
 - **A new pattern:** one entry in `kPatterns` with a new label in its part's group, and the row in PATTERNS.md with the same bytes, the offset and what the match holds; the `patterns` suite fails until both agree.
   After a game update the same; PATTERNS.md's "When Game Updates" has the boot that shows every pattern matching as often as it must.
-- **A plugin that does a part's job:** an old one TweaksV replaces is its file name in `oldPlugins` of each part whose job it does; one that stays installed is a `PeerPlugin` constant in `TweaksVFeatures.cpp`, named in `peerPlugins` of each such part, with a comment that says why it stays and what clashes.
+- **A plugin that does a part's job:** an old one TweaksV replaces is its file name in `oldPlugins` of each part whose job it does; one that stays installed is a `PeerPlugin` constant in `features.cpp`, named in `peerPlugins` of each such part, with a comment that says why it stays and what clashes.
   Either kind gets its scenarios in the integration suite, its row in section 4.3 and its name in README's "Testing" step 2.
-- **A new part:** a section in `kSections` and `kSettings`, a feature in `kFeatures` in the same order with its old plugins, its plugins that stay and `Init<Part>()`; one file `TweaksV<Part>.cpp` with its header comment, its tag and its credits, listed with its header in `TweaksV.vcxproj` and `.vcxproj.filters`; patterns in the table; a suite `test\run_<part>.sh` with the sites added to the fake game, its name in `run_all.sh`'s list and its `CHECKS` line.
+- **A new part:** a section in `kSections` and `kSettings`, a feature in `kFeatures` in the same order with its old plugins, its plugins that stay and `Init<Part>()`; one file `<part>.cpp` with its header comment, its tag and its credits, listed with its header in `TweaksV.vcxproj` and `.vcxproj.filters`; patterns in the table; a suite `test\run_<part>.sh` with the sites added to the fake game, its name in `run_all.sh`'s list and its `CHECKS` line.
   Its documents: a section 11.x here, its game facts in PATTERNS.md, a section and the key rows in README, the version's entry and the new check count in NOTES.md, and the project it derives from or takes its idea from in CREDITS.md (and in THIRD_PARTY_NOTICES.md where it carries its code).
-  It follows section 12, writes through `WriteCode` or `RedirectCalls`, hooks through `HookFunctions`, reports through `ReportFailure` - `ReportFinding`, with a row of its own in `TweaksVSummary`'s table, for what it finds while it does its job -, logs in the wording of section 6.3 and runs a measurement through `StartMeasurement` (section 6.6).
-- **A limit measured first,** before its part is built (section 11.16): a module `TweaksV<Limit>.cpp` and `.h` with `Measure<Limit>()`, an entry in `kMeasuredFirst`, and its project files, patterns and suite as for a part.
+  It follows section 12, writes through `WriteCode` or `RedirectCalls`, hooks through `HookFunctions`, reports through `ReportFailure` - `ReportFinding`, with a row of its own in `summary`'s table, for what it finds while it does its job -, logs in the wording of section 6.3 and runs a measurement through `StartMeasurement` (section 6.6).
+- **A limit measured first,** before its part is built (section 11.16): a module `<limit>.cpp` and `.h` with `Measure<Limit>()`, an entry in `kMeasuredFirst`, and its project files, patterns and suite as for a part.
   Its documents: its subsection of 11.16, its rows in sections 2 and 14.2, its section in PATTERNS.md, its paragraph in README's "Measured first", the version's entry and the new check count in NOTES.md.
   Once its part is built, the limit leaves `kMeasuredFirst` and its module becomes the part's.
 - **A new array part:** a `RelocationSpec` with its anchors (section 10.1), `FindRelocation` then `ApplyRelocation`; what the core cannot express stays in the part and reads `RelocationPlan::matches`.

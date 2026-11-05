@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-only
-# The two model budgets, a limit measured first (TweaksVPopulation): with DIAGNOSTIC_MODE=1 the fake game's 16 sites found, checked and
+# The two model budgets, a limit measured first (population.cpp): with DIAGNOSTIC_MODE=1 the fake game's 16 sites found, checked and
 # logged, nothing written, and both budgets sampled and summed up 10 seconds in and again when a high or the samples at the stop move -
 # the numbers of my boot at 180 s, word for word; before the game's init; a level a script lowered, one above the game's, a
 # network game; a table a tunable changed, a raise in gameconfig.xml, a variety past the slider, a budget past an int; models, a pool

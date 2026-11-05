@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-only
-# The render queues, a limit measured first (TweaksVRenderQueues): with DIAGNOSTIC_MODE=1 the fake game's 24 sites found, each once,
+# The render queues, a limit measured first (renderqueues.cpp): with DIAGNOSTIC_MODE=1 the fake game's 24 sites found, each once,
 # checked and logged at the fake's own RVAs, and its six pools, its three families of arrays and its draw list read every 20 ms while the
 # fake runs the patterns' own bytes - each pool's pointer decoded by its make, each add writing what the module reads - and summed up 10
 # seconds in, word for word, and again when a most changes and not when only the latest numbers do; r and s of the fake's own, read and

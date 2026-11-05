@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-only
-# The PedProps part (TweaksVPedProps), which ships off (ISSUES.md, T-PEDPROPS): as it ships, not a word of it and nothing
+# The PedProps part (pedprops.cpp), which ships off (ISSUES.md, T-PEDPROPS): as it ships, not a word of it and nothing
 # looked for, and with DIAGNOSTIC_MODE=1 the measurement alone. Every other scenario switches it on: the full fake game's
 # eleven narrowings widened from 8 to 16 bits, B6 made B7 and nothing else, one line; DRY_RUN; with DIAGNOSTIC_MODE=1
 # every pattern, every narrowing with the call in its match, the complete sets through the scanner's FindCallsTo - the per-anchor count called exactly 7 times and

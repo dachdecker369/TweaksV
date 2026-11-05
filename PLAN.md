@@ -53,6 +53,9 @@ D1 to D18, phases A and B, in short; their full text is in the git history up to
 - **D42, stands:** the hat of T-PEDPROPS, a small clean single-prop pack, a start of its own.
 - **D43, stands:** no raise of the ped pool, the render queues or the ped budget: my proof's numbers do not ask for one.
 - **D44, stands:** `TEST_SIREN_PASSES`, a test build's switch that repeats the sirens' renderer per pass, since no normal load reaches the stores' numbers: 16 cars lit gave at most 124 vehicle lights, about 7 a car, under a spawn cap of 17.
+- **D45, stands:** the source files have plain lowercase names without the project's, since 2026-11-05: `main.cpp`, `log.cpp` and so on, and only Visual Studio's `TweaksV.slnx`, `TweaksV.vcxproj` and `TweaksV.vcxproj.filters` carry the name.
+  The symbols keep `namespace TweaksV`, and the binary, its INI and its log keep their names.
+  There is no `main.h`: `main.cpp` defines only `DllMain`, which no other file calls.
 
 ## What my boots have shown so far
 
@@ -91,6 +94,7 @@ The full account is in the git history up to b3a7a1b.
 ## Next steps
 
 **State:** 2.8.0, phase C's second and last build, is tagged on b3a7a1b and pushed, this document with it, and my proof passed on it; it is the full version I publish (D7), after 2.2.1.
+Above the tag the source files took plain lowercase names (D45): the Release build is 2.8.0's, byte for byte, but for the commit in its log header, its time stamps and its debug ID.
 It has sixteen parts, `TweaksV.ini`'s layout 5 with its 47 keys, 274 patterns and 2986 checks, the full run about 10 minutes side by side.
 It takes the sirens per vehicle (D23), the light stores and the corona store as a part (D35, D39), `VIDEO_MEMORY_BUDGET` at 6000 (D33), and `STREAMED_OBJECTS` at 131072 (D37), which ended my LOD switching by my eye.
 Open for a later plan, none asked for now: the ray traced list's sort (D36); some lights on buildings that come on late, about 50 m from a Gruppe 6 building downtown by my eye, with nothing refused in the log (ROADMAP.md); the hat of T-PEDPROPS (D42).

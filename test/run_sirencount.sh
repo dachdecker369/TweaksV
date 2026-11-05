@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-only
-# The siren count, a limit of the SirenSettings part measured first (TweaksVSirenCount): with DIAGNOSTIC_MODE=1 the fake game's
+# The siren count, a limit of the SirenSettings part measured first (sirencount.cpp): with DIAGNOSTIC_MODE=1 the fake game's
 # four sites found, checked and logged, the vehicle lights' call of the siren lights' renderer redirected, and the fake's
 # vehicles drawn through it from two threads at once - the game's renderer first, with its arguments, its result and its last
 # error, then each model counted once and summed up 10 seconds after the first, and again when the models change, and with

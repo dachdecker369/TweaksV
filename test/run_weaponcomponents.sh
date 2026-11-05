@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-only
-# The weapon components (TweaksVWeaponComponents, the WeaponLimits part's second half), on the fake game's list of every
+# The weapon components (weaponcomponents.cpp, the WeaponLimits part's second half), on the fake game's list of every
 # weapon component definition - its rebuild, its sort, its update of the count, the pool's size call and the list's 15
 # other leas: by default the list moved - its 17 loads to a list of 16854 entries that holds the game's own entries, the
 # count left where it is - and the pool's size call redirected to a read+execute stub that gives the pool the room and

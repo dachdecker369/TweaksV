@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-only
-# The StaticBounds part (TweaksVStaticBounds): the fake game's store init (C-E-L1) run as code, its call of the pool size lookup redirected,
+# The StaticBounds part (staticbounds.cpp): the fake game's store init (C-E-L1) run as code, its call of the pool size lookup redirected,
 # so that the static bounds store gets the larger of its size and STATICBOUNDS_SIZE, everything built from what comes back, said once, and the
 # fake's three other stores stay as they are: the size below and above the key, the key at its limits and beyond; the regression of start 3
 # of 2.7.0's proof, names past the game's size carried and names past the raise trapped, and the old way's write to the pool alone trapped at

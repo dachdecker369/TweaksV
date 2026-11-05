@@ -1,0 +1,44 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// TweaksV - TweaksV.ini, the file: where it is, creating it, adding keys that are missing and carrying an
+// older layout forward. What is in it - every setting, its default and its reader - is in settings.h.
+#pragma once
+
+#include <string>
+
+namespace TweaksV
+{
+	// Folder of GTA5_Enhanced.exe, without a trailing backslash. TweaksV.ini,
+	// TweaksV.log and mods\ live there, wherever TweaksV.asi itself sits.
+	const std::wstring& GetGameFolder();
+
+	// %LOCALAPPDATA%\TweaksV - where TweaksV.ini and TweaksV.log go when the game
+	// folder is read-only (e.g. under C:\Program Files). Empty if unavailable. The
+	// folder is not created here.
+	std::wstring GetFallbackFolder();
+
+	// Absolute path of the TweaksV.ini in use: the game folder's if it exists, else the one in
+	// %LOCALAPPDATA%\TweaksV if that exists, else a new one in the game folder - or in
+	// %LOCALAPPDATA%\TweaksV if the game folder is read-only.
+	const wchar_t* GetIniPathW();
+
+	// Picks the TweaksV.ini to use (see GetIniPathW) and writes the full default file
+	// (DefaultIniText) if there is none. An existing file with the layout of TweaksV 1.x - no VERSION
+	// under [TWEAKSV] - is renamed to TweaksV.old.ini and the default file written in its place; any
+	// other existing file gets the keys it is missing, and one of an older layout from kIniFirstLayout on
+	// then gets the current VERSION written back (settings.h); no other value is ever changed. The
+	// file is used only if it is what its path says (files.h), and is then held until
+	// ReleaseIniFile(); a file that fails the check is reported and not read at all, so every setting
+	// keeps its default.
+	void CreateOrUpdateIni();
+
+	// Lets go of the TweaksV.ini that CreateOrUpdateIni() holds - once LoadSettings() has read it.
+	void ReleaseIniFile();
+
+	// The TweaksV.ini line of the log header: the path, and where it came from.
+	std::string DescribeIniLocation();
+
+	// A key's value as written in TweaksV.ini, up to a comment after it ("//" or ";") and without the
+	// spaces around it; empty if the key is missing. At most 255 characters are read. Only
+	// LoadSettings() reads TweaksV.ini this way - everything else asks settings.h.
+	std::wstring ReadIniValue(const char* section, const char* key);
+}

@@ -122,46 +122,46 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="dllmain.cpp" />
-    <ClCompile Include="TweaksVBlips.cpp" />
-    <ClCompile Include="TweaksVBoxStreamer.cpp" />
-    <ClCompile Include="TweaksVConflicts.cpp" />
-    <ClCompile Include="TweaksVCoronaStore.cpp" />
-    <ClCompile Include="TweaksVDecals.cpp" />
-    <ClCompile Include="TweaksVDirectStorage.cpp" />
-    <ClCompile Include="TweaksVDump.cpp" />
-    <ClCompile Include="TweaksVFeatures.cpp" />
-    <ClCompile Include="TweaksVFiles.cpp" />
-    <ClCompile Include="TweaksVGame.cpp" />
-    <ClCompile Include="TweaksVHeapAdjuster.cpp" />
-    <ClCompile Include="TweaksVIni.cpp" />
-    <ClCompile Include="TweaksVLegacyPacks.cpp" />
-    <ClCompile Include="TweaksVLightCapacity.cpp" />
-    <ClCompile Include="TweaksVLog.cpp" />
-    <ClCompile Include="TweaksVMeasure.cpp" />
-    <ClCompile Include="TweaksVModkitLimit.cpp" />
-    <ClCompile Include="TweaksVModsFolder.cpp" />
-    <ClCompile Include="TweaksVPackfileLimit.cpp" />
-    <ClCompile Include="TweaksVPatch.cpp" />
-    <ClCompile Include="TweaksVPedPool.cpp" />
-    <ClCompile Include="TweaksVPedProps.cpp" />
-    <ClCompile Include="TweaksVRageOpenV.cpp" />
-    <ClCompile Include="TweaksVRayTracing.cpp" />
-    <ClCompile Include="TweaksVRelocation.cpp" />
-    <ClCompile Include="TweaksVRenderQueues.cpp" />
-    <ClCompile Include="TweaksVScanner.cpp" />
-    <ClCompile Include="TweaksVScripts.cpp" />
-    <ClCompile Include="TweaksVSettings.cpp" />
-    <ClCompile Include="TweaksVSirenCount.cpp" />
-    <ClCompile Include="TweaksVSirenDamage.cpp" />
-    <ClCompile Include="TweaksVSirenIds.cpp" />
-    <ClCompile Include="TweaksVStaticBounds.cpp" />
-    <ClCompile Include="TweaksVStraightToStoryMode.cpp" />
-    <ClCompile Include="TweaksVSummary.cpp" />
-    <ClCompile Include="TweaksVTextureBudget.cpp" />
-    <ClCompile Include="TweaksVPopulation.cpp" />
-    <ClCompile Include="TweaksVWeaponComponents.cpp" />
-    <ClCompile Include="TweaksVWeaponInfos.cpp" />
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="blips.cpp" />
+    <ClCompile Include="boxstreamer.cpp" />
+    <ClCompile Include="conflicts.cpp" />
+    <ClCompile Include="coronastore.cpp" />
+    <ClCompile Include="decals.cpp" />
+    <ClCompile Include="directstorage.cpp" />
+    <ClCompile Include="dump.cpp" />
+    <ClCompile Include="features.cpp" />
+    <ClCompile Include="files.cpp" />
+    <ClCompile Include="game.cpp" />
+    <ClCompile Include="heapadjuster.cpp" />
+    <ClCompile Include="ini.cpp" />
+    <ClCompile Include="legacypacks.cpp" />
+    <ClCompile Include="lightcapacity.cpp" />
+    <ClCompile Include="log.cpp" />
+    <ClCompile Include="measure.cpp" />
+    <ClCompile Include="modkitlimit.cpp" />
+    <ClCompile Include="modsfolder.cpp" />
+    <ClCompile Include="packfilelimit.cpp" />
+    <ClCompile Include="patch.cpp" />
+    <ClCompile Include="pedpool.cpp" />
+    <ClCompile Include="pedprops.cpp" />
+    <ClCompile Include="rageopenv.cpp" />
+    <ClCompile Include="raytracing.cpp" />
+    <ClCompile Include="relocation.cpp" />
+    <ClCompile Include="renderqueues.cpp" />
+    <ClCompile Include="scanner.cpp" />
+    <ClCompile Include="scripts.cpp" />
+    <ClCompile Include="settings.cpp" />
+    <ClCompile Include="sirencount.cpp" />
+    <ClCompile Include="sirendamage.cpp" />
+    <ClCompile Include="sirenids.cpp" />
+    <ClCompile Include="staticbounds.cpp" />
+    <ClCompile Include="straighttostorymode.cpp" />
+    <ClCompile Include="summary.cpp" />
+    <ClCompile Include="texturebudget.cpp" />
+    <ClCompile Include="population.cpp" />
+    <ClCompile Include="weaponcomponents.cpp" />
+    <ClCompile Include="weaponinfos.cpp" />
     <!-- MinHook v1.3.4, compiled unchanged from vendor\MinHook (x64 only: hde64, not hde32), at warning
          level 3, which it builds without a warning: its code is not TweaksV's to change, and /W4 finds
          its own warnings -->
@@ -179,56 +179,56 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="TweaksVBlips.h" />
-    <ClInclude Include="TweaksVBoxStreamer.h" />
-    <ClInclude Include="TweaksVConflicts.h" />
-    <ClInclude Include="TweaksVCoronaStore.h" />
-    <ClInclude Include="TweaksVDecals.h" />
-    <ClInclude Include="TweaksVDirectStorage.h" />
-    <ClInclude Include="TweaksVDump.h" />
-    <ClInclude Include="TweaksVFeatures.h" />
-    <ClInclude Include="TweaksVFiles.h" />
-    <ClInclude Include="TweaksVGame.h" />
-    <ClInclude Include="TweaksVHeapAdjuster.h" />
-    <ClInclude Include="TweaksVIni.h" />
-    <ClInclude Include="TweaksVLegacyPacks.h" />
-    <ClInclude Include="TweaksVLock.h" />
-    <ClInclude Include="TweaksVLightCapacity.h" />
-    <ClInclude Include="TweaksVLog.h" />
-    <ClInclude Include="TweaksVMeasure.h" />
-    <ClInclude Include="TweaksVModkitLimit.h" />
-    <ClInclude Include="TweaksVModsFolder.h" />
-    <ClInclude Include="TweaksVPackfileLimit.h" />
-    <ClInclude Include="TweaksVPatch.h" />
-    <ClInclude Include="TweaksVPatterns.h" />
-    <ClInclude Include="TweaksVPedPool.h" />
-    <ClInclude Include="TweaksVPedProps.h" />
-    <ClInclude Include="TweaksVRageOpenV.h" />
-    <ClInclude Include="TweaksVRayTracing.h" />
-    <ClInclude Include="TweaksVRelocation.h" />
-    <ClInclude Include="TweaksVRenderQueues.h" />
-    <ClInclude Include="TweaksVRpf.h" />
-    <ClInclude Include="TweaksVScanner.h" />
-    <ClInclude Include="TweaksVScripts.h" />
-    <ClInclude Include="TweaksVSettings.h" />
-    <ClInclude Include="TweaksVSirenCount.h" />
-    <ClInclude Include="TweaksVSirenDamage.h" />
-    <ClInclude Include="TweaksVSirenIds.h" />
-    <ClInclude Include="TweaksVSirenRoom.h" />
-    <ClInclude Include="TweaksVStaticBounds.h" />
-    <ClInclude Include="TweaksVStraightToStoryMode.h" />
-    <ClInclude Include="TweaksVSummary.h" />
-    <ClInclude Include="TweaksVTextureBudget.h" />
-    <ClInclude Include="TweaksVPopulation.h" />
-    <ClInclude Include="TweaksVWeaponComponents.h" />
-    <ClInclude Include="TweaksVWeaponInfos.h" />
+    <ClInclude Include="blips.h" />
+    <ClInclude Include="boxstreamer.h" />
+    <ClInclude Include="conflicts.h" />
+    <ClInclude Include="coronastore.h" />
+    <ClInclude Include="decals.h" />
+    <ClInclude Include="directstorage.h" />
+    <ClInclude Include="dump.h" />
+    <ClInclude Include="features.h" />
+    <ClInclude Include="files.h" />
+    <ClInclude Include="game.h" />
+    <ClInclude Include="heapadjuster.h" />
+    <ClInclude Include="ini.h" />
+    <ClInclude Include="legacypacks.h" />
+    <ClInclude Include="lock.h" />
+    <ClInclude Include="lightcapacity.h" />
+    <ClInclude Include="log.h" />
+    <ClInclude Include="measure.h" />
+    <ClInclude Include="modkitlimit.h" />
+    <ClInclude Include="modsfolder.h" />
+    <ClInclude Include="packfilelimit.h" />
+    <ClInclude Include="patch.h" />
+    <ClInclude Include="patterns.h" />
+    <ClInclude Include="pedpool.h" />
+    <ClInclude Include="pedprops.h" />
+    <ClInclude Include="rageopenv.h" />
+    <ClInclude Include="raytracing.h" />
+    <ClInclude Include="relocation.h" />
+    <ClInclude Include="renderqueues.h" />
+    <ClInclude Include="rpf.h" />
+    <ClInclude Include="scanner.h" />
+    <ClInclude Include="scripts.h" />
+    <ClInclude Include="settings.h" />
+    <ClInclude Include="sirencount.h" />
+    <ClInclude Include="sirendamage.h" />
+    <ClInclude Include="sirenids.h" />
+    <ClInclude Include="sirenroom.h" />
+    <ClInclude Include="staticbounds.h" />
+    <ClInclude Include="straighttostorymode.h" />
+    <ClInclude Include="summary.h" />
+    <ClInclude Include="texturebudget.h" />
+    <ClInclude Include="population.h" />
+    <ClInclude Include="weaponcomponents.h" />
+    <ClInclude Include="weaponinfos.h" />
     <ClInclude Include="..\vendor\MinHook\include\MinHook.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="version.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <!-- BuildInfo.h, for the log header (TweaksVLog.cpp) and version.rc: the version above and the git
+  <!-- BuildInfo.h, for the log header (log.cpp) and version.rc: the version above and the git
        commit ID, with "-dirty" for uncommitted changes (empty outside a git repository, so the log
        says "unknown"). Written into $(IntDir) before every build, but only when its content
        changes, so an unchanged ID causes no rebuild. -->

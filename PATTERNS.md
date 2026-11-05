@@ -2,7 +2,7 @@
 
 Every byte pattern TweaksV searches for in `GTA5_Enhanced.exe`, and the game build each one was last verified on.
 TweaksV searches only the game's code (its executable sections).
-Each pattern is defined once, in the table in `source\TweaksVPatterns.h`, under the label it has here (`H-E1`, `P-E-R31a`, ...), and is written here exactly as there; `?` matches any byte.
+Each pattern is defined once, in the table in `source\patterns.h`, under the label it has here (`H-E1`, `P-E-R31a`, ...), and is written here exactly as there; `?` matches any byte.
 The tests check that this file and the table list the same patterns, and `TweaksV.log` names each pattern by its label.
 RVA is where each pattern matched on 1.0.1158.16, counted from the start of `GTA5_Enhanced.exe` in memory.
 Every game fact found is here, what each match holds - the reference, limit, call or function - among them; what each part does with them is in [SPECIFICATIONS.md](SPECIFICATIONS.md).
@@ -31,7 +31,7 @@ NTFS takes `FILE_RENAME_POSIX_SEMANTICS` from Windows 10 1607 on.
    The game is not patched then, and `TweaksV.log` lists every pattern not found, by its label.
    A dry run does not redirect the script programs' call, so the Blips part sees no script program then: whether it still finds `blip_controller`'s guard shows only on a boot without `DRY_RUN`, in its line or its problem.
 2. Check whether the project the pattern came from has changed it (`CREDITS.md` names them).
-3. Update the pattern in `source\TweaksVPatterns.h` and in this file - the tests check that both agree - and confirm that it matches exactly once.
+3. Update the pattern in `source\patterns.h` and in this file - the tests check that both agree - and confirm that it matches exactly once.
    `GTA5_Enhanced.exe` is encrypted on disk and its code decrypted only in memory, so the file shows random bytes where the patterns match: look for the code in a copy of the running game, which a test build with `TEST_DUMP_CODE=60` saves (README, Test Builds).
    The game is built with clang, not MSVC: its code writes `31 C9` and `45 31 C0` for xor where MSVC writes `33 C9`, and the image has a `.retplne` section, two `.text` sections and a `.pdata` function table, so a pattern from a GTA V Legacy mod never carries over and is found anew here.
    A fact in `.data`, which a dump holds as zeros, is read with `TEST_DUMP_DATA` (README, Test Builds): windows of it at the RVAs the code names, at the start and later.

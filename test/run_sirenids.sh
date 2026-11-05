@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-only
-# The siren setting IDs, the SirenSettings part's first job (TweaksVSirenIds). First its measurement alone, with
+# The siren setting IDs, the SirenSettings part's first job (sirenids.cpp). First its measurement alone, with
 # LARGE_SIREN_IDS=0 or the part off: with DIAGNOSTIC_MODE=1 only, the 14 patterns found in the full fake game, every site
 # checked and logged word for word, and the measurement over the fake's carcols data and ID table at the game's sizes - 10
 # seconds in, again when the numbers change (the test build's TWEAKSV_TEST_SUMMARY_MS), before the base files are read, with

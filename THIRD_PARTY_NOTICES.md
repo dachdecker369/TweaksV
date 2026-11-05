@@ -13,12 +13,12 @@ Everyone whose work TweaksV builds on is credited in [CREDITS.md](CREDITS.md), t
 
 | Component | Copyright | License | Where in TweaksV |
 |---|---|---|---|
-| [MinHook](https://github.com/TsudaKageyu/minhook) 1.3.4 | Tsuda Kageyu; the Hacker Disassembler Engine in it by Vyacheslav Patkov | BSD-2-Clause | `vendor\MinHook`, unchanged; `hook.c`, `buffer.c`, `trampoline.c` and `hde64.c` are compiled into `TweaksV.asi`. The search for free memory near the game in `TweaksVPatch.cpp` is an adapted version of its `buffer.c` |
-| [ScriptHookVDotNet](https://github.com/scripthookvdotnet/scripthookvdotnet) memory scanner | crosire, kagikn; the C++ port by Chiheb-Bacha | zlib | the pattern parser in `TweaksVScanner.cpp`, an altered version (see the notes) |
-| [RageOpenV](https://github.com/Chiheb-Bacha/RageOpenV) | Chiheb-Bacha | GPL-3.0 | the console opener in `TweaksVLog.cpp`, carried over as it was |
-| [Static Bounds Limit Adjuster](https://github.com/Nochala/StaticboundsLimitAdjuster) v1.0.2, commit 61507bc | Nochala (3_Washing_Machines) | GPL-3.0-or-later | the key's name, default and rule in the StaticBounds part, `TweaksVStaticBounds.cpp`; the route is TweaksV's own (see the notes) |
+| [MinHook](https://github.com/TsudaKageyu/minhook) 1.3.4 | Tsuda Kageyu; the Hacker Disassembler Engine in it by Vyacheslav Patkov | BSD-2-Clause | `vendor\MinHook`, unchanged; `hook.c`, `buffer.c`, `trampoline.c` and `hde64.c` are compiled into `TweaksV.asi`. The search for free memory near the game in `patch.cpp` is an adapted version of its `buffer.c` |
+| [ScriptHookVDotNet](https://github.com/scripthookvdotnet/scripthookvdotnet) memory scanner | crosire, kagikn; the C++ port by Chiheb-Bacha | zlib | the pattern parser in `scanner.cpp`, an altered version (see the notes) |
+| [RageOpenV](https://github.com/Chiheb-Bacha/RageOpenV) | Chiheb-Bacha | GPL-3.0 | the console opener in `log.cpp`, carried over as it was |
+| [Static Bounds Limit Adjuster](https://github.com/Nochala/StaticboundsLimitAdjuster) v1.0.2, commit 61507bc | Nochala (3_Washing_Machines) | GPL-3.0-or-later | the key's name, default and rule in the StaticBounds part, `staticbounds.cpp`; the route is TweaksV's own (see the notes) |
 
-Everything else in `dllmain.cpp`, `version.rc` and the `TweaksV*` files is TweaksV's own code, Copyright (C) dachdecker369, licensed under the GPL-3.0-only.
+Everything else in `source\` is TweaksV's own code, Copyright (C) dachdecker369, licensed under the GPL-3.0-only.
 
 ## Notes
 
@@ -27,7 +27,7 @@ Everything else in `dllmain.cpp`, `version.rc` and the `TweaksV*` files is Tweak
   The search itself is TweaksV's own.
 - **RageOpenV:** its license is the GPL-3.0, the same as TweaksV's; the text is [LICENSE](LICENSE), which accompanies every copy.
 - **Static Bounds Limit Adjuster:** Copyright (C) 2026 Nochala, licensed under the GNU General Public License as published by the Free Software Foundation, version 3 or, at the licensee's option, any later version; TweaksV takes it under version 3, its own, whose text is [LICENSE](LICENSE), which accompanies every copy.
-  The part is written for TweaksV, as the GPL requires to be stated (2026-11-02): what comes from version 1.0.2 is the key, its default, its rule - the larger of the game's size and the key's - and the name it raises, in `TweaksVStaticBounds.cpp`, whose header carries the notice too.
+  The part is written for TweaksV, as the GPL requires to be stated (2026-11-02): what comes from version 1.0.2 is the key, its default, its rule - the larger of the game's size and the key's - and the name it raises, in `staticbounds.cpp`, whose header carries the notice too.
   The source those come from: https://github.com/Nochala/StaticboundsLimitAdjuster, commit 61507bc.
 
 ## License texts

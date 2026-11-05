@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-only
-# DirectStorage (TweaksVDirectStorage) scenarios: the fake GTA5_Enhanced.exe loads the real
+# DirectStorage (directstorage.cpp) scenarios: the fake GTA5_Enhanced.exe loads the real
 # TweaksV.asi. With "dstorage" it loads a stand-in dstorage.dll first, which opens its files for real and
 # holds them open as DirectStorage does, and calls it afterwards, including the factory's OpenFile for 19
 # paths: 4 archives and 7 other files in its folder, 7 paths outside it and one too long to check

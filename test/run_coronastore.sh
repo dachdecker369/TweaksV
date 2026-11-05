@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-only
-# The corona store (TweaksVCoronaStore), the second half of the LightCapacity part: at the game's own 1088 nothing looked for or written; above it the fake
+# The corona store (coronastore.cpp), the second half of the LightCapacity part: at the game's own 1088 nothing looked for or written; above it the fake
 # game's sites found and checked, the 13 writes and nothing else, the new store 16-aligned and of N records and 0x180 bytes; the general add, the LOD lights'
 # job and the copy run through the moved store, up to N and past it, from two threads, the count exact; the clamp's trap shown at the game's own clamp and
 # gone with the raise; the counters of the four jumps and the batch with DIAGNOSTIC_MODE, a stub that cannot be made logged and the raise going on; DRY_RUN;
@@ -180,7 +180,7 @@ modded i9limit G-E-I9
 modded j1scratch G-E-J1
 
 section "C12 TEST_BREAK_PATTERN (test build): each of the 14 patterns missing"
-for label in $(sed -nE 's/^\s*\{ "(G-E-[IJ][0-9]+)", .*/\1/p' "$R/source/TweaksVPatterns.h"); do
+for label in $(sed -nE 's/^\s*\{ "(G-E-[IJ][0-9]+)", .*/\1/p' "$R/source/patterns.h"); do
 	broken "$label"
 done
 

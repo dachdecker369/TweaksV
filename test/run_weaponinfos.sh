@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-only
-# The weapon infos, the WeaponLimits part's half for the weapons.meta files (TweaksVWeaponInfos): the full fake game's
+# The weapon infos, the WeaponLimits part's half for the weapons.meta files (weaponinfos.cpp): the full fake game's
 # initializer of the weapon info blob array, its allocation and its loader - real code, called through its start with a
 # data file entry as the game calls its loader - the array in the fake's data empty while TweaksV starts and set up by
 # the fake afterwards, as the game's initializer does, with as many blobs as the immediates say. With DIAGNOSTIC_MODE

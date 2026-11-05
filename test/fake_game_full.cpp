@@ -533,10 +533,10 @@
 //   sbl1hooked     C-E-L1's call leads outside the game (another mod redirected it): no store is made, nothing being there to call
 //   sbd1out, sbd1odd
 //                  C-E-D1's lea leads outside the game, or 4 bytes past the store
-// The boxes after the start-up summary (TweaksVSummary):
+// The boxes after the start-up summary (summary.cpp):
 //   latefailures N  once everything else has run, the script program placed N times, 2 s apart, with a code length past what
 //                   TEST_DUMP_SCRIPT copies: with that key each placement is a problem, far enough from the next for a box of its own
-// The lighting capacity (TweaksVLightCapacity): its 22 sites as the patterns match them, add-to-a-job's-list as code the fake runs,
+// The lighting capacity (lightcapacity.cpp): its 22 sites as the patterns match them, add-to-a-job's-list as code the fake runs,
 // and its counters in the fake's data at the game's distances, all 0 until an option sets them once TweaksV has started:
 //   lcnumbers      the counters as a frame leaves them from before TweaksV loads, so that every sample sees them, the larger of each two
 //                  buffers' in the first and the sort list marked below the store's room; the write pointers once TweaksV has started
@@ -624,7 +624,7 @@
 //   popvmoved, poppmoved, popambientmoved
 //                  O-E-V7, O-E-P6 or O-E-V5 elsewhere, whole, but for where the others have it
 //   popgateedge    with rtjumpunread, whose page it borrows: O-E-P2 so near that page's end that what is read past the match cannot be
-// The ped pool (TweaksVPedPool): its sites are in every run, read by nothing but TweaksV; the pool itself only as asked:
+// The ped pool (pedpool.cpp): its sites are in every run, read by nothing but TweaksV; the pool itself only as asked:
 //   pprun          the pool made once TweaksV has started, behind the game's obfuscation: 171 peds in use and 165 in the spatial array for 2.5 s, past a
 //                  sample of the module's, then 143 and 139 - 12 mission peds, 4 waiting for reuse, 2 that every loop skips, the free slots' stale bytes misleading
 //   ppfull         with pprun: 256 in use in those 2.5 s
@@ -679,7 +679,7 @@
 //   pmcallunread   H-E2 at the end of a page and its call's rel32 on the next, which cannot be read: the set-up does not run
 //   pmfield        the allocator's budget holds another value than the site's while TweaksV starts, which the set-up then overwrites
 //   pmgone         the allocator's page cannot be read from the moment TweaksV has started: the set-up does not run
-// The render queues (TweaksVRenderQueues), whose sites are code the fake runs only as these ask; its report "render queues: ..." and
+// The render queues (renderqueues.cpp), whose sites are code the fake runs only as these ask; its report "render queues: ..." and
 // its other fields only with an option that starts rq:
 //   rqload         as the game does once TweaksV has started: the inits, every pool made through its size lookup, a frame's peak held,
 //                  then the numbers fall to the lines of the findings: 14 and 0, 3 and 0, 5 and 0 in use, the most 31 and 9, 8 and 4, 11 and 3;
@@ -711,7 +711,7 @@
 //   rqlatest       the latest numbers change after the first summary, and no most, for 5 s
 //   rqbad:WHAT:N   the site WHAT, N the pool, the family or the call it asks for, as RqSetUp has them, not as the research found it; no site runs then
 //   rqrvas         the report's "rq rvas: ..." field, with every site's RVA, for the suite to compare with the log
-// The sirens per vehicle's damage (TweaksVSirenDamage): its sites as code the fake runs (SdSetUp), always; what the report says of them, "sd sites: ...", always.
+// The sirens per vehicle's damage (sirendamage.cpp): its sites as code the fake runs (SdSetUp), always; what the report says of them, "sd sites: ...", always.
 //   sdrun          once TweaksV has started: the pool set up by its site's stride, seven models made through the call at the site - one made for
 //                  20 sirens, one for 32 whose names past siren20 are in other cases, one for 24, one with a few here and there, a plane with gear doors in
 //                  its first glass slots, one with bones past what a signed byte names, one with 8 sirens - and every loop run on them
@@ -731,7 +731,7 @@
 //   sdpoolmade     the bone structures' pool made before TweaksV starts
 //   sdpoolshape    the instruction before the allocation not the load of the pool
 //   sdpoolout      that load leading outside the game
-// The corona store (TweaksVCoronaStore): its sites as the patterns match them, G-E-I1 in g_ccGeneralAdd and G-E-G1 in the lighting capacity's two checks, and its count
+// The corona store (coronastore.cpp): its sites as the patterns match them, G-E-I1 in g_ccGeneralAdd and G-E-G1 in the lighting capacity's two checks, and its count
 // and records in the lighting capacity's data. The general add, the job's parameters and batch, its own limit and the copy are code the fake runs, only as these ask:
 //   ccrun          once TweaksV has started: the job's parameters; two threads through the general add, 3/4 of the room each; both inlined adds for the last two slots and
 //                  once more each past the room; a batch from 100 short of the room that brings 300; the job's own limit at 1087 and three times at 1088; the copy at a full store and at 0
@@ -1541,7 +1541,7 @@ constexpr size_t kPoolMemoryMatch = 4, kPoolMemoryAllocatorAt = kPoolMemoryMatch
 	kPoolMemoryCallAt = kPoolMemoryMatch + 27;
 volatile unsigned char g_poolMemorySite[] = { 0x48, 0x83, 0xEC, 0x28, 0x48, 0x8D, 0x0D, 0, 0, 0, 0, 0x48, 0x8D, 0x15, 0, 0, 0, 0, 0x41, 0xB8, 0x00, 0x00, 0x01, 0x00,
 	0x41, 0xB9, 0x00, 0x00, 0x80, 0x08, 0xE8, 0, 0, 0, 0, 0x48, 0x83, 0xC4, 0x28, 0xC3 };
-// The render queues' sites (TweaksVRenderQueues), each with its pattern's bytes as PATTERNS.md has them and around them what makes it
+// The render queues' sites (renderqueues.cpp), each with its pattern's bytes as PATTERNS.md has them and around them what makes it
 // run as the fake's code: a prologue, a tail, and the rel32 RqSetUp sets. The make of the vehicles' render pool lies in a carrier,
 // kRqMakeV2 below, since its jump must lie in a function of the fake's unwind data; g_rqEdge's second page cannot be read with
 // "rqbad:edge...", a section of its own, since MakeSitesReadExecute gives .fakesit its protection back after RqSetUp.
@@ -3433,7 +3433,7 @@ static void SirenIdsReport()
 // the fake's own code runs. The models lie at the game's offsets: the hash of a model's name at +0x18, the holder of its bone
 // structure at +0xB0, the bone structure's signed byte at 0x10 + a hierarchy ID, the skeleton data at the skeleton's +0x00, its
 // bone count at +0x5E, and a bone's index at +0x42. Their bone structures have the room the part gives them in the game, filled
-// from the start (TweaksVSirenRoom.h), so that the second call's scenarios need no fill, whose own proof is on the merged tree.
+// from the start (sirenroom.h), so that the second call's scenarios need no fill, whose own proof is on the merged tree.
 static void SetRel32(const Site& site, const void* target);
 static const unsigned char* Rel32Target(const Site& site);
 static const unsigned char* ImageEnd();
@@ -7833,7 +7833,7 @@ static void PoolMemoryReport()
 	else
 		wprintf(L"its constructor not run | ");
 }
-// The render queues (TweaksVRenderQueues). What TweaksV reads lies in one page of the fake's .data, and what the pools and the arrays
+// The render queues (renderqueues.cpp). What TweaksV reads lies in one page of the fake's .data, and what the pools and the arrays
 // hold in memory of the fake's game allocator: the code RqSetUp points the sites at runs on it as the game's, so that the module's
 // numbers are what the patterns' own bytes wrote and its decoding of a pool's pointer is what the patterns' own bytes decode.
 constexpr int kRqPools = 6, kRqFamilies = 3, kRqArrays = 4;
@@ -8630,7 +8630,7 @@ static void RqReport(int argc, wchar_t** argv)
 	wprintf(L" D1=0x%llX D2=0x%llX D3=0x%llX MG=0x%llX | ", rva(g_rqReferences + 11), rva(g_rqRotation), rva(g_rqManagerMade + 5), rva(&g_rqData.manager));
 }
 
-// The sirens per vehicle's damage (TweaksVSirenDamage): the game's damage code as code that runs, around the patterns' bytes, so that
+// The sirens per vehicle's damage (sirendamage.cpp): the game's damage code as code that runs, around the patterns' bytes, so that
 // what TweaksV writes is read by the real instructions. SdSetUp writes each loop into .fakesit, and the function that makes a bone
 // structure and the game's fill over carriers its unwind data names, as the siren count does; each loop reads its bones where the game's
 // does, so the numbers it leaves are the raise's.
@@ -11127,7 +11127,7 @@ static void OpenFiles()
 	swprintf(g_fileOpensResult, 160, L"file opens: missing file error %lu | ", static_cast<unsigned long>(missingError));
 }
 
-// The script programs (TweaksVScripts, TEST_DUMP_SCRIPT, the Blips part): blip_controller with its code over two
+// The script programs (scripts.cpp, TEST_DUMP_SCRIPT, the Blips part): blip_controller with its code over two
 // pages of 16 KB, the second holding 0x123 bytes, three natives and 0x1F0 bytes of strings in one page; other_script
 // and blip_imposter - blip_controller's hash under another name - with code and strings of their own. Every page is
 // a VirtualAlloc of its own, so that one can be made unreadable. The placements run on a thread of their own,

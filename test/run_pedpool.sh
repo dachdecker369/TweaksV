@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-only
-# The ped pool, a limit measured first (TweaksVPedPool): with DIAGNOSTIC_MODE=1 the fake game's sites found, each once, checked and logged, the
+# The ped pool, a limit measured first (pedpool.cpp): with DIAGNOSTIC_MODE=1 the fake game's sites found, each once, checked and logged, the
 # pool read from behind the game's obfuscation, whose accessor the fake runs over its own encoding, and its numbers summed up 10 seconds in and
 # again when they change: the slots in use, the most a sample of the sampling thread saw, the mission and reuse peds of a walk of the slots, the
 # population's counts and caps, the spatial array; the pool not made yet and made later; full, past the fixed arrays, both; the game's number

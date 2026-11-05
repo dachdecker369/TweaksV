@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-only
-# The light stores and the lighting capacity (TweaksVLightCapacity). The measurement, with the part off, as base.ini has it: with DIAGNOSTIC_MODE=1
+# The light stores and the lighting capacity (lightcapacity.cpp). The measurement, with the part off, as base.ini has it: with DIAGNOSTIC_MODE=1
 # the fake game's 24 sites found, checked and logged, the counters sampled and summed up 10 seconds in and again when they change, its one write - the
 # jumps when a job's list and the ray traced list are full through counting stubs and a job's two copies through stubs that keep its most, while threads run
 # that code at once, the counts exact - and nothing else; every number at its room and past it, the write pointers outside their stores, each line once and no box; the siren settings' numbers on none, 0, 33 and 255 settings and an
@@ -377,7 +377,7 @@ a_number_less 'lcedge k2call rtjumpunread' "$MOST_LESS the call of a job.s light
 a_number_less 'lcother k2call' "$MOST_LESS a job.s two copies call different functions: $HERE and $HERE (G-E-K2)."
 
 section "G13 TEST_BREAK_PATTERN (test build): each of the 22 patterns missing"
-for label in $(sed -nE 's/^\s*\{ "(G-E-[A-H][1-4])", .*/\1/p' "$R/source/TweaksVPatterns.h"); do
+for label in $(sed -nE 's/^\s*\{ "(G-E-[A-H][1-4])", .*/\1/p' "$R/source/patterns.h"); do
 	broken "$label"
 done
 

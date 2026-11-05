@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-only
-# The RayTracing part (TweaksVRayTracing): the ray tracing buffer of moving geometry and its two checks raised together in the
+# The RayTracing part (raytracing.cpp): the ray tracing buffer of moving geometry and its two checks raised together in the
 # full fake game, whose three sites are code it runs - nothing looked for with DYNAMIC_BVH_VERTICES=0 and DIAGNOSTIC_MODE off, the
 # part off, the raise and nothing else, the cap, a value below the game's own, DRY_RUN; each check failing on its own, with the
 # part's problem and nothing written, another mod's raise left as it is, each pattern missing or twice, the plain game; with

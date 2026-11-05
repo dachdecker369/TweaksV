@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-only
-# The texture budget, the Resources part (TweaksVTextureBudget): VIDEO_MEMORY_BUDGET at 0, said in one line, nothing looked for;
+# The texture budget, the Resources part (texturebudget.cpp): VIDEO_MEMORY_BUDGET at 0, said in one line, nothing looked for;
 # at 6000 the four budgets raised as the game's start-up sets them, through the call after its stores redirected to a stub,
 # read+execute, and nothing else written - the call's four arguments and its result as they came, the budgets raised before
 # the game's function runs; none lowered, a gameconfig.xml's larger budgets kept; none below 1500 left as they are; 1000

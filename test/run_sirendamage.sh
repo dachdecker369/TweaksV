@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-only
-# The sirens per vehicle's damage (TweaksVSirenDamage), the half of the part's one write that InitSirensPerVehicle asks after the lights'. The
+# The sirens per vehicle's damage (sirendamage.cpp), the half of the part's one write that InitSirensPerVehicle asks after the lights'. The
 # fake game holds the game's damage code as code that runs, around the patterns' bytes, and makes its bone structures as the game does: with the
 # key on, every site found and written and nothing else, each page its own protection; the room behind each structure filled at a model's load,
 # a plane's gear doors in their slots, a bone in any case and a bone past 127; a hit, an impact and a wreck on lights past 20 and the glass's

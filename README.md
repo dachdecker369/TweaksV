@@ -271,7 +271,7 @@ msbuild source\TweaksV.slnx -p:Configuration=Release -p:Platform=x64
   `TEST_DUMP_DATA=<seconds>,<rva>:<bytes>[,<rva>:<bytes>...]` saves windows of `.data` beside them, at most 16 of at most 64 KB each, the numbers in hex, each wholly inside `.data`, as `GameData-<rva>-start.bin` and `-later.bin`.
   `TEST_DUMP_SCRIPT=<name>` saves a script program as the game places it, 1 to 63 letters, digits and `_`, at most 16 times a session, as `Script-<name>-<n>.bin`.
   `TEST_SIREN_PASSES=<n>` (0 to 31) has each pass of a vehicle's sirens run the game's renderer n more times, so that a handful of cars loads the lighting stores as no normal load does.
-  Delete the dumps when you are done; their format is in `source\TweaksVDump.h`.
+  Delete the dumps when you are done; their format is in `source\dump.h`.
 
 ## Testing
 

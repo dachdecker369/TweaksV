@@ -10,124 +10,124 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="dllmain.cpp">
+    <ClCompile Include="main.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
-    <ClCompile Include="TweaksVBlips.cpp">
+    <ClCompile Include="blips.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
-    <ClCompile Include="TweaksVBoxStreamer.cpp">
+    <ClCompile Include="boxstreamer.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
-    <ClCompile Include="TweaksVConflicts.cpp">
+    <ClCompile Include="conflicts.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
-    <ClCompile Include="TweaksVCoronaStore.cpp">
+    <ClCompile Include="coronastore.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
-    <ClCompile Include="TweaksVDecals.cpp">
+    <ClCompile Include="decals.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
-    <ClCompile Include="TweaksVDirectStorage.cpp">
+    <ClCompile Include="directstorage.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
-    <ClCompile Include="TweaksVDump.cpp">
+    <ClCompile Include="dump.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
-    <ClCompile Include="TweaksVFeatures.cpp">
+    <ClCompile Include="features.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
-    <ClCompile Include="TweaksVFiles.cpp">
+    <ClCompile Include="files.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
-    <ClCompile Include="TweaksVGame.cpp">
+    <ClCompile Include="game.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
-    <ClCompile Include="TweaksVHeapAdjuster.cpp">
+    <ClCompile Include="heapadjuster.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
-    <ClCompile Include="TweaksVIni.cpp">
+    <ClCompile Include="ini.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
-    <ClCompile Include="TweaksVLegacyPacks.cpp">
+    <ClCompile Include="legacypacks.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
-    <ClCompile Include="TweaksVLightCapacity.cpp">
+    <ClCompile Include="lightcapacity.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
-    <ClCompile Include="TweaksVLog.cpp">
+    <ClCompile Include="log.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
-    <ClCompile Include="TweaksVMeasure.cpp">
+    <ClCompile Include="measure.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
-    <ClCompile Include="TweaksVModkitLimit.cpp">
+    <ClCompile Include="modkitlimit.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
-    <ClCompile Include="TweaksVModsFolder.cpp">
+    <ClCompile Include="modsfolder.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
-    <ClCompile Include="TweaksVPackfileLimit.cpp">
+    <ClCompile Include="packfilelimit.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
-    <ClCompile Include="TweaksVPatch.cpp">
+    <ClCompile Include="patch.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
-    <ClCompile Include="TweaksVPedPool.cpp">
+    <ClCompile Include="pedpool.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
-    <ClCompile Include="TweaksVPedProps.cpp">
+    <ClCompile Include="pedprops.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
-    <ClCompile Include="TweaksVRageOpenV.cpp">
+    <ClCompile Include="rageopenv.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
-    <ClCompile Include="TweaksVRayTracing.cpp">
+    <ClCompile Include="raytracing.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
-    <ClCompile Include="TweaksVRelocation.cpp">
+    <ClCompile Include="relocation.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
-    <ClCompile Include="TweaksVRenderQueues.cpp">
+    <ClCompile Include="renderqueues.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
-    <ClCompile Include="TweaksVScanner.cpp">
+    <ClCompile Include="scanner.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
-    <ClCompile Include="TweaksVScripts.cpp">
+    <ClCompile Include="scripts.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
-    <ClCompile Include="TweaksVSettings.cpp">
+    <ClCompile Include="settings.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
-    <ClCompile Include="TweaksVSirenCount.cpp">
+    <ClCompile Include="sirencount.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
-    <ClCompile Include="TweaksVSirenDamage.cpp">
+    <ClCompile Include="sirendamage.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
-    <ClCompile Include="TweaksVSirenIds.cpp">
+    <ClCompile Include="sirenids.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
-    <ClCompile Include="TweaksVStaticBounds.cpp">
+    <ClCompile Include="staticbounds.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
-    <ClCompile Include="TweaksVStraightToStoryMode.cpp">
+    <ClCompile Include="straighttostorymode.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
-    <ClCompile Include="TweaksVSummary.cpp">
+    <ClCompile Include="summary.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
-    <ClCompile Include="TweaksVTextureBudget.cpp">
+    <ClCompile Include="texturebudget.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
-    <ClCompile Include="TweaksVPopulation.cpp">
+    <ClCompile Include="population.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
-    <ClCompile Include="TweaksVWeaponComponents.cpp">
+    <ClCompile Include="weaponcomponents.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
-    <ClCompile Include="TweaksVWeaponInfos.cpp">
+    <ClCompile Include="weaponinfos.cpp">
       <Filter>TweaksV</Filter>
     </ClCompile>
     <ClCompile Include="..\vendor\MinHook\src\buffer.c">
@@ -144,133 +144,133 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="TweaksVBlips.h">
+    <ClInclude Include="blips.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
-    <ClInclude Include="TweaksVBoxStreamer.h">
+    <ClInclude Include="boxstreamer.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
-    <ClInclude Include="TweaksVConflicts.h">
+    <ClInclude Include="conflicts.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
-    <ClInclude Include="TweaksVCoronaStore.h">
+    <ClInclude Include="coronastore.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
-    <ClInclude Include="TweaksVDecals.h">
+    <ClInclude Include="decals.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
-    <ClInclude Include="TweaksVDirectStorage.h">
+    <ClInclude Include="directstorage.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
-    <ClInclude Include="TweaksVDump.h">
+    <ClInclude Include="dump.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
-    <ClInclude Include="TweaksVFeatures.h">
+    <ClInclude Include="features.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
-    <ClInclude Include="TweaksVFiles.h">
+    <ClInclude Include="files.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
-    <ClInclude Include="TweaksVGame.h">
+    <ClInclude Include="game.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
-    <ClInclude Include="TweaksVHeapAdjuster.h">
+    <ClInclude Include="heapadjuster.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
-    <ClInclude Include="TweaksVIni.h">
+    <ClInclude Include="ini.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
-    <ClInclude Include="TweaksVLegacyPacks.h">
+    <ClInclude Include="legacypacks.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
-    <ClInclude Include="TweaksVLock.h">
+    <ClInclude Include="lock.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
-    <ClInclude Include="TweaksVLightCapacity.h">
+    <ClInclude Include="lightcapacity.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
-    <ClInclude Include="TweaksVLog.h">
+    <ClInclude Include="log.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
-    <ClInclude Include="TweaksVMeasure.h">
+    <ClInclude Include="measure.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
-    <ClInclude Include="TweaksVModkitLimit.h">
+    <ClInclude Include="modkitlimit.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
-    <ClInclude Include="TweaksVModsFolder.h">
+    <ClInclude Include="modsfolder.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
-    <ClInclude Include="TweaksVPackfileLimit.h">
+    <ClInclude Include="packfilelimit.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
-    <ClInclude Include="TweaksVPatch.h">
+    <ClInclude Include="patch.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
-    <ClInclude Include="TweaksVPatterns.h">
+    <ClInclude Include="patterns.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
-    <ClInclude Include="TweaksVPedPool.h">
+    <ClInclude Include="pedpool.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
-    <ClInclude Include="TweaksVPedProps.h">
+    <ClInclude Include="pedprops.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
-    <ClInclude Include="TweaksVRageOpenV.h">
+    <ClInclude Include="rageopenv.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
-    <ClInclude Include="TweaksVRayTracing.h">
+    <ClInclude Include="raytracing.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
-    <ClInclude Include="TweaksVRelocation.h">
+    <ClInclude Include="relocation.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
-    <ClInclude Include="TweaksVRenderQueues.h">
+    <ClInclude Include="renderqueues.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
-    <ClInclude Include="TweaksVRpf.h">
+    <ClInclude Include="rpf.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
-    <ClInclude Include="TweaksVScanner.h">
+    <ClInclude Include="scanner.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
-    <ClInclude Include="TweaksVScripts.h">
+    <ClInclude Include="scripts.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
-    <ClInclude Include="TweaksVSettings.h">
+    <ClInclude Include="settings.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
-    <ClInclude Include="TweaksVSirenCount.h">
+    <ClInclude Include="sirencount.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
-    <ClInclude Include="TweaksVSirenDamage.h">
+    <ClInclude Include="sirendamage.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
-    <ClInclude Include="TweaksVSirenIds.h">
+    <ClInclude Include="sirenids.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
-    <ClInclude Include="TweaksVSirenRoom.h">
+    <ClInclude Include="sirenroom.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
-    <ClInclude Include="TweaksVStaticBounds.h">
+    <ClInclude Include="staticbounds.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
-    <ClInclude Include="TweaksVStraightToStoryMode.h">
+    <ClInclude Include="straighttostorymode.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
-    <ClInclude Include="TweaksVSummary.h">
+    <ClInclude Include="summary.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
-    <ClInclude Include="TweaksVTextureBudget.h">
+    <ClInclude Include="texturebudget.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
-    <ClInclude Include="TweaksVPopulation.h">
+    <ClInclude Include="population.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
-    <ClInclude Include="TweaksVWeaponComponents.h">
+    <ClInclude Include="weaponcomponents.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
-    <ClInclude Include="TweaksVWeaponInfos.h">
+    <ClInclude Include="weaponinfos.h">
       <Filter>TweaksV</Filter>
     </ClInclude>
     <ClInclude Include="..\vendor\MinHook\include\MinHook.h">

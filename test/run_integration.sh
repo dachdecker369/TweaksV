@@ -295,7 +295,7 @@ rm -f TweaksV.log; rm -rf appdata/TweaksV
 echo "== I16 TEST_DUMP_CODE in a test build: the game's code saved in %LOCALAPPDATA%\\TweaksV at start and later, never its data"
 d=appdata/TweaksV
 # dump_sections FILE: the names in a dump's section table, one per line - sectionCount at offset 12 of the
-# 40-byte header, then 32 bytes per section with its name in the first 8 (TweaksVDump.h)
+# 40-byte header, then 32 bytes per section with its name in the first 8 (dump.h)
 dump_sections() {
 	local n i
 	n=$(od -An -tu4 -j12 -N4 "$1" | tr -d ' ')
@@ -334,7 +334,7 @@ hex() { printf '%X' "$1"; }
 dw_read() { read -r dw_win dw_data dw_bytes dw_image <<< "$(sed -nE 's/.*dw: window RVA 0x([0-9A-F]+), \.data RVA 0x([0-9A-F]+), 0x([0-9A-F]+) bytes, image ([0-9 ]+) \|.*/\1 \2 \3 \4/p' <<< "$out")"; }
 # dw_run VALUE [OPTION...]: the fake game with the test build, TEST_DUMP_DATA=VALUE, no window's file there before it
 dw_run() { local value=$1; shift; fresh_ini; addkey TEST_DUMP_DATA "$value"; rm -rf $d; out=$(ASI=TweaksV_test.asi game full_game.exe dwrvas "$@"); dw_read; }
-# dw_header FILE SECONDS RVA SIZE UNREADABLE: the file's DataDumpHeader (TweaksVDump.h, 48 bytes) for that window of this
+# dw_header FILE SECONDS RVA SIZE UNREADABLE: the file's DataDumpHeader (dump.h, 48 bytes) for that window of this
 # run's game, the RVA and the size in hex, and the file as long as the header and the window
 dw_header() {
 	[ "$(head -c 8 "$1")" = TWKVDATA ] &&
@@ -433,7 +433,7 @@ script_report() {
 	read -r placed thread base size stamp <<< "$(sed -nE 's/.*script: ([0-9]+) placed on thread ([0-9]+) through [^,]*, resolved [0-9]+ of [0-9]+, last error kept [0-9]+ of [0-9]+, image ([0-9]+) ([0-9]+) ([0-9]+) \|.*/\1 \2 \3 \4 \5/p' <<< "$out")"
 }
 # header_ok FILE N PLACED RESOLVED UNREADABLE: the header of a copy of blip_controller as the fake game places it
-# (TweaksVDump.h's ScriptDumpHeader, 176 bytes: code 16675 bytes, 3 natives, strings 496 bytes), its placement N, the
+# (dump.h's ScriptDumpHeader, 176 bytes: code 16675 bytes, 3 natives, strings 496 bytes), its placement N, the
 # programs placed so far, what the resolution returned and the bytes unreadable, the blocks' offsets and the file's size
 header_ok() {
 	local f=$1 code=16675 natives=3 strings=496
