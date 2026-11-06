@@ -11,10 +11,17 @@ So every module starts with a research pass in the dump that settles whether the
 The below ideas for future features come from the page of [Resource Extensions [Enhanced]](https://www.gta5-mods.com/scripts/resource-extensions) 2.4 by Koukol, read on 2026-11-01.
 It is closed source and its redistribution forbidden, so the page's words alone are used, and its plugin is not.
 Each has a research pass in the dump and a measurement before any raise.
+Each estimate is for a round of that idea alone, from its plan to my boot; about 2 hours of it are the plan, the merge, the review and the proof, which ideas built together share, as they share the boot.
 
 - The vehicle model budget and the ped model budget: researched, each a budget in bytes, 429 MB and 561 MB at the Population Variety slider's top, measured first in `population.cpp` (SPECIFICATIONS.md, section 11.16.4); a raise goes by my own `gameconfig.xml`'s block for my load, a key of a part only if other people's loads are to get it, and only from the numbers.
+  About 5 hours: no research left, since the findings design one redirect and one stub for both budgets; the coding about 2, my boot with a load past the game's budgets about 1.
 - The ped pool: measured in 2.7.0, not raised: my proof's numbers do not ask for it.
+  About 9 hours once the render queues' raise is in, which must come first, and about 10 for both in one round.
+  The findings design `PED_POOL_SIZE` up to 1,024 in nine steps, one a function of the part in place of one of the game's: a research pass of about 1 hour for it, the coding about 3.5, my boot with more than 256 peds alive about 2.
 - The render queues: measured in 2.7.0, not raised: my proof's numbers do not ask for it; a raise's design is in the findings' section 8.
+  About 6 hours: no research left; the coding about 2.5, my boot with streamed peds past the game's 120 entries about 1.5.
 - The ray traced list: 2.8.0 counts what it refuses, and my proof's start 4 refused 172,943 lights, 165,438 of them in one minute in the tunnel: no sort in 2.8.0, a research pass in a later build.
+  About 7 hours: a research pass of about 1.5 into what the list feeds and what an add knows of its light, the coding about 2.5, my boot through the tunnel with ray tracing on about 1.
 - Some lights on buildings appearing late: by my eye about 50 m from a Gruppe 6 building downtown, a light on the first floor's side turning on and off in sight, with nothing refused in the log and no cutoff near that distance in my `visualsettings.dat`; a hint, not read: the model that holds the light has that LOD distance.
   To be looked at, no pass planned.
+  About 2 hours to tell whether it is a limit at all, by reading that model in the packs; a part, if it is one, gets its estimate then.
