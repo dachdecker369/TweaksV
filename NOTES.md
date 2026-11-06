@@ -12,6 +12,7 @@ The game facts are in [PATTERNS.md](PATTERNS.md), the open issues in [ISSUES.md]
 
 Newest first; the tags carry the same numbers.
 One line per version with what it brought; git has the rest.
+One minor version per part, a patch version for its fixes, but parts built in one round ship together as one version, as 2.6.0's did; a version takes the next free number when it ships.
 
 - **2.8.1:** `PACKFILEARRAY_SIZE` stops at 32770 and is rounded down to a multiple of 5, since 65531 and up crash the game at start-up: a higher value in an older `TweaksV.ini` now runs at 32770 with the clamp's message on screen; the default stays 13000; 2995 checks.
 - **2.8.0:** phase C's second build: the sirens per vehicle, `SIRENS_PER_VEHICLE`, 32 by default, the lights past 20 by a second call of the game's renderer and the damage on them, glass included, by the game's own loops raised; the light stores, a sixteenth part: a job's lists at 180 lights and 300 coronas, the frame's stores moved, the scene store's byte index fixed; the corona store raised to `CORONA_STORE`, 4096 by default; `VIDEO_MEMORY_BUDGET` at 6000 by default and `STREAMED_OBJECTS` at 131072; with `DIAGNOSTIC_MODE=1` a job's most, the ray traced list's refused lights, the coronas the store refuses, the descriptors in use, a pack's carcols lines naming their file, and the vehicles whose siren setting ID finds no setting; `TEST_SIREN_PASSES` in test builds, the load the stores' proof needs (D44); `TweaksV.ini` layout 5 with 47 keys; 2986 checks.
