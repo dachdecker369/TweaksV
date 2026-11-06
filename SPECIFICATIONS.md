@@ -13,7 +13,8 @@ Five files carry what the code does not say, each with its own job:
 | [ISSUES.md](ISSUES.md) | the open issues |
 
 Credits and derivations are in [CREDITS.md](CREDITS.md), the notices in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
-[SECURITY.md](SECURITY.md) says how to report a security problem; [ROADMAP.md](ROADMAP.md) holds what I plan next, [PLAN.md](PLAN.md) the phases of a change and the decisions that stand.
+[SECURITY.md](SECURITY.md) says how to report a security problem; [ROADMAP.md](ROADMAP.md) holds what I plan next, [PLAN.md](PLAN.md) the order of work for a change or new feature while one is planned.
+A decision named by its number, D1 to D46 and D-V5, has its text in PLAN.md's git history up to 174e93e.
 "I" in these files is the author, dachdecker369.
 TweaksV is GPL-3.0-only.
 
